@@ -1,0 +1,430 @@
+﻿Pre-made Prompt
+Can you help me design a valentines campaign for perfumes
+
+
+Co Marketer
+I need to gather essential information about the Valentine's Day perfume campaign before proceeding. Let me ask the user for more details to ensure we create an effective campaign.[a]
+
+
+Co Marketer
+I'll help you design a Valentine's Day perfume campaign. To create the most effective campaign, I need some additional information:
+
+
+1. Campaign Goals:
+* What are your primary objectives? (e.g., increase sales, brand awareness, etc.)
+* Do you have specific revenue or sales targets?
+
+   2. Product Details:
+   * Which perfume brands/collections are you promoting?
+   * What is the price range of the perfumes?
+   * Are there any special Valentine's Day offers or bundles?
+
+
+   3. Target Audience:
+   * Are you targeting specific age groups?
+   * Any specific gender focus (men buying for women, women for men, or both)?
+   * Geographic location for the campaign?
+
+      4. Campaign Duration:
+      * When would you like to start the campaign?
+      * How long do you want to run it? (typically Valentine's campaigns start 2-3 weeks before February 14th)
+
+         5. Budget and Resources:
+         * Do you have a specific marketing budget?
+         * Which marketing channels would you like to use? (email, social media, etc.)
+         * Please provide as much information as possible so I can help create a targeted and effective Valentine's Day campaign.
+
+
+Marketer (USER)
+Objective of the campaign is to increase sales for perfumes by 3%. I want to cater to entire audience base with demographic and Affinity bifurcations - feel free to make micro segments. Duration of the campaign is for 7 days from 7th Feb to 14th Feb.
+
+
+Co Marketer
+I'll start by creating audience segments based on the information provided. Let me work with the Segment Expert Agent to create optimal segments for the Valentine's campaign.
+
+
+Segment Agent
+Let me retrieve the segments for this Valentine's Day perfume campaign by providing the campaign summary to the retrieve_segment[b] tool.
+
+
+Segment Agent
+Based on the segmentation rules and available segments, I'll create targeted micro-segments that incorporate:
+
+
+RFM checks (Rule #1)
+Product and Category Affinity (Enhanced Rules #1 & #2)
+Price Sensitivity (Enhanced Rule #4)
+Gender-Specific targeting (Enhanced Rule #5)
+Channel Interactions (Enhanced Rule #6)
+Avoiding overlap and campaign fatigue (Rule #2)
+Let me structure the segments optimally for the Valentine's campaign.[c]
+
+
+Segment Agent
+
+
+Segment: Premium Perfume Enthusiasts
+         * Conditions:
+
+            * Users who clicked emails in the last 90 days AND
+
+            * Have a high PBL_HI score (likely behavioral/purchase intent score) AND
+
+            * Engaged with luxury perfume categories
+
+               * Suggested Campaign Message: Promote premium Valentine’s Day gifts.
+
+Segment: Recent Beauty Browsers
+                  * Conditions:
+
+                     * Users who opened emails in the last 90 days AND
+
+                     * Viewed skin or beauty/perfume category pages recently AND
+
+                     * Have not purchased yet
+
+                        * Suggested Campaign Message: Push first-time buyer offers or incentives.
+
+Segment: Loyal Beauty Shoppers
+                           * Conditions:
+
+                              * Users who bought skincare products in the last 90 days AND
+
+                              * Are repeat buyers based on PBL_buyers tag
+
+                                 * Suggested Campaign Message: Offer exclusive Valentine’s Day bundles for loyal customers.
+
+Segment: High Intent New Customers
+                                    * Conditions:
+
+                                       * New buyers with high intent in the last 30 days (HI_NB_L30D) AND
+
+                                       * Have opened emails recently AND
+
+                                       * Haven’t made a purchase yet
+
+                                          * Suggested Campaign Message: Encourage conversion with special Valentine’s discount.
+
+Segment: Welcome Premium Segment
+                                             * Conditions:
+
+                                                * Users in the high-tier Welcome segment AND
+
+                                                * Clicked emails in the last 180 days
+
+                                                   * Suggested Campaign Message: Share personalized Valentine’s recommendations tailored to premium interests.
+
+
+
+Co Marketer
+Now that I have the segments, I'll get the segment rules and counts from the Segment Rules Agent.
+
+
+Segment Rule Generator
+I'll analyze each segment description and create appropriate JSON rules. I'll need to create rules that capture email interactions, browsing behavior, and purchase patterns. Let's create these rules and get user counts for each segment.
+
+
+Let me break this down and create rules for each segment:
+
+
+Premium_Perfume_Enthusiasts: Combining email clicks, high purchase behavior likelihood, and luxury perfume engagement
+Recent_Beauty_Browsers: Email opens, skin category views, and beauty browsing without purchase
+Loyal_Beauty_Shoppers: Recent skincare purchases and beauty category buyers
+High_Intent_New_Customers: High intent new buyers and email opens
+Welcome_Premium_Segment: Welcome tier high value and email clicks
+I'll create these rules and get the counts in a batch.
+
+
+Segment Rule Generator
+I have received the user counts for all segments. Let me format the final response with descriptions and counts for each segment.
+
+
+Segment Rule Generator
+                                                      * Premium Perfume Enthusiasts
+
+                                                         * Criteria: Users who clicked emails and have a high propensity to buy (PBL_HI) in the last 90 days, showing strong interest in luxury perfume categories.
+
+                                                         * Size: 423,718 users
+
+                                                            * Recent Beauty Browsers
+
+                                                               * Criteria: Users who opened emails in the last 90 days and viewed beauty or perfume category pages, but have not yet made a purchase.
+
+                                                               * Size: 578,332 users
+
+                                                                  * Loyal Beauty Shoppers
+
+                                                                     * Criteria: Users who purchased skincare products in the last 90 days and are repeat buyers in the beauty category.
+
+                                                                     * Size: 490,353 users
+
+                                                                        * High Intent New Customers
+
+                                                                           * Criteria: New users with high purchase intent in the last 30 days and who opened emails, but haven’t yet completed a purchase.
+
+                                                                           * Size: 444,949 users
+
+                                                                              * Welcome Premium Segment
+
+                                                                                 * Criteria: Users tagged in a high-tier welcome segment and who have clicked on emails in the last 180 days.
+
+                                                                                 * Size: 586,286 users
+
+Co Marketer
+Let me now get insights from previous campaigns to optimize our approach. I'll contact the Insights Agent.
+
+
+Insights Agent
+
+
+I'll analyze the campaign data comprehensively by breaking down each aspect requested. Let me gather relevant information through multiple queries.
+
+
+Insights Agent
+Based on the data analysis, I'll provide comprehensive guidelines for perfume campaigns optimization.
+
+
+Insights Agent
+PERFUME CAMPAIGN OPTIMIZATION GUIDELINES
+
+
+Email Campaign Best Practices:
+
+A. Subject Line Optimization:
+Length: 31-62 characters (+44.03% click rate)
+Words: 4-5 words (+18.94% click rate)
+Style: Use punctuation (+2.85% click rate)
+Avoid emojis (23.78% better click rates)
+
+
+B. Timing & Scheduling:
+Best revenue window: 19 PM - 22 PM (+14.61% revenue)
+Optimal open rates: 15 PM - 19 PM (+2.27%)
+Best click rates: 12 PM - 15 PM (+19.50%)
+Schedule for weekends (+12.68% revenue)
+
+
+C. Content Strategy:
+Use 'Content Engagement' approach (+37.81% click rate)
+Implement 'Exclusivity' tone (+150% click rate)
+Include 'Urgency' elements (+14.04% revenue)
+Use 'Discounted Promotion' messaging (+12.20% revenue)
+
+
+                                                                                    1. SMS Campaign Optimization:
+                                                                                    * Timing: 9 AM - 11 AM for clicks (+13.73%)
+                                                                                    * Message length: 234-239 characters
+                                                                                    * Weekend scheduling (+13.80% revenue)
+                                                                                    2. Revenue Growth Strategy (to achieve 3% increase):
+                                                                                    * Combine weekend scheduling (+12.68%) with optimal timing
+                                                                                    * Use exclusivity messaging with urgency elements
+                                                                                    * Implement discounted promotions during peak hours
+                                                                                    * Focus on content engagement with clear call-to-actions
+                                                                                    3. Retention Optimization:
+                                                                                    * Use 'Promotion of Recommended Products' (-44.24% unsubscribe rate)
+                                                                                    * Maintain shorter subject lines (12-23 characters) for lower unsubscribe rates
+                                                                                    * Schedule during 15 PM - 19 PM window
+                                                                                    * Use neutral tone ('Others' category) for better retention
+                                                                                    * These guidelines, when implemented together, should exceed the 3% sales increase target while maintaining healthy engagement metrics.
+
+
+Co Marketer
+
+
+Now I'll work with the Content Agent to create personalized subject lines and content for each segment based on these insights.
+
+
+Content Agent
+
+
+Let me break this down and create engaging Valentine's Day perfume campaign subject lines. I'll first query some successful subject lines from past campaigns to understand the tone and style that works well. Let me start with luxury perfume campaigns.
+
+
+Content Agent
+Based on the queries and the campaign requirements, I'll create unique subject lines for each segment incorporating the insights from successful campaigns while maintaining the character limit (31-62 characters) and focusing on Valentine's Day theme, exclusivity, and urgency.
+
+
+Content Agent
+
+
+                                                                                    1. Premium Perfume Enthusiasts
+                                                                                    * Subject: "VIP Access: Love's Luxury Collection"
+                                                                                    * Focus: Exclusive luxury Valentine's collections
+                                                                                    2. Recent Beauty Browsers
+                                                                                    * Subject: "First Love: Special Valentine's Offer"
+                                                                                    * Focus: First-time buyer incentives
+                                                                                    3. Loyal Beauty Shoppers
+                                                                                    * Subject: "Members-Only Valentine's Bundle"
+                                                                                    * Focus: Exclusive bundles and rewards
+                                                                                    4. High Intent New Customers
+                                                                                    * Subject: "Love at First Scent: 20% Off"
+                                                                                    * Focus: New customer special offers
+                                                                                    5. Welcome Premium Segment
+                                                                                    * Subject: "Your Perfect Valentine's Match"
+                                                                                    * Focus: Personalized recommendations
+
+
+Co Marketer
+Let me now work with the Scheduling Agent to optimize the campaign timing for maximum impact.
+
+
+Scheduler Agent
+Let me analyze the campaign parameters and segments to create an optimal schedule. Given the 7-day duration and established engagement patterns (open rates, click rates, revenue windows), this is a good candidate for Send Time Optimization (STO) for most segments.
+
+
+Key considerations:
+Long campaign duration (>24 hours) makes STO viable
+We have clear engagement windows (12-15, 15-19, 19-22)
+Weekend focus requirement
+Multiple segments with different characteristics
+
+
+Scheduler Agent
+Campaign: Premium Perfume Enthusiasts
+                                                                                    * Send Time Optimization (STO): Enabled
+                                                                                    * Schedule: Feb 7–14, focusing on 7–10 PM (19:00–22:00), with extra emphasis on weekends
+
+                                                                                    * Push TTL: 24 hours
+
+                                                                                    * Rationale: This is a high-value segment; STO is used to maximize engagement during known high-revenue periods.
+
+Campaign: Recent Beauty Browsers
+                                                                                       * Send Time Optimization (STO): Enabled
+
+                                                                                       * Schedule: Feb 7–14, targeting 12–3 PM (12:00–15:00), the segment’s typical click window
+
+                                                                                       * Push TTL: 24 hours
+
+                                                                                       * Rationale: These users recently browsed beauty products, indicating high intent. STO is used to capture them during peak click times.
+
+Campaign: Loyal Beauty Shoppers
+                                                                                          * Send Time Optimization (STO): Enabled
+
+                                                                                          * Schedule: Feb 7–14, evenly distributed across all engagement windows
+
+                                                                                          * Push TTL: 24 hours
+
+                                                                                          * Rationale: With consistent past engagement, STO is well-suited to optimize delivery across various active times.
+
+Campaign: High Intent New Customers
+                                                                                             * Send Time Optimization (STO): Not used
+
+                                                                                             * Schedule: Fixed schedule at 3 PM daily and 7 PM on weekends
+
+                                                                                             * Push TTL: 12 hours
+
+                                                                                             * Rationale: Since these users have limited historical data, fixed peak open-rate times are used instead of STO.
+
+Campaign: Welcome Premium Segment
+                                                                                                * Send Time Optimization (STO): Not used
+
+                                                                                                * Schedule: Immediate send upon joining the segment, followed by another message at 7 PM the next day
+
+                                                                                                * Push TTL: 12 hours
+
+                                                                                                * Rationale: Welcome journeys require instant communication. A follow-up is timed at a standard high-engagement hour.
+
+Co Marketer
+Now I'll compile all this information into a comprehensive campaign report.
+
+
+Co Marketer
+Valentine’s Day Perfume Campaign Report
+Executive Summary
+                                                                                                   * Campaign goal: Achieve 3% sales increase over Feb 7–14.
+
+                                                                                                   * Reach: Over 2.5 million customers.
+
+                                                                                                   * Strategy: Personalized messaging + optimal timing to drive engagement & conversion.
+
+Audience Segments
+                                                                                                      1. Premium Perfume Enthusiasts (423,718 users)
+
+                                                                                                         * High-value customers with luxury perfume purchase history.
+
+                                                                                                            2. Recent Beauty Browsers (578,332 users)
+
+                                                                                                               * Active browsers in beauty/perfume categories.
+
+                                                                                                                  3. Loyal Beauty Shoppers (490,353 users)
+
+                                                                                                                     * Repeat beauty category purchasers.
+
+                                                                                                                        4. High Intent New Customers (444,949 users)
+
+                                                                                                                           * Recent high-intent prospects.
+
+                                                                                                                              5. Welcome Premium Segment (586,286 users)
+
+                                                                                                                                 * Engaged new customers with premium potential.
+
+Campaign Insights – Key Performance Drivers
+                                                                                                                                    * Optimal revenue window: 19 PM – 22 PM (+14.61% revenue)
+
+                                                                                                                                    * Weekend scheduling advantage: +12.68% revenue
+
+                                                                                                                                    * Subject line length (31–62 characters): +44.03% click rate
+
+                                                                                                                                    * Exclusivity messaging: +150% click rate
+
+                                                                                                                                    * Urgency elements: +14.04% revenue
+
+Content Strategy
+1. Premium Perfume Enthusiasts
+                                                                                                                                       * Subject: “VIP Access: Love’s Luxury Collection”
+
+                                                                                                                                       * Focus: Exclusive luxury Valentine’s collections
+
+2. Recent Beauty Browsers
+                                                                                                                                          * Subject: “First Love: Special Valentine’s Offer”
+
+                                                                                                                                          * Focus: First-time buyer incentives
+
+3. Loyal Beauty Shoppers
+                                                                                                                                             * Subject: “Members-Only Valentine’s Bundle”
+
+                                                                                                                                             * Focus: Exclusive bundles and rewards
+
+4. High Intent New Customers
+                                                                                                                                                * Subject: “Love at First Scent: 20% Off”
+
+                                                                                                                                                * Focus: New customer special offers
+
+5. Welcome Premium Segment
+                                                                                                                                                   * Subject: “Your Perfect Valentine’s Match”
+
+                                                                                                                                                   * Focus: Personalized recommendations
+
+Campaign Schedule
+1. Premium & Loyal Segments
+                                                                                                                                                      * Prime time: 19–22 PM
+
+                                                                                                                                                      * Smart Time Optimization enabled
+
+                                                                                                                                                      * Weekend focus for maximum revenue
+
+2. New & Browse Segments
+                                                                                                                                                         * Fixed timing: 15 PM weekdays, 19 PM weekends
+
+                                                                                                                                                         * 12-hour push notification TTL
+
+3. Welcome Segment
+                                                                                                                                                            * Immediate trigger upon segment entry
+
+                                                                                                                                                            * Follow-up at 19 PM next day
+
+Conclusion
+                                                                                                                                                               * Campaign designed to exceed 3% sales increase.
+
+                                                                                                                                                               * Driven by strategic timing, personalization, and segment-specific offers.
+
+                                                                                                                                                               * Continuous monitoring and optimization throughout the campaign duration.
+
+
+
+[a]@parth.shukla@netcorecloud.com ye response chahiye kya? Can we directly begin with the "I'll help you design a Valentine's day…" the message after this. What do you think?
+_Assigned to parth.shukla@netcorecloud.com_
+[b]@parth.shukla@netcorecloud.com do we write "retrieve_segment" tool like this only? Seems lil technical?
+_Assigned to parth.shukla@netcorecloud.com_
+[c]@parth.shukla@netcorecloud.com This message feels like something that should come AFTER the segment agent has given the response because in brackets here we say which Rule caters to what but then the rules actually come in the next message? That's a bit confusing… Can we have this message come later AFTER the segments rules have been introduced?
+_Assigned to parth.shukla@netcorecloud.com_
