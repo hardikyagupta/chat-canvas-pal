@@ -269,6 +269,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     scrollToBottom();
   }, [messages]);
 
+  // Listen for scroll events during text streaming
+  useEffect(() => {
+    const handleScrollToBottom = () => {
+      scrollToBottom();
+    };
+
+    window.addEventListener('chatScrollToBottom', handleScrollToBottom);
+    
+    return () => {
+      window.removeEventListener('chatScrollToBottom', handleScrollToBottom);
+    };
+  }, []);
+
   const stopMockConversation = () => {
     setIsMockAgentChatActive(false); 
     if (mockMessageTimeoutRef.current) {
@@ -545,8 +558,8 @@ The content has been updated across all channels to reflect your changes.`;
                     </table>`, 
             avatarIcon: segmentAgent?.icon, 
             avatarBgClass: segmentAgent?.colorClass,
-            animate: false,
-            animationSpeed: 0
+            animate: true,
+            animationSpeed: 50
           },
           { agentId: coMarketer?.id, type: 'chat', isAI: true, agentName: coMarketer?.name, content: "Now that I have the segments, I'll get insights from previous campaigns to optimize our approach. I'll contact the Insights Agent.", avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass },
           { 
@@ -626,12 +639,10 @@ The content has been updated across all channels to reflect your changes.`;
           type: 'chat', 
           isAI: true, 
           agentName: segmentAgent?.name, 
-          // Explicitly disable animation for the segment agent's table response
-          // These properties are technically redundant since ChatMessage.tsx 
-          // automatically detects tables and skips animation, but they're kept
-          // for clarity and in case the table detection logic changes
-          animate: false, 
-          animationSpeed: 0, 
+          // Enable animation for Segment agent to show thinking animation
+          // Table content will still be handled appropriately by ChatMessage.tsx
+          animate: true, 
+          animationSpeed: 50, 
           content: `
                     <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; table-layout: fixed; border: 1px solid hsl(var(--border)); background-color: hsl(var(--background));">
                       <thead>

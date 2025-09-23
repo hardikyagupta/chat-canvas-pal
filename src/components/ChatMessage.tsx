@@ -20,6 +20,376 @@ import { SegmentAgentRationale } from './SegmentAgentRationale';
 import { ContentAgentRationale } from './ContentAgentRationale';
 import { ExecutiveSummaryContentAccordion } from './ExecutiveSummaryContentAccordion';
 
+// Loading indicator component with Cursor-style processing dots
+const LoadingIndicator: React.FC = () => {
+  return (
+    <div className="flex items-center py-2">
+      <div className="flex items-center gap-1">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="w-1.5 h-1.5 bg-gray-500 dark:bg-gray-400 rounded-full"
+            style={{
+              animation: 'cursorDots 1.4s infinite ease-in-out',
+              animationDelay: `${i * 0.16}s`,
+              animationFillMode: 'both'
+            }}
+          />
+        ))}
+      </div>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes cursorDots {
+            0%, 80%, 100% {
+              transform: scale(0.6);
+              opacity: 0.4;
+            }
+            40% {
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+        `
+      }} />
+    </div>
+  );
+};
+
+// Simple inline thinking loader for tables (no avatar/section)
+const SimpleThinkingLoader: React.FC = () => {
+  console.log("🎨 SIMPLE THINKING LOADER FOR TABLE CONTENT");
+  
+  return (
+    <div className="flex items-center gap-2 py-1 px-2 w-fit">
+      <div className="flex gap-1">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full"
+            style={{
+              animation: 'simpleDots 1.4s infinite ease-in-out',
+              animationDelay: `${i * 0.16}s`,
+              animationFillMode: 'both'
+            }}
+          />
+        ))}
+      </div>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes simpleDots {
+            0%, 80%, 100% {
+              transform: scale(0.6);
+              opacity: 0.4;
+            }
+            40% {
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+        `
+      }} />
+    </div>
+  );
+};
+
+// Segment Agent Thinking indicator with animated infinity icon (for rationale content)
+const SegmentAgentThinking: React.FC = () => {
+  console.log("🎨🎨🎨 SEGMENT AGENT THINKING COMPONENT IS RENDERING! 🎨🎨🎨");
+  console.log("This will appear BEFORE the 'To keep messaging razor-focused...' content");
+  
+  // Auto-scroll when component mounts
+  React.useEffect(() => {
+    console.log("🎨 SegmentAgentThinking component mounted - scrolling to keep content visible");
+    // Dispatch scroll event to parent container instead of window scrolling
+    window.dispatchEvent(new CustomEvent('chatScrollToBottom'));
+    
+    // Extra prominent logging
+    console.log("🚨🚨🚨 THINKING ANIMATION SHOULD BE VISIBLE NOW! 🚨🚨🚨");
+  }, []);
+  
+  return (
+    <div className="flex items-center gap-2 py-2 px-3 bg-white dark:bg-white rounded-lg border border-gray-200 dark:border-gray-200 shadow-sm w-fit h-8">
+      <div className="text-xs text-gray-600 dark:text-gray-600 font-['Nunito Sans'] font-medium">
+        Segment Agent thinking
+      </div>
+      <div className="flex items-center">
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="12" 
+          height="12" 
+          fill="currentColor" 
+          viewBox="0 0 256 256"
+          className="text-gray-500 dark:text-gray-500"
+          style={{
+            animation: 'infinityRotate 1.5s ease-in-out infinite'
+          }}
+        >
+          <path d="M248,128a56,56,0,0,1-95.6,39.6l-.33-.35L92.12,99.55a40,40,0,1,0,0,56.9l8.52-9.62a8,8,0,1,1,12,10.61l-8.69,9.81-.33.35a56,56,0,1,1,0-79.2l.33.35,59.95,67.7a40,40,0,1,0,0-56.9l-8.52,9.62a8,8,0,1,1-12-10.61l8.69-9.81.33-.35A56,56,0,0,1,248,128Z"></path>
+        </svg>
+      </div>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes infinityRotate {
+            0% {
+              transform: rotate(0deg) scale(1);
+              opacity: 0.7;
+            }
+            50% {
+              transform: rotate(180deg) scale(1);
+              opacity: 1;
+            }
+            100% {
+              transform: rotate(360deg) scale(1);
+              opacity: 0.7;
+            }
+          }
+        `
+      }} />
+    </div>
+  );
+};
+
+// Enhanced tokenization for ChatGPT-style table streaming
+const tokenizeText = (text: string): string[] => {
+  if (!text) return [];
+
+  // Check if content contains a table - use different tokenization strategy
+  if (text.includes('<table')) {
+    return tokenizeTableContent(text);
+  }
+
+  // Regular content tokenization (existing logic for non-table content)
+  const tokens: string[] = [];
+  let currentToken = '';
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    
+    if (char === '\n') {
+      if (currentToken) {
+        tokens.push(currentToken);
+        currentToken = '';
+      }
+      tokens.push('\n');
+      continue;
+    }
+    
+    if (char === ' ') {
+      if (currentToken) {
+        tokens.push(currentToken);
+        currentToken = '';
+      }
+      tokens.push(' ');
+      continue;
+    }
+    
+    if (/[.!?,:;]/.test(char)) {
+      if (currentToken) {
+        tokens.push(currentToken);
+        currentToken = '';
+      }
+      tokens.push(char);
+      continue;
+    }
+    
+    if (char === '<') {
+      if (currentToken) {
+        tokens.push(currentToken);
+        currentToken = '';
+      }
+      let tagEnd = i;
+      while (tagEnd < text.length && text[tagEnd] !== '>') {
+        tagEnd++;
+      }
+      if (tagEnd < text.length) {
+        tokens.push(text.substring(i, tagEnd + 1));
+        i = tagEnd;
+        continue;
+      }
+    }
+    
+    currentToken += char;
+  }
+  
+  if (currentToken) {
+    tokens.push(currentToken);
+  }
+  
+  return tokens.filter(token => token.length > 0);
+};
+
+// Basic tokenization helper to avoid recursion
+const basicTokenize = (text: string): string[] => {
+  const tokens: string[] = [];
+  let currentToken = '';
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    
+    if (char === '\n') {
+      if (currentToken) {
+        tokens.push(currentToken);
+        currentToken = '';
+      }
+      tokens.push('\n');
+      continue;
+    }
+    
+    if (char === ' ') {
+      if (currentToken) {
+        tokens.push(currentToken);
+        currentToken = '';
+      }
+      tokens.push(' ');
+      continue;
+    }
+    
+    if (/[.!?,:;]/.test(char)) {
+      if (currentToken) {
+        tokens.push(currentToken);
+        currentToken = '';
+      }
+      tokens.push(char);
+      continue;
+    }
+    
+    currentToken += char;
+  }
+  
+  if (currentToken) {
+    tokens.push(currentToken);
+  }
+  
+  return tokens.filter(token => token.length > 0);
+};
+
+// NEW: Table-specific tokenization for ChatGPT-style row-by-row streaming
+const tokenizeTableContent = (text: string): string[] => {
+  const tokens: string[] = [];
+  
+  // Split content: before table, table, after table
+  const tableRegex = /(.*?)(<table[\s\S]*?<\/table>)(.*)/;
+  const match = text.match(tableRegex);
+  
+  if (!match) {
+    // Fallback to regular tokenization (non-table content)
+    const tokens: string[] = [];
+    let currentToken = '';
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      
+      if (char === '\n') {
+        if (currentToken) {
+          tokens.push(currentToken);
+          currentToken = '';
+        }
+        tokens.push('\n');
+        continue;
+      }
+      
+      if (char === ' ') {
+        if (currentToken) {
+          tokens.push(currentToken);
+          currentToken = '';
+        }
+        tokens.push(' ');
+        continue;
+      }
+      
+      if (/[.!?,:;]/.test(char)) {
+        if (currentToken) {
+          tokens.push(currentToken);
+          currentToken = '';
+        }
+        tokens.push(char);
+        continue;
+      }
+      
+      currentToken += char;
+    }
+    
+    if (currentToken) {
+      tokens.push(currentToken);
+    }
+    
+    return tokens.filter(token => token.length > 0);
+  }
+  
+  const [, beforeTable, tableContent, afterTable] = match;
+  
+  // Add content before table (if any) - use basic tokenization to avoid recursion
+  if (beforeTable.trim()) {
+    const beforeTokens = basicTokenize(beforeTable);
+    tokens.push(...beforeTokens);
+  }
+  
+  // Parse table into row-by-row tokens
+  const tableTokens = parseTableForStreaming(tableContent);
+  tokens.push(...tableTokens);
+  
+  // Add content after table (if any) - use basic tokenization to avoid recursion
+  if (afterTable.trim()) {
+    const afterTokens = basicTokenize(afterTable);
+    tokens.push(...afterTokens);
+  }
+  
+  return tokens;
+};
+
+// Parse table into streamable row chunks for ChatGPT-like experience
+const parseTableForStreaming = (tableHtml: string): string[] => {
+  const tokens: string[] = [];
+  
+  // Extract table structure components
+  const tableOpenMatch = tableHtml.match(/^<table[^>]*>/);
+  const theadMatch = tableHtml.match(/<thead[\s\S]*?<\/thead>/);
+  const tbodyOpenMatch = tableHtml.match(/<tbody[^>]*>/);
+  const tbodyCloseMatch = tableHtml.match(/<\/tbody>/);
+  const tableCloseMatch = tableHtml.match(/<\/table>$/);
+  
+  // Start with table opening
+  if (tableOpenMatch) {
+    tokens.push(tableOpenMatch[0]);
+  }
+  
+  // Add table header as one chunk (appears first, faster)
+  if (theadMatch) {
+    tokens.push('TABLE_SECTION_BREAK'); // Special marker for longer pause
+    tokens.push(theadMatch[0]);
+  }
+  
+  // Add tbody opening
+  if (tbodyOpenMatch) {
+    tokens.push('TABLE_SECTION_BREAK'); // Pause between header and body
+    tokens.push(tbodyOpenMatch[0]);
+  }
+  
+  // Extract and add individual body rows
+  const bodyContent = tableHtml.match(/<tbody[\s\S]*?<\/tbody>/);
+  if (bodyContent) {
+    const rowMatches = bodyContent[0].match(/<tr[\s\S]*?<\/tr>/g);
+    if (rowMatches) {
+      rowMatches.forEach((row, index) => {
+        if (index > 0) {
+          tokens.push('TABLE_ROW_BREAK'); // Small pause between rows
+        }
+        tokens.push(row);
+      });
+    }
+  }
+  
+  // Add closing tags
+  if (tbodyCloseMatch) {
+    tokens.push(tbodyCloseMatch[0]);
+  }
+  if (tableCloseMatch) {
+    tokens.push(tableCloseMatch[0]);
+  }
+  
+  return tokens;
+};
+
 interface ChatMessageProps {
   isAI: boolean;
   content: string;
@@ -70,7 +440,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   avatarIcon: AvatarIconComponent,
   avatarBgClass,
   animate = true,
-  animationSpeed = 15,
+  animationSpeed = 50, // Base speed for token streaming (not used for regular tokens)
   onAnimationComplete,
   messageId,
   isLastMessage,
@@ -114,6 +484,15 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const animationTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
   const [dynamicAvatarSrc, setDynamicAvatarSrc] = useState<string | null>("/avatarGIF.gif");
   
+  // Enhanced animation states for instant "pop" token streaming
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTextVisible, setIsTextVisible] = useState(false);
+  const [textOpacity, setTextOpacity] = useState(0);
+  const [textBlur, setTextBlur] = useState(1.5);
+  
+  // Segment Agent thinking state
+  const [isSegmentAgentThinking, setIsSegmentAgentThinking] = useState(false);
+  
   // State for content changes
   const [hasContentChanges, setHasContentChanges] = useState(false);
   const [isUpdatingContent, setIsUpdatingContent] = useState(false);
@@ -133,14 +512,28 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   }, []);
 
   useEffect(() => {
+    console.log("🚀 ChatMessage useEffect triggered:", { 
+      agentName, 
+      isAI, 
+      animate, 
+      content: content?.substring(0, 100) + "...",
+      isSegmentAccordion,
+      hasTable: content?.includes('<table')
+    });
     setIsAnimationDone(false);
+    setIsLoading(false);
+    setIsTextVisible(false);
+    setTextOpacity(0);
+    setTextBlur(1.5);
+    setIsSegmentAgentThinking(false);
+    
     if (animationTimeoutIdRef.current) {
       clearTimeout(animationTimeoutIdRef.current);
       animationTimeoutIdRef.current = null;
     }
 
     // ===================================================================
-    // ANIMATION CONTROL LOGIC
+    // ENHANCED ANIMATION CONTROL LOGIC
     // ===================================================================
     // We skip the typing animation under four conditions:
     // 1. For user messages (!isAI)
@@ -153,7 +546,24 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     // If adding more animation exceptions, add them here rather than creating
     // new props or flags in message definitions.
     // ===================================================================
-    if (!isAI || !animate || (content && content.includes('<table')) || isSegmentAccordion) {
+    // Special handling: Allow Segment agent messages to proceed to animation even if they contain tables
+    const isSegmentAgent = agentName === "Segment agent" || isSegmentAgentRationale;
+    const hasTable = content && content.includes('<table');
+    const skipAnimation = !isAI || !animate || (hasTable && !isSegmentAgent) || isSegmentAccordion;
+    
+    console.log("🔍 Animation Check:", { 
+      agentName, 
+      isSegmentAgent, 
+      isSegmentAgentRationale,
+      isAI, 
+      animate, 
+      hasTable, 
+      isSegmentAccordion, 
+      skipAnimation 
+    });
+    
+    if (skipAnimation) {
+      console.log("❌ SKIPPING animation for:", agentName);
       // For segment accordions, don't set displayedText since we render a component
       if (isSegmentAccordion) {
         setDisplayedText('');
@@ -161,6 +571,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         setDisplayedText(content || '');
       }
       setIsAnimationDone(true);
+      setIsTextVisible(true);
+      setTextOpacity(1);
+      setTextBlur(0);
       onAnimationComplete?.();
       return;
     }
@@ -168,37 +581,269 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     if (!content) {
         setDisplayedText('');
         setIsAnimationDone(true);
+        setIsTextVisible(true);
+        setTextOpacity(1);
+        setTextBlur(0);
         onAnimationComplete?.();
         return;
     }
 
-    const currentContentForAnimation = content;
-    const contentLength = currentContentForAnimation.length;
-    
+    // Tokenize content for natural streaming
+    const tokens = tokenizeText(content);
     setDisplayedText('');
 
-    if (contentLength === 0) {
+    if (tokens.length === 0) {
         onAnimationComplete?.();
         return;
     }
 
-    const animateStep = (index: number) => {
-      setDisplayedText(prev => prev + currentContentForAnimation.charAt(index));
+    // Use the already declared isSegmentAgent variable
+    console.log("✅ PROCEEDING with animation for:", agentName, "isSegmentAgent:", isSegmentAgent, "isSegmentAgentRationale:", isSegmentAgentRationale);
+    console.log("ChatMessage Debug:", { agentName, isSegmentAgent, isSegmentAgentRationale, content: content.substring(0, 50) + "..." });
 
-      if (index < contentLength - 1) {
+    if (isSegmentAgent) {
+      // Phase 1: Show Segment Agent Thinking (2000ms) - thinking period
+      const hasTable = content && content.includes('<table');
+      console.log("🤔 Starting Segment Agent Thinking animation...", 
+        isSegmentAgentRationale ? "(for Rationale component)" : hasTable ? "(for Table content)" : "(for regular content)");
+      console.log("Content type check:", { hasTable, isSegmentAgentRationale, contentLength: content?.length });
+      
+      // Clear any existing text content and states
+      setDisplayedText('');
+      setIsTextVisible(false);
+      setIsLoading(false);
+      setTextOpacity(0);
+      
+      // Start thinking animation
+      setIsSegmentAgentThinking(true);
+      console.log("🎯 isSegmentAgentThinking state set to:", true);
+      
+      // Immediate scroll to keep content visible when thinking starts
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('chatScrollToBottom'));
+      }, 100);
+      
+      animationTimeoutIdRef.current = setTimeout(() => {
+        console.log("✅ Segment Agent Thinking complete, starting loading dots...");
+        setIsSegmentAgentThinking(false);
+        
+        // Phase 2: Show Cursor-style processing dots (400ms) - brief loading
+        setIsLoading(true);
+        
         animationTimeoutIdRef.current = setTimeout(() => {
-          animateStep(index + 1);
-        }, animationSpeed);
-      } else {
-        animationTimeoutIdRef.current = null;
-        setIsAnimationDone(true);
-        onAnimationComplete?.();
-      }
-    };
+          setIsLoading(false);
+          setIsTextVisible(true);
+          
+          // Phase 3: Start blur/fade-in effect (60ms) - ultra-fast for instant "pop" streaming
+          let fadeProgress = 0;
+          const fadeInterval = setInterval(() => {
+            fadeProgress += 0.33; // 3 steps over 60ms for instant animation
+            if (fadeProgress >= 1) {
+              fadeProgress = 1;
+              clearInterval(fadeInterval);
+            }
+            
+            // Quick ease-in-out curve for instant appearance
+            const easedProgress = 0.5 * (1 - Math.cos(fadeProgress * Math.PI));
+            setTextOpacity(easedProgress);
+            setTextBlur(1.5 * (1 - easedProgress)); // Minimal blur for instant effect
+          }, 20);
 
-    animationTimeoutIdRef.current = setTimeout(() => {
-      animateStep(0);
-    }, animationSpeed);
+          // Phase 4: Start instant token streaming immediately
+          setTimeout(() => {
+            let displayedTokens = '';
+            
+            const streamToken = (tokenIndex: number) => {
+              const currentToken = tokens[tokenIndex];
+              
+              // Detect special table tokens for enhanced delays FIRST
+              const isTableSectionBreak = currentToken === 'TABLE_SECTION_BREAK';
+              const isTableRowBreak = currentToken === 'TABLE_ROW_BREAK';
+              
+              // Skip timing marker tokens - they are only for delays, not display
+              if (isTableSectionBreak) {
+                // Skip rendering section breaks, just add delay
+                const baseDelay = 200 + Math.random() * 100; // 200-300ms pause between table sections
+                setTimeout(() => {
+                  streamToken(tokenIndex + 1);
+                }, baseDelay);
+                return; // Skip to next token without displaying
+              } else if (isTableRowBreak) {
+                // Skip rendering row breaks, just add delay  
+                const baseDelay = 50 + Math.random() * 50; // 50-100ms pause between table rows
+                setTimeout(() => {
+                  streamToken(tokenIndex + 1);
+                }, baseDelay);
+                return; // Skip to next token without displaying
+              }
+              
+              // Add entire token instantly - NO character-by-character animation
+              // Each token (word, punctuation, space) appears as a complete chunk
+              displayedTokens += currentToken;
+              setDisplayedText(displayedTokens);
+
+              // Enhanced auto-scroll: scroll to keep new content visible as it streams
+              if (currentToken.includes('\n') || tokenIndex % 3 === 0) {
+                setTimeout(() => {
+                  // Dispatch scroll event to parent container
+                  window.dispatchEvent(new CustomEvent('chatScrollToBottom'));
+                }, 50);
+              }
+
+              if (tokenIndex < tokens.length - 1) {
+                // ChatGPT-style pause detection based on token types
+                const isParagraphBreak = currentToken === '\n';
+                const isPunctuation = /^[.!?]$/.test(currentToken);
+                const isMinorPunctuation = /^[,:;]$/.test(currentToken);
+                
+                // Generate human-like randomness (5-15ms for natural feel)
+                const randomDelay = 5 + Math.random() * 10;
+                
+                // Set delays for ChatGPT-style streaming with table support
+                let baseDelay;
+                if (isParagraphBreak) {
+                  // Paragraph breaks (\n) get longer pauses (200-300ms)
+                  baseDelay = 200 + Math.random() * 100;
+                } else if (isPunctuation) {
+                  // Sentence-ending punctuation (.!?) gets slight extra pause
+                  baseDelay = 25 + randomDelay;
+                } else if (isMinorPunctuation) {
+                  // Minor punctuation (,:;) gets minimal pause
+                  baseDelay = 15 + randomDelay;
+                } else {
+                  // Regular tokens (words, spaces, table elements) use base speed + randomness
+                  baseDelay = randomDelay; // Fast streaming for smooth flow
+                }
+                
+                const delay = Math.max(5, baseDelay); // Minimum 5ms for instant streaming
+                
+                animationTimeoutIdRef.current = setTimeout(() => {
+                  streamToken(tokenIndex + 1);
+                }, delay);
+              } else {
+                animationTimeoutIdRef.current = null;
+                setIsAnimationDone(true);
+                // Final scroll to ensure we're at the bottom when animation completes
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('chatScrollToBottom'));
+                }, 100);
+                onAnimationComplete?.();
+              }
+            };
+
+            streamToken(0);
+          }, 10); // Start streaming 10ms into fade-in for instant flow
+          
+        }, 400); // Loading indicator duration for segment agent
+        
+      }, 2000); // Segment Agent Thinking duration - 2 seconds like modern AI
+      
+    } else {
+      // Regular flow for non-segment agents
+      // Phase 1: Show Cursor-style processing dots (600ms) - visible loading period
+      setIsLoading(true);
+      
+      animationTimeoutIdRef.current = setTimeout(() => {
+        setIsLoading(false);
+        setIsTextVisible(true);
+        
+        // Phase 2: Start blur/fade-in effect (60ms) - ultra-fast for instant "pop" streaming
+        let fadeProgress = 0;
+        const fadeInterval = setInterval(() => {
+          fadeProgress += 0.33; // 3 steps over 60ms for instant animation
+          if (fadeProgress >= 1) {
+            fadeProgress = 1;
+            clearInterval(fadeInterval);
+          }
+          
+          // Quick ease-in-out curve for instant appearance
+          const easedProgress = 0.5 * (1 - Math.cos(fadeProgress * Math.PI));
+          setTextOpacity(easedProgress);
+          setTextBlur(1.5 * (1 - easedProgress)); // Minimal blur for instant effect
+        }, 20);
+
+        // Phase 3: Start instant token streaming immediately
+        setTimeout(() => {
+          let displayedTokens = '';
+          
+          const streamToken = (tokenIndex: number) => {
+            // Add entire token instantly - NO character-by-character animation
+            // Each token (word, punctuation, space) appears as a complete chunk
+            displayedTokens += tokens[tokenIndex];
+            setDisplayedText(displayedTokens);
+
+            // Enhanced auto-scroll: scroll to keep new content visible as it streams
+            if (tokens[tokenIndex].includes('\n') || tokenIndex % 3 === 0) {
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('chatScrollToBottom'));
+              }, 50);
+            }
+
+            if (tokenIndex < tokens.length - 1) {
+              // ChatGPT-style pause detection based on token types
+              const currentToken = tokens[tokenIndex];
+              
+              // Detect special table tokens for enhanced delays
+              const isTableSectionBreak = currentToken === 'TABLE_SECTION_BREAK';
+              const isTableRowBreak = currentToken === 'TABLE_ROW_BREAK';
+              const isParagraphBreak = currentToken === '\n';
+              const isPunctuation = /^[.!?]$/.test(currentToken);
+              const isMinorPunctuation = /^[,:;]$/.test(currentToken);
+              
+              // Generate human-like randomness (5-15ms for natural feel)
+              const randomDelay = 5 + Math.random() * 10;
+              
+              // Set delays for ChatGPT-style streaming with table support
+              let baseDelay;
+              if (isTableSectionBreak) {
+                // Skip rendering section breaks, just add delay
+                baseDelay = 200 + Math.random() * 100; // 200-300ms pause between table sections
+                setTimeout(() => {
+                  streamToken(tokenIndex + 1);
+                }, baseDelay);
+                return; // Skip to next token without displaying
+              } else if (isTableRowBreak) {
+                // Skip rendering row breaks, just add delay  
+                baseDelay = 50 + Math.random() * 50; // 50-100ms pause between table rows
+                setTimeout(() => {
+                  streamToken(tokenIndex + 1);
+                }, baseDelay);
+                return; // Skip to next token without displaying
+              } else if (isParagraphBreak) {
+                // Paragraph breaks (\n) get longer pauses (200-300ms)
+                baseDelay = 200 + Math.random() * 100;
+              } else if (isPunctuation) {
+                // Sentence-ending punctuation (.!?) gets slight extra pause
+                baseDelay = 25 + randomDelay;
+              } else if (isMinorPunctuation) {
+                // Minor punctuation (,:;) gets minimal pause
+                baseDelay = 15 + randomDelay;
+              } else {
+                // Regular tokens (words, spaces, table elements) use base speed + randomness
+                baseDelay = randomDelay; // Fast streaming for smooth flow
+              }
+              
+              const delay = Math.max(5, baseDelay); // Minimum 5ms for instant streaming
+              
+              animationTimeoutIdRef.current = setTimeout(() => {
+                streamToken(tokenIndex + 1);
+              }, delay);
+            } else {
+              animationTimeoutIdRef.current = null;
+              setIsAnimationDone(true);
+              // Final scroll to ensure we're at the bottom when animation completes
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('chatScrollToBottom'));
+              }, 100);
+              onAnimationComplete?.();
+            }
+          };
+
+          streamToken(0);
+        }, 10); // Start streaming 10ms into fade-in for instant flow
+        
+      }, 600); // Loading indicator duration - Cursor-style processing time
+    }
 
     return () => {
       if (animationTimeoutIdRef.current) {
@@ -439,25 +1084,36 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 
   if (!isAI) {
     return (
-      <div className="flex items-center gap-[18px] w-full bg-[#E7F0FF] px-4 py-2">
-        <Avatar className="w-8 h-8 rounded-full flex-shrink-0">
-          <AvatarImage src="/user-avatar.png" alt="User" />
-          <AvatarFallback className="bg-gray-200">
-            <User className="w-4 h-4 text-gray-600" />
-          </AvatarFallback>
-        </Avatar>
-        <p className="text-[#143F93] text-xs font-medium leading-normal font-['Nunito Sans']">
-          {displayedText}
-        </p>
+      <div className="flex gap-3 items-start py-2">
+        <div className="flex-1 flex flex-col items-end min-w-0">
+          <div className="bg-[#F6F6F6] dark:bg-[#F6F6F6] rounded-lg px-4 py-3 w-fit max-w-[70%]">
+            <p className="text-[#17173A] dark:text-[#17173A] text-sm font-semibold leading-normal font-['Nunito Sans']">
+              {displayedText}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
+
   const iconContainerBgClass = avatarBgClass ? avatarBgClass.split(' ').find(cls => cls.startsWith('bg-')) : 'bg-gray-200';
   const iconFileClass = avatarBgClass ? avatarBgClass.split(' ').find(cls => cls.startsWith('text-')) : 'text-gray-700';
 
+  // Check if we should show thinking animation above the agent component
+  const isSegmentAgent = agentName === "Segment agent" || isSegmentAgentRationale;
+  const shouldShowThinkingAbove = isSegmentAgent && isSegmentAgentThinking;
+
   return (
-    <div className="flex gap-3 items-start py-2">
+    <div>
+      {/* Show thinking animation above the entire message component */}
+      {shouldShowThinkingAbove && (
+        <div className="flex gap-3 items-start py-1 mb-2">
+          <SegmentAgentThinking />
+        </div>
+      )}
+      
+      <div className="flex gap-3 items-start py-2">
       <div className="flex-shrink-0 pt-1">
         <Avatar className={cn("w-8 h-8", (AvatarIconComponent && !avatarSrc) ? iconContainerBgClass : '')}>
           {/* Priority: avatarSrc (SVG) > AvatarIconComponent (Lucide) > dynamicAvatarSrc (GIF) */}
@@ -490,7 +1146,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       </div>
       <div className="flex-1 flex flex-col items-start min-w-0">
         {agentName && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-['Nunito Sans'] font-medium">
             {agentName}
           </p>
         )}
@@ -505,8 +1161,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   <SchedulerAgentCampaignAccordions />
                 ) :
                 /* Segment Agent Rationale */
-                isSegmentAgentRationale && isAnimationDone ? (
-                  <SegmentAgentRationale onContinue={onContinueSegment || (() => {})} />
+                isSegmentAgentRationale ? (
+                  isAnimationDone ? (
+                    <SegmentAgentRationale onContinue={onContinueSegment || (() => {})} />
+                  ) : (
+                    // Show thinking animation before Segment Agent Rationale
+                    isSegmentAgentThinking ? (
+                      <SegmentAgentThinking />
+                    ) : isLoading ? (
+                      <LoadingIndicator />
+                    ) : null
+                  )
                 ) :
                 /* Content Agent Rationale */
                 isContentAgentRationale && isAnimationDone ? (
@@ -535,17 +1200,68 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   <FlowExecutionProgress onComplete={onFlowExecutionComplete} />
                 ) : 
                 /* Default Text Content */
-                displayedText ? (
-                  <div>
-                    <p 
-                        className="text-sm text-[#17173A] dark:text-white leading-normal font-['Nunito Sans'] whitespace-pre-line"
-                        dangerouslySetInnerHTML={{ __html: displayedText }}
-                    />
-                    {/* Executive Summary Content Accordion - only shown for executive summary messages */}
-                    {isExecutiveSummaryWithContent && <ExecutiveSummaryContentAccordion />}
-                  </div>
-                ) : null}
+                (() => {
+                  console.log("🔍 RENDER STATE:", { 
+                    isSegmentAgentThinking, 
+                    isLoading, 
+                    displayedText: !!displayedText, 
+                    isTextVisible,
+                    agentName 
+                  });
+                  
+                  // UPDATED PRIORITY ORDER: Loading > Text Content (thinking is now shown above component)
+                  if (isLoading) {
+                    console.log("🔄 RENDERING LOADING INDICATOR (PRIORITY 1)");
+                    return <LoadingIndicator />;
+                  }
+                  
+                  // Show text content if NOT loading and content is available
+                  if (!isLoading && (displayedText || isTextVisible)) {
+                    console.log("📝 RENDERING TEXT CONTENT (PRIORITY 2)");
+                    return (
+                      <div>
+                        <p 
+                            className="text-sm text-[#17173A] dark:text-white leading-normal font-['Nunito Sans'] font-normal whitespace-pre-line transition-all duration-50 ease-out"
+                            style={{
+                              opacity: textOpacity,
+                              filter: `blur(${textBlur}px)`,
+                              transform: `translateY(${(1 - textOpacity) * 0.5}px)`,
+                              willChange: 'opacity, filter, transform'
+                            }}
+                            dangerouslySetInnerHTML={{ __html: displayedText }}
+                        />
+                        {/* Executive Summary Content Accordion - only shown for executive summary messages */}
+                        {isExecutiveSummaryWithContent && <ExecutiveSummaryContentAccordion />}
+                      </div>
+                    );
+                  }
+                  
+                  console.log("❌ RENDERING NULL - no conditions met");
+                  return null;
+                })()}
             </Card>
+            
+            {/* Feedback icons at bottom-left of AI content (ChatGPT style) - only show after animation completes */}
+            {isAnimationDone && (
+              <div className="flex justify-start w-full mt-2">
+                <div className="flex items-center gap-3 text-gray-400 dark:text-gray-500">
+                  <Button variant="ghost" size="sm" className="p-1 h-auto hover:text-green-600 hover:bg-green-50 focus-visible:ring-0 focus-visible:ring-offset-0">
+                    <ThumbsUp className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="p-1 h-auto hover:text-red-600 hover:bg-red-50 focus-visible:ring-0 focus-visible:ring-offset-0">
+                    <ThumbsDown className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="p-1 h-auto hover:text-gray-600 hover:bg-gray-100 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    onClick={handleCopy}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
         
             {isAnimationDone && (
               <div className="flex items-center justify-between w-full mt-2 pr-1">
@@ -689,26 +1405,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   )}
                   
                 </div>
-                <div className="flex items-center gap-3 text-gray-400 dark:text-gray-500">
-                  <Button variant="ghost" size="sm" className="p-1 h-auto hover:text-green-600 hover:bg-green-50 focus-visible:ring-0 focus-visible:ring-offset-0">
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="p-1 h-auto hover:text-red-600 hover:bg-red-50 focus-visible:ring-0 focus-visible:ring-offset-0">
-                    <ThumbsDown className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="p-1 h-auto hover:text-gray-600 hover:bg-gray-100 focus-visible:ring-0 focus-visible:ring-offset-0"
-                    onClick={handleCopy}
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
               </div>
             )}
         </div>
       </div>
+    </div>
     </div>
   );
 }
