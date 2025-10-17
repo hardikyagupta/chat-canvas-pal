@@ -73,17 +73,17 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
     const newData = { ...currentData };
     const cta = newData[ctaKey];
     if (cta) {
-      cta[field] = value;
+      (cta as any)[field] = value;
       
       if (field === 'buttonType') {
         if (value === 'Website') {
-          delete cta.country;
-          delete cta.phoneNumber;
-          cta.websiteLink = cta.websiteLink || '';
+          (cta as any).country = undefined;
+          (cta as any).phoneNumber = undefined;
+          (cta as any).websiteLink = (cta as any).websiteLink || '';
         } else if (value === 'Call phone number') {
-          delete cta.websiteLink;
-          cta.country = cta.country || '';
-          cta.phoneNumber = cta.phoneNumber || '';
+          (cta as any).websiteLink = undefined;
+          (cta as any).country = (cta as any).country || '';
+          (cta as any).phoneNumber = (cta as any).phoneNumber || '';
         }
       }
     }
@@ -227,7 +227,7 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
                         Country
                       </Label>
                       <Input
-                        value={cta.country || ''}
+                        value={(cta as any).country || ''}
                         onChange={(e) => updateCtaField(ctaKey, 'country', e.target.value)}
                         placeholder="+1"
                         className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"
@@ -238,7 +238,7 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
                         Phone number
                       </Label>
                       <Input
-                        value={cta.phoneNumber || ''}
+                        value={(cta as any).phoneNumber || ''}
                         onChange={(e) => updateCtaField(ctaKey, 'phoneNumber', e.target.value)}
                         placeholder="800-555-0199"
                         className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"

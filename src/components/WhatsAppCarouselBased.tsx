@@ -137,17 +137,17 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
     if (itemIndex !== -1) {
       const cta = newData.items[itemIndex][ctaKey];
       if (cta) {
-        cta[field] = value;
+        (cta as any)[field] = value;
         
         if (field === 'buttonType') {
           if (value === 'Website') {
-            delete cta.country;
-            delete cta.phoneNumber;
-            cta.websiteLink = cta.websiteLink || '';
+            (cta as any).country = undefined;
+            (cta as any).phoneNumber = undefined;
+            (cta as any).websiteLink = (cta as any).websiteLink || '';
           } else if (value === 'Call phone number') {
-            delete cta.websiteLink;
-            cta.country = cta.country || '';
-            cta.phoneNumber = cta.phoneNumber || '';
+            (cta as any).websiteLink = undefined;
+            (cta as any).country = (cta as any).country || '';
+            (cta as any).phoneNumber = (cta as any).phoneNumber || '';
           }
         }
       }
