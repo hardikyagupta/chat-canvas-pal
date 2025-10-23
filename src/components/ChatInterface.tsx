@@ -1531,7 +1531,7 @@ The content has been updated across all channels to reflect your changes.`;
                       <AvatarFallback className="bg-gray-200 text-gray-600">CM</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-foreground/90 mb-4 text-sm">Hello, Amit! Try these suggestions or just type in a few key words to get started!</p>
+                      <p className="text-foreground/90 mb-4 text-sm">Hello! Try these suggestions or just type in a few key words to get started!</p>
                       {selectedMode === 'collaborative' ? [
                         "Help me create a campaign for valentine\'s day",
                         "Find the top 5 and bottom 5 campaigns in the last 30 days. Show success rates and patterns behind high and low performance.",
