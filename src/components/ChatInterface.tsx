@@ -1208,7 +1208,7 @@ The content has been updated across all channels to reflect your changes.`;
             <path d="M8.644 21.42a10 10 0 0 0 7.631-.38"></path>
           </svg>
         </Button>
-        <Button variant="ghost" size="icon" className="p-1.5 hover:bg-muted rounded-md" title="Toggle Theme">
+        <Button variant="ghost" size="icon" className="p-1.5 hover:bg-muted rounded-md" title="Toggle theme">
           <ThemeToggle />
         </Button>
         <Button variant="ghost" size="icon" className="p-1.5 hover:bg-muted rounded-md" onClick={() => setIsExpanded(false)} title="Minimize">
