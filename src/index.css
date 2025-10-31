@@ -131,3 +131,44 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-border/70 rounded hover:bg-border;
 }
+
+/* Thinking text shimmer - gradient moves across the text */
+.thinking-shimmer-gradient {
+  background: linear-gradient(
+    to right,
+    #737373 0%,
+    #737373 40%,
+    #171717 50%,
+    #737373 60%,
+    #737373 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmerMove 2.5s ease-in-out infinite;
+}
+
+.dark .thinking-shimmer-gradient {
+  background: linear-gradient(
+    to right,
+    #737373 0%,
+    #737373 40%,
+    #d4d4d4 50%,
+    #737373 60%,
+    #737373 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes shimmerMove {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

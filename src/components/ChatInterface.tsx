@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 // Lucide icons for various UI elements
-import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, Users, Trash2, Info, ChevronDown, StopCircle, Zap, MoreVertical } from 'lucide-react';
+import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, Users, Trash2, Info, ChevronDown, StopCircle, Zap, MoreVertical, ArrowDown } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SystemMessage from './SystemMessage';
@@ -65,6 +65,10 @@ interface ChatMessageData {
   onContinueSegment?: () => void;
   onRefineThis?: () => void;
   updatedContent?: any; // New field to store updated content
+  // Thinking state specific
+  isThinkingState?: boolean;
+  thinkingDuration?: number;
+  reasoningSteps?: string[];
 }
 
 // Props for the main ChatInterface component
@@ -80,6 +84,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isMockAgentChatActive, setIsMockAgentChatActive] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const [mockChatCompleted, setMockChatCompleted] = useState(false); // New state
   const [contentApproved, setContentApproved] = useState(false); // New state for content approval
   const [segmentsApproved, setSegmentsApproved] = useState(false); // New state for segments approval
@@ -263,24 +268,65 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setShowScrollButton(false); // Hide button after scrolling
   };
 
+  // Detect if user is near bottom of chat and show/hide scroll button
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const chatContainer = chatContainerRef.current;
+    if (!chatContainer) return;
 
-  // Listen for scroll events during text streaming
-  useEffect(() => {
-    const handleScrollToBottom = () => {
-      scrollToBottom();
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainer;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShowScrollButton(!isNearBottom);
     };
 
-    window.addEventListener('chatScrollToBottom', handleScrollToBottom);
+    chatContainer.addEventListener('scroll', handleScroll);
     
-    return () => {
-      window.removeEventListener('chatScrollToBottom', handleScrollToBottom);
-    };
+    return () => chatContainer.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Monitor content changes and show scroll button when content overflows
+  useEffect(() => {
+    const chatContainer = chatContainerRef.current;
+    if (!chatContainer) return;
+
+    const checkScrollButton = () => {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainer;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      
+      // Show button if content exceeds viewport and user is not at bottom
+      if (scrollHeight > clientHeight && !isNearBottom) {
+        setShowScrollButton(true);
+      } else if (isNearBottom) {
+        setShowScrollButton(false);
+      }
+    };
+
+    // Use MutationObserver to detect when content changes (including typing animation)
+    const observer = new MutationObserver(() => {
+      checkScrollButton();
+    });
+
+    // Observe the messages container for any changes
+    const messagesContainer = chatContainer.querySelector('.space-y-4');
+    if (messagesContainer) {
+      observer.observe(messagesContainer, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: false
+      });
+    }
+
+    // Also check on initial messages load
+    checkScrollButton();
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [messages]);
 
   const stopMockConversation = () => {
     setIsMockAgentChatActive(false); 
@@ -609,6 +655,20 @@ The content has been updated across all channels to reflect your changes.`;
             isExecutiveSummaryWithContent: true
           }
         ] : [
+        // Thinking state before Co-Marketer responds
+        {
+          type: 'chat',
+          isAI: true,
+          content: '',
+          isThinkingState: true,
+          thinkingDuration: 3,
+          reasoningSteps: [
+            "Analyzing campaign requirements for Valentine's Day",
+            "Identifying key information needed for effective targeting",
+            "Preparing strategic questions to gather campaign details",
+            "Structuring questionnaire for optimal campaign planning"
+          ]
+        },
         // Add the questionnaire flow to collaborative mode as well
         { 
           agentId: coMarketer?.id, 
@@ -618,7 +678,7 @@ The content has been updated across all channels to reflect your changes.`;
           content: "I'll help you design a Valentine's Day perfume campaign. To create the most effective campaign, I need some additional information:\n\n<strong>1. Campaign Goals:</strong>\n• What are your primary objectives? (e.g., increase sales, brand awareness, etc.)\n• Do you have specific revenue or sales targets?\n\n<strong>2. Product Details:</strong>\n• Which perfume brands/collections are you promoting?\n• What is the price range of the perfumes?\n• Are there any special Valentine's Day offers or bundles?\n\n<strong>3. Target Audience:</strong>\n• Are you targeting specific age groups?\n• Any specific gender focus (men buying for women, women for men, or both)?\n• Geographic location for the campaign?\n\n<strong>4. Campaign Duration:</strong>\n• When would you like to start the campaign?\n• How long do you want to run it? (typically Valentine's campaigns start 2-3 weeks before February 14th)\n\n<strong>5. Budget and Resources:</strong>\n• Do you have a specific marketing budget?\n• Which marketing channels would you like to use? (email, social media, etc.)\n\nPlease provide as much information as possible so I can help create a targeted and effective Valentine's Day campaign.", 
           avatarIcon: coMarketer?.icon, 
           avatarBgClass: coMarketer?.colorClass,
-          waitForUserInput: true // Special flag to pause and wait for user input
+          waitForUserInput: true // Wait for user to type and send something
         },
         // After user input, continue with collaborative flow starting with "This looks like a good campaign..."
         { agentId: coMarketer?.id, type: 'chat', isAI: true, agentName: coMarketer?.name, content: "This looks like a good project. <strong>Segment specialist</strong>, can you help identify the best audience segments for this campaign?", avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass },
@@ -783,6 +843,9 @@ The content has been updated across all channels to reflect your changes.`;
             isSegmentAgentRationale: currentMessageDef.isSegmentAgentRationale,
             isContentAgentRationale: currentMessageDef.isContentAgentRationale,
             isExecutiveSummaryWithContent: currentMessageDef.isExecutiveSummaryWithContent,
+            isThinkingState: currentMessageDef.isThinkingState,
+            thinkingDuration: currentMessageDef.thinkingDuration,
+            reasoningSteps: currentMessageDef.reasoningSteps,
             onAnimationComplete: () => {
               // Clear previous timeout before setting a new one
               if (mockMessageTimeoutRef.current) {
@@ -848,6 +911,9 @@ The content has been updated across all channels to reflect your changes.`;
             isSegmentAgentRationale: currentMessageDef.isSegmentAgentRationale,
             isContentAgentRationale: currentMessageDef.isContentAgentRationale,
             isExecutiveSummaryWithContent: currentMessageDef.isExecutiveSummaryWithContent,
+            isThinkingState: currentMessageDef.isThinkingState,
+            thinkingDuration: currentMessageDef.thinkingDuration,
+            reasoningSteps: currentMessageDef.reasoningSteps,
             onAnimationComplete: () => {
               // Clear previous timeout before setting a new one
               if (mockMessageTimeoutRef.current) {
@@ -933,9 +999,9 @@ The content has been updated across all channels to reflect your changes.`;
     } else if (selectedMode === 'collaborative' && isMockAgentChatActive) {
       // In collaborative mode and waiting for user input, handle different types of waiting states
       
-      // Check if the first message in the collaborative flow is waiting for user input (questionnaire)
-      const firstMessage = mockMessagesDefinitionRef.current[0];
-      if (firstMessage && firstMessage.waitForUserInput && !firstMessage.isSegmentAgentRationale) {
+      // Check if the questionnaire message (index 1, after thinking state at index 0) is waiting for user input
+      const questionnaireMessage = mockMessagesDefinitionRef.current[1];
+      if (questionnaireMessage && questionnaireMessage.waitForUserInput && !questionnaireMessage.isSegmentAgentRationale) {
         // Add the predefined collaborative response for questionnaire
         const collaborativeResponse: ChatMessageData = {
           type: 'chat',
@@ -951,9 +1017,10 @@ The content has been updated across all channels to reflect your changes.`;
           return updatedMessages;
         });
         
-        // Continue the collaborative flow from the next message (index 1, since index 0 was the question)
+        // Continue the collaborative flow from the next message 
+        // Index 0 is thinking state, Index 1 is questionnaire, so continue from Index 2
         setTimeout(() => {
-          addNextMockMessageRef.current(1);
+          addNextMockMessageRef.current(2);
         }, 1000);
       } else {
         // Check if we're waiting for segment agent rationale continuation
@@ -1688,6 +1755,9 @@ The content has been updated across all channels to reflect your changes.`;
                       updatedContent={message.updatedContent}
                       onAnimationComplete={message.onAnimationComplete}
                       promptTemplateExists={promptTemplateExists}
+                      isThinkingState={message.isThinkingState}
+                      thinkingDuration={message.thinkingDuration}
+                      reasoningSteps={message.reasoningSteps}
                     />
                   )
                 ))}
@@ -1695,7 +1765,30 @@ The content has been updated across all channels to reflect your changes.`;
               </div>
             </div>
 
-
+            {/* Floating Scroll to Bottom Button - Positioned relative to parent chat container */}
+            {showScrollButton && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={scrollToBottom}
+                      size="icon"
+                      className={cn(
+                        "absolute right-6 h-10 w-10 rounded-full shadow-lg z-50 bg-white dark:bg-white border-[1.5px] hover:bg-gray-50 dark:hover:bg-gray-50",
+                        isExpanded ? "bottom-[112px]" : "bottom-[106px]"
+                      )}
+                      style={{ borderColor: '#DDE2EE' }}
+                      aria-label="Scroll to latest"
+                    >
+                      <ArrowDown className="h-4 w-4 text-gray-700" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    <p>Scroll to latest</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
 
             <div className={cn(
               "bg-background border-t border-border shadow-footer backdrop-blur-sm flex-shrink-0",

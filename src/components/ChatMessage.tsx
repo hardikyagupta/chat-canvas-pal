@@ -19,6 +19,7 @@ import { SchedulerAgentCampaignAccordions } from './SchedulerAgentCampaignAccord
 import { SegmentAgentRationale } from './SegmentAgentRationale';
 import { ContentAgentRationale } from './ContentAgentRationale';
 import { ExecutiveSummaryContentAccordion } from './ExecutiveSummaryContentAccordion';
+import { ThinkingState } from './ThinkingState';
 
 // Loading indicator component with Cursor-style processing dots
 const LoadingIndicator: React.FC = () => {
@@ -430,6 +431,10 @@ interface ChatMessageProps {
   onDiscardChanges?: () => void; // New prop for discard action
   updatedContent?: any; // New prop to pass updated content
   promptTemplateExists?: boolean; // New prop for prompt template existence toggle
+  // Thinking state specific
+  isThinkingState?: boolean;
+  thinkingDuration?: number;
+  reasoningSteps?: string[];
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -472,6 +477,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   onDiscardChanges,
   updatedContent,
   promptTemplateExists = true,
+  isThinkingState = false,
+  thinkingDuration = 3,
+  reasoningSteps,
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isAnimationDone, setIsAnimationDone] = useState(false);
@@ -518,8 +526,15 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       animate, 
       content: content?.substring(0, 100) + "...",
       isSegmentAccordion,
-      hasTable: content?.includes('<table')
+      hasTable: content?.includes('<table'),
+      isThinkingState
     });
+    
+    // Skip all animation logic for thinking state messages
+    if (isThinkingState) {
+      return;
+    }
+    
     setIsAnimationDone(false);
     setIsLoading(false);
     setIsTextVisible(false);
@@ -614,73 +629,66 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       setIsLoading(false);
       setTextOpacity(0);
       
-      // Start thinking animation
-      setIsSegmentAgentThinking(true);
-      console.log("🎯 isSegmentAgentThinking state set to:", true);
-      
-      // Immediate scroll to keep content visible when thinking starts
+      // Immediate scroll to keep content visible
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('chatScrollToBottom'));
       }, 100);
       
+      // Show Cursor-style processing dots (400ms) - brief loading
+      setIsLoading(true);
+      
       animationTimeoutIdRef.current = setTimeout(() => {
-        console.log("✅ Segment Agent Thinking complete, starting loading dots...");
-        setIsSegmentAgentThinking(false);
+        console.log("✅ Loading complete, showing content...");
+        setIsLoading(false);
+        setIsTextVisible(true);
         
-        // Phase 2: Show Cursor-style processing dots (400ms) - brief loading
-        setIsLoading(true);
-        
-        animationTimeoutIdRef.current = setTimeout(() => {
-          setIsLoading(false);
-          setIsTextVisible(true);
+        // Start blur/fade-in effect (60ms) - ultra-fast for instant "pop" streaming
+        let fadeProgress = 0;
+        const fadeInterval = setInterval(() => {
+          fadeProgress += 0.33; // 3 steps over 60ms for instant animation
+          if (fadeProgress >= 1) {
+            fadeProgress = 1;
+            clearInterval(fadeInterval);
+          }
           
-          // Phase 3: Start blur/fade-in effect (60ms) - ultra-fast for instant "pop" streaming
-          let fadeProgress = 0;
-          const fadeInterval = setInterval(() => {
-            fadeProgress += 0.33; // 3 steps over 60ms for instant animation
-            if (fadeProgress >= 1) {
-              fadeProgress = 1;
-              clearInterval(fadeInterval);
+          // Quick ease-in-out curve for instant appearance
+          const easedProgress = 0.5 * (1 - Math.cos(fadeProgress * Math.PI));
+          setTextOpacity(easedProgress);
+          setTextBlur(1.5 * (1 - easedProgress)); // Minimal blur for instant effect
+        }, 20);
+
+        // Start instant token streaming immediately
+        setTimeout(() => {
+          let displayedTokens = '';
+          
+          const streamToken = (tokenIndex: number) => {
+            const currentToken = tokens[tokenIndex];
+            
+            // Detect special table tokens for enhanced delays FIRST
+            const isTableSectionBreak = currentToken === 'TABLE_SECTION_BREAK';
+            const isTableRowBreak = currentToken === 'TABLE_ROW_BREAK';
+            
+            // Skip timing marker tokens - they are only for delays, not display
+            if (isTableSectionBreak) {
+              // Skip rendering section breaks, just add delay
+              const baseDelay = 200 + Math.random() * 100; // 200-300ms pause between table sections
+              setTimeout(() => {
+                streamToken(tokenIndex + 1);
+              }, baseDelay);
+              return; // Skip to next token without displaying
+            } else if (isTableRowBreak) {
+              // Skip rendering row breaks, just add delay  
+              const baseDelay = 50 + Math.random() * 50; // 50-100ms pause between table rows
+              setTimeout(() => {
+                streamToken(tokenIndex + 1);
+              }, baseDelay);
+              return; // Skip to next token without displaying
             }
             
-            // Quick ease-in-out curve for instant appearance
-            const easedProgress = 0.5 * (1 - Math.cos(fadeProgress * Math.PI));
-            setTextOpacity(easedProgress);
-            setTextBlur(1.5 * (1 - easedProgress)); // Minimal blur for instant effect
-          }, 20);
-
-          // Phase 4: Start instant token streaming immediately
-          setTimeout(() => {
-            let displayedTokens = '';
-            
-            const streamToken = (tokenIndex: number) => {
-              const currentToken = tokens[tokenIndex];
-              
-              // Detect special table tokens for enhanced delays FIRST
-              const isTableSectionBreak = currentToken === 'TABLE_SECTION_BREAK';
-              const isTableRowBreak = currentToken === 'TABLE_ROW_BREAK';
-              
-              // Skip timing marker tokens - they are only for delays, not display
-              if (isTableSectionBreak) {
-                // Skip rendering section breaks, just add delay
-                const baseDelay = 200 + Math.random() * 100; // 200-300ms pause between table sections
-                setTimeout(() => {
-                  streamToken(tokenIndex + 1);
-                }, baseDelay);
-                return; // Skip to next token without displaying
-              } else if (isTableRowBreak) {
-                // Skip rendering row breaks, just add delay  
-                const baseDelay = 50 + Math.random() * 50; // 50-100ms pause between table rows
-                setTimeout(() => {
-                  streamToken(tokenIndex + 1);
-                }, baseDelay);
-                return; // Skip to next token without displaying
-              }
-              
-              // Add entire token instantly - NO character-by-character animation
-              // Each token (word, punctuation, space) appears as a complete chunk
-              displayedTokens += currentToken;
-              setDisplayedText(displayedTokens);
+            // Add entire token instantly - NO character-by-character animation
+            // Each token (word, punctuation, space) appears as a complete chunk
+            displayedTokens += currentToken;
+            setDisplayedText(displayedTokens);
 
               // Enhanced auto-scroll: scroll to keep new content visible as it streams
               if (currentToken.includes('\n') || tokenIndex % 3 === 0) {
@@ -735,8 +743,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           }, 10); // Start streaming 10ms into fade-in for instant flow
           
         }, 400); // Loading indicator duration for segment agent
-        
-      }, 2000); // Segment Agent Thinking duration - 2 seconds like modern AI
       
     } else {
       // Regular flow for non-segment agents
@@ -851,7 +857,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         animationTimeoutIdRef.current = null;
       }
     };
-  }, [content, isAI, animationSpeed, onAnimationComplete, animate]);
+  }, [content, isAI, animationSpeed, onAnimationComplete, animate, isThinkingState]);
 
   useEffect(() => {
     let playTimeoutId: NodeJS.Timeout | undefined;
@@ -1100,19 +1106,23 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const iconContainerBgClass = avatarBgClass ? avatarBgClass.split(' ').find(cls => cls.startsWith('bg-')) : 'bg-gray-200';
   const iconFileClass = avatarBgClass ? avatarBgClass.split(' ').find(cls => cls.startsWith('text-')) : 'text-gray-700';
 
+  // Render ThinkingState component if this is a thinking state message
+  if (isThinkingState) {
+    console.log("🤔 Rendering ThinkingState component", { thinkingDuration, reasoningSteps: reasoningSteps?.length });
+    return (
+      <ThinkingState
+        thinkingDuration={thinkingDuration}
+        reasoningSteps={reasoningSteps}
+        onComplete={onAnimationComplete}
+      />
+    );
+  }
+
   // Check if we should show thinking animation above the agent component
   const isSegmentAgent = agentName === "Segment agent" || isSegmentAgentRationale;
-  const shouldShowThinkingAbove = isSegmentAgent && isSegmentAgentThinking;
 
   return (
     <div>
-      {/* Show thinking animation above the entire message component */}
-      {shouldShowThinkingAbove && (
-        <div className="flex gap-3 items-start py-1 mb-2">
-          <SegmentAgentThinking />
-        </div>
-      )}
-      
       <div className="flex gap-3 items-start py-2">
       <div className="flex-shrink-0 pt-1">
         <Avatar className={cn("w-8 h-8", (AvatarIconComponent && !avatarSrc) ? iconContainerBgClass : '')}>
@@ -1164,14 +1174,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 isSegmentAgentRationale ? (
                   isAnimationDone ? (
                     <SegmentAgentRationale onContinue={onContinueSegment || (() => {})} />
-                  ) : (
-                    // Show thinking animation before Segment Agent Rationale
-                    isSegmentAgentThinking ? (
-                      <SegmentAgentThinking />
-                    ) : isLoading ? (
-                      <LoadingIndicator />
-                    ) : null
-                  )
+                  ) : isLoading ? (
+                    <LoadingIndicator />
+                  ) : null
                 ) :
                 /* Content Agent Rationale */
                 isContentAgentRationale && isAnimationDone ? (
