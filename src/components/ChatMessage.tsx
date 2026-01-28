@@ -1091,7 +1091,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   if (!isAI) {
     return (
       <div className="flex justify-end w-full py-2">
-        <div className="bg-[#F9FAFB] dark:bg-[#F9FAFB] rounded-lg px-4 py-3 w-[60%]">
+        <div className="bg-[#F9FAFB] dark:bg-[#F9FAFB] rounded-lg px-4 py-3 w-fit max-w-[60%]">
           <p className="text-[#17173A] dark:text-[#17173A] text-sm font-semibold leading-[24px] font-['Nunito Sans']">
             {displayedText}
           </p>

@@ -1622,7 +1622,7 @@ The content has been updated across all channels to reflect your changes.`;
         {/* Main content area: Layout changes based on view mode */}
         <div className={cn(
           "flex flex-1 overflow-hidden",
-          isExpanded ? "flex-row pt-4" : "flex-col"
+          isExpanded ? "flex-row pt-0" : "flex-col"
         )}>
           {/* Conditional rendering of AppSidebar (Bookmarks/History) in expanded view */}
           {isExpanded && activeSidebar === 'bookmarks' && (
@@ -1653,7 +1653,7 @@ The content has been updated across all channels to reflect your changes.`;
               {/* Centered container for chat content - 768px width as per Figma */}
               <div className={cn(
                 "flex flex-col items-center w-full h-full",
-                isExpanded ? "pt-0" : "",
+                isExpanded ? "pt-2" : "",
                 messages.length === 0 ? "justify-center" : ""
               )}>
                 <div className={cn(
