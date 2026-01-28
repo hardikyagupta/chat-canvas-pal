@@ -172,3 +172,88 @@
     background-position: -200% 0;
   }
 }
+
+/* Chat message content styling - matching Figma design specs */
+.text-sm p {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+  margin: 0;
+  padding: 0;
+}
+
+.text-sm strong,
+.text-sm b {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: 0.42px;
+  display: block;
+  margin: 0;
+}
+
+.text-sm ul,
+.text-sm ol {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+  margin-left: 21px;
+  margin: 0;
+}
+
+.text-sm li {
+  margin-bottom: 0;
+  line-height: 22px;
+}
+
+.text-sm h1,
+.text-sm h2,
+.text-sm h3 {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: 0.42px;
+  margin: 0;
+}
+
+.text-sm h4,
+.text-sm h5,
+.text-sm h6 {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0.42px;
+  margin: 0;
+}
+
+.text-sm em,
+.text-sm i {
+  font-style: italic;
+}
+
+/* Thought indicator styling */
+.thought-indicator {
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0.42px;
+  color: #6f6f8d;
+}
+
+/* Table styling - 4px border radius */
+.text-sm .table-wrapper {
+  border-radius: 4px;
+  overflow: hidden;
+  display: block;
+}
+
+.text-sm .table-wrapper table {
+  margin: 0;
+  display: table;
+}

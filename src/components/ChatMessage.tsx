@@ -1090,13 +1090,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 
   if (!isAI) {
     return (
-      <div className="flex gap-3 items-start py-2">
-        <div className="flex-1 flex flex-col items-end min-w-0">
-          <div className="bg-[#F6F6F6] dark:bg-[#F6F6F6] rounded-lg px-4 py-3 w-fit max-w-[70%]">
-            <p className="text-[#17173A] dark:text-[#17173A] text-sm font-semibold leading-normal font-['Nunito Sans']">
-              {displayedText}
-            </p>
-          </div>
+      <div className="flex justify-end w-full py-2">
+        <div className="bg-[#F9FAFB] dark:bg-[#F9FAFB] rounded-lg px-4 py-3 w-[60%]">
+          <p className="text-[#17173A] dark:text-[#17173A] text-sm font-semibold leading-[24px] font-['Nunito Sans']">
+            {displayedText}
+          </p>
         </div>
       </div>
     );
@@ -1121,132 +1119,161 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   // Check if we should show thinking animation above the agent component
   const isSegmentAgent = agentName === "Segment agent" || isSegmentAgentRationale;
 
+  // Helper function to split HTML content into individual blocks for separate py-2 wrapping
+  const splitIntoBlocks = (html: string): string[] => {
+    if (!html) return [];
+    
+    // Create a temporary div to parse HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    const blocks: string[] = [];
+    const nodes = Array.from(tempDiv.childNodes);
+    
+    nodes.forEach((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        // It's an HTML element (strong, table, ul, etc.)
+        const element = node as Element;
+        // Wrap tables in a container div for border-radius support
+        if (element.tagName.toLowerCase() === 'table') {
+          blocks.push(`<div class="table-wrapper">${element.outerHTML}</div>`);
+        } else {
+          blocks.push(element.outerHTML);
+        }
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        // It's a text node - split by double line breaks and create paragraphs
+        const text = node.textContent || '';
+        const paragraphs = text.split(/\n\n+/).map(p => p.trim()).filter(p => p);
+        paragraphs.forEach(para => {
+          if (para) {
+            blocks.push(`<p>${para}</p>`);
+          }
+        });
+      }
+    });
+    
+    // If no blocks created, return original as single block
+    if (blocks.length === 0 && html.trim()) {
+      return [html];
+    }
+    
+    return blocks;
+  };
+
   return (
-    <div>
-      <div className="flex gap-3 items-start py-2">
-      <div className="flex-shrink-0 pt-1">
-        <Avatar className={cn("w-8 h-8", (AvatarIconComponent && !avatarSrc) ? iconContainerBgClass : '')}>
-          {/* Priority: avatarSrc (SVG) > AvatarIconComponent (Lucide) > dynamicAvatarSrc (GIF) */}
-          {avatarSrc ? (
-            <>
-              <AvatarImage
-                src={avatarSrc}
-                alt={agentName || "AI Assistant"}
-              />
-              <AvatarFallback className={cn("uppercase", iconContainerBgClass, iconFileClass, 'rounded-lg')}>
-                {agentName ? agentName.substring(0, 2) : "AI"}
-              </AvatarFallback>
-            </>
-          ) : AvatarIconComponent ? (
-            <AvatarFallback className={cn("flex items-center justify-center w-full h-full", iconContainerBgClass, iconFileClass, 'rounded-lg')}>
-              <AvatarIconComponent className={cn("w-5 h-5")} />
-            </AvatarFallback>
-          ) : (
-            <>
-              <AvatarImage
-                src={dynamicAvatarSrc || undefined}
-                alt={agentName || "AI Assistant"}
-              />
-              <AvatarFallback className={cn("uppercase", iconContainerBgClass, iconFileClass, 'rounded-lg')}>
-                {agentName ? agentName.substring(0, 2) : "AI"}
-              </AvatarFallback>
-            </>
-          )}
-        </Avatar>
-      </div>
-      <div className="flex-1 flex flex-col items-start min-w-0">
-        {agentName && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-['Nunito Sans'] font-medium">
-            {agentName}
-          </p>
-        )}
-        <div className="p-0 flex flex-col items-start gap-[4px] w-full">
-            <Card className="p-4 w-full dark:bg-[#343538] dark:shadow-[0_5px_10px_rgba(23,23,58,0.05)] rounded-lg bg-white border border-[#DDE2EE] dark:border-transparent shadow-[0_5px_10px_rgba(23,23,58,0.05)]">
-                {/* Segment Accordion - Highest Priority */}
-                {isSegmentAccordion ? (
-                  <ContentAgentSegmentAccordions />
-                ) :
-                /* Scheduler Accordion */
-                isSchedulerAccordion ? (
-                  <SchedulerAgentCampaignAccordions />
-                ) :
-                /* Segment Agent Rationale */
-                isSegmentAgentRationale ? (
-                  isAnimationDone ? (
-                    <SegmentAgentRationale onContinue={onContinueSegment || (() => {})} />
-                  ) : isLoading ? (
-                    <LoadingIndicator />
-                  ) : null
-                ) :
-                /* Content Agent Rationale */
-                isContentAgentRationale && isAnimationDone ? (
-                  <ContentAgentRationale onContinue={onContinueSegment || (() => {})} onRefineThis={onRefineThis || (() => {})} />
-                ) :
-                /* Content Agent Question Choice */
-                isContentAgentQuestionChoice && isAnimationDone ? (
-                  <ContentAgentQuestionChoice />
-                ) :
-                /* Other Component Conditions */
-                isContentAgentClarification && isAnimationDone ? (
-                  <ContentAgentClarification 
-                    onGenerateContent={onGenerateContent || (() => {})} 
-                    promptTemplateExists={promptTemplateExists}
-                  />
-                ) : isContentAgent && isAnimationDone ? (
-                  <ContentAgentResponse 
-                    isPlanMode={isPlanMode}
-                    onContentChanged={handleContentChanged}
-                    onUpdateContent={onUpdateContent}
-                    onDiscardChanges={onDiscardChanges}
-                    updateHandlers={contentUpdateHandlersRef.current}
-                    updatedContent={updatedContent}
-                  />
-                ) : isFlowExecutionProgress && isAnimationDone ? (
-                  <FlowExecutionProgress onComplete={onFlowExecutionComplete} />
-                ) : 
-                /* Default Text Content */
-                (() => {
-                  console.log("🔍 RENDER STATE:", { 
-                    isSegmentAgentThinking, 
-                    isLoading, 
-                    displayedText: !!displayedText, 
-                    isTextVisible,
-                    agentName 
-                  });
-                  
-                  // UPDATED PRIORITY ORDER: Loading > Text Content (thinking is now shown above component)
-                  if (isLoading) {
-                    console.log("🔄 RENDERING LOADING INDICATOR (PRIORITY 1)");
-                    return <LoadingIndicator />;
-                  }
-                  
-                  // Show text content if NOT loading and content is available
-                  if (!isLoading && (displayedText || isTextVisible)) {
-                    console.log("📝 RENDERING TEXT CONTENT (PRIORITY 2)");
-                    return (
-                      <div>
-                        <p 
-                            className="text-sm text-[#17173A] dark:text-white leading-normal font-['Nunito Sans'] font-normal whitespace-pre-line transition-all duration-50 ease-out"
-                            style={{
-                              opacity: textOpacity,
-                              filter: `blur(${textBlur}px)`,
-                              transform: `translateY(${(1 - textOpacity) * 0.5}px)`,
-                              willChange: 'opacity, filter, transform'
-                            }}
-                            dangerouslySetInnerHTML={{ __html: displayedText }}
-                        />
-                        {/* Executive Summary Content Accordion - only shown for executive summary messages */}
-                        {isExecutiveSummaryWithContent && <ExecutiveSummaryContentAccordion />}
-                      </div>
-                    );
-                  }
-                  
-                  console.log("❌ RENDERING NULL - no conditions met");
-                  return null;
-                })()}
-            </Card>
+    <div className="w-full">
+      <Card className="p-0 w-full dark:bg-transparent dark:shadow-none rounded-none bg-transparent border-0 shadow-none">
+        {/* Segment Accordion - Highest Priority */}
+        {isSegmentAccordion ? (
+          <div className="py-2">
+            <ContentAgentSegmentAccordions />
+          </div>
+        ) :
+        /* Scheduler Accordion */
+        isSchedulerAccordion ? (
+          <div className="py-2">
+            <SchedulerAgentCampaignAccordions />
+          </div>
+        ) :
+        /* Segment Agent Rationale */
+        isSegmentAgentRationale ? (
+          isAnimationDone ? (
+            <div className="py-2">
+              <SegmentAgentRationale onContinue={onContinueSegment || (() => {})} />
+            </div>
+          ) : isLoading ? (
+            <LoadingIndicator />
+          ) : null
+        ) :
+        /* Content Agent Rationale */
+        isContentAgentRationale && isAnimationDone ? (
+          <div className="py-2">
+            <ContentAgentRationale onContinue={onContinueSegment || (() => {})} onRefineThis={onRefineThis || (() => {})} />
+          </div>
+        ) :
+        /* Content Agent Question Choice */
+        isContentAgentQuestionChoice && isAnimationDone ? (
+          <div className="py-2">
+            <ContentAgentQuestionChoice />
+          </div>
+        ) :
+        /* Other Component Conditions */
+        isContentAgentClarification && isAnimationDone ? (
+          <div className="py-2">
+            <ContentAgentClarification 
+              onGenerateContent={onGenerateContent || (() => {})} 
+              promptTemplateExists={promptTemplateExists}
+            />
+          </div>
+        ) : isContentAgent && isAnimationDone ? (
+          <div className="py-2">
+            <ContentAgentResponse 
+              isPlanMode={isPlanMode}
+              onContentChanged={handleContentChanged}
+              onUpdateContent={onUpdateContent}
+              onDiscardChanges={onDiscardChanges}
+              updateHandlers={contentUpdateHandlersRef.current}
+              updatedContent={updatedContent}
+            />
+          </div>
+        ) : isFlowExecutionProgress && isAnimationDone ? (
+          <div className="py-2">
+            <FlowExecutionProgress onComplete={onFlowExecutionComplete} />
+          </div>
+        ) : 
+        /* Default Text Content */
+        (() => {
+          console.log("🔍 RENDER STATE:", { 
+            isSegmentAgentThinking, 
+            isLoading, 
+            displayedText: !!displayedText, 
+            isTextVisible,
+            agentName 
+          });
+          
+          // UPDATED PRIORITY ORDER: Loading > Text Content (thinking is now shown above component)
+          if (isLoading) {
+            console.log("🔄 RENDERING LOADING INDICATOR (PRIORITY 1)");
+            return <LoadingIndicator />;
+          }
+          
+          // Show text content if NOT loading and content is available
+          if (!isLoading && (displayedText || isTextVisible)) {
+            console.log("📝 RENDERING TEXT CONTENT (PRIORITY 2)");
             
-            {/* Feedback icons at bottom-left of AI content (ChatGPT style) - only show after animation completes */}
+            // Split content into individual blocks
+            const contentBlocks = splitIntoBlocks(displayedText);
+            
+            return (
+              <div className="text-sm">
+                {contentBlocks.map((block, index) => (
+                  <div 
+                    key={index} 
+                    className="py-2 text-[#17173A] dark:text-white leading-[22px] font-['Nunito Sans'] font-normal whitespace-pre-line transition-all duration-50 ease-out"
+                    style={{
+                      opacity: textOpacity,
+                      filter: `blur(${textBlur}px)`,
+                      transform: `translateY(${(1 - textOpacity) * 0.5}px)`,
+                      willChange: 'opacity, filter, transform'
+                    }}
+                    dangerouslySetInnerHTML={{ __html: block }}
+                  />
+                ))}
+                {/* Executive Summary Content Accordion - only shown for executive summary messages */}
+                {isExecutiveSummaryWithContent && (
+                  <div className="py-2">
+                    <ExecutiveSummaryContentAccordion />
+                  </div>
+                )}
+              </div>
+            );
+          }
+          
+          console.log("❌ RENDERING NULL - no conditions met");
+          return null;
+        })()}
+            
+        {/* Feedback icons at bottom-left of AI content (ChatGPT style) - only show after animation completes */}
             {isAnimationDone && (
               <div className="flex justify-start w-full mt-2">
                 <div className="flex items-center gap-3 text-gray-400 dark:text-gray-500">
@@ -1412,9 +1439,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 </div>
               </div>
             )}
-        </div>
-      </div>
-    </div>
+      </Card>
     </div>
   );
 }

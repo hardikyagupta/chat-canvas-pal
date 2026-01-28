@@ -2,7 +2,7 @@ import React, { useState, useRef, KeyboardEvent, CSSProperties, useEffect } from
 import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Send, StopCircle } from 'lucide-react';
+import { ArrowUp, StopCircle } from 'lucide-react';
 import { marketingAgents, MarketingAgent } from '@/data/agents';
 import { cn } from "@/lib/utils";
 
@@ -176,7 +176,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSend, isMockAgentChatActive, on
           placeholder="Type your message..."
           disabled={isQuestionnaireActive}
           className={cn(
-            "w-full pl-4 pr-12 py-3 rounded-md border border-[#DDE2EE] dark:border-input-border dark:bg-input focus:outline-none focus:ring-1 focus:ring-[#007BFF] dark:focus:ring-ring transition-shadow text-sm placeholder:text-[#6F6F8D] dark:placeholder:text-foreground-muted dark:text-foreground",
+            "w-full h-[56px] pl-4 pr-0 pt-3 pb-3 rounded-lg border border-[#DDE2EE] dark:border-input-border dark:bg-input focus:outline-none focus:ring-1 focus:ring-[#007BFF] dark:focus:ring-ring transition-shadow text-sm placeholder:text-[#6F6F8D] dark:placeholder:text-foreground-muted dark:text-foreground shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)]",
             isQuestionnaireActive && "cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800"
           )}
           autoComplete="off"
@@ -185,10 +185,18 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSend, isMockAgentChatActive, on
           type="button"
           onClick={isMockAgentChatActive ? handleStopClick : handleSendClick}
           disabled={isQuestionnaireActive || (!isMockAgentChatActive && !inputValue.trim())}
-          className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#6F6F8D] dark:text-foreground-muted hover:text-cobalt-blue dark:hover:text-accent disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+          className={cn(
+            "absolute right-3 top-1/2 -translate-y-1/2 rounded-lg w-8 h-8 flex items-center justify-center transition-colors",
+            isMockAgentChatActive 
+              ? "text-[#6F6F8D] dark:text-foreground-muted hover:text-cobalt-blue dark:hover:text-accent" 
+              : inputValue.trim() 
+                ? "bg-[#002D72] text-white hover:bg-[#001f4d]" 
+                : "bg-gray-200 text-gray-400 cursor-not-allowed",
+            isQuestionnaireActive && "opacity-50 cursor-not-allowed"
+          )}
           aria-label={isMockAgentChatActive ? "Stop conversation" : "Send message"}
         >
-          {isMockAgentChatActive ? <StopCircle className="w-4.5 h-4.5" /> : <Send className="w-4.5 h-4.5" />}
+          {isMockAgentChatActive ? <StopCircle className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
         </button>
       </div>
     );
@@ -229,7 +237,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSend, isMockAgentChatActive, on
             placeholder="Type your message or use '@' to mention an agent..."
             disabled={isQuestionnaireActive}
             className={cn(
-              "w-full pl-4 pr-12 py-3 rounded-md border border-[#DDE2EE] dark:border-input-border dark:bg-input focus:outline-none focus:ring-1 focus:ring-[#007BFF] dark:focus:ring-ring transition-shadow text-sm placeholder:text-[#6F6F8D] dark:placeholder:text-foreground-muted dark:text-foreground",
+              "w-full h-[56px] pl-4 pr-0 pt-3 pb-3 rounded-lg border border-[#DDE2EE] dark:border-input-border dark:bg-input focus:outline-none focus:ring-1 focus:ring-[#007BFF] dark:focus:ring-ring transition-shadow text-sm placeholder:text-[#6F6F8D] dark:placeholder:text-foreground-muted dark:text-foreground shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)]",
               isQuestionnaireActive && "cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800"
             )}
             autoComplete="off"
@@ -288,10 +296,18 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSend, isMockAgentChatActive, on
         type="button"
         onClick={isMockAgentChatActive ? handleStopClick : handleSendClick}
         disabled={isQuestionnaireActive || (!isMockAgentChatActive && !inputValue.trim())}
-        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#6F6F8D] dark:text-foreground-muted hover:text-cobalt-blue dark:hover:text-accent disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+        className={cn(
+          "absolute right-3 top-1/2 -translate-y-1/2 rounded-lg w-8 h-8 flex items-center justify-center transition-colors",
+          isMockAgentChatActive 
+            ? "text-[#6F6F8D] dark:text-foreground-muted hover:text-cobalt-blue dark:hover:text-accent" 
+            : inputValue.trim() 
+              ? "bg-[#002D72] text-white hover:bg-[#001f4d]" 
+              : "bg-gray-200 text-gray-400 cursor-not-allowed",
+          isQuestionnaireActive && "opacity-50 cursor-not-allowed"
+        )}
         aria-label={isMockAgentChatActive ? "Stop conversation" : "Send message"}
       >
-        {isMockAgentChatActive ? <StopCircle className="w-4.5 h-4.5" /> : <Send className="w-4.5 h-4.5" />}
+        {isMockAgentChatActive ? <StopCircle className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
       </button>
     </div>
   );

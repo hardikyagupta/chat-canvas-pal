@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 // Lucide icons for various UI elements
-import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, Users, Trash2, Info, ChevronDown, StopCircle, Zap, MoreVertical, ArrowDown } from 'lucide-react';
+import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, Users, Trash2, Info, ChevronDown, StopCircle, MoreVertical, ArrowDown } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SystemMessage from './SystemMessage';
@@ -494,6 +494,9 @@ The content has been updated across all channels to reflect your changes.`;
   };
 
   const handleSendMessage = (message: string) => {
+    console.log("🔍 Message received:", message);
+    console.log("🔍 Lowercase message:", message.toLowerCase().trim());
+    
     const userMessage: ChatMessageData = {
       type: 'chat',
       content: message,
@@ -506,6 +509,13 @@ The content has been updated across all channels to reflect your changes.`;
     const userMessagesCount = messages.filter(m => !m.isAI && m.type === 'chat').length + 1;
     const lowerCaseMessage = message.toLowerCase().trim();
 
+    // Check for CTR/conversion analysis trigger
+    const isCTRAnalysisTrigger = lowerCaseMessage === "which campaigns had the highest ctr but lowest conversions, and what could be the possible reasons?";
+    
+    console.log("🔍 isCTRAnalysisTrigger:", isCTRAnalysisTrigger);
+    console.log("🔍 Expected:", "which campaigns had the highest ctr but lowest conversions, and what could be the possible reasons?");
+    console.log("🔍 Match:", lowerCaseMessage === "which campaigns had the highest ctr but lowest conversions, and what could be the possible reasons?");
+
     // Check for autonomous mode triggers
     const isAutonomousValentinesTrigger = selectedMode === 'autonomous' && 
       lowerCaseMessage === "can you help me create a valentine's day campaign for perfumes";
@@ -513,6 +523,104 @@ The content has been updated across all channels to reflect your changes.`;
     // Check for collaborative mode triggers
     const isCollaborativeValentinesTrigger = selectedMode === 'collaborative' && 
       (lowerCaseMessage === "hi" || lowerCaseMessage === "help me create a campaign for valentine's day");
+
+    if (isCTRAnalysisTrigger) {
+      console.log("✅ CTR Analysis Trigger MATCHED! Starting mock conversation...");
+      setIsMockAgentChatActive(true);
+      setContentApproved(false);
+      setContentGenerated(false);
+      setAutonomousWaitingForInput(false);
+      isMockAgentChatActiveRef.current = true;
+      
+      const coMarketer = marketingAgents.find(agent => agent.id === 'co-marketer');
+
+      const mockMessagesDefinition: (Omit<ChatMessageData, 'onAnimationComplete'> & { agentId?: string })[] = [
+        {
+          type: 'chat',
+          isAI: true,
+          content: '',
+          isThinkingState: true,
+          thinkingDuration: 3,
+          reasoningSteps: [
+            "Analyzing campaign performance metrics",
+            "Identifying CTR vs conversion rate patterns",
+            "Examining channel-specific data",
+            "Evaluating potential conversion bottlenecks"
+          ]
+        },
+        { 
+          agentId: coMarketer?.id, 
+          type: 'chat', 
+          isAI: true, 
+          agentName: coMarketer?.name, 
+          content: `<strong>Executive Summary</strong>\n\nBased on the provided query results, I am unable to provide a meaningful analysis of campaigns with high CTR but low conversion rates, as the sample data shows null values for all key metrics (CTR, conversion rates, and channel-specific data). The query results do not contain the necessary campaign-level data to:\n\n1. Analyze CTR vs conversion rate correlation\n2. Identify specific campaigns with high CTR/low conversion patterns\n3. Determine channel-specific performance variations\n4. Compare metrics across the requested 6-month period (2025-07-28 to 2026-01-28)\n\nTo perform this analysis, we would need campaign-level data containing:\n\n• Campaign-specific CTR values\n• Conversion rates per campaign\n• Channel information\n• Click and conversion metrics over time\n\nNOTE:\nCTR = (Total Clicked / Total Delivered) × 100\nCVR = (Total Conversions / Total Delivered) × 100\n\n<strong>Top 1 Campaigns by CTR</strong>\n\nEmail campaigns demonstrate the highest engagement-to-conversion disparity, with the Holiday Special campaign showing a notable 4.82% CTR but only 0.75% conversion rate. Across all channels, there appears to be a consistent pattern of high click-through rates (3.25-4.82%) paired with relatively low conversion rates (under 1%), suggesting potential issues with landing page effectiveness or offer alignment with customer expectations.\n\n<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; table-layout: fixed; border: 1px solid #e5e7eb; background-color: white;">\n  <thead>\n    <tr>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; background-color: #f2f5f9; color: #64758b; font-weight: bold;">new_campaign_count</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; background-color: #f2f5f9; color: #64758b; font-weight: bold;">sent_new</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; background-color: #f2f5f9; color: #64758b; font-weight: bold;">sent_returning</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">revenue_new</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">revenue_returning</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr style="background-color: white;">\n      <td style="border: 1px solid #e5e7eb; padding: 10px; font-weight: bold; color: #17173a;">233233</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; font-weight: 600; color: #17173a;">12330</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; font-weight: 600; color: #17173a;">12330</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">1231</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">3211</td>\n    </tr>\n  </tbody>\n</table>\n\n<strong>Campaign Performance Analysis</strong>\n\n<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; table-layout: fixed; border: 1px solid #e5e7eb; background-color: white;">\n  <thead>\n    <tr>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; background-color: #f2f5f9; color: #64758b; font-weight: bold; width: 166px;">Campaign Name</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">CTR (%)</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">CVR (%)</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">Channel</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">Send Date</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr style="background-color: white;">\n      <td style="border: 1px solid #e5e7eb; padding: 10px; font-weight: bold; color: #17173a;">Holiday Special</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">4.82</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">0.75</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">Email</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">2025-12-15</td>\n    </tr>\n  </tbody>\n</table>\n\n<strong>Key Insights:</strong>\n\n• Holiday Special campaign shows the highest CTR-CVR gap with 4.82% CTR but only 0.75% conversion rate, indicating potential targeting or landing page issues.\n\n• All top 5 campaigns demonstrate CTR above 3% but conversion rates below 1%, suggesting consistent engagement but conversion bottlenecks.`, 
+          avatarIcon: coMarketer?.icon, 
+          avatarBgClass: coMarketer?.colorClass,
+        }
+      ];
+
+      mockMessagesDefinitionRef.current = mockMessagesDefinition;
+      
+      const processedAgentIdsForJoinMessage = new Set<string>();
+
+      const addNextMockMessage = (index: number) => {
+        if (!isMockAgentChatActiveRef.current) {
+          if (mockMessageTimeoutRef.current) {
+            clearTimeout(mockMessageTimeoutRef.current);
+            mockMessageTimeoutRef.current = null;
+          }
+          return;
+        }
+
+        if (index >= mockMessagesDefinition.length) {
+          setIsMockAgentChatActive(false);
+          setMockChatCompleted(true);
+          if (mockMessageTimeoutRef.current) {
+            clearTimeout(mockMessageTimeoutRef.current);
+            mockMessageTimeoutRef.current = null;
+          }
+          return;
+        }
+
+        const currentMessageDef = mockMessagesDefinition[index];
+        const messageWithCallback: ChatMessageData = {
+          type: currentMessageDef.type,
+          content: currentMessageDef.content,
+          isAI: currentMessageDef.isAI,
+          agentName: currentMessageDef.agentName,
+          avatarSrc: coMarketer?.avatarSrc,
+          avatarIcon: currentMessageDef.avatarIcon,
+          avatarBgClass: currentMessageDef.avatarBgClass,
+          animate: currentMessageDef.animate,
+          animationSpeed: currentMessageDef.animationSpeed,
+          isThinkingState: currentMessageDef.isThinkingState,
+          thinkingDuration: currentMessageDef.thinkingDuration,
+          reasoningSteps: currentMessageDef.reasoningSteps,
+          onAnimationComplete: () => {
+            if (mockMessageTimeoutRef.current) {
+              clearTimeout(mockMessageTimeoutRef.current);
+            }
+            mockMessageTimeoutRef.current = setTimeout(() => {
+              addNextMockMessage(index + 1);
+            }, 500);
+          }
+        };
+        setMessages(prev => [...prev, messageWithCallback]);
+      };
+      
+      addNextMockMessageRef.current = addNextMockMessage;
+
+      if (mockMessageTimeoutRef.current) {
+        clearTimeout(mockMessageTimeoutRef.current);
+        mockMessageTimeoutRef.current = null; 
+      }
+      
+      mockMessageTimeoutRef.current = setTimeout(() => {
+        addNextMockMessage(0);
+      }, 1000);
+      
+      return;
+    }
 
     if (userMessagesCount === 1 && (isAutonomousValentinesTrigger || isCollaborativeValentinesTrigger)) {
       setIsMockAgentChatActive(true); // Set state
@@ -1172,66 +1280,11 @@ The content has been updated across all channels to reflect your changes.`;
 
   // Header for the expanded view
   const ExpandedViewHeader = () => (
-    <div className="p-4 border-b border-border flex items-center justify-between bg-background shadow-sm flex-shrink-0 h-[80px]">
+    <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-background shadow-sm flex-shrink-0 h-[64px]">
       <div className="flex items-center gap-3">
         <div className="flex flex-col pl-3">
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold text-foreground">Co-marketer</h1>
-            
-            {/* Mode toggle - new tab-like implementation */}
-            <div className="flex items-center gap-0 rounded-md border border-border bg-muted p-0.5">
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => handleModeSwitch('collaborative')}
-                      className={cn(
-                        "flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[0.55rem] font-medium transition-all duration-150",
-                        selectedMode === 'collaborative'
-                          ? "bg-background text-blue-600 dark:text-blue-400 shadow-sm"
-                          : "text-muted-foreground hover:bg-background hover:text-foreground"
-                      )}
-                    >
-                      <Users className="w-2.5 h-2.5" /> {/* Original icon: Users */}
-                      Execute
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent 
-                    side="bottom" 
-                    className="bg-black text-white border-black max-w-[200px] text-xs p-2 text-center relative"
-                    sideOffset={6}
-                  >
-                    <div className="absolute top-0 left-1/2 -mt-2 -ml-2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[8px] border-b-black"></div>
-                    <p>Execute mode: Collaborate for full campaign creation and deployment</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => handleModeSwitch('autonomous')}
-                      className={cn(
-                        "flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[0.55rem] font-medium transition-all duration-150",
-                        selectedMode === 'autonomous'
-                          ? "bg-background text-blue-600 dark:text-blue-400 shadow-sm"
-                          : "text-muted-foreground hover:bg-background hover:text-foreground"
-                      )}
-                    >
-                      <Zap className="w-2.5 h-2.5" /> {/* Original icon: Zap */}
-                      Plan
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent 
-                    side="bottom" 
-                    className="bg-black text-white border-black max-w-[200px] text-xs p-2 text-center relative"
-                    sideOffset={6}
-                  >
-                    <div className="absolute top-0 left-1/2 -mt-2 -ml-2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[8px] border-b-black"></div>
-                    <p>Plan mode: Get comprehensive campaign strategies to implement yourself</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
           </div>
           <p className="text-xs text-muted-foreground leading-tight">Your assistant for data-driven success</p>
         </div>
@@ -1250,15 +1303,17 @@ The content has been updated across all channels to reflect your changes.`;
         >
           <Bot className="w-5 h-5 text-muted-foreground" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="p-1.5 hover:bg-muted rounded-md"
-          title="Preferences"
-          onClick={() => window.open('https://www.figma.com/proto/PpMyMSpfteIiBlbsBYryx2/Raman-AI---Co-Marketer---Co-Pilot?page-id=5891:1439&node-id=7073-4874&viewport=-442,2798,0.17&t=3ThX3Yd3gjcwJf8j-1&scaling=contain&content-scaling=responsive&starting-point-node-id=7073:4873&hide-ui=1', '_blank')}
-        >
-          <Settings2 className="w-5 h-5 text-muted-foreground" />
-        </Button>
+        <div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="p-1.5 hover:bg-muted rounded-md"
+            title="Preferences"
+            onClick={() => window.open('https://www.figma.com/proto/PpMyMSpfteIiBlbsBYryx2/Raman-AI---Co-Marketer---Co-Pilot?page-id=5891:1439&node-id=7073-4874&viewport=-442,2798,0.17&t=3ThX3Yd3gjcwJf8j-1&scaling=contain&content-scaling=responsive&starting-point-node-id=7073:4873&hide-ui=1', '_blank')}
+          >
+            <Settings2 className="w-8 h-8 text-muted-foreground" />
+          </Button>
+        </div>
         <Button
           variant="ghost"
           size="icon"
@@ -1545,7 +1600,7 @@ The content has been updated across all channels to reflect your changes.`;
         ref={chatWindowRef} // Attach ref here
         className={cn(
           isExpanded
-            ? "fixed z-50 inset-0 m-auto w-[1416px] max-w-[95vw] h-[776px] max-h-[90vh] bg-background border border-border shadow-2xl rounded-xl flex flex-col overflow-hidden"
+            ? "fixed z-50 inset-3 bg-background border border-border shadow-2xl rounded-xl flex flex-col overflow-hidden"
             // For widget view, if position is null, it uses these classes. If position is set, inline style takes over for pos.
             : "w-[470px] h-[776px] bg-background border border-border shadow-lg rounded-xl flex flex-col overflow-hidden",
             !isExpanded && position && "fixed z-50" // Ensure it's fixed and on top when dragged
@@ -1567,7 +1622,7 @@ The content has been updated across all channels to reflect your changes.`;
         {/* Main content area: Layout changes based on view mode */}
         <div className={cn(
           "flex flex-1 overflow-hidden",
-          isExpanded ? "flex-row" : "flex-col"
+          isExpanded ? "flex-row pt-4" : "flex-col"
         )}>
           {/* Conditional rendering of AppSidebar (Bookmarks/History) in expanded view */}
           {isExpanded && activeSidebar === 'bookmarks' && (
@@ -1587,14 +1642,24 @@ The content has been updated across all channels to reflect your changes.`;
             "flex flex-col flex-1",
             isExpanded ? "overflow-hidden" : "overflow-hidden"
           )}>
+            {/* Scrollable chat messages area */}
             <div
               className={cn(
                 "relative z-0 flex-1 flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
-                isExpanded ? "p-6" : "p-4"
+                isExpanded ? "" : "p-4"
               )}
               ref={chatContainerRef}
             >
-              <div className="mt-auto space-y-4">
+              {/* Centered container for chat content - 768px width as per Figma */}
+              <div className={cn(
+                "flex flex-col items-center w-full h-full",
+                isExpanded ? "pt-0" : "",
+                messages.length === 0 ? "justify-center" : ""
+              )}>
+                <div className={cn(
+                  "flex flex-col items-start w-full space-y-0",
+                  isExpanded ? "w-[768px]" : "w-full"
+                )}>
                 {messages.length === 0 && (
                   <div className="flex gap-3">
                     <Avatar className="w-10 h-10">
@@ -1607,7 +1672,7 @@ The content has been updated across all channels to reflect your changes.`;
                     <div>
                       <p className="text-foreground/90 mb-4 text-sm">Hello! Try these suggestions or just type in a few key words to get started!</p>
                       {selectedMode === 'collaborative' ? [
-                        "Help me create a campaign for valentine\'s day",
+                        "Which campaigns had the highest CTR but lowest conversions, and what could be the possible reasons?",
                         "Find the top 5 and bottom 5 campaigns in the last 30 days. Show success rates and patterns behind high and low performance.",
                         "Tell me the best time slots to send campaigns on APN, WPN, Email, SMS, and WhatsApp for higher engagement.",
                       ].map((suggestion, index) => (
@@ -1619,7 +1684,7 @@ The content has been updated across all channels to reflect your changes.`;
                           <p className="text-primary text-sm">{suggestion}</p>
                         </Card>
                       )) : [
-                        "Can you help me create a valentine's day campaign for perfumes",
+                        "Which campaigns had the highest CTR but lowest conversions, and what could be the possible reasons?",
                         "Find the top 5 and bottom 5 campaigns in the last 30 days. Show success rates and patterns behind high and low performance.",
                         "Tell me the best time slots to send campaigns on APN, WPN, Email, SMS, and WhatsApp for higher engagement.",
                       ].map((suggestion, index) => (
@@ -1762,6 +1827,7 @@ The content has been updated across all channels to reflect your changes.`;
                   )
                 ))}
                 <div ref={messagesEndRef} />
+                </div>
               </div>
             </div>
 
@@ -1791,37 +1857,53 @@ The content has been updated across all channels to reflect your changes.`;
             )}
 
             <div className={cn(
-              "bg-background border-t border-border shadow-footer backdrop-blur-sm flex-shrink-0",
-              isExpanded ? "p-6" : "h-[82px] px-4 py-5"
+              "flex-shrink-0",
+              isExpanded ? "" : "h-[82px] px-4 py-5"
             )}>
-              <ChatInput
-                onSend={handleSendMessage}
-                isMockAgentChatActive={isMockAgentChatActive}
-                onStopMockConversation={stopMockConversation}
-                isQuestionnaireActive={(() => {
-                  const lastMessage = messages[messages.length - 1];
-                  
-                  // If the last message is a content agent response, input should be enabled
-                  if (lastMessage?.isContentAgent) {
-                    return false; // Content agent response phase - input enabled
-                  }
-                  
-                  // Check if we're currently in the clarification phase (questionnaire form)
-                  if (lastMessage?.isContentAgentClarification) {
-                    return true; // Currently filling out questionnaire - input disabled
-                  }
-                  
-                  // Check if we're in rationale phase (creative proposal)
-                  if (lastMessage?.isContentAgentRationale) {
-                    // Rationale phase is a response phase, not an input phase
-                    // User should be able to type messages during creative proposals
-                    return false; // Input enabled during rationale phase
-                  }
-                  
-                  // All other cases - input enabled
-                  return false;
-                })()}
-              />
+              {/* Centered container for chat input - 768px width as per Figma */}
+              <div className={cn(
+                "flex items-center justify-center w-full bg-transparent outline-none",
+                isExpanded ? "pb-2 pt-0" : "pb-2"
+              )}>
+                <div className={cn(
+                  isExpanded ? "w-[768px]" : "w-full"
+                )}>
+                  <ChatInput
+                    onSend={handleSendMessage}
+                    isMockAgentChatActive={isMockAgentChatActive}
+                    onStopMockConversation={stopMockConversation}
+                    isQuestionnaireActive={(() => {
+                      const lastMessage = messages[messages.length - 1];
+                      
+                      // If the last message is a content agent response, input should be enabled
+                      if (lastMessage?.isContentAgent) {
+                        return false; // Content agent response phase - input enabled
+                      }
+                      
+                      // Check if we're currently in the clarification phase (questionnaire form)
+                      if (lastMessage?.isContentAgentClarification) {
+                        return true; // Currently filling out questionnaire - input disabled
+                      }
+                      
+                      // Check if we're in rationale phase (creative proposal)
+                      if (lastMessage?.isContentAgentRationale) {
+                        // Rationale phase is a response phase, not an input phase
+                        // User should be able to type messages during creative proposals
+                        return false; // Input enabled during rationale phase
+                      }
+                      
+                      // All other cases - input enabled
+                      return false;
+                    })()}
+                  />
+                  {/* Centered text below input */}
+                  <div className="flex justify-center mt-2">
+                    <p className="text-sm text-foreground-muted text-center">
+                      Co-marketer can make mistakes. Please double check responses
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
