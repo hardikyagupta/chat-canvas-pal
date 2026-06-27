@@ -4,6 +4,11 @@ import {
 } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const MANROPE = 'Manrope, sans-serif';
+const chartTick = { fontSize: 11, fill: '#6F6F8D', fontFamily: MANROPE };
+const chartLegend = { fontSize: 11, fontFamily: MANROPE };
+const chartTooltip = { fontSize: 12, borderRadius: 8, fontFamily: MANROPE };
+
 // ---- Metric cards (minimal white + outline) ----
 const metrics = [
   { label: 'Total campaigns', value: '50', sub: '6 channels' },
@@ -41,14 +46,14 @@ const formatThousands = (value: number) => {
 
 // ---- Section building blocks ----
 export const MetricCards: React.FC = () => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 gap-[8px]">
+  <div className="grid grid-cols-2 sm:grid-cols-3 gap-[8px] font-['Manrope']">
     {metrics.map((m) => (
       <div
         key={m.label}
         className="border border-[#E5E7EB] bg-white rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[2px]"
       >
         <span className="text-[11px] text-[#6F6F8D] font-medium">{m.label}</span>
-        <span className="text-[20px] font-bold text-[#17173A] leading-tight" style={{ fontFamily: 'Inter, sans-serif' }}>{m.value}</span>
+        <span className="text-[20px] font-bold text-[#17173A] leading-tight">{m.value}</span>
         <span className="text-[10px] text-[#9AA3B2]">{m.sub}</span>
       </div>
     ))}
@@ -56,17 +61,17 @@ export const MetricCards: React.FC = () => (
 );
 
 export const PublishedVsDeliveredChart: React.FC = () => (
-  <div className="w-full border border-[#E5E7EB] bg-white rounded-[8px] p-[12px] flex flex-col gap-[4px]">
-    <p className="text-[12px] font-semibold text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>Published vs Delivered by Channel</p>
+  <div className="w-full border border-[#E5E7EB] bg-white rounded-[8px] p-[12px] flex flex-col gap-[4px] font-['Manrope']">
+    <p className="text-[12px] font-semibold text-[#17173A]">Published vs Delivered by Channel</p>
     <p className="text-[10px] text-[#6F6F8D]">Volume comparison across channels</p>
     <div className="w-full h-[220px] mt-[8px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={publishedVsDelivered} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#EDEFF3" vertical={false} />
-          <XAxis dataKey="channel" tick={{ fontSize: 11, fill: '#6F6F8D' }} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={formatThousands} tick={{ fontSize: 11, fill: '#6F6F8D' }} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(value: number) => value.toLocaleString()} />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <XAxis dataKey="channel" tick={chartTick} axisLine={false} tickLine={false} />
+          <YAxis tickFormatter={formatThousands} tick={chartTick} axisLine={false} tickLine={false} />
+          <Tooltip contentStyle={chartTooltip} formatter={(value: number) => value.toLocaleString()} />
+          <Legend wrapperStyle={chartLegend} />
           <Bar dataKey="Published" fill="#3B82F6" radius={[3, 3, 0, 0]} />
           <Bar dataKey="Delivered" fill="#22A565" radius={[3, 3, 0, 0]} />
         </BarChart>
@@ -76,17 +81,17 @@ export const PublishedVsDeliveredChart: React.FC = () => (
 );
 
 export const RatesChart: React.FC = () => (
-  <div className="w-full border border-[#E5E7EB] bg-white rounded-[8px] p-[12px] flex flex-col gap-[4px]">
-    <p className="text-[12px] font-semibold text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>Click Rate & Conversion Rate by Channel</p>
+  <div className="w-full border border-[#E5E7EB] bg-white rounded-[8px] p-[12px] flex flex-col gap-[4px] font-['Manrope']">
+    <p className="text-[12px] font-semibold text-[#17173A]">Click Rate & Conversion Rate by Channel</p>
     <p className="text-[10px] text-[#6F6F8D]">Engagement efficiency across channels</p>
     <div className="w-full h-[220px] mt-[8px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={ratesByChannel} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#EDEFF3" vertical={false} />
-          <XAxis dataKey="channel" tick={{ fontSize: 11, fill: '#6F6F8D' }} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={(v: number) => `${v}%`} tick={{ fontSize: 11, fill: '#6F6F8D' }} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(value: number) => `${value}%`} />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <XAxis dataKey="channel" tick={chartTick} axisLine={false} tickLine={false} />
+          <YAxis tickFormatter={(v: number) => `${v}%`} tick={chartTick} axisLine={false} tickLine={false} />
+          <Tooltip contentStyle={chartTooltip} formatter={(value: number) => `${value}%`} />
+          <Legend wrapperStyle={chartLegend} />
           <Bar dataKey="Click rate %" fill="#3B82F6" radius={[3, 3, 0, 0]} />
           <Bar dataKey="Conversion rate %" fill="#E0A82E" radius={[3, 3, 0, 0]} />
         </BarChart>

@@ -5,6 +5,11 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 
+const MANROPE = 'Manrope, sans-serif';
+const chartTick = { fontSize: 11, fill: '#6F6F8D', fontFamily: MANROPE };
+const chartLegend = { fontSize: 11, fontFamily: MANROPE };
+const chartTooltip = { fontSize: 12, borderRadius: 8, fontFamily: MANROPE };
+
 interface ArtifactPreviewProps {
   fileName?: string;
   title?: string;
@@ -45,11 +50,11 @@ const Gauge: React.FC<{ value: number; color: string; title: string; sub: string
           </Pie>
         </PieChart>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[18px] font-bold text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>{value.toFixed(2)}</span>
+          <span className="text-[18px] font-bold text-[#17173A]">{value.toFixed(2)}</span>
           <span className="text-[8px] text-[#6F6F8D] tracking-wide">ACCURACY</span>
         </div>
       </div>
-      <p className="text-[12px] font-semibold text-[#17173A] text-center" style={{ fontFamily: 'Inter, sans-serif' }}>{title}</p>
+      <p className="text-[12px] font-semibold text-[#17173A] text-center">{title}</p>
       <p className="text-[10px] text-[#6F6F8D] text-center">{sub}</p>
     </div>
   );
@@ -107,7 +112,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
           >
             <PanelLeft className="size-[16px] text-[#40474C]" />
           </button>
-          <p className="min-w-0 truncate text-[14px] font-medium text-black" style={{ fontFamily: 'Inter, sans-serif' }}>
+          <p className="min-w-0 truncate text-[14px] font-medium text-black">
             {fileName}
           </p>
         </div>
@@ -126,7 +131,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
 
       {/* content-area (scrollable) */}
       <div className="flex flex-col gap-[16px] items-start px-[16px] py-[16px] w-full flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-        <p className="text-[20px] font-semibold leading-[28px] text-[#17173A] w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
+        <p className="text-[20px] font-semibold leading-[28px] text-[#17173A] w-full">
           {title}
         </p>
 
@@ -137,29 +142,29 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
             {kpis.map((k) => (
               <div key={k.label} className="border border-[#EDEFF3] rounded-[8px] px-[10px] py-[8px] flex flex-col gap-[2px]">
                 <span className="text-[8px] tracking-[0.5px] text-[#9AA3B2] font-medium">{k.label}</span>
-                <span className="text-[18px] font-bold text-[#17173A] leading-none" style={{ fontFamily: 'Inter, sans-serif' }}>{k.value}</span>
+                <span className="text-[18px] font-bold text-[#17173A] leading-none">{k.value}</span>
                 <span className="text-[9px] text-[#6F6F8D]">{k.sub}</span>
               </div>
             ))}
           </div>
 
-          {/* Charts row — stacks on narrow widths */}
-          <div className="grid grid-cols-1 min-[520px]:grid-cols-2 gap-[12px]">
+          {/* Charts row — stacks based on available panel width, not viewport */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-[12px]">
             {/* Gauges block */}
-            <div className="border border-[#EDEFF3] rounded-[8px] p-[12px] flex flex-col gap-[8px]">
+            <div className="border border-[#EDEFF3] rounded-[8px] p-[12px] flex flex-col gap-[8px] min-w-0">
               <p className="text-[11px] font-semibold text-[#17173A]">Who's about to act</p>
               <p className="text-[9px] text-[#6F6F8D]">How confidently we can pick the right people — and the payoff</p>
-              <div className="flex items-start justify-around pt-[4px]">
+              <div className="flex flex-wrap items-start justify-center gap-x-6 gap-y-4 pt-[4px]">
                 <Gauge value={0.83} color="#22A565" title="First-time buyers" sub="6.87x better targeting · 8.2M ranked" />
                 <Gauge value={0.71} color="#E0A82E" title="Repeat buyers" sub="2.62x better targeting · 535K ranked" />
               </div>
             </div>
 
             {/* Channel donut block */}
-            <div className="border border-[#EDEFF3] rounded-[8px] p-[12px] flex flex-col gap-[8px]">
+            <div className="border border-[#EDEFF3] rounded-[8px] p-[12px] flex flex-col gap-[8px] min-w-0">
               <p className="text-[11px] font-semibold text-[#17173A]">Where they actually engage</p>
               <p className="text-[9px] text-[#6F6F8D]">We route each person to the channel they respond to</p>
-              <div className="flex items-center gap-[8px]">
+              <div className="flex flex-wrap items-center justify-center gap-[12px] pt-[4px]">
                 <div className="relative w-[96px] h-[96px] shrink-0">
                   <PieChart width={96} height={96}>
                     <Pie data={channelData} dataKey="value" innerRadius={32} outerRadius={46} stroke="none">
@@ -167,17 +172,17 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
                     </Pie>
                   </PieChart>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-[14px] font-bold text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>25.67%</span>
+                    <span className="text-[14px] font-bold text-[#17173A]">25.67%</span>
                     <span className="text-[8px] text-[#6F6F8D]">SHARED</span>
                   </div>
                 </div>
-                <div className="flex flex-col gap-[6px] flex-1 min-w-0">
+                <div className="flex flex-col gap-[6px] flex-1 min-w-[160px]">
                   {channelData.map((c) => (
                     <div key={c.name} className="flex items-center gap-[4px] text-[9px]">
                       <span className="size-[8px] rounded-full shrink-0" style={{ background: c.color }} />
-                      <span className="text-[#6F6F8D] flex-1 min-w-0 truncate">{c.name}</span>
-                      <span className="text-[#17173A] font-medium">{c.count}</span>
-                      <span className="text-[#6F6F8D]">{c.value}%</span>
+                      <span className="text-[#6F6F8D] flex-1 min-w-0">{c.name}</span>
+                      <span className="text-[#17173A] font-medium shrink-0">{c.count}</span>
+                      <span className="text-[#6F6F8D] shrink-0">{c.value}%</span>
                     </div>
                   ))}
                 </div>
@@ -188,15 +193,15 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
 
         {/* Executive Summary */}
         <div className="flex flex-col gap-[8px] w-full">
-          <p className="text-[16px] font-semibold leading-[24px] text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>⭐ Executive Summary</p>
-          <p className="text-[14px] leading-[24px] text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>
+          <p className="text-[16px] font-semibold leading-[24px] text-[#17173A]">⭐ Executive Summary</p>
+          <p className="text-[14px] leading-[24px] text-[#17173A]">
             The performance analysis <strong>(Aug 17–Nov 17, 2025)</strong> highlights strong differences between Q3 and Q4. Q3 delivered significantly higher conversions <strong>(1,249)</strong>{' '}
-            <span className="bg-[#F6F6F6] text-[#6F6F8D] text-[12px] rounded-[6px] px-[6px] py-[2px]" style={{ fontFamily: 'monospace' }}>whatsAppCampaign +1</span>{' '}
+            <span className="bg-[#F6F6F6] text-[#6F6F8D] text-[12px] rounded-[6px] px-[6px] py-[2px]">whatsAppCampaign +1</span>{' '}
             and revenue <strong>(935,654 units)</strong> compared to Q4 <strong>(648 conversions, 786,660 units).</strong>
           </p>
-          <p className="text-[14px] leading-[24px] text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>
+          <p className="text-[14px] leading-[24px] text-[#17173A]">
             <strong>WhatsApp</strong> was the standout channel, especially in Q3, generating the <strong>highest revenue (389,886 units)</strong>,{' '}
-            <span className="bg-[#F6F6F6] text-[#6F6F8D] text-[12px] rounded-[6px] px-[6px] py-[2px]" style={{ fontFamily: 'monospace' }}>augcampaign +1</span>{' '}
+            <span className="bg-[#F6F6F6] text-[#6F6F8D] text-[12px] rounded-[6px] px-[6px] py-[2px]">augcampaign +1</span>{' '}
             <strong>highest conversions (569)</strong>, and an <strong>impressive 20.8% CTR.</strong>
           </p>
         </div>
@@ -204,7 +209,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
         {/* Table */}
         <div className="w-full border border-[#E5E7EB] rounded-[8px] overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[14px]" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <table className="w-full border-collapse text-[14px]">
               <thead>
                 <tr className="bg-[#F2F5F9]">
                   {['Quarter', 'Total Conversion', 'Total Revenue (₹)', 'CTR', 'Open Rate', 'Conversion Rate'].map((h) => (
@@ -230,16 +235,16 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
 
         {/* Bottom bar chart */}
         <div className="w-full border border-[#E5E7EB] rounded-[8px] p-[12px] flex flex-col gap-[4px]">
-          <p className="text-[12px] font-semibold text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>Q1 Performance Metrics Comparison</p>
+          <p className="text-[12px] font-semibold text-[#17173A]">Q1 Performance Metrics Comparison</p>
           <p className="text-[10px] text-[#6F6F8D]">CTR, Open Rate, and Conversion Rate Analysis</p>
           <div className="w-full h-[220px] mt-[8px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#EDEFF3" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6F6F8D' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#6F6F8D' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <XAxis dataKey="name" tick={chartTick} axisLine={false} tickLine={false} />
+                <YAxis tick={chartTick} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={chartTooltip} />
+                <Legend wrapperStyle={chartLegend} />
                 <Bar dataKey="CTR" fill="#22A565" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="Open Rate" fill="#3B82F6" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="Conversion Rate" fill="#E0A82E" radius={[3, 3, 0, 0]} />

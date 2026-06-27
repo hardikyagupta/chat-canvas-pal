@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback } from 'react';
 // Lucide icons for various UI elements
 import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, Users, Trash2, Info, ChevronDown, StopCircle, MoreVertical, ArrowDown, Menu } from 'lucide-react';
 import { Card } from "@/components/ui/card";
@@ -29,6 +29,8 @@ import MinViewLhsOverlay from './MinViewLhsOverlay';
 import ArtifactPreview from './ArtifactPreview';
 import { ContentAgentSegmentAccordions } from './ContentAgentSegmentAccordions';
 import GeneratingLoader from './GeneratingLoader';
+import { BorderBeam } from 'border-beam';
+import { welcomeCardBeamStyleBlock } from './welcomeCardBeamStyles';
 
 
 // Interface for individual chat message data
@@ -1801,15 +1803,17 @@ The content has been updated across all channels to reflect your changes.`;
             "flex flex-col flex-1 overflow-hidden",
             isExpanded && "p-[8px]"
           )}>
+          <ChatCardBeam enabled={isExpanded} active={messages.length === 0 && !isGeneratingOutput}>
           <div className={cn(
-            "relative flex flex-1 overflow-hidden",
+            "relative flex flex-1 overflow-hidden min-h-0 min-w-0",
             isExpanded ? "bg-[#F9FAFB] border-[0.5px] border-[#DDE2EE] rounded-[16px]" : "bg-[#F9FAFB]",
-            isExpanded && showArtifactPreview && !artifactClosing && "gap-[12px] pl-[12px]"
+            isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "gap-[12px] pl-[12px]",
+            isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "px-[12px]"
           )}>
           {/* Conversation column — 60% when artifact open, hidden when full-expanded, expands back while closing */}
           <div
             className={cn(
-              "relative flex flex-col overflow-hidden min-w-0 transition-[width] duration-300 ease-in-out",
+              "relative z-10 flex flex-col overflow-hidden min-w-0 transition-[width] duration-300 ease-in-out",
               isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "w-0 opacity-0 pointer-events-none",
               isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "w-[60%]",
               !(isExpanded && showArtifactPreview && !artifactClosing) && "w-full flex-1"
@@ -1833,7 +1837,7 @@ The content has been updated across all channels to reflect your changes.`;
                   "flex flex-col items-start space-y-0 max-w-full",
                   isExpanded ? "w-[768px]" : "w-full"
                 )}>
-                {messages.length === 0 && (
+                {messages.length === 0 && !isGeneratingOutput && (
                   <div className="w-full flex flex-col items-center">
                     <div className={cn("w-full flex flex-col gap-[24px] items-center", isExpanded ? "max-w-[768px]" : "max-w-full")}>
                       {/* "Hello" greeting */}
@@ -1847,7 +1851,6 @@ The content has been updated across all channels to reflect your changes.`;
                         <ChatInput
                           onSend={handleSendMessage}
                           isMockAgentChatActive={isMockAgentChatActive}
-                          shimmer={inputShimmer}
                           onStopMockConversation={stopMockConversation}
                           isQuestionnaireActive={false}
                           selectedContextChip={selectedStarterChip}
@@ -2075,7 +2078,7 @@ The content has been updated across all channels to reflect your changes.`;
                     <ChatInput
                       onSend={handleSendMessage}
                       isMockAgentChatActive={isMockAgentChatActive}
-                          shimmer={inputShimmer}
+                      shimmer={inputShimmer || isGeneratingOutput}
                       onStopMockConversation={stopMockConversation}
                       isQuestionnaireActive={(() => {
                         const lastMessage = messages[messages.length - 1];
@@ -2104,9 +2107,12 @@ The content has been updated across all channels to reflect your changes.`;
                     />
                     {/* Footer text below input — widget view only (expanded uses card footer) */}
                     {!isExpanded && (
-                      <div className="flex justify-center mt-2">
+                      <div className="flex flex-col items-center gap-1 mt-2">
                         <p className="text-sm text-foreground-muted text-center">
                           Co-marketer can make mistakes. Please double check responses
+                        </p>
+                        <p className="text-[12px] text-foreground-muted text-center">
+                          This AI doesn&apos;t take coffee breaks. Made with ❤️ by design engineer.
                         </p>
                       </div>
                     )}
@@ -2117,12 +2123,18 @@ The content has been updated across all channels to reflect your changes.`;
 
             {/* Persistent card footer (expanded view) — per Figma */}
             {isExpanded && (
-              <div className="flex items-center justify-center py-[8px] w-full shrink-0">
+              <div className="flex flex-col items-center justify-center gap-1 py-[8px] w-full shrink-0">
                 <p
                   className="text-[12px] text-[#6F6F8D] text-center w-[768px]"
                   style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                 >
                   Co-marketer can make mistakes. Please double check responses
+                </p>
+                <p
+                  className="text-[10px] text-[#6F6F8D] text-center w-[768px]"
+                  style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
+                >
+                  This AI doesn&apos;t take coffee breaks. Made with ❤️ by design engineer.
                 </p>
               </div>
             )}
@@ -2131,11 +2143,11 @@ The content has been updated across all channels to reflect your changes.`;
               On close it slides right + fades + collapses width before unmounting. */}
           {isExpanded && showArtifactPreview && (
             <div className={cn(
-              "shrink-0 h-full py-[12px] transition-all duration-300 ease-in-out will-change-[width,transform,opacity]",
+              "relative z-10 shrink-0 h-full py-[12px] transition-all duration-300 ease-in-out will-change-[width,transform,opacity]",
               artifactClosing
                 ? "w-0 opacity-0 translate-x-6 pr-0"
                 : artifactFullExpanded
-                  ? "w-full pl-[12px] pr-[12px]"
+                  ? "w-full"
                   : "w-[40%] pr-[12px]"
             )}>
               <ArtifactPreview
@@ -2147,6 +2159,7 @@ The content has been updated across all channels to reflect your changes.`;
             </div>
           )}
           </div>
+          </ChatCardBeam>
           </div>
           </div>
         </div>
@@ -2158,3 +2171,50 @@ The content has been updated across all channels to reflect your changes.`;
 };
 
 export default ChatInterface;
+
+type ChatCardBeamProps = {
+  enabled: boolean;
+  active: boolean;
+  children: React.ReactNode;
+};
+
+/** border-beam md — rotating inner edge shimmer (not pulse-inner breathe). */
+function ChatCardBeam({ enabled, active, children }: ChatCardBeamProps) {
+  const beamRef = useRef<HTMLDivElement>(null);
+  const [beamId, setBeamId] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (!enabled) {
+      setBeamId(null);
+      return;
+    }
+    const id = beamRef.current?.getAttribute('data-beam') ?? null;
+    if (id) setBeamId(id);
+  }, [enabled, active]);
+
+  if (!enabled) {
+    return <>{children}</>;
+  }
+
+  return (
+    <>
+      {beamId ? <style>{welcomeCardBeamStyleBlock(beamId)}</style> : null}
+      <BorderBeam
+        ref={beamRef}
+        size="md"
+        theme="light"
+        colorVariant="colorful"
+        staticColors={true}
+        borderRadius={16}
+        strength={0.72}
+        brightness={1.55}
+        saturation={1.85}
+        duration={3.2}
+        active={active}
+        className="welcome-card-beam flex flex-1 min-h-0 min-w-0"
+      >
+        {children}
+      </BorderBeam>
+    </>
+  );
+}

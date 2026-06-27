@@ -184,6 +184,14 @@
   }
 }
 
+/* Figma shimmer palette — shared by input + welcome card shimmers */
+:root {
+  --shimmer-blue: #5c80ff;
+  --shimmer-pink: #ffa8dc;
+  --shimmer-orange: #fc5e02;
+  --shimmer-teal: #085286;
+}
+
 /* Chat-input shimmer (active while a conversation is in progress).
    Two independent layers, per the reference:
    1. .input-border-shimmer — a rotating conic gradient clipped to the border ring
@@ -204,14 +212,14 @@
   pointer-events: none;
   background: conic-gradient(
     from var(--input-shimmer-angle),
-    #5c80ff 0deg,
-    #ffa8dc 40deg,
-    #fc5e02 75deg,
+    var(--shimmer-blue) 0deg,
+    var(--shimmer-pink) 40deg,
+    var(--shimmer-orange) 75deg,
     #ffffff 105deg,
     #ffffff 255deg,
-    #085286 285deg,
-    #5c80ff 325deg,
-    #5c80ff 360deg
+    var(--shimmer-teal) 285deg,
+    var(--shimmer-blue) 325deg,
+    var(--shimmer-blue) 360deg
   );
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
@@ -234,10 +242,10 @@
   /* Thin color wisps along the top/bottom edges (per reference) — keeping the
      blobs off-center is what prevents the conic mask's center "pinch". */
   background:
-    radial-gradient(ellipse 156px 30px at 84% 0%, rgba(92, 128, 255, 0.42), transparent 72%),
-    radial-gradient(ellipse 176px 40px at 9% 100%, rgba(255, 168, 220, 0.36), transparent 74%),
-    radial-gradient(ellipse 156px 34px at 52% 100%, rgba(252, 94, 2, 0.28), transparent 78%),
-    radial-gradient(ellipse 116px 24px at 30% 0%, rgba(8, 82, 134, 0.22), transparent 75%);
+    radial-gradient(ellipse 156px 30px at 84% 0%, color-mix(in srgb, var(--shimmer-blue) 42%, transparent), transparent 72%),
+    radial-gradient(ellipse 176px 40px at 9% 100%, color-mix(in srgb, var(--shimmer-pink) 36%, transparent), transparent 74%),
+    radial-gradient(ellipse 156px 34px at 52% 100%, color-mix(in srgb, var(--shimmer-orange) 28%, transparent), transparent 78%),
+    radial-gradient(ellipse 116px 24px at 30% 0%, color-mix(in srgb, var(--shimmer-teal) 22%, transparent), transparent 75%);
   /* Exact reference compositing: conic reveal ∩ vertical edge-fade, then the
      horizontal edge-fade added on top — produces the smooth perimeter sweep. */
   -webkit-mask-image:
@@ -296,6 +304,11 @@
   .input-inner-shimmer {
     animation: none;
   }
+}
+
+/* border-beam md: hide bloom spill only — keep rotating ::after/::before shimmer */
+.welcome-card-beam[data-beam] [data-beam-bloom] {
+  display: none !important;
 }
 
 /* Chat message content styling - matching Figma design specs */

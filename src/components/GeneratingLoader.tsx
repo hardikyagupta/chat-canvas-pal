@@ -22,15 +22,15 @@ const GeneratingLoader: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex justify-start w-full py-2">
+    <div className="flex justify-start w-full">
       <div className="flex items-center gap-2">
-        {/* Animated loader GIF */}
-        <img
-          src="/thinking-loader.gif"
-          alt=""
-          aria-hidden="true"
-          className="w-6 h-6 shrink-0 pointer-events-none"
-        />
+        <div className="w-6 h-6 shrink-0 overflow-hidden flex items-center justify-center" aria-hidden="true">
+          <img
+            src="/thinking-loader.gif"
+            alt=""
+            className="w-6 h-6 pointer-events-none"
+          />
+        </div>
         <span className="text-sm thinking-shimmer-gradient">
           {loaderLabels[labelIndex]}
         </span>
