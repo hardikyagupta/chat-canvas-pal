@@ -62,14 +62,36 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
       <div className="max-w-[75%] flex flex-col items-start">
         {/* Thinking Phase (Active) */}
         {isThinking && (
-          <div className="flex items-center gap-3">
-            {/* Three bouncing dots - smaller size */}
+          <div className="flex items-center gap-2">
+            {/* Cursor-style processing dots */}
             <div className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }}></div>
-              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '1s' }}></div>
-              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1s' }}></div>
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-1.5 h-1.5 bg-gray-500 dark:bg-gray-400 rounded-full"
+                  style={{
+                    animation: 'cursorDots 1.4s infinite ease-in-out',
+                    animationDelay: `${i * 0.16}s`,
+                    animationFillMode: 'both'
+                  }}
+                />
+              ))}
             </div>
-            
+            <style dangerouslySetInnerHTML={{
+              __html: `
+                @keyframes cursorDots {
+                  0%, 80%, 100% {
+                    transform: scale(0.6);
+                    opacity: 0.4;
+                  }
+                  40% {
+                    transform: scale(1);
+                    opacity: 1;
+                  }
+                }
+              `
+            }} />
+
             {/* Thinking text with shimmer - appears after dots */}
             {showText && (
               <span className="text-sm thinking-shimmer-gradient">

@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import DocArtifactCard, { DocArtifact } from './DocArtifactCard';
 import { ContentAgentResponse } from './ContentAgentResponse';
 import { ContentAgentClarification } from './ContentAgentClarification';
 import { ContentAgentQuestionChoice } from './ContentAgentQuestionChoice';
@@ -19,6 +20,13 @@ import { SchedulerAgentCampaignAccordions } from './SchedulerAgentCampaignAccord
 import { SegmentAgentRationale } from './SegmentAgentRationale';
 import { ContentAgentRationale } from './ContentAgentRationale';
 import { ExecutiveSummaryContentAccordion } from './ExecutiveSummaryContentAccordion';
+import {
+  MetricCards,
+  MetricCardsSkeleton,
+  PublishedVsDeliveredChart,
+  RatesChart,
+  ChartSkeleton,
+} from './CampaignPerformanceDashboard';
 import { ThinkingState } from './ThinkingState';
 
 // Loading indicator component with Cursor-style processing dots
@@ -110,7 +118,7 @@ const SegmentAgentThinking: React.FC = () => {
   
   return (
     <div className="flex items-center gap-2 py-2 px-3 bg-white dark:bg-white rounded-lg border border-gray-200 dark:border-gray-200 shadow-sm w-fit h-8">
-      <div className="text-xs text-gray-600 dark:text-gray-600 font-['Nunito Sans'] font-medium">
+      <div className="text-xs text-gray-600 dark:text-gray-600 font-['Manrope'] font-medium">
         Segment Agent thinking
       </div>
       <div className="flex items-center">
@@ -435,6 +443,12 @@ interface ChatMessageProps {
   isThinkingState?: boolean;
   thinkingDuration?: number;
   reasoningSteps?: string[];
+  // Doc-like artifact
+  artifact?: DocArtifact;
+  onDownloadArtifact?: () => void;
+  onPreviewArtifact?: () => void;
+  // Inline campaign performance dashboard (cards + charts)
+  showPerformanceDashboard?: boolean;
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -480,9 +494,16 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   isThinkingState = false,
   thinkingDuration = 3,
   reasoningSteps,
+  artifact,
+  onDownloadArtifact,
+  onPreviewArtifact,
+  showPerformanceDashboard = false,
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isAnimationDone, setIsAnimationDone] = useState(false);
+  // Inline dashboard: cards reveal during streaming; charts after stream completes
+  const [dashboardCardsReady, setDashboardCardsReady] = useState(false);
+  const [dashboardChartsReady, setDashboardChartsReady] = useState(false);
   const [isFlowExecuting, setIsFlowExecuting] = useState(false);
   const [isContentApproving, setIsContentApproving] = useState(false);
   const [isSegmentsApproving, setIsSegmentsApproving] = useState(false);
@@ -912,6 +933,37 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   }, [isPlanMode, isContentAgent, isAnimationDone, showApproveContentCTA, onApproveContent]);
 
+  // Cards: skeleton → real once streaming starts (2nd slot in layout)
+  useEffect(() => {
+    if (!showPerformanceDashboard || !isTextVisible) {
+      setDashboardCardsReady(false);
+      return;
+    }
+    const revealTimeout = setTimeout(() => {
+      setDashboardCardsReady(true);
+    }, 600);
+
+    return () => clearTimeout(revealTimeout);
+  }, [showPerformanceDashboard, isTextVisible]);
+
+  // Charts: skeleton during late stream, real when animation completes
+  useEffect(() => {
+    if (!showPerformanceDashboard) {
+      setDashboardChartsReady(false);
+      return;
+    }
+    if (!isAnimationDone) {
+      setDashboardChartsReady(false);
+      return;
+    }
+    const revealTimeout = setTimeout(() => {
+      setDashboardChartsReady(true);
+      window.dispatchEvent(new CustomEvent('chatScrollToBottom'));
+    }, 800);
+
+    return () => clearTimeout(revealTimeout);
+  }, [showPerformanceDashboard, isAnimationDone]);
+
   // Handle content change tracking
   const handleContentChanged = (hasChanges: boolean) => {
     setHasContentChanges(hasChanges);
@@ -1091,8 +1143,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   if (!isAI) {
     return (
       <div className="flex justify-end w-full py-2">
-        <div className="bg-[#F9FAFB] dark:bg-[#F9FAFB] rounded-lg px-4 py-3 w-fit max-w-[60%]">
-          <p className="text-[#17173A] dark:text-[#17173A] text-sm font-semibold leading-[24px] font-['Nunito Sans']">
+        <div className="bg-white dark:bg-white border border-[#E5E7EB] rounded-[12px] p-[12px] w-fit max-w-[60%]">
+          <p className="text-[#17173A] dark:text-[#17173A] text-sm font-semibold leading-[24px] font-['Manrope']">
             {displayedText}
           </p>
         </div>
@@ -1118,6 +1170,22 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 
   // Check if we should show thinking animation above the agent component
   const isSegmentAgent = agentName === "Segment agent" || isSegmentAgentRationale;
+
+  // Split streaming HTML into intro (before cards) and the rest (after cards)
+  const splitIntroFromRest = (html: string): { introHtml: string; restHtml: string } => {
+    if (!html) return { introHtml: '', restHtml: '' };
+    const splitPatterns = ['\n\n<strong>', '\n\n', '<strong>'];
+    let splitAt = -1;
+    for (const pat of splitPatterns) {
+      const idx = html.indexOf(pat);
+      if (idx !== -1 && (splitAt === -1 || idx < splitAt)) splitAt = idx;
+    }
+    if (splitAt === -1) return { introHtml: html, restHtml: '' };
+    return {
+      introHtml: html.slice(0, splitAt).trim(),
+      restHtml: html.slice(splitAt).trim(),
+    };
+  };
 
   // Helper function to split HTML content into individual blocks for separate py-2 wrapping
   const splitIntoBlocks = (html: string): string[] => {
@@ -1243,26 +1311,75 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             
             // Split content into individual blocks
             const contentBlocks = splitIntoBlocks(displayedText);
-            
+            const { introHtml, restHtml } = showPerformanceDashboard
+              ? splitIntroFromRest(displayedText)
+              : { introHtml: contentBlocks[0] ?? '', restHtml: contentBlocks.slice(1).join('') };
+            const introBlock = introHtml || undefined;
+            const restBlocks = showPerformanceDashboard
+              ? splitIntoBlocks(restHtml)
+              : contentBlocks.slice(1);
+            const showCardsSlot = showPerformanceDashboard && isTextVisible && introHtml.length > 20;
+            const showChartsSlot = showPerformanceDashboard && isTextVisible && (restHtml.length > 0 || isAnimationDone);
+
+            const renderContentBlock = (block: string, index: number) => (
+              <div
+                key={index}
+                className="py-2 text-[#17173A] dark:text-white leading-[22px] font-['Manrope'] font-normal whitespace-pre-line transition-all duration-50 ease-out"
+                style={{
+                  opacity: textOpacity,
+                  filter: `blur(${textBlur}px)`,
+                  transform: `translateY(${(1 - textOpacity) * 0.5}px)`,
+                  willChange: 'opacity, filter, transform'
+                }}
+                dangerouslySetInnerHTML={{ __html: block }}
+              />
+            );
+
             return (
               <div className="text-sm">
-                {contentBlocks.map((block, index) => (
-                  <div 
-                    key={index} 
-                    className="py-2 text-[#17173A] dark:text-white leading-[22px] font-['Nunito Sans'] font-normal whitespace-pre-line transition-all duration-50 ease-out"
-                    style={{
-                      opacity: textOpacity,
-                      filter: `blur(${textBlur}px)`,
-                      transform: `translateY(${(1 - textOpacity) * 0.5}px)`,
-                      willChange: 'opacity, filter, transform'
-                    }}
-                    dangerouslySetInnerHTML={{ __html: block }}
-                  />
-                ))}
+                {/* 1. Intro text streams first */}
+                {introBlock && renderContentBlock(introBlock, 0)}
+
+                {/* 2. Metric cards — visible during streaming (skeleton → real) */}
+                {showCardsSlot && (
+                  <div className="py-2">
+                    {dashboardCardsReady ? <MetricCards /> : <MetricCardsSkeleton />}
+                  </div>
+                )}
+
+                {/* 3. Remaining text continues streaming below cards */}
+                {restBlocks.map((block, index) => renderContentBlock(block, index + 1))}
+
+                {/* 4. Charts after the text (skeleton while streaming, real when done) */}
+                {showChartsSlot && (
+                  <div className="py-2 flex flex-col gap-[12px]">
+                    {dashboardChartsReady ? (
+                      <>
+                        <PublishedVsDeliveredChart />
+                        <RatesChart />
+                      </>
+                    ) : (
+                      <>
+                        <ChartSkeleton />
+                        <ChartSkeleton />
+                      </>
+                    )}
+                  </div>
+                )}
                 {/* Executive Summary Content Accordion - only shown for executive summary messages */}
                 {isExecutiveSummaryWithContent && (
                   <div className="py-2">
                     <ExecutiveSummaryContentAccordion />
+                  </div>
+                )}
+                {/* Doc-like artifact card — revealed only after the text finishes streaming */}
+                {artifact && isAnimationDone && (
+                  <div className="py-2 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-1">
+                    <DocArtifactCard
+                      artifact={artifact}
+                      onDownload={onDownloadArtifact}
+                      onPreview={onPreviewArtifact}
+                    />
                   </div>
                 )}
               </div>

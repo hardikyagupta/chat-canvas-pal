@@ -156,10 +156,10 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
   };
 
   return (
-    <div className="w-full max-w-[873px] space-y-5">
+    <div className="w-full max-w-[873px] space-y-5 bg-white">
       {/* Content agent suggests and Card navigation */}
       <div className="w-56 flex flex-col justify-start items-start gap-3.5">
-        <div className="self-stretch justify-start text-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Content agent suggests:</div>
+        <div className="self-stretch justify-start text-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Content agent suggests:</div>
         <div 
           className="self-stretch rounded-sm outline outline-[0.50px] outline-offset-[-0.50px] outline-slate-100 inline-flex justify-start items-center overflow-hidden"
           style={{
@@ -189,7 +189,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
             >
               <div 
                 className={cn(
-                  "justify-start font-['Nunito_Sans']",
+                  "justify-start font-['Manrope']",
                   activeCard === item.id 
                     ? "text-white" 
                     : "text-[#64748B]"
@@ -217,8 +217,8 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
           <div className="self-stretch flex flex-col justify-start items-start gap-2">
             <div className="flex flex-col justify-start items-start gap-1">
               <div className="justify-start">
-                <span className="text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Message bubble </span>
-                <span className="text-red-500 text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">*</span>
+                <span className="text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Message bubble </span>
+                <span className="text-red-500 text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
               </div>
             </div>
             <Input
@@ -235,8 +235,8 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
           <div className="self-stretch flex flex-col justify-start items-start gap-2">
             <div className="flex flex-col justify-start items-start gap-1">
               <div className="justify-start">
-                <span className="text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Header </span>
-                <span className="text-red-500 text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">*</span>
+                <span className="text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Header </span>
+                <span className="text-red-500 text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
               </div>
             </div>
             <Input
@@ -253,8 +253,8 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
           <div className="self-stretch flex flex-col justify-start items-start gap-2">
             <div className="flex flex-col justify-start items-start gap-1">
               <div className="justify-start">
-                <span className="text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Body </span>
-                <span className="text-red-500 text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">*</span>
+                <span className="text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Body </span>
+                <span className="text-red-500 text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
               </div>
             </div>
             <Textarea
@@ -271,8 +271,8 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
           <div className="self-stretch flex flex-col justify-start items-start gap-2">
             <div className="flex flex-col justify-start items-start gap-1">
               <div className="justify-start">
-                <span className="text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Footer </span>
-                <span className="text-red-500 text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">*</span>
+                <span className="text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Footer </span>
+                <span className="text-red-500 text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
               </div>
             </div>
             <Input
@@ -287,12 +287,12 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
         {/* CTA 1 */}
         <div className="self-stretch p-4 bg-white dark:bg-gray-800/20 rounded border border-border flex flex-col justify-start items-start gap-2.5">
           <div className="self-stretch flex flex-col justify-start items-start gap-3.5">
-            <div className="justify-start text-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">CTA 1</div>
+            <div className="justify-start text-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">CTA 1</div>
             <div className="self-stretch inline-flex justify-start items-start gap-6">
               <div className="flex-1 inline-flex flex-col justify-start items-start gap-6">
                 <div className="self-stretch flex flex-col justify-start items-start gap-2">
                   <div className="flex flex-col justify-start items-start gap-1">
-                    <div className="justify-start text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Button type</div>
+                    <div className="justify-start text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Button type</div>
                   </div>
                   <Popover open={openCtaPopover?.itemId === activeCard && openCtaPopover?.ctaKey === 'cta1'} onOpenChange={(isOpen) => setOpenCtaPopover(isOpen ? { itemId: activeCard, ctaKey: 'cta1' } : null)}>
                     <PopoverTrigger asChild>
@@ -336,7 +336,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
               <div className="flex-1 inline-flex flex-col justify-start items-start gap-6">
                 <div className="self-stretch flex flex-col justify-start items-start gap-2">
                   <div className="flex flex-col justify-start items-start gap-1">
-                    <div className="justify-start text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">CTA text </div>
+                    <div className="justify-start text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">CTA text </div>
                   </div>
                   <Input
                     value={activeItem.cta1?.ctaText || ''}
@@ -350,7 +350,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
             <div className="self-stretch flex flex-col justify-start items-start gap-6">
               <div className="self-stretch flex flex-col justify-start items-start gap-2">
                 <div className="flex flex-col justify-start items-start gap-1">
-                  <div className="justify-start text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Website link</div>
+                  <div className="justify-start text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Website link</div>
                 </div>
                 <Input
                   value={activeItem.cta1?.websiteLink || ''}
@@ -366,12 +366,12 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
         {/* CTA 2 */}
         <div className="self-stretch p-4 bg-white dark:bg-gray-800/20 rounded border border-border flex flex-col justify-start items-start gap-2.5">
           <div className="self-stretch flex flex-col justify-start items-start gap-3.5">
-            <div className="justify-start text-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">CTA 2</div>
+            <div className="justify-start text-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">CTA 2</div>
             <div className="self-stretch inline-flex justify-start items-start gap-6">
               <div className="flex-1 inline-flex flex-col justify-start items-start gap-6">
                 <div className="self-stretch flex flex-col justify-start items-start gap-2">
                   <div className="flex flex-col justify-start items-start gap-1">
-                    <div className="justify-start text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Button type</div>
+                    <div className="justify-start text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Button type</div>
                   </div>
                   <Popover open={openCtaPopover?.itemId === activeCard && openCtaPopover?.ctaKey === 'cta2'} onOpenChange={(isOpen) => setOpenCtaPopover(isOpen ? { itemId: activeCard, ctaKey: 'cta2' } : null)}>
                     <PopoverTrigger asChild>
@@ -415,7 +415,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
               <div className="flex-1 inline-flex flex-col justify-start items-start gap-6">
                 <div className="self-stretch flex flex-col justify-start items-start gap-2">
                   <div className="flex flex-col justify-start items-start gap-1">
-                    <div className="justify-start text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">CTA text </div>
+                    <div className="justify-start text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">CTA text </div>
                   </div>
                   <Input
                     value={activeItem.cta2?.ctaText || ''}
@@ -429,7 +429,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
             <div className="self-stretch flex flex-col justify-start items-start gap-6">
               <div className="self-stretch flex flex-col justify-start items-start gap-2">
                 <div className="flex flex-col justify-start items-start gap-1">
-                  <div className="justify-start text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Website link</div>
+                  <div className="justify-start text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Website link</div>
                 </div>
                 <Input
                   value={activeItem.cta2?.websiteLink || ''}
@@ -445,7 +445,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
         {/* Image URL */}
         <div className="self-stretch flex flex-col justify-start items-start gap-2">
           <div className="flex flex-col justify-start items-start gap-1">
-            <div className="justify-start text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Image URL</div>
+            <div className="justify-start text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Image URL</div>
           </div>
           <Input
             value={activeItem.imageUrl}
@@ -458,7 +458,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
         {/* Image Preview */}
         <div className="self-stretch flex flex-col justify-start items-start gap-2">
           <div className="flex flex-col justify-start items-start gap-1">
-            <div className="justify-start text-muted-foreground text-sm font-semibold font-['Nunito_Sans'] leading-tight tracking-wide">Image Preview</div>
+            <div className="justify-start text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Image Preview</div>
           </div>
           <img 
             className="w-72 h-40 object-cover rounded" 

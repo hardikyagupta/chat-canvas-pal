@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 // Lucide icons for various UI elements
-import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, Users, Trash2, Info, ChevronDown, StopCircle, MoreVertical, ArrowDown } from 'lucide-react';
+import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, Users, Trash2, Info, ChevronDown, StopCircle, MoreVertical, ArrowDown, Menu } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SystemMessage from './SystemMessage';
@@ -22,7 +22,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModeSwitchConfirmation } from './ModeSwitchConfirmation';
+import LhsSidebar from './LhsSidebar';
+import LhsSidebarCollapsed from './LhsSidebarCollapsed';
+import RhsHeader from './RhsHeader';
+import MinViewLhsOverlay from './MinViewLhsOverlay';
+import ArtifactPreview from './ArtifactPreview';
 import { ContentAgentSegmentAccordions } from './ContentAgentSegmentAccordions';
+import GeneratingLoader from './GeneratingLoader';
 
 
 // Interface for individual chat message data
@@ -69,6 +75,10 @@ interface ChatMessageData {
   isThinkingState?: boolean;
   thinkingDuration?: number;
   reasoningSteps?: string[];
+  // Doc-like artifact
+  artifact?: { title: string; subtitle?: string; intro?: string };
+  // Inline campaign performance dashboard escape hatch
+  hidePerformanceDashboard?: boolean;
 }
 
 // Props for the main ChatInterface component
@@ -84,8 +94,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isMockAgentChatActive, setIsMockAgentChatActive] = useState(false);
+  // Briefly shimmers the input after every send (survives the empty→conversation input swap)
+  const [inputShimmer, setInputShimmer] = useState(false);
+  const inputShimmerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [mockChatCompleted, setMockChatCompleted] = useState(false); // New state
+  const [isGeneratingOutput, setIsGeneratingOutput] = useState(false); // Drives the persistent bottom-of-thread loader
   const [contentApproved, setContentApproved] = useState(false); // New state for content approval
   const [segmentsApproved, setSegmentsApproved] = useState(false); // New state for segments approval
   const [contentGenerated, setContentGenerated] = useState(false); // New state for content generation
@@ -104,6 +118,41 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   
   // Chat options dropdown state
   const [openChatId, setOpenChatId] = useState<string | null>(null);
+  const [selectedStarterChip, setSelectedStarterChip] = useState<string | null>(null);
+  const starterChips = [
+    "Seasonal Trend",
+    "CTR Monitoring",
+    "QBR Report",
+    "Channel Anomalies",
+    "Revenue Monitoring",
+  ];
+  const starterPromptsByChip: Record<string, string[]> = {
+    "Seasonal Trend": [
+      "Show me seasonal engagement trends across channels for the last 12 months.",
+      "Which campaigns performed best during festival periods, and why?",
+      "What seasonal patterns should we use for next quarter planning?",
+    ],
+    "CTR Monitoring": [
+      "Which campaigns had the highest CTR but lowest conversions, and what could be the possible reasons?",
+      "Find the top 5 and bottom 5 campaigns in the last 30 days. Show success rates and patterns behind high and low performance.",
+      "Tell me the best time slots to send campaigns on APN, WPN, Email, SMS, and WhatsApp for higher engagement.",
+    ],
+    "QBR Report": [
+      "Summarize this quarter's campaign performance with wins, gaps, and next actions.",
+      "Build a QBR snapshot by channel with CTR, CVR, and revenue trends.",
+      "Highlight top opportunities and risks for next quarter's campaign plan.",
+    ],
+    "Channel Anomalies": [
+      "Detect unusual drops or spikes in campaign performance by channel in the last 30 days.",
+      "Which channels show anomaly patterns in delivery, CTR, or conversion rates?",
+      "Suggest likely reasons and next checks for identified channel anomalies.",
+    ],
+    "Revenue Monitoring": [
+      "Which campaigns contributed the most revenue in the last 30 days?",
+      "Show revenue trends by channel with week-over-week changes.",
+      "Identify low-efficiency campaigns with high spend but low revenue impact.",
+    ],
+  };
 
   const handleCopyChatId = (chatId: string) => {
     navigator.clipboard.writeText(chatId);
@@ -127,6 +176,39 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [isExpanded, setIsExpanded] = useState(true);
   // State to manage which sidebar (bookmarks/history or agents) is active in expanded view
   const [activeSidebar, setActiveSidebar] = useState<'bookmarks' | 'agents' | null>('bookmarks');
+  // Collapsed (icon-rail) state for the LHS sidebar in expanded view
+  const [lhsCollapsed, setLhsCollapsed] = useState(false);
+  // Minimized-view LHS overlay (opened from the widget header menu icon)
+  const [showMinOverlay, setShowMinOverlay] = useState(false);
+  // Artifact preview split-view (opened from a message's "Preview" button)
+  const [showArtifactPreview, setShowArtifactPreview] = useState(false);
+  const [artifactFullExpanded, setArtifactFullExpanded] = useState(false);
+  const [artifactClosing, setArtifactClosing] = useState(false); // exit-animation flag
+  const hasOpenedArtifactRef = useRef(false);
+  const artifactCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleOpenArtifactPreview = () => {
+    if (artifactCloseTimerRef.current) clearTimeout(artifactCloseTimerRef.current);
+    setArtifactClosing(false);
+    setShowArtifactPreview(true);
+    setArtifactFullExpanded(false);
+    // First time a user previews, collapse the LHS to give room
+    if (!hasOpenedArtifactRef.current) {
+      hasOpenedArtifactRef.current = true;
+      setLhsCollapsed(true);
+    }
+  };
+
+  const handleCloseArtifactPreview = () => {
+    // Play the slide-out/fade exit before unmounting
+    setArtifactClosing(true);
+    if (artifactCloseTimerRef.current) clearTimeout(artifactCloseTimerRef.current);
+    artifactCloseTimerRef.current = setTimeout(() => {
+      setShowArtifactPreview(false);
+      setArtifactFullExpanded(false);
+      setArtifactClosing(false);
+    }, 320);
+  };
 
   // --- DRAG AND DROP STATE AND REFS ---
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -146,6 +228,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   useEffect(() => {
     isMockAgentChatActiveRef.current = isMockAgentChatActive;
   }, [isMockAgentChatActive]);
+
 
   const handleDragMouseDown = useCallback((event: React.MouseEvent<HTMLElement>) => {
     const targetElement = event.target as HTMLElement;
@@ -328,8 +411,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     };
   }, [messages]);
 
+  // Stop the input shimmer (output generation ended / was stopped).
+  const clearInputShimmer = () => {
+    if (inputShimmerTimerRef.current) clearTimeout(inputShimmerTimerRef.current);
+    setInputShimmer(false);
+  };
+
   const stopMockConversation = () => {
-    setIsMockAgentChatActive(false); 
+    setIsMockAgentChatActive(false);
+    setIsGeneratingOutput(false);
+    clearInputShimmer();
     if (mockMessageTimeoutRef.current) {
       clearTimeout(mockMessageTimeoutRef.current);
       mockMessageTimeoutRef.current = null;
@@ -354,6 +445,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       // Clear current conversation
       setMessages([]);
       setIsMockAgentChatActive(false);
+      setIsGeneratingOutput(false);
       setMockChatCompleted(false);
       setContentApproved(false);
       setContentGenerated(false);
@@ -505,6 +597,15 @@ The content has been updated across all channels to reflect your changes.`;
     };
     setMessages(prev => [...prev, userMessage]);
     setMockChatCompleted(false); // Reset when user sends a new message
+    setIsGeneratingOutput(true); // Show the persistent bottom loader until this response finishes
+
+    // Shimmer the input for the whole generation. Mock flows keep it on via
+    // isMockAgentChatActive; non-mock responses clear it when their streaming
+    // finishes (see the AI response's onAnimationComplete below). A long safety
+    // fallback guards against a response that never reports completion.
+    setInputShimmer(true);
+    if (inputShimmerTimerRef.current) clearTimeout(inputShimmerTimerRef.current);
+    inputShimmerTimerRef.current = setTimeout(() => setInputShimmer(false), 30000);
 
     const userMessagesCount = messages.filter(m => !m.isAI && m.type === 'chat').length + 1;
     const lowerCaseMessage = message.toLowerCase().trim();
@@ -574,6 +675,8 @@ The content has been updated across all channels to reflect your changes.`;
 
         if (index >= mockMessagesDefinition.length) {
           setIsMockAgentChatActive(false);
+          setIsGeneratingOutput(false);
+          clearInputShimmer();
           setMockChatCompleted(true);
           if (mockMessageTimeoutRef.current) {
             clearTimeout(mockMessageTimeoutRef.current);
@@ -901,6 +1004,8 @@ The content has been updated across all channels to reflect your changes.`;
 
         if (index >= mockMessagesDefinition.length) {
           setIsMockAgentChatActive(false); // End of sequence (ref will update via useEffect)
+          setIsGeneratingOutput(false);
+          clearInputShimmer();
           setMockChatCompleted(true); // <-- Set mock chat completed true
           if (mockMessageTimeoutRef.current) { // Clear ref if sequence ends naturally
             clearTimeout(mockMessageTimeoutRef.current);
@@ -1152,19 +1257,68 @@ The content has been updated across all channels to reflect your changes.`;
       if (isMockAgentChatActiveRef.current) { // Check the ref here too
         stopMockConversation();
       }
+      // Re-assert the bottom loader for this new (generic) response, since stopMockConversation clears it.
+      setIsGeneratingOutput(true);
+      // Re-arm the shimmer for this new response (stopMockConversation clears it).
+      setInputShimmer(true);
+      if (inputShimmerTimerRef.current) clearTimeout(inputShimmerTimerRef.current);
+      inputShimmerTimerRef.current = setTimeout(() => setInputShimmer(false), 30000);
       setMockChatCompleted(false); // Also reset if conversation is stopped manually
-      // Proceed with normal message handling or other AI responses
+
+      const coMarketer = marketingAgents.find(agent => agent.id === 'co-marketer');
+
+      // Guard so the AI response is appended only once even if
+      // the thinking state's onComplete fires more than once.
+      let hasResponded = false;
+
+      // 1) Thinking state
       setTimeout(() => {
-        const defaultAIMessage: ChatMessageData = {
-            type: 'chat',
-            content: "Thank you for your message. I'm processing your request.",
-            isAI: true,
-            agentName: "AI Assistant",
-            avatarBgClass: "bg-gray-100 text-gray-800",
-            onAnimationComplete: () => {}
+        const thinking: ChatMessageData = {
+          type: 'chat',
+          isAI: true,
+          content: '',
+          isThinkingState: true,
+          thinkingDuration: 3,
+          reasoningSteps: [
+            "Understanding the campaign request",
+            "Identifying information needed for targeting",
+            "Structuring a questionnaire",
+            "Preparing a ready-to-use artifact",
+          ],
+          onAnimationComplete: () => {
+            if (hasResponded) return;
+            hasResponded = true;
+            // 2) AI response with the doc-like artifact
+            const aiResponse: ChatMessageData = {
+              type: 'chat',
+              isAI: true,
+              agentName: coMarketer?.name || 'Co-marketer',
+              avatarIcon: coMarketer?.icon,
+              avatarBgClass: coMarketer?.colorClass,
+              content:
+                "I'll help you design a Valentine's Day perfume campaign. To create the most effective campaign, I need some additional information:\n\n" +
+                "<strong>1. Campaign Goals:</strong>\n• What are your primary objectives? (e.g., increase sales, brand awareness, etc.)\n• Do you have specific revenue or sales targets?\n\n" +
+                "<strong>2. Product Details:</strong>\n• Which perfume brands/collections are you promoting?\n• What is the price range of the perfumes?\n• Are there any special Valentine's Day offers or bundles?\n\n" +
+                "<strong>3. Target Audience:</strong>\n• Are you targeting specific age groups?\n• Any specific gender focus (men buying for women, women for men, or both)?\n• Geographic location for the campaign?\n\n" +
+                "<strong>4. Campaign Duration:</strong>\n• When would you like to start the campaign?\n• How long do you want to run it? (typically Valentine's campaigns start 2-3 weeks before February 14th)\n\n" +
+                "<strong>5. Budget and Resources:</strong>\n• Do you have a specific marketing budget?\n• Which marketing channels would you like to use? (email, social media, etc.)",
+              artifact: {
+                intro: "I've created the Highest Engagement Last Quarter summary in an artifact with all the information you provided, formatted and ready to use",
+                title: "Highest Engagement Last Quarter",
+                subtitle: "WhatsApp Document",
+              },
+              onAnimationComplete: () => {
+                // Output finished streaming — stop the input shimmer and bottom loader.
+                if (inputShimmerTimerRef.current) clearTimeout(inputShimmerTimerRef.current);
+                setInputShimmer(false);
+                setIsGeneratingOutput(false);
+              },
+            };
+            setMessages(prev => [...prev, aiResponse]);
+          },
         };
-        setMessages(prev => [...prev, defaultAIMessage]);
-      }, 1000);
+        setMessages(prev => [...prev, thinking]);
+      }, 600);
     }
   };
 
@@ -1193,87 +1347,63 @@ The content has been updated across all channels to reflect your changes.`;
 
   // Header for the compact widget view
   const WidgetViewHeader = () => (
-    <div 
+    <div
       className={cn(
-        "p-4 border-b border-border flex items-center justify-between bg-background/80 backdrop-blur-sm",
-        "shadow-header",
+        "flex items-start shrink-0 w-full",
         !isExpanded && (isDragging ? "cursor-grabbing" : "cursor-grab")
       )}
       onMouseDown={!isExpanded ? handleDragMouseDown : undefined}
     >
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="flex flex-col min-w-0">
-          <div className="h-6 flex items-center">
-            {activeAgents.length === 0 && (
-              <h1 className="text-base font-semibold text-foreground truncate">Co-marketer</h1>
-            )}
-            {activeAgents.length === 1 && (() => {
-              const agent = activeAgents[0];
-              const Icon = agent.icon;
-              return (
-                <div className="flex items-center gap-2 min-w-0">
-                  <Avatar 
-                    className={cn(
-                      "h-6 w-6 flex items-center justify-center flex-shrink-0",
-                      "border-2 border-white",
-                      (Icon && !agent.avatarSrc) ? agent.colorClass : 'bg-transparent'
-                    )}
-                  >
-                    {/* Priority: avatarSrc (SVG) > Icon (Lucide) > GIF fallback */}
-                    {agent.avatarSrc ? (
-                      <>
-                        <AvatarImage src={agent.avatarSrc} alt={agent.name} className="h-full w-full object-cover" />
-                        <AvatarFallback>{agent.initials}</AvatarFallback>
-                      </>
-                    ) : Icon ? (
-                      <Icon className="h-3.5 w-3.5" />
-                    ) : (
-                      <>
-                        <AvatarImage src="/avatarGIF.gif" alt={agent.name} className="h-full w-full object-cover" />
-                        <AvatarFallback>{agent.initials}</AvatarFallback>
-                      </>
-                    )}
-                  </Avatar>
-                  <span className="text-base font-semibold text-foreground/90 truncate">
-                    {agent.name}
-                  </span>
-                </div>
-              );
-            })()}
-            {activeAgents.length > 1 && (
-              <div className="flex items-center gap-2 min-w-0">
-                <AvatarStack agents={activeAgents} />
-                <span className="text-base font-semibold text-foreground/90 truncate">
-                  Multi-agent
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">⌥ Option + C / Alt + C</span>
-            <span className="border-l border-border h-3 mx-1 flex-shrink-0"></span>
-            <p className="text-xs text-muted-foreground whitespace-nowrap">Drag to reposition</p>
+      {/* Left: menu + icon + title */}
+      <div className="flex flex-col items-start justify-center pl-[16px] py-[16px] shrink-0 w-[287px]">
+        <div className="flex gap-[8px] items-center w-full">
+          {/* Menu icon — minimized mode only */}
+          <button
+            type="button"
+            className="flex items-center justify-center p-[4px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
+            aria-label="Menu"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => setShowMinOverlay(true)}
+          >
+            <Menu className="w-[16px] h-[16px] text-[#40474C]" />
+          </button>
+          {/* Logo + title group (4px gap per Figma) */}
+          <div className="flex gap-[4px] items-center min-w-0">
+            {/* Blue gradient circle icon */}
+            <div
+              className="flex items-center justify-center rounded-full shrink-0 size-[24px]"
+              style={{ background: "linear-gradient(to top, #143f93 13.75%, #97baff 76.25%)" }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 1L7.545 4.455L11 6L7.545 7.545L6 11L4.455 7.545L1 6L4.455 4.455L6 1Z" fill="white" fillOpacity="0.9" />
+              </svg>
+            </div>
+            <span
+              className="font-bold text-[16px] leading-[20px] text-[#101828] whitespace-nowrap"
+              style={{ fontFamily: "Manrope, sans-serif" }}
+            >
+              Co-marketer
+            </span>
           </div>
         </div>
       </div>
-      {/* Right side actions: Agent selection, theme toggle, expand, close */}
-      <div className="flex items-center space-x-1 flex-shrink-0">
-        {onBotIconClick && (
-            <Button variant="ghost" size="icon" onClick={onBotIconClick} className="h-7 w-7 text-foreground/60 hover:bg-muted/50 hover:text-foreground/80" aria-label="Select Agents">
-                <Users className="h-4 w-4" />
-            </Button>
-        )}
-        
-        <ThemeToggle /> {/* ThemeToggle is already a button with appropriate styling */}
 
-        <Button variant="ghost" size="icon" onClick={() => setIsExpanded(true)} className="h-7 w-7 text-foreground/60 hover:bg-muted/50 hover:text-foreground/80" aria-label="Expand">
-            <Maximize2 className="h-4 w-4" />
-        </Button>
-        
-        {/* Close button - visible, onClick safely calls prop if provided */}
-        <Button variant="ghost" size="icon" onClick={() => onCloseInterface?.()} className="ml-1 h-7 w-7 text-foreground/60 hover:bg-muted/50 hover:text-foreground/80" aria-label="Close">
-            <X className="h-5 w-5" />
-        </Button>
+      {/* Right: expand + close buttons */}
+      <div className="flex flex-1 h-[56px] items-center justify-end pr-[24px] gap-[4px]">
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors"
+          aria-label="Expand"
+        >
+          <Maximize2 className="w-[16px] h-[16px] text-[#40474C]" />
+        </button>
+        <button
+          onClick={() => onCloseInterface?.()}
+          className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors"
+          aria-label="Close"
+        >
+          <X className="w-[16px] h-[16px] text-[#40474C]" />
+        </button>
       </div>
     </div>
   );
@@ -1600,9 +1730,9 @@ The content has been updated across all channels to reflect your changes.`;
         ref={chatWindowRef} // Attach ref here
         className={cn(
           isExpanded
-            ? "fixed z-50 inset-3 bg-background border border-border shadow-2xl rounded-xl flex flex-col overflow-hidden"
+            ? "fixed z-50 inset-0 bg-background flex flex-col overflow-hidden"
             // For widget view, if position is null, it uses these classes. If position is set, inline style takes over for pos.
-            : "w-[470px] h-[776px] bg-background border border-border shadow-lg rounded-xl flex flex-col overflow-hidden",
+            : "w-[470px] h-[776px] bg-background border border-border shadow-lg rounded-xl flex flex-col overflow-hidden relative",
             !isExpanded && position && "fixed z-50" // Ensure it's fixed and on top when dragged
         )}
         style={!isExpanded && position ? {
@@ -1612,11 +1742,16 @@ The content has been updated across all channels to reflect your changes.`;
             height: '776px',
         } : {}}
       >
-        {/* Conditional rendering of header based on view mode */}
-        {isExpanded ? (
-          <ExpandedViewHeader />
-        ) : (
-          <WidgetViewHeader />
+        {/* Widget (minimized) header sits above everything */}
+        {!isExpanded && <WidgetViewHeader />}
+
+        {/* Minimized-view LHS overlay — opened from the widget header menu icon */}
+        {!isExpanded && showMinOverlay && (
+          <MinViewLhsOverlay
+            activeChatId={null}
+            onClose={() => setShowMinOverlay(false)}
+            onNewChat={() => { setMessages([]); setShowMinOverlay(false); }}
+          />
         )}
 
         {/* Main content area: Layout changes based on view mode */}
@@ -1624,9 +1759,20 @@ The content has been updated across all channels to reflect your changes.`;
           "flex flex-1 overflow-hidden",
           isExpanded ? "flex-row pt-0" : "flex-col"
         )}>
-          {/* Conditional rendering of AppSidebar (Bookmarks/History) in expanded view */}
+          {/* Full-height LHS sidebar (expanded view) — full or collapsed icon rail */}
           {isExpanded && activeSidebar === 'bookmarks' && (
-            <AppSidebar onClose={() => setActiveSidebar(null)} />
+            lhsCollapsed ? (
+              <LhsSidebarCollapsed
+                onNewChat={() => setMessages([])}
+                onOpenSettings={() => window.open('https://www.figma.com/proto/PpMyMSpfteIiBlbsBYryx2/Raman-AI---Co-Marketer---Co-Pilot?page-id=5891:1439&node-id=7073-4874&viewport=-442,2798,0.17&t=3ThX3Yd3gjcwJf8j-1&scaling=contain&content-scaling=responsive&starting-point-node-id=7073:4873&hide-ui=1', '_blank')}
+              />
+            ) : (
+              <LhsSidebar
+                activeChatId={null}
+                onNewChat={() => setMessages([])}
+                onOpenSettings={() => window.open('https://www.figma.com/proto/PpMyMSpfteIiBlbsBYryx2/Raman-AI---Co-Marketer---Co-Pilot?page-id=5891:1439&node-id=7073-4874&viewport=-442,2798,0.17&t=3ThX3Yd3gjcwJf8j-1&scaling=contain&content-scaling=responsive&starting-point-node-id=7073:4873&hide-ui=1', '_blank')}
+              />
+            )
           )}
           {/* Conditional rendering of AgentsSidebar in expanded view */}
           {isExpanded && activeSidebar === 'agents' && (
@@ -1637,65 +1783,109 @@ The content has been updated across all channels to reflect your changes.`;
             />
           )}
 
-          {/* Chat messages and input area */}
+          {/* Right column: header + chat (expanded) / chat only (widget) */}
+          <div className={cn("flex flex-col flex-1 min-w-0", isExpanded ? "overflow-hidden" : "")}>
+          {isExpanded && (
+            <RhsHeader
+              chatName={messages.length > 0 ? "Placeholder for chat-name" : null}
+              showSidebarToggle={true}
+              onToggleSidebar={() => setLhsCollapsed(prev => !prev)}
+              onMinimize={() => setIsExpanded(false)}
+              onClose={onCloseInterface}
+            />
+          )}
+
+          {/* Chat messages and input area.
+              Window is full screen; the chat-area itself is the Figma bordered card. */}
           <div className={cn(
-            "flex flex-col flex-1",
-            isExpanded ? "overflow-hidden" : "overflow-hidden"
+            "flex flex-col flex-1 overflow-hidden",
+            isExpanded && "p-[8px]"
           )}>
+          <div className={cn(
+            "relative flex flex-1 overflow-hidden",
+            isExpanded ? "bg-[#F9FAFB] border-[0.5px] border-[#DDE2EE] rounded-[16px]" : "bg-[#F9FAFB]",
+            isExpanded && showArtifactPreview && !artifactClosing && "gap-[12px] pl-[12px]"
+          )}>
+          {/* Conversation column — 60% when artifact open, hidden when full-expanded, expands back while closing */}
+          <div
+            className={cn(
+              "relative flex flex-col overflow-hidden min-w-0 transition-[width] duration-300 ease-in-out",
+              isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "w-0 opacity-0 pointer-events-none",
+              isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "w-[60%]",
+              !(isExpanded && showArtifactPreview && !artifactClosing) && "w-full flex-1"
+            )}
+          >
             {/* Scrollable chat messages area */}
             <div
               className={cn(
                 "relative z-0 flex-1 flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
-                isExpanded ? "" : "p-4"
+                isExpanded ? "" : "p-[16px]"
               )}
               ref={chatContainerRef}
             >
               {/* Centered container for chat content - 768px width as per Figma */}
               <div className={cn(
-                "flex flex-col items-center w-full h-full",
-                isExpanded ? "pt-2" : "",
+                "flex flex-col items-center w-full min-h-full",
+                isExpanded && messages.length > 0 ? "pt-2" : "",
                 messages.length === 0 ? "justify-center" : ""
               )}>
                 <div className={cn(
-                  "flex flex-col items-start w-full space-y-0",
+                  "flex flex-col items-start space-y-0 max-w-full",
                   isExpanded ? "w-[768px]" : "w-full"
                 )}>
                 {messages.length === 0 && (
-                  <div className="flex gap-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage
-                        src="/AgentIcons/Co-Marketer.svg"
-                        alt="Co-marketer"
-                      />
-                      <AvatarFallback className="bg-gray-200 text-gray-600">CM</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-foreground/90 mb-4 text-sm">Hello! Try these suggestions or just type in a few key words to get started!</p>
-                      {selectedMode === 'collaborative' ? [
-                        "Which campaigns had the highest CTR but lowest conversions, and what could be the possible reasons?",
-                        "Find the top 5 and bottom 5 campaigns in the last 30 days. Show success rates and patterns behind high and low performance.",
-                        "Tell me the best time slots to send campaigns on APN, WPN, Email, SMS, and WhatsApp for higher engagement.",
-                      ].map((suggestion, index) => (
-                        <Card
-                          key={index}
-                          className="p-4 mb-3 bg-primary-foreground border border-border rounded-md hover:shadow-md cursor-pointer transition-shadow duration-150 hover:bg-muted"
-                          onClick={() => handleSendMessage(suggestion)}
-                        >
-                          <p className="text-primary text-sm">{suggestion}</p>
-                        </Card>
-                      )) : [
-                        "Which campaigns had the highest CTR but lowest conversions, and what could be the possible reasons?",
-                        "Find the top 5 and bottom 5 campaigns in the last 30 days. Show success rates and patterns behind high and low performance.",
-                        "Tell me the best time slots to send campaigns on APN, WPN, Email, SMS, and WhatsApp for higher engagement.",
-                      ].map((suggestion, index) => (
-                        <Card
-                          key={index}
-                          className="p-4 mb-3 bg-primary-foreground border border-border rounded-md hover:shadow-md cursor-pointer transition-shadow duration-150 hover:bg-muted"
-                          onClick={() => handleSendMessage(suggestion)}
-                        >
-                          <p className="text-primary text-sm">{suggestion}</p>
-                        </Card>
-                      ))}
+                  <div className="w-full flex flex-col items-center">
+                    <div className={cn("w-full flex flex-col gap-[24px] items-center", isExpanded ? "max-w-[768px]" : "max-w-full")}>
+                      {/* "Hello" greeting */}
+                      <p
+                        className="font-bold text-[16px] leading-[22px] text-[#40474C] text-center tracking-[0.42px] whitespace-nowrap"
+                        style={{ fontFamily: "Manrope, sans-serif" }}
+                      >
+                        Hello, what can I do for you?
+                      </p>
+                      <div className="w-full flex flex-col gap-[16px] items-center">
+                        <ChatInput
+                          onSend={handleSendMessage}
+                          isMockAgentChatActive={isMockAgentChatActive}
+                          shimmer={inputShimmer}
+                          onStopMockConversation={stopMockConversation}
+                          isQuestionnaireActive={false}
+                          selectedContextChip={selectedStarterChip}
+                          onClearSelectedContextChip={() => setSelectedStarterChip(null)}
+                        />
+                        {!selectedStarterChip && (
+                          <div className="flex flex-wrap gap-[8px] items-center justify-center w-full">
+                            {starterChips.map((chipLabel, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                className="bg-white border-[0.5px] border-[#DDE2EE] px-[12px] py-[5px] rounded-[6px] whitespace-nowrap hover:bg-[#F9FAFB] transition-colors shrink-0"
+                                onClick={() => setSelectedStarterChip(chipLabel)}
+                              >
+                                <span
+                                  className="font-medium text-[14px] leading-[20px] text-[#6F6F8D] tracking-[0.42px]"
+                                  style={{ fontFamily: "Manrope, sans-serif" }}
+                                >
+                                  {chipLabel}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {selectedStarterChip && (
+                          <div className="w-full flex flex-col gap-[8px]">
+                            {(starterPromptsByChip[selectedStarterChip] ?? []).map((suggestion, index) => (
+                              <Card
+                                key={`${selectedStarterChip}-${index}`}
+                                className="p-[12px] bg-white border-[0.5px] border-[#E5E7EB] rounded-md hover:shadow-md cursor-pointer transition-shadow duration-150 hover:bg-muted"
+                                onClick={() => handleSendMessage(suggestion)}
+                              >
+                                <p className="text-primary text-sm">{suggestion}</p>
+                              </Card>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1741,6 +1931,11 @@ The content has been updated across all channels to reflect your changes.`;
                       isSegmentAgentRationale={message.isSegmentAgentRationale}
                       isContentAgentRationale={message.isContentAgentRationale}
                       isExecutiveSummaryWithContent={message.isExecutiveSummaryWithContent}
+                      showPerformanceDashboard={
+                        (message.isAI ?? false) &&
+                        !message.isThinkingState &&
+                        !message.hidePerformanceDashboard
+                      }
                       onContinueSegment={() => {
                         if (message.isSegmentAgentRationale) {
                           const idx = mockMessagesDefinitionRef.current.findIndex(msg => msg.isSegmentAgentRationale);
@@ -1823,9 +2018,17 @@ The content has been updated across all channels to reflect your changes.`;
                       isThinkingState={message.isThinkingState}
                       thinkingDuration={message.thinkingDuration}
                       reasoningSteps={message.reasoningSteps}
+                      artifact={message.artifact}
+                      onDownloadArtifact={() => {}}
+                      onPreviewArtifact={handleOpenArtifactPreview}
                     />
                   )
                 ))}
+                {isGeneratingOutput && (
+                  <div className="w-full py-2">
+                    <GeneratingLoader />
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
                 </div>
               </div>
@@ -1856,55 +2059,95 @@ The content has been updated across all channels to reflect your changes.`;
               </TooltipProvider>
             )}
 
-            <div className={cn(
-              "flex-shrink-0",
-              isExpanded ? "" : "h-[82px] px-4 py-5"
-            )}>
-              {/* Centered container for chat input - 768px width as per Figma */}
+            {messages.length > 0 && (
               <div className={cn(
-                "flex items-center justify-center w-full bg-transparent outline-none",
-                isExpanded ? "pb-2 pt-0" : "pb-2"
+                "flex-shrink-0",
+                isExpanded ? "" : "h-[82px] px-4 py-5"
               )}>
+                {/* Centered container for chat input - 768px width as per Figma */}
                 <div className={cn(
-                  isExpanded ? "w-[768px]" : "w-full"
+                  "flex items-center justify-center w-full bg-transparent outline-none",
+                  isExpanded ? "pb-2 pt-0" : "pb-2"
                 )}>
-                  <ChatInput
-                    onSend={handleSendMessage}
-                    isMockAgentChatActive={isMockAgentChatActive}
-                    onStopMockConversation={stopMockConversation}
-                    isQuestionnaireActive={(() => {
-                      const lastMessage = messages[messages.length - 1];
-                      
-                      // If the last message is a content agent response, input should be enabled
-                      if (lastMessage?.isContentAgent) {
-                        return false; // Content agent response phase - input enabled
-                      }
-                      
-                      // Check if we're currently in the clarification phase (questionnaire form)
-                      if (lastMessage?.isContentAgentClarification) {
-                        return true; // Currently filling out questionnaire - input disabled
-                      }
-                      
-                      // Check if we're in rationale phase (creative proposal)
-                      if (lastMessage?.isContentAgentRationale) {
-                        // Rationale phase is a response phase, not an input phase
-                        // User should be able to type messages during creative proposals
-                        return false; // Input enabled during rationale phase
-                      }
-                      
-                      // All other cases - input enabled
-                      return false;
-                    })()}
-                  />
-                  {/* Centered text below input */}
-                  <div className="flex justify-center mt-2">
-                    <p className="text-sm text-foreground-muted text-center">
-                      Co-marketer can make mistakes. Please double check responses
-                    </p>
+                  <div className={cn(
+                    isExpanded ? "w-[768px]" : "w-full"
+                  )}>
+                    <ChatInput
+                      onSend={handleSendMessage}
+                      isMockAgentChatActive={isMockAgentChatActive}
+                          shimmer={inputShimmer}
+                      onStopMockConversation={stopMockConversation}
+                      isQuestionnaireActive={(() => {
+                        const lastMessage = messages[messages.length - 1];
+                        
+                        // If the last message is a content agent response, input should be enabled
+                        if (lastMessage?.isContentAgent) {
+                          return false; // Content agent response phase - input enabled
+                        }
+                        
+                        // Check if we're currently in the clarification phase (questionnaire form)
+                        if (lastMessage?.isContentAgentClarification) {
+                          return true; // Currently filling out questionnaire - input disabled
+                        }
+                        
+                        // Check if we're in rationale phase (creative proposal)
+                        if (lastMessage?.isContentAgentRationale) {
+                          // Rationale phase is a response phase, not an input phase
+                          // User should be able to type messages during creative proposals
+                          return false; // Input enabled during rationale phase
+                        }
+                        
+                        // All other cases - input enabled
+                        return false;
+                      })()}
+                      selectedContextChip={null}
+                    />
+                    {/* Footer text below input — widget view only (expanded uses card footer) */}
+                    {!isExpanded && (
+                      <div className="flex justify-center mt-2">
+                        <p className="text-sm text-foreground-muted text-center">
+                          Co-marketer can make mistakes. Please double check responses
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* Persistent card footer (expanded view) — per Figma */}
+            {isExpanded && (
+              <div className="flex items-center justify-center py-[8px] w-full shrink-0">
+                <p
+                  className="text-[12px] text-[#6F6F8D] text-center w-[768px]"
+                  style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
+                >
+                  Co-marketer can make mistakes. Please double check responses
+                </p>
+              </div>
+            )}
+          </div>
+          {/* Artifact preview panel — 40% split, or full width when expanded.
+              On close it slides right + fades + collapses width before unmounting. */}
+          {isExpanded && showArtifactPreview && (
+            <div className={cn(
+              "shrink-0 h-full py-[12px] transition-all duration-300 ease-in-out will-change-[width,transform,opacity]",
+              artifactClosing
+                ? "w-0 opacity-0 translate-x-6 pr-0"
+                : artifactFullExpanded
+                  ? "w-full pl-[12px] pr-[12px]"
+                  : "w-[40%] pr-[12px]"
+            )}>
+              <ArtifactPreview
+                onClose={handleCloseArtifactPreview}
+                onDownload={() => {}}
+                isFullExpanded={artifactFullExpanded}
+                onToggleExpand={() => setArtifactFullExpanded(prev => !prev)}
+              />
             </div>
+          )}
+          </div>
+          </div>
           </div>
         </div>
       </div>

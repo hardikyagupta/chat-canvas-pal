@@ -19,7 +19,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Nunito Sans', 'sans-serif'],
+        sans: ['Manrope', 'sans-serif'],
+        manrope: ['Manrope', 'sans-serif'],
+        mono: ['Manrope', 'sans-serif'],
+        serif: ['Manrope', 'sans-serif'],
       },
       backgroundImage: {
         'main-app-bg': "url('/background.png')",

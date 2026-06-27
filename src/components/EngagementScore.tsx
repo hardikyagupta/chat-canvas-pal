@@ -77,13 +77,13 @@ export function EngagementScore({
       {/* Score percentage and label */}
       <div className="flex items-center gap-1">
         <div 
-          className="text-xs font-bold font-['Nunito_Sans'] leading-none"
+          className="text-xs font-bold font-['Manrope'] leading-none"
           style={{ color: score >= 70 ? '#00C48C' : '#E7B231' }}
         >
           {score}%
         </div>
         {showLabel && (
-          <div className="text-slate-900 dark:text-white text-[10px] font-normal font-['Nunito_Sans'] leading-none">
+          <div className="text-slate-900 dark:text-white text-[10px] font-normal font-['Manrope'] leading-none">
             Engagement score
           </div>
         )}

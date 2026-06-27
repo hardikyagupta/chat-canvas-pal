@@ -1,0 +1,255 @@
+import React from 'react';
+import { PanelLeft, Download, ArrowLeftToLine, ArrowRightToLine } from 'lucide-react';
+import {
+  PieChart, Pie, Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts';
+
+interface ArtifactPreviewProps {
+  fileName?: string;
+  title?: string;
+  onClose?: () => void;        // collapse/close the artifact panel
+  onDownload?: () => void;
+  isFullExpanded?: boolean;    // artifact occupies full width (chat hidden)
+  onToggleExpand?: () => void; // expand to full / restore split
+}
+
+// ---- KPI cards ----
+const kpis = [
+  { label: 'CUSTOMERS ANALYSED', value: '23M', sub: 'every single one' },
+  { label: 'SIGNALS READ', value: '469M', sub: 'across every interaction' },
+  { label: 'CUSTOMER TYPES FOUND', value: '29', sub: 'discovered automatically' },
+  { label: 'TARGETING BOOST', value: '4.87x', sub: 'more first-time buyers, same spend' },
+  { label: 'READY-TO-ACT CUSTOMERS', value: '8.7M', sub: 'with a clear next step' },
+  { label: 'SAFE TO MESSAGE NOW', value: '7.6M', sub: '99.0% — brand-safe' },
+];
+
+// ---- Gauge (donut with center value) ----
+const Gauge: React.FC<{ value: number; color: string; title: string; sub: string }> = ({ value, color, title, sub }) => {
+  const data = [{ v: value }, { v: 1 - value }];
+  return (
+    <div className="flex flex-col items-center gap-[6px]">
+      <div className="relative w-[96px] h-[96px]">
+        <PieChart width={96} height={96}>
+          <Pie
+            data={data}
+            dataKey="v"
+            innerRadius={36}
+            outerRadius={46}
+            startAngle={90}
+            endAngle={-270}
+            stroke="none"
+          >
+            <Cell fill={color} />
+            <Cell fill="#EDEFF3" />
+          </Pie>
+        </PieChart>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[18px] font-bold text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>{value.toFixed(2)}</span>
+          <span className="text-[8px] text-[#6F6F8D] tracking-wide">ACCURACY</span>
+        </div>
+      </div>
+      <p className="text-[12px] font-semibold text-[#17173A] text-center" style={{ fontFamily: 'Inter, sans-serif' }}>{title}</p>
+      <p className="text-[10px] text-[#6F6F8D] text-center">{sub}</p>
+    </div>
+  );
+};
+
+// ---- Channel donut ----
+const channelData = [
+  { name: 'On-site / in-app', value: 88.3, count: '2,06,85,743', color: '#E8552B' },
+  { name: 'Email', value: 6, count: '14,86,303', color: '#3B82F6' },
+  { name: 'WhatsApp', value: 5.7, count: '13,35,988', color: '#22A565' },
+];
+
+// ---- Bottom bar chart ----
+const barData = [
+  { name: 'Email', CTR: 0.54, 'Open Rate': 78.1, 'Conversion Rate': 0.4 },
+  { name: 'WhatsApp', CTR: 20.8, 'Open Rate': 64.2, 'Conversion Rate': 3.1 },
+  { name: 'APN', CTR: 4.2, 'Open Rate': 41.6, 'Conversion Rate': 1.2 },
+  { name: 'SMS', CTR: 2.1, 'Open Rate': 33.0, 'Conversion Rate': 0.8 },
+];
+
+const tableRows = [
+  { q: 'Jul 2025', conv: '1,249', rev: '935,654', ctr: '0.54%', open: '78.17%', cr: '0.0%' },
+  { q: 'Aug 2025', conv: '1,249', rev: '935,654', ctr: '0.54%', open: '78.17%', cr: '0.0%' },
+];
+
+const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
+  fileName = 'Ui launch usage readout combined · PDF',
+  title = 'Highest Engagement Last Quarter',
+  onClose,
+  onDownload,
+  isFullExpanded = false,
+  onToggleExpand,
+}) => {
+  return (
+    <div className="flex flex-col h-full w-full bg-white border border-[#DDE2EE] rounded-[12px] overflow-hidden">
+      {/* top-nav-artifact */}
+      <div className="flex gap-[8px] items-center px-[8px] py-[4px] w-full shrink-0 border-b border-[#DDE2EE]">
+        {/* Left cluster: 1) expand arrow  2) collapse/close  then label */}
+        <div className="flex min-w-0 gap-[4px] items-center">
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
+            aria-label={isFullExpanded ? 'Restore split view' : 'Expand artifact'}
+          >
+            {isFullExpanded
+              ? <ArrowRightToLine className="size-[16px] text-[#40474C]" />
+              : <ArrowLeftToLine className="size-[16px] text-[#40474C]" />}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
+            aria-label="Close artifact"
+          >
+            <PanelLeft className="size-[16px] text-[#40474C]" />
+          </button>
+          <p className="min-w-0 truncate text-[14px] font-medium text-black" style={{ fontFamily: 'Inter, sans-serif' }}>
+            {fileName}
+          </p>
+        </div>
+        {/* Spacer */}
+        <div className="flex-1" />
+        {/* Right: download */}
+        <button
+          type="button"
+          onClick={onDownload}
+          className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
+          aria-label="Download artifact"
+        >
+          <Download className="size-[16px] text-[#40474C]" />
+        </button>
+      </div>
+
+      {/* content-area (scrollable) */}
+      <div className="flex flex-col gap-[16px] items-start px-[16px] py-[16px] w-full flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+        <p className="text-[20px] font-semibold leading-[28px] text-[#17173A] w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
+          {title}
+        </p>
+
+        {/* Top dashboard card */}
+        <div className="w-full border border-[#E5E7EB] rounded-[12px] p-[16px] flex flex-col gap-[16px] bg-white">
+          {/* KPI row */}
+          <div className="grid grid-cols-3 gap-[8px]">
+            {kpis.map((k) => (
+              <div key={k.label} className="border border-[#EDEFF3] rounded-[8px] px-[10px] py-[8px] flex flex-col gap-[2px]">
+                <span className="text-[8px] tracking-[0.5px] text-[#9AA3B2] font-medium">{k.label}</span>
+                <span className="text-[18px] font-bold text-[#17173A] leading-none" style={{ fontFamily: 'Inter, sans-serif' }}>{k.value}</span>
+                <span className="text-[9px] text-[#6F6F8D]">{k.sub}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Charts row — stacks on narrow widths */}
+          <div className="grid grid-cols-1 min-[520px]:grid-cols-2 gap-[12px]">
+            {/* Gauges block */}
+            <div className="border border-[#EDEFF3] rounded-[8px] p-[12px] flex flex-col gap-[8px]">
+              <p className="text-[11px] font-semibold text-[#17173A]">Who's about to act</p>
+              <p className="text-[9px] text-[#6F6F8D]">How confidently we can pick the right people — and the payoff</p>
+              <div className="flex items-start justify-around pt-[4px]">
+                <Gauge value={0.83} color="#22A565" title="First-time buyers" sub="6.87x better targeting · 8.2M ranked" />
+                <Gauge value={0.71} color="#E0A82E" title="Repeat buyers" sub="2.62x better targeting · 535K ranked" />
+              </div>
+            </div>
+
+            {/* Channel donut block */}
+            <div className="border border-[#EDEFF3] rounded-[8px] p-[12px] flex flex-col gap-[8px]">
+              <p className="text-[11px] font-semibold text-[#17173A]">Where they actually engage</p>
+              <p className="text-[9px] text-[#6F6F8D]">We route each person to the channel they respond to</p>
+              <div className="flex items-center gap-[8px]">
+                <div className="relative w-[96px] h-[96px] shrink-0">
+                  <PieChart width={96} height={96}>
+                    <Pie data={channelData} dataKey="value" innerRadius={32} outerRadius={46} stroke="none">
+                      {channelData.map((c) => <Cell key={c.name} fill={c.color} />)}
+                    </Pie>
+                  </PieChart>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[14px] font-bold text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>25.67%</span>
+                    <span className="text-[8px] text-[#6F6F8D]">SHARED</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-[6px] flex-1 min-w-0">
+                  {channelData.map((c) => (
+                    <div key={c.name} className="flex items-center gap-[4px] text-[9px]">
+                      <span className="size-[8px] rounded-full shrink-0" style={{ background: c.color }} />
+                      <span className="text-[#6F6F8D] flex-1 min-w-0 truncate">{c.name}</span>
+                      <span className="text-[#17173A] font-medium">{c.count}</span>
+                      <span className="text-[#6F6F8D]">{c.value}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Executive Summary */}
+        <div className="flex flex-col gap-[8px] w-full">
+          <p className="text-[16px] font-semibold leading-[24px] text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>⭐ Executive Summary</p>
+          <p className="text-[14px] leading-[24px] text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>
+            The performance analysis <strong>(Aug 17–Nov 17, 2025)</strong> highlights strong differences between Q3 and Q4. Q3 delivered significantly higher conversions <strong>(1,249)</strong>{' '}
+            <span className="bg-[#F6F6F6] text-[#6F6F8D] text-[12px] rounded-[6px] px-[6px] py-[2px]" style={{ fontFamily: 'monospace' }}>whatsAppCampaign +1</span>{' '}
+            and revenue <strong>(935,654 units)</strong> compared to Q4 <strong>(648 conversions, 786,660 units).</strong>
+          </p>
+          <p className="text-[14px] leading-[24px] text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>
+            <strong>WhatsApp</strong> was the standout channel, especially in Q3, generating the <strong>highest revenue (389,886 units)</strong>,{' '}
+            <span className="bg-[#F6F6F6] text-[#6F6F8D] text-[12px] rounded-[6px] px-[6px] py-[2px]" style={{ fontFamily: 'monospace' }}>augcampaign +1</span>{' '}
+            <strong>highest conversions (569)</strong>, and an <strong>impressive 20.8% CTR.</strong>
+          </p>
+        </div>
+
+        {/* Table */}
+        <div className="w-full border border-[#E5E7EB] rounded-[8px] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[14px]" style={{ fontFamily: 'Inter, sans-serif' }}>
+              <thead>
+                <tr className="bg-[#F2F5F9]">
+                  {['Quarter', 'Total Conversion', 'Total Revenue (₹)', 'CTR', 'Open Rate', 'Conversion Rate'].map((h) => (
+                    <th key={h} className="text-left font-medium text-[#64758B] px-[10px] py-[10px] whitespace-nowrap tracking-[0.33px]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.map((r, i) => (
+                  <tr key={i} className="bg-white border-t border-[#E5E7EB]">
+                    <td className="px-[10px] py-[10px] text-[#17173A] font-medium whitespace-nowrap">{r.q}</td>
+                    <td className="px-[10px] py-[10px] text-[#17173A] whitespace-nowrap">{r.conv}</td>
+                    <td className="px-[10px] py-[10px] text-[#17173A] font-medium whitespace-nowrap">{r.rev}</td>
+                    <td className="px-[10px] py-[10px] text-[#17173A] whitespace-nowrap">{r.ctr}</td>
+                    <td className="px-[10px] py-[10px] text-[#17173A] whitespace-nowrap">{r.open}</td>
+                    <td className="px-[10px] py-[10px] text-[#17173A] whitespace-nowrap">{r.cr}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Bottom bar chart */}
+        <div className="w-full border border-[#E5E7EB] rounded-[8px] p-[12px] flex flex-col gap-[4px]">
+          <p className="text-[12px] font-semibold text-[#17173A]" style={{ fontFamily: 'Inter, sans-serif' }}>Q1 Performance Metrics Comparison</p>
+          <p className="text-[10px] text-[#6F6F8D]">CTR, Open Rate, and Conversion Rate Analysis</p>
+          <div className="w-full h-[220px] mt-[8px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={barData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#EDEFF3" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6F6F8D' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#6F6F8D' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="CTR" fill="#22A565" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Open Rate" fill="#3B82F6" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Conversion Rate" fill="#E0A82E" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ArtifactPreview;

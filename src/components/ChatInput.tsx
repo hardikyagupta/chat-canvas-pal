@@ -2,7 +2,7 @@ import React, { useState, useRef, KeyboardEvent, CSSProperties, useEffect } from
 import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowUp, StopCircle } from 'lucide-react';
+import { ArrowUp, StopCircle, X } from 'lucide-react';
 import { marketingAgents, MarketingAgent } from '@/data/agents';
 import { cn } from "@/lib/utils";
 
@@ -24,12 +24,24 @@ interface ChatInputProps {
   isMockAgentChatActive?: boolean;
   onStopMockConversation?: () => void;
   isQuestionnaireActive?: boolean;
+  selectedContextChip?: string | null;
+  onClearSelectedContextChip?: () => void;
+  /** Drives the input shimmer (set by parent on every send / while generating). */
+  shimmer?: boolean;
 }
 
 // Temporary feature flag to disable @-agent mention dropdown
 const ALLOW_AGENT_MENTION = false;
 
-const ChatInput: React.FC<ChatInputProps> = ({ onSend, isMockAgentChatActive, onStopMockConversation, isQuestionnaireActive = false }) => {
+const ChatInput: React.FC<ChatInputProps> = ({
+  onSend,
+  isMockAgentChatActive,
+  onStopMockConversation,
+  isQuestionnaireActive = false,
+  selectedContextChip = null,
+  onClearSelectedContextChip,
+  shimmer = false,
+}) => {
   const [inputValue, setInputValue] = useState("");
   const [showMentionList, setShowMentionList] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
@@ -165,39 +177,114 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSend, isMockAgentChatActive, on
 
   // If mentions disabled, never render popover
   if (!ALLOW_AGENT_MENTION) {
+    const hasText = inputValue.trim().length > 0;
+    // Button is active (blue) by default; while output is generating (input shimmering)
+    // it switches to the disabled/grey state with the Figma square icon.
+    const isLoading = !!isMockAgentChatActive || shimmer;
+    const isActive = !isLoading;
     return (
       <div className="relative w-full">
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          onChange={(e)=>setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your message..."
-          disabled={isQuestionnaireActive}
+        {/* Outer container — height grows smoothly when chip appears */}
+        <div
           className={cn(
-            "w-full h-[56px] pl-4 pr-0 pt-3 pb-3 rounded-lg border border-[#DDE2EE] dark:border-input-border dark:bg-input focus:outline-none focus:ring-1 focus:ring-[#007BFF] dark:focus:ring-ring transition-shadow text-sm placeholder:text-[#6F6F8D] dark:placeholder:text-foreground-muted dark:text-foreground shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)]",
-            isQuestionnaireActive && "cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800"
+            "relative overflow-hidden w-full bg-white rounded-[16px] border-[0.5px] border-[#DDE2EE] p-[12px]",
+            "drop-shadow-[0px_1px_1px_rgba(16,24,40,0.05)]",
+            "focus-within:ring-1 focus-within:ring-[#0056F8] transition-shadow",
+            isQuestionnaireActive && "cursor-not-allowed opacity-50"
           )}
-          autoComplete="off"
-        />
-        <button
-          type="button"
-          onClick={isMockAgentChatActive ? handleStopClick : handleSendClick}
-          disabled={isQuestionnaireActive || (!isMockAgentChatActive && !inputValue.trim())}
-          className={cn(
-            "absolute right-3 top-1/2 -translate-y-1/2 rounded-lg w-8 h-8 flex items-center justify-center transition-colors",
-            isMockAgentChatActive 
-              ? "text-[#6F6F8D] dark:text-foreground-muted hover:text-cobalt-blue dark:hover:text-accent" 
-              : inputValue.trim() 
-                ? "bg-[#002D72] text-white hover:bg-[#001f4d]" 
-                : "bg-gray-200 text-gray-400 cursor-not-allowed",
-            isQuestionnaireActive && "opacity-50 cursor-not-allowed"
-          )}
-          aria-label={isMockAgentChatActive ? "Stop conversation" : "Send message"}
         >
-          {isMockAgentChatActive ? <StopCircle className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
-        </button>
+          {/* Shimmer layers — active while a response is being generated (mock
+              flow) and briefly after every send. Inner sheen sweeps inside,
+              border ring shimmers around the edge. */}
+          {(isMockAgentChatActive || shimmer) && (
+            <>
+              <span aria-hidden="true" className="input-inner-shimmer" />
+              <span aria-hidden="true" className="input-border-shimmer" />
+            </>
+          )}
+          {/* Single flex row: lhs-area + rhs-area.
+              Center-aligned in zero state; bottom-aligned when chip expands it. */}
+          <div className={cn("relative z-10 flex gap-[8px]", selectedContextChip ? "items-end" : "items-center")}>
+            {/* lhs-area: input on top, chip below (gap-[24px]) */}
+            <div className="flex-1 min-w-0 flex flex-col">
+              {/* Placeholder / input row */}
+              <div className="flex items-center">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask Co-marketer..."
+                  disabled={isQuestionnaireActive}
+                  className="flex-1 min-w-0 bg-transparent border-0 p-0 font-medium text-[14px] leading-[22px] text-foreground placeholder:text-[#6F6F8D] focus:outline-none"
+                  style={{ fontFamily: "Manrope, sans-serif" }}
+                  autoComplete="off"
+                />
+              </div>
+
+              {/* Context chip — animates in/out using grid-rows trick */}
+              <div
+                className="grid transition-[grid-template-rows,margin-top] duration-200 ease-in-out"
+                style={{ gridTemplateRows: selectedContextChip ? '1fr' : '0fr', marginTop: selectedContextChip ? '24px' : '0px' }}
+              >
+                <div className="overflow-hidden min-h-0">
+                  {selectedContextChip && (
+                    <button
+                      type="button"
+                      onClick={onClearSelectedContextChip}
+                      className="inline-flex items-center gap-[4px] bg-[#F9FAFB] border border-[#2F68E5] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_rgba(10,143,253,0.1)] whitespace-nowrap transition-opacity duration-200"
+                    >
+                      <span
+                        className="text-[12px] leading-[16px] text-[#2F68E5] tracking-[0.42px]"
+                        style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
+                      >
+                        {selectedContextChip}
+                      </span>
+                      <X className="w-[12px] h-[12px] text-[#6F6F8D] shrink-0" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* rhs-area: send button (alignment handled by parent row) */}
+            <div className="flex shrink-0">
+              <button
+                type="button"
+                onClick={handleSendClick}
+                disabled={isQuestionnaireActive || isLoading}
+                className={cn(
+                  "relative flex items-center justify-center overflow-hidden rounded-[30px] p-[8px] transition-all duration-200",
+                  isActive
+                    ? "border-[0.75px] border-[#0043C1] shadow-[0px_1px_0px_0px_rgba(0,0,0,0.02)]"
+                    : "border-0",
+                  isQuestionnaireActive && "opacity-50 cursor-not-allowed"
+                )}
+                style={{
+                  background: isActive
+                    ? "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.24) 100%), linear-gradient(90deg, rgb(0,86,248) 0%, rgb(0,86,248) 100%)"
+                    : "linear-gradient(90deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.08) 100%), linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.24) 100%)",
+                }}
+                aria-label={isLoading ? "Generating response" : "Send message"}
+              >
+                {/* Inner highlight for active state */}
+                {isActive && (
+                  <span
+                    className="absolute inset-0 rounded-[30px] pointer-events-none"
+                    style={{ boxShadow: "inset 0px 1px 1px 0px rgba(255,255,255,0.25)" }}
+                  />
+                )}
+                {isLoading ? (
+                  /* Loading/disabled state — grey rounded square per Figma (node 16318:13144) */
+                  <span className="block w-3 h-3 rounded-[4px] bg-[#6F6F8D] relative z-10" />
+                ) : (
+                  <ArrowUp className="w-4 h-4 text-white relative z-10" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

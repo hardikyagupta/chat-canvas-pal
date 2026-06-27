@@ -188,11 +188,11 @@ export function ContentAgentSegmentAccordions() {
                   )}
                 </div>
                 
-                {/* Segment Text - Nunito Sans, 500 weight, 12px, 16px line height */}
+                {/* Segment Text - Manrope, 500 weight, 12px, 16px line height */}
                 <span 
                   className={cn(
                     // Font specifications from Figma
-                    "font-['Nunito Sans'] font-medium text-xs leading-4",
+                    "font-['Manrope'] font-medium text-xs leading-4",
                     // Height: 16px, flex: none, order: 1, flex-grow: 0
                     "h-4 flex-none",
                     // Color based on hover state

@@ -31,7 +31,7 @@ export const ModeSwitchConfirmation: React.FC<ModeSwitchConfirmationProps> = ({
           <div className="flex flex-col">
             {/* Title */}
             <h2 
-              className="font-['Nunito_Sans'] font-bold text-xl leading-7 text-[#17173A] mb-4"
+              className="font-['Manrope'] font-bold text-xl leading-7 text-[#17173A] mb-4"
               style={{ letterSpacing: '0.416667px' }}
             >
               Are you sure you want to switch to {modeDisplayName} mode?
@@ -39,7 +39,7 @@ export const ModeSwitchConfirmation: React.FC<ModeSwitchConfirmationProps> = ({
             
             {/* Content Body */}
             <p 
-              className="font-['Nunito_Sans'] font-normal text-sm leading-5 text-[#17173A] mb-8"
+              className="font-['Manrope'] font-normal text-sm leading-5 text-[#17173A] mb-8"
               style={{ letterSpacing: '0.42px' }}
             >
               A new conversation will be created. The current conversation will be saved in chat history and can be accessed from there to resume.
@@ -50,7 +50,7 @@ export const ModeSwitchConfirmation: React.FC<ModeSwitchConfirmationProps> = ({
               {/* Cancel Button */}
               <Button
                 onClick={onCancel}
-                className="px-[18px] py-2 h-9 bg-white border-[1.5px] border-[#143F93] rounded-[4px] font-['Nunito_Sans'] font-semibold text-sm leading-5 uppercase text-[#143F93] hover:bg-white hover:text-[#143F93] hover:border-[#143F93]"
+                className="px-[18px] py-2 h-9 bg-white border-[1.5px] border-[#143F93] rounded-[4px] font-['Manrope'] font-semibold text-sm leading-5 uppercase text-[#143F93] hover:bg-white hover:text-[#143F93] hover:border-[#143F93]"
                 style={{ letterSpacing: '0.42px' }}
                 variant="outline"
               >
@@ -60,7 +60,7 @@ export const ModeSwitchConfirmation: React.FC<ModeSwitchConfirmationProps> = ({
               {/* Confirm Button */}
               <Button
                 onClick={onConfirm}
-                className="px-[18px] py-2 h-9 bg-[#143F93] rounded-[4px] font-['Nunito_Sans'] font-semibold text-sm leading-5 uppercase text-white hover:bg-[#0f2d70] hover:text-white"
+                className="px-[18px] py-2 h-9 bg-[#143F93] rounded-[4px] font-['Manrope'] font-semibold text-sm leading-5 uppercase text-white hover:bg-[#0f2d70] hover:text-white"
                 style={{ letterSpacing: '0.42px' }}
               >
                 SWITCH MODE

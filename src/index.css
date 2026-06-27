@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700&display=swap');
+/* Manrope is loaded via the @fontsource/manrope library (see src/main.tsx) */
 
 @tailwind base;
 @tailwind components;
@@ -115,6 +115,17 @@
   body {
     @apply bg-background text-foreground;
     @apply bg-main-app-bg bg-cover bg-top bg-no-repeat min-h-screen fixed inset-0;
+    font-family: 'Manrope', sans-serif;
+  }
+
+  /* Enforce Manrope across the entire app — no other fonts should render */
+  html,
+  body,
+  button,
+  input,
+  textarea,
+  select {
+    font-family: 'Manrope', sans-serif;
   }
 }
 
@@ -173,9 +184,123 @@
   }
 }
 
+/* Chat-input shimmer (active while a conversation is in progress).
+   Two independent layers, per the reference:
+   1. .input-border-shimmer — a rotating conic gradient clipped to the border ring
+   2. .input-inner-shimmer   — soft radial color blobs revealed by a rotating
+                               conic mask, so the inner gradient sweeps around. */
+@property --input-shimmer-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.input-border-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  z-index: 1;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--input-shimmer-angle),
+    #5c80ff 0deg,
+    #ffa8dc 40deg,
+    #fc5e02 75deg,
+    #ffffff 105deg,
+    #ffffff 255deg,
+    #085286 285deg,
+    #5c80ff 325deg,
+    #5c80ff 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: inputShimmerSpin 4s linear infinite;
+}
+
+.input-inner-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.9;
+  /* Thin color wisps along the top/bottom edges (per reference) — keeping the
+     blobs off-center is what prevents the conic mask's center "pinch". */
+  background:
+    radial-gradient(ellipse 156px 30px at 84% 0%, rgba(92, 128, 255, 0.42), transparent 72%),
+    radial-gradient(ellipse 176px 40px at 9% 100%, rgba(255, 168, 220, 0.36), transparent 74%),
+    radial-gradient(ellipse 156px 34px at 52% 100%, rgba(252, 94, 2, 0.28), transparent 78%),
+    radial-gradient(ellipse 116px 24px at 30% 0%, rgba(8, 82, 134, 0.22), transparent 75%);
+  /* Exact reference compositing: conic reveal ∩ vertical edge-fade, then the
+     horizontal edge-fade added on top — produces the smooth perimeter sweep. */
+  -webkit-mask-image:
+    conic-gradient(
+      from var(--input-shimmer-angle),
+      transparent 0%,
+      transparent 18%,
+      rgba(255, 255, 255, 0.24) 26%,
+      rgba(255, 255, 255, 0.52) 38%,
+      rgba(255, 255, 255, 0.7) 50%,
+      rgba(255, 255, 255, 0.78) 62%,
+      rgba(255, 255, 255, 0.78) 82%,
+      rgba(255, 255, 255, 0.56) 90%,
+      rgba(255, 255, 255, 0.26) 96%,
+      transparent 99%,
+      transparent 100%
+    ),
+    linear-gradient(white, transparent 24px, transparent calc(100% - 24px), white),
+    linear-gradient(to right, white, transparent 22px, transparent calc(100% - 22px), white);
+  -webkit-mask-composite: source-in, source-over;
+  mask-image:
+    conic-gradient(
+      from var(--input-shimmer-angle),
+      transparent 0%,
+      transparent 18%,
+      rgba(255, 255, 255, 0.24) 26%,
+      rgba(255, 255, 255, 0.52) 38%,
+      rgba(255, 255, 255, 0.7) 50%,
+      rgba(255, 255, 255, 0.78) 62%,
+      rgba(255, 255, 255, 0.78) 82%,
+      rgba(255, 255, 255, 0.56) 90%,
+      rgba(255, 255, 255, 0.26) 96%,
+      transparent 99%,
+      transparent 100%
+    ),
+    linear-gradient(white, transparent 24px, transparent calc(100% - 24px), white),
+    linear-gradient(to right, white, transparent 22px, transparent calc(100% - 22px), white);
+  mask-composite: intersect, add;
+  animation:
+    inputShimmerSpin 3.2s linear infinite,
+    inputShimmerHue 9s ease-in-out infinite;
+}
+
+@keyframes inputShimmerSpin {
+  to { --input-shimmer-angle: 360deg; }
+}
+
+@keyframes inputShimmerHue {
+  0% { filter: hue-rotate(-18deg) brightness(1.1) saturate(1.12); }
+  50% { filter: hue-rotate(18deg) brightness(1.1) saturate(1.12); }
+  100% { filter: hue-rotate(-18deg) brightness(1.1) saturate(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input-border-shimmer,
+  .input-inner-shimmer {
+    animation: none;
+  }
+}
+
 /* Chat message content styling - matching Figma design specs */
 .text-sm p {
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 22px;
@@ -185,7 +310,7 @@
 
 .text-sm strong,
 .text-sm b {
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 18px;
   font-weight: 600;
   line-height: 24px;
@@ -196,7 +321,7 @@
 
 .text-sm ul,
 .text-sm ol {
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 22px;
@@ -212,7 +337,7 @@
 .text-sm h1,
 .text-sm h2,
 .text-sm h3 {
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 18px;
   font-weight: 600;
   line-height: 24px;
@@ -223,7 +348,7 @@
 .text-sm h4,
 .text-sm h5,
 .text-sm h6 {
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
@@ -238,7 +363,7 @@
 
 /* Thought indicator styling */
 .thought-indicator {
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;

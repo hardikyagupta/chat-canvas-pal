@@ -100,7 +100,7 @@ export function WhatsAppMediaBased({ data, onDataChange }: WhatsAppMediaBasedPro
 
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 bg-white">
       <h3 className="text-sm font-medium text-foreground">Content agent suggests:</h3>
       
       {/* Media URL */}
