@@ -522,7 +522,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const [isContentGenerating, setIsContentGenerating] = useState(false);
   const [isAnsweringQuestions, setIsAnsweringQuestions] = useState(false);
   const [isSkippingToGenerate, setIsSkippingToGenerate] = useState(false);
-  const animationTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+  const animationTimeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dynamicAvatarSrc, setDynamicAvatarSrc] = useState<string | null>("/avatarGIF.gif");
   
   // Enhanced animation states for instant "pop" token streaming
@@ -897,8 +897,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   }, [content, isAI, animationSpeed, onAnimationComplete, animate, isThinkingState]);
 
   useEffect(() => {
-    let playTimeoutId: NodeJS.Timeout | undefined;
-    let pauseTimeoutId: NodeJS.Timeout | undefined;
+    let playTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let pauseTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
     const GIF_ASSUMED_DURATION = 10000; // 10 seconds for the GIF to play
     const STATIC_FRAME_HOLD_DURATION = 10000;  // 10 seconds to show the static first frame

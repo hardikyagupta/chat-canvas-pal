@@ -242,7 +242,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [contentApproved, setContentApproved] = useState(false); // New state for content approval
   const [segmentsApproved, setSegmentsApproved] = useState(false); // New state for segments approval
   const [contentGenerated, setContentGenerated] = useState(false); // New state for content generation
-  const mockMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mockMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMockAgentChatActiveRef = useRef(isMockAgentChatActive);
   // True while the performance "story" flow is running, so re-typing restarts the
   // story instead of being captured by the Valentine collaborative continuation path.
@@ -343,7 +343,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [artifactFullExpanded, setArtifactFullExpanded] = useState(false);
   const [artifactClosing, setArtifactClosing] = useState(false); // exit-animation flag
   const hasOpenedArtifactRef = useRef(false);
-  const artifactCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const artifactCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleOpenArtifactPreview = () => {
     if (artifactCloseTimerRef.current) clearTimeout(artifactCloseTimerRef.current);
