@@ -22,11 +22,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModeSwitchConfirmation } from './ModeSwitchConfirmation';
-import LhsSidebar from './LhsSidebar';
-import LhsSidebarCollapsed from './LhsSidebarCollapsed';
+import LhsSidebar, { defaultChats } from './LhsSidebar';
+import ChatListPage from './ChatListPage';
 import RhsHeader from './RhsHeader';
+import RotatingWord from './RotatingWord';
+import { GradientShimmer } from 'gradient-shimmer';
 import MinViewLhsOverlay from './MinViewLhsOverlay';
 import ArtifactPreview from './ArtifactPreview';
+import LineNav, { LineNavItem } from './LineNav';
 import { ContentAgentSegmentAccordions } from './ContentAgentSegmentAccordions';
 import GeneratingLoader from './GeneratingLoader';
 import { BorderBeam } from 'border-beam';
@@ -81,6 +84,11 @@ interface ChatMessageData {
   artifact?: { title: string; subtitle?: string; intro?: string };
   // Inline campaign performance dashboard escape hatch
   hidePerformanceDashboard?: boolean;
+  // Short title used by the vertical line-nav (only meaningful on user turns)
+  navLabel?: string;
+  // Lightweight per-message graphics for follow-up answers (visual parity)
+  statCards?: { label: string; value: string; sub?: string }[];
+  miniChart?: 'delivery' | 'rates';
 }
 
 // Props for the main ChatInterface component
@@ -90,6 +98,101 @@ interface ChatInterfaceProps {
   setEnabledAgents: React.Dispatch<React.SetStateAction<Set<string>>>;
   onCloseInterface?: () => void; // Handler to close the entire chat interface
 }
+
+// Rotating example topics shown in the empty-state greeting slot animation
+const GREETING_TOPICS = [
+  'Campaign performance',
+  'Revenue trends',
+  'Journey drop-offs',
+  'Audience behavior',
+  'Channel anomalies',
+  'Conversion opportunities',
+];
+
+// Bookmarked chats — the saved subset of the chat list
+const bookmarkedChats = defaultChats.filter((c) => ['2', '5', '8', '11', '17'].includes(c.id));
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+};
+
+// --- Performance "story" -------------------------------------------------
+// Whatever the user types, the conversation is anchored to a single coherent
+// narrative so the input prompt and the charted output read as one story that
+// ties directly to the info tiles and charts in the performance dashboard.
+const STORY_PROMPT =
+  "We just wrapped our mid-June push — 50 campaigns across 6 channels between June 8 and 19. Everyone keeps telling me it “did well,” but I need the real story: how many messages actually reached people, where we’re losing the audience, and which channels turned attention into revenue. Walk me through it.";
+
+// The intro line (before the first \n\n) renders above the metric tiles; each
+// <strong> line is a standalone section header (never inline) so the block
+// splitter renders clean paragraphs. Numbers live in the tiles/charts.
+const STORY_OUTPUT =
+  "Here’s the full story of your June 8–19 push — 50 campaigns across 6 channels, with one clear plot line: we earned plenty of attention, but most of it slips away before it becomes revenue.\n\n" +
+  "<strong>The headline</strong>\n\nWe published 1.12M messages and delivered 589K of them — about a 52.5% delivery rate. Those reached audiences produced 5,016 clicks, 590 conversions, and ₹24.3L in revenue. A strong top of funnel, but a thin bottom.\n\n" +
+  "<strong>Chapter 1 — Where the audience leaks</strong>\n\nDelivery is the first crack. WhatsApp carried the volume at 510K published but only 195K landed — we lost more than 60% before a single customer saw the message, and RCS and BPN tell the same story. The bright spots are Email, which delivered all 52K it sent, and APN at 47K of 57K. The first chart below makes the gap clear.\n\n" +
+  "<strong>Chapter 2 — Where attention stalls</strong>\n\nAmong the messages that did land, WhatsApp leads on engagement at a 1.41% click rate, with SMS close behind. But conversion collapses across the board — Email clicks at 0.97% yet converts just 0.02%, and BPN converts almost no one. People are clicking; the journey after the click isn’t closing.\n\n" +
+  "<strong>How the story ends</strong>\n\nJune wasn’t an attention problem — it was a delivery and conversion problem. Recover WhatsApp, RCS and BPN delivery and we widen reach without spending more; tighten the post-click experience on Email and we convert traffic we already have. Two levers, both ready for the next chapter.";
+
+// Short nav label for the opening story turn (shown in the vertical line-nav).
+const STORY_NAV_LABEL = "June 8–19 recap";
+
+// --- Follow-up "chapter 2" thread ---------------------------------------
+// After the story, the user's next message auto-plays this scripted batch of
+// follow-up Q&A that drills deeper into the same June campaign data. Each
+// question becomes a navigable turn in the line-nav. FOLLOWUPS[0] is shown as
+// the user's own bubble; the rest are generated as the conversation unfolds.
+type StatCard = { label: string; value: string; sub?: string };
+const FOLLOWUPS: { label: string; q: string; a: string; statCards?: StatCard[]; miniChart?: 'delivery' | 'rates' }[] = [
+  {
+    label: "WhatsApp delivery",
+    q: "WhatsApp delivery looks brutal — only 195K of 510K landed. Why is it leaking that badly?",
+    a:
+      "<strong>Why WhatsApp delivery is only ~38%</strong>\n\nIt isn’t one failure — three issues stack up:\n• Stale opt-ins — much of the 510K hadn’t been messaged in 90+ days, so Meta drops them as inactive.\n• Template quality — two high-volume templates fell to a “Medium” rating after blocks, which throttles delivery.\n• Marketing caps — we hit the per-user limit for part of the list, so those sends were never attempted.\n\nIt never shows as a hard failure; it just surfaces as the gap between published and delivered, shown below.",
+    statCards: [
+      { label: "WhatsApp published", value: "510K", sub: "most of any channel" },
+      { label: "Delivered", value: "195K", sub: "~38% delivery rate" },
+      { label: "Lost in delivery", value: "315K", sub: "never reached" },
+    ],
+    miniChart: 'delivery',
+  },
+  {
+    label: "Biggest fix",
+    q: "If we could fix only one thing before the next send, what’s the single biggest lever?",
+    a:
+      "<strong>Fix delivery before anything else</strong>\n\nEngagement isn’t the problem — among messages that land, WhatsApp clicks at 1.41%, the best of any channel. The issue is that 60%+ never arrive.\n\nThe highest-ROI move is a list-hygiene and template pass on WhatsApp: suppress inactive numbers, replace the Medium-rated templates with fresh ones, and stagger sends under the marketing cap. It recovers reach we already paid to publish — at no extra cost.",
+    statCards: [
+      { label: "WhatsApp click rate", value: "1.41%", sub: "best of all channels" },
+      { label: "Delivery gap", value: "62%", sub: "the real bottleneck" },
+      { label: "Added spend to fix", value: "₹0", sub: "hygiene, not budget" },
+    ],
+  },
+  {
+    label: "Quantify upside",
+    q: "Quantify it for me — if we recover WhatsApp delivery, what’s the upside?",
+    a:
+      "<strong>The upside, in round numbers</strong>\n\nWhatsApp delivers 195K today (~38%). Email proves a clean list can reach ~100% and APN already runs ~82%, so a realistic post-cleanup target is 70% delivery.\n\nThat lifts delivered volume to roughly 357K — about 162K more customers reached. At WhatsApp’s current click and conversion rates that’s ~2,280 more clicks and ~400 more conversions: a ~68% lift, with no added send cost.",
+    statCards: [
+      { label: "Delivered (target)", value: "~357K", sub: "from 195K" },
+      { label: "Extra reach", value: "+162K", sub: "more customers" },
+      { label: "Extra clicks", value: "~2,280", sub: "at 1.41% CTR" },
+      { label: "Extra conversions", value: "~400", sub: "+68% on WhatsApp" },
+    ],
+  },
+  {
+    label: "Next-cycle plan",
+    q: "Good. Draft the plan for the next cycle so I can share it with the team.",
+    a:
+      "<strong>Next-cycle plan — June recovery</strong>\n\nWhatsApp is the priority: scrub inactive numbers, swap the Medium-rated templates for High-rated ones, and stagger sends to target 70% delivery. For Email, delivery is already ~100% — the leak is post-click, so A/B test landing pages and tighten the offer-to-page match. RCS and BPN get the same hygiene playbook, since both lose ~60% in delivery.\n\nThe goal: recover ~162K in WhatsApp reach and lift conversions without increasing spend. I’ll prep the send calendar once you approve.",
+    statCards: [
+      { label: "Delivery target", value: "70%", sub: "from ~38%" },
+      { label: "Reach recovered", value: "+162K", sub: "no extra send" },
+      { label: "Added spend", value: "₹0", sub: "hygiene-driven" },
+    ],
+  },
+];
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface }) => {
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
@@ -107,6 +210,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [contentGenerated, setContentGenerated] = useState(false); // New state for content generation
   const mockMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMockAgentChatActiveRef = useRef(isMockAgentChatActive);
+  // True while the performance "story" flow is running, so re-typing restarts the
+  // story instead of being captured by the Valentine collaborative continuation path.
+  const isStoryFlowActiveRef = useRef(false);
+  // Which "act" of the performance story the conversation is on: the opening
+  // recap runs first, then the next message auto-plays the follow-up batch.
+  const hasRunStoryRef = useRef(false);
+  const hasRunFollowupsRef = useRef(false);
   const [selectedMode, setSelectedMode] = useState<'collaborative' | 'autonomous'>('collaborative'); // Added state for mode
   const [autonomousWaitingForInput, setAutonomousWaitingForInput] = useState(false); // State to track if autonomous mode is waiting for user input
   const [showModeSwitchConfirmation, setShowModeSwitchConfirmation] = useState(false); // State for mode switch confirmation popup
@@ -155,6 +265,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       "Identify low-efficiency campaigns with high spend but low revenue impact.",
     ],
   };
+  // Contextual header shown above the suggested prompts for the selected category
+  const starterPromptHeaderByChip: Record<string, string> = {
+    "Seasonal Trend": "Explore seasonal trends",
+    "CTR Monitoring": "Monitor click-through performance",
+    "QBR Report": "Build your QBR report",
+    "Channel Anomalies": "Investigate channel anomalies",
+    "Revenue Monitoring": "Track revenue performance",
+  };
 
   const handleCopyChatId = (chatId: string) => {
     navigator.clipboard.writeText(chatId);
@@ -178,8 +296,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [isExpanded, setIsExpanded] = useState(true);
   // State to manage which sidebar (bookmarks/history or agents) is active in expanded view
   const [activeSidebar, setActiveSidebar] = useState<'bookmarks' | 'agents' | null>('bookmarks');
-  // Collapsed (icon-rail) state for the LHS sidebar in expanded view
+  // Collapsed (icon-rail) state for the LHS sidebar in expanded view.
+  // A single sidebar component animates its own width + label opacity, so there is
+  // no component swap and no position jump between the two states.
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
+  // RHS page: the default conversation view, or the full Chats / Bookmarks list page
+  const [activePage, setActivePage] = useState<'home' | 'chats' | 'bookmarks'>('home');
   // Minimized-view LHS overlay (opened from the widget header menu icon)
   const [showMinOverlay, setShowMinOverlay] = useState(false);
   // Artifact preview split-view (opened from a message's "Preview" button)
@@ -351,6 +473,37 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     return marketingAgents.filter(agent => enabledAgents.has(agent.id));
   }, [enabledAgents]);
 
+  // Chat name shown in the header — derived from the first user turn, kept short.
+  const chatName = useMemo(() => {
+    const firstUser = messages.find(m => m.type === 'chat' && !m.isAI);
+    const raw = (firstUser?.navLabel || firstUser?.content || '').trim();
+    if (!raw) return null;
+    const MAX = 32;
+    return raw.length > MAX ? `${raw.slice(0, MAX).trimEnd()}…` : raw;
+  }, [messages]);
+
+  // The live conversation shows up as the top "active" chat in the LHS list.
+  const CURRENT_CHAT_ID = '__current__';
+  const lhsChats = useMemo(() => {
+    if (messages.length === 0) return defaultChats;
+    return [{ id: CURRENT_CHAT_ID, title: chatName || 'New chat', time: 'now' }, ...defaultChats];
+  }, [messages.length, chatName]);
+  const activeLhsChatId = messages.length > 0 ? CURRENT_CHAT_ID : null;
+  // Pulse the active chat while it is still generating output.
+  const busyLhsChatId =
+    messages.length > 0 && (isGeneratingOutput || isMockAgentChatActive) ? CURRENT_CHAT_ID : null;
+
+  // One line-nav entry per user turn, anchored to its message div (msg-<index>).
+  const navItems: LineNavItem[] = useMemo(() => {
+    return messages
+      .map((m, index) => ({ m, index }))
+      .filter(({ m }) => m.type === 'chat' && !m.isAI)
+      .map(({ m, index }) => ({
+        id: `msg-${index}`,
+        label: m.navLabel || (m.content.length > 28 ? `${m.content.slice(0, 28)}…` : m.content),
+      }));
+  }, [messages]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     setShowScrollButton(false); // Hide button after scrolling
@@ -421,12 +574,37 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
 
   const stopMockConversation = () => {
     setIsMockAgentChatActive(false);
+    isStoryFlowActiveRef.current = false;
     setIsGeneratingOutput(false);
     clearInputShimmer();
     if (mockMessageTimeoutRef.current) {
       clearTimeout(mockMessageTimeoutRef.current);
       mockMessageTimeoutRef.current = null;
     }
+  };
+
+  // Resets the RHS to its default empty state so the user can start a fresh chat.
+  const handleNewChat = () => {
+    stopMockConversation();
+    hasRunStoryRef.current = false;
+    hasRunFollowupsRef.current = false;
+    setActivePage('home');
+    setMessages([]);
+    setMockChatCompleted(false);
+    setContentApproved(false);
+    setContentGenerated(false);
+    setAutonomousWaitingForInput(false);
+    setSelectedStarterChip(null);
+    setShowMinOverlay(false);
+    // Tear down the artifact preview split-view
+    if (artifactCloseTimerRef.current) {
+      clearTimeout(artifactCloseTimerRef.current);
+      artifactCloseTimerRef.current = null;
+    }
+    setShowArtifactPreview(false);
+    setArtifactFullExpanded(false);
+    setArtifactClosing(false);
+    hasOpenedArtifactRef.current = false;
   };
 
   const handleModeSwitch = (newMode: 'collaborative' | 'autonomous') => {
@@ -447,6 +625,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       // Clear current conversation
       setMessages([]);
       setIsMockAgentChatActive(false);
+      isStoryFlowActiveRef.current = false;
+      hasRunStoryRef.current = false;
+      hasRunFollowupsRef.current = false;
       setIsGeneratingOutput(false);
       setMockChatCompleted(false);
       setContentApproved(false);
@@ -588,12 +769,39 @@ The content has been updated across all channels to reflect your changes.`;
   };
 
   const handleSendMessage = (message: string) => {
-    console.log("🔍 Message received:", message);
-    console.log("🔍 Lowercase message:", message.toLowerCase().trim());
-    
+    const userMessagesCount = messages.filter(m => !m.isAI && m.type === 'chat').length + 1;
+    const lowerCaseMessage = message.toLowerCase().trim();
+
+    // Explicit Valentine demo triggers (scripted strings) — left untouched.
+    const isAutonomousValentinesTrigger = selectedMode === 'autonomous' &&
+      lowerCaseMessage === "can you help me create a valentine's day campaign for perfumes";
+    const isCollaborativeValentinesTrigger = selectedMode === 'collaborative' &&
+      (lowerCaseMessage === "hi" || lowerCaseMessage === "help me create a campaign for valentine's day");
+    const isValentineTrigger = userMessagesCount === 1 &&
+      (isAutonomousValentinesTrigger || isCollaborativeValentinesTrigger);
+
+    // Continuations of an in-progress Valentine flow (waiting for the user's reply).
+    const isAutonomousValentineContinuation = selectedMode === 'autonomous' && autonomousWaitingForInput;
+    const isCollaborativeValentineContinuation = selectedMode === 'collaborative' &&
+      isMockAgentChatActive && !isStoryFlowActiveRef.current;
+
+    // Anything else the user types is anchored to the performance "story". The
+    // first turn plays the opening recap; the next message auto-plays the
+    // follow-up batch ("chapter 2"); anything after that restarts the recap.
+    const isStoryTrigger = !isValentineTrigger &&
+      !isAutonomousValentineContinuation && !isCollaborativeValentineContinuation;
+    const storyPhase: 'story' | 'followups' = isStoryTrigger && hasRunStoryRef.current && !hasRunFollowupsRef.current
+      ? 'followups'
+      : 'story';
+
     const userMessage: ChatMessageData = {
       type: 'chat',
-      content: message,
+      content: !isStoryTrigger
+        ? message
+        : storyPhase === 'followups' ? FOLLOWUPS[0].q : STORY_PROMPT,
+      navLabel: !isStoryTrigger
+        ? undefined
+        : storyPhase === 'followups' ? FOLLOWUPS[0].label : STORY_NAV_LABEL,
       isAI: false,
       onAnimationComplete: () => {}
     };
@@ -609,35 +817,20 @@ The content has been updated across all channels to reflect your changes.`;
     if (inputShimmerTimerRef.current) clearTimeout(inputShimmerTimerRef.current);
     inputShimmerTimerRef.current = setTimeout(() => setInputShimmer(false), 30000);
 
-    const userMessagesCount = messages.filter(m => !m.isAI && m.type === 'chat').length + 1;
-    const lowerCaseMessage = message.toLowerCase().trim();
-
-    // Check for CTR/conversion analysis trigger
-    const isCTRAnalysisTrigger = lowerCaseMessage === "which campaigns had the highest ctr but lowest conversions, and what could be the possible reasons?";
-    
-    console.log("🔍 isCTRAnalysisTrigger:", isCTRAnalysisTrigger);
-    console.log("🔍 Expected:", "which campaigns had the highest ctr but lowest conversions, and what could be the possible reasons?");
-    console.log("🔍 Match:", lowerCaseMessage === "which campaigns had the highest ctr but lowest conversions, and what could be the possible reasons?");
-
-    // Check for autonomous mode triggers
-    const isAutonomousValentinesTrigger = selectedMode === 'autonomous' && 
-      lowerCaseMessage === "can you help me create a valentine's day campaign for perfumes";
-    
-    // Check for collaborative mode triggers
-    const isCollaborativeValentinesTrigger = selectedMode === 'collaborative' && 
-      (lowerCaseMessage === "hi" || lowerCaseMessage === "help me create a campaign for valentine's day");
-
-    if (isCTRAnalysisTrigger) {
-      console.log("✅ CTR Analysis Trigger MATCHED! Starting mock conversation...");
+    if (isStoryTrigger) {
+      if (storyPhase === 'followups') hasRunFollowupsRef.current = true;
+      else hasRunStoryRef.current = true;
       setIsMockAgentChatActive(true);
+      isStoryFlowActiveRef.current = true;
       setContentApproved(false);
       setContentGenerated(false);
       setAutonomousWaitingForInput(false);
       isMockAgentChatActiveRef.current = true;
-      
+
       const coMarketer = marketingAgents.find(agent => agent.id === 'co-marketer');
 
-      const mockMessagesDefinition: (Omit<ChatMessageData, 'onAnimationComplete'> & { agentId?: string })[] = [
+      // Opening recap (with dashboard + artifact) vs. the deeper follow-up batch.
+      const storyMessages: (Omit<ChatMessageData, 'onAnimationComplete'> & { agentId?: string })[] = [
         {
           type: 'chat',
           isAI: true,
@@ -645,22 +838,63 @@ The content has been updated across all channels to reflect your changes.`;
           isThinkingState: true,
           thinkingDuration: 3,
           reasoningSteps: [
-            "Analyzing campaign performance metrics",
-            "Identifying CTR vs conversion rate patterns",
-            "Examining channel-specific data",
-            "Evaluating potential conversion bottlenecks"
+            "Pulling 50 campaigns across 6 channels (Jun 8–19)",
+            "Reconciling published vs delivered volumes",
+            "Tracing where the audience drops off",
+            "Linking engagement to revenue by channel"
           ]
         },
-        { 
-          agentId: coMarketer?.id, 
-          type: 'chat', 
-          isAI: true, 
-          agentName: coMarketer?.name, 
-          content: `<strong>Executive Summary</strong>\n\nBased on the provided query results, I am unable to provide a meaningful analysis of campaigns with high CTR but low conversion rates, as the sample data shows null values for all key metrics (CTR, conversion rates, and channel-specific data). The query results do not contain the necessary campaign-level data to:\n\n1. Analyze CTR vs conversion rate correlation\n2. Identify specific campaigns with high CTR/low conversion patterns\n3. Determine channel-specific performance variations\n4. Compare metrics across the requested 6-month period (2025-07-28 to 2026-01-28)\n\nTo perform this analysis, we would need campaign-level data containing:\n\n• Campaign-specific CTR values\n• Conversion rates per campaign\n• Channel information\n• Click and conversion metrics over time\n\nNOTE:\nCTR = (Total Clicked / Total Delivered) × 100\nCVR = (Total Conversions / Total Delivered) × 100\n\n<strong>Top 1 Campaigns by CTR</strong>\n\nEmail campaigns demonstrate the highest engagement-to-conversion disparity, with the Holiday Special campaign showing a notable 4.82% CTR but only 0.75% conversion rate. Across all channels, there appears to be a consistent pattern of high click-through rates (3.25-4.82%) paired with relatively low conversion rates (under 1%), suggesting potential issues with landing page effectiveness or offer alignment with customer expectations.\n\n<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; table-layout: fixed; border: 1px solid #e5e7eb; background-color: white;">\n  <thead>\n    <tr>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; background-color: #f2f5f9; color: #64758b; font-weight: bold;">new_campaign_count</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; background-color: #f2f5f9; color: #64758b; font-weight: bold;">sent_new</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; background-color: #f2f5f9; color: #64758b; font-weight: bold;">sent_returning</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">revenue_new</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">revenue_returning</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr style="background-color: white;">\n      <td style="border: 1px solid #e5e7eb; padding: 10px; font-weight: bold; color: #17173a;">233233</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; font-weight: 600; color: #17173a;">12330</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; font-weight: 600; color: #17173a;">12330</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">1231</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">3211</td>\n    </tr>\n  </tbody>\n</table>\n\n<strong>Campaign Performance Analysis</strong>\n\n<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; table-layout: fixed; border: 1px solid #e5e7eb; background-color: white;">\n  <thead>\n    <tr>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; background-color: #f2f5f9; color: #64758b; font-weight: bold; width: 166px;">Campaign Name</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">CTR (%)</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">CVR (%)</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">Channel</th>\n      <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; background-color: #f2f5f9; color: #64758b; font-weight: bold;">Send Date</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr style="background-color: white;">\n      <td style="border: 1px solid #e5e7eb; padding: 10px; font-weight: bold; color: #17173a;">Holiday Special</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">4.82</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">0.75</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">Email</td>\n      <td style="border: 1px solid #e5e7eb; padding: 10px; text-align: center; font-weight: 600; color: #17173a;">2025-12-15</td>\n    </tr>\n  </tbody>\n</table>\n\n<strong>Key Insights:</strong>\n\n• Holiday Special campaign shows the highest CTR-CVR gap with 4.82% CTR but only 0.75% conversion rate, indicating potential targeting or landing page issues.\n\n• All top 5 campaigns demonstrate CTR above 3% but conversion rates below 1%, suggesting consistent engagement but conversion bottlenecks.`, 
-          avatarIcon: coMarketer?.icon, 
+        {
+          agentId: coMarketer?.id,
+          type: 'chat',
+          isAI: true,
+          agentName: coMarketer?.name,
+          content: STORY_OUTPUT,
+          avatarIcon: coMarketer?.icon,
           avatarBgClass: coMarketer?.colorClass,
+          artifact: {
+            intro: "I've created the Highest Engagement Last Quarter summary in an artifact with all the information you provided, formatted and ready to use",
+            title: "Highest Engagement Last Quarter",
+            subtitle: "WhatsApp Document",
+          },
         }
       ];
+
+      // Follow-up batch: thinking → answer to Q0, then Q1/A1, Q2/A2, Q3/A3.
+      // The user questions are rendered as their own bubbles (navigable turns)
+      // and the answers suppress the dashboard so it isn't repeated each turn.
+      const followupMessages: (Omit<ChatMessageData, 'onAnimationComplete'> & { agentId?: string })[] = [
+        {
+          type: 'chat',
+          isAI: true,
+          content: '',
+          isThinkingState: true,
+          thinkingDuration: 2,
+          reasoningSteps: [
+            "Re-checking WhatsApp published vs delivered",
+            "Diagnosing the delivery gap",
+            "Pulling template quality + opt-in status",
+            "Estimating recoverable reach"
+          ]
+        },
+        {
+          agentId: coMarketer?.id, type: 'chat', isAI: true, agentName: coMarketer?.name,
+          content: FOLLOWUPS[0].a, avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass,
+          hidePerformanceDashboard: true,
+          statCards: FOLLOWUPS[0].statCards, miniChart: FOLLOWUPS[0].miniChart,
+        },
+        ...FOLLOWUPS.slice(1).flatMap((f) => ([
+          { type: 'chat' as const, isAI: false, content: f.q, navLabel: f.label },
+          {
+            agentId: coMarketer?.id, type: 'chat' as const, isAI: true, agentName: coMarketer?.name,
+            content: f.a, avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass,
+            hidePerformanceDashboard: true,
+            statCards: f.statCards, miniChart: f.miniChart,
+          },
+        ])),
+      ];
+
+      const mockMessagesDefinition = storyPhase === 'followups' ? followupMessages : storyMessages;
 
       mockMessagesDefinitionRef.current = mockMessagesDefinition;
       
@@ -701,6 +935,14 @@ The content has been updated across all channels to reflect your changes.`;
           isThinkingState: currentMessageDef.isThinkingState,
           thinkingDuration: currentMessageDef.thinkingDuration,
           reasoningSteps: currentMessageDef.reasoningSteps,
+          // Preserve the doc-like artifact so the "Preview" card/split-view stays intact
+          artifact: currentMessageDef.artifact,
+          // Follow-up answers suppress the repeated dashboard; user turns carry a nav label
+          hidePerformanceDashboard: currentMessageDef.hidePerformanceDashboard,
+          navLabel: currentMessageDef.navLabel,
+          // Per-message graphics so follow-up answers match the opening recap visually
+          statCards: currentMessageDef.statCards,
+          miniChart: currentMessageDef.miniChart,
           onAnimationComplete: () => {
             if (mockMessageTimeoutRef.current) {
               clearTimeout(mockMessageTimeoutRef.current);
@@ -712,7 +954,7 @@ The content has been updated across all channels to reflect your changes.`;
         };
         setMessages(prev => [...prev, messageWithCallback]);
       };
-      
+
       addNextMockMessageRef.current = addNextMockMessage;
 
       if (mockMessageTimeoutRef.current) {
@@ -1752,7 +1994,7 @@ The content has been updated across all channels to reflect your changes.`;
           <MinViewLhsOverlay
             activeChatId={null}
             onClose={() => setShowMinOverlay(false)}
-            onNewChat={() => { setMessages([]); setShowMinOverlay(false); }}
+            onNewChat={handleNewChat}
           />
         )}
 
@@ -1761,20 +2003,19 @@ The content has been updated across all channels to reflect your changes.`;
           "flex flex-1 overflow-hidden",
           isExpanded ? "flex-row pt-0" : "flex-col"
         )}>
-          {/* Full-height LHS sidebar (expanded view) — full or collapsed icon rail */}
+          {/* Full-height LHS sidebar (expanded view) — single component animates between full and icon-rail */}
           {isExpanded && activeSidebar === 'bookmarks' && (
-            lhsCollapsed ? (
-              <LhsSidebarCollapsed
-                onNewChat={() => setMessages([])}
-                onOpenSettings={() => window.open('https://www.figma.com/proto/PpMyMSpfteIiBlbsBYryx2/Raman-AI---Co-Marketer---Co-Pilot?page-id=5891:1439&node-id=7073-4874&viewport=-442,2798,0.17&t=3ThX3Yd3gjcwJf8j-1&scaling=contain&content-scaling=responsive&starting-point-node-id=7073:4873&hide-ui=1', '_blank')}
-              />
-            ) : (
-              <LhsSidebar
-                activeChatId={null}
-                onNewChat={() => setMessages([])}
-                onOpenSettings={() => window.open('https://www.figma.com/proto/PpMyMSpfteIiBlbsBYryx2/Raman-AI---Co-Marketer---Co-Pilot?page-id=5891:1439&node-id=7073-4874&viewport=-442,2798,0.17&t=3ThX3Yd3gjcwJf8j-1&scaling=contain&content-scaling=responsive&starting-point-node-id=7073:4873&hide-ui=1', '_blank')}
-              />
-            )
+            <LhsSidebar
+              collapsed={lhsCollapsed}
+              chats={lhsChats}
+              activeChatId={activeLhsChatId}
+              busyChatId={busyLhsChatId}
+              onNewChat={handleNewChat}
+              onOpenChats={() => setActivePage('chats')}
+              onOpenBookmarks={() => setActivePage('bookmarks')}
+              onSelectChat={() => setActivePage('home')}
+              onOpenSettings={() => window.open('https://www.figma.com/proto/PpMyMSpfteIiBlbsBYryx2/Raman-AI---Co-Marketer---Co-Pilot?page-id=5891:1439&node-id=7073-4874&viewport=-442,2798,0.17&t=3ThX3Yd3gjcwJf8j-1&scaling=contain&content-scaling=responsive&starting-point-node-id=7073:4873&hide-ui=1', '_blank')}
+            />
           )}
           {/* Conditional rendering of AgentsSidebar in expanded view */}
           {isExpanded && activeSidebar === 'agents' && (
@@ -1789,8 +2030,9 @@ The content has been updated across all channels to reflect your changes.`;
           <div className={cn("flex flex-col flex-1 min-w-0", isExpanded ? "overflow-hidden" : "")}>
           {isExpanded && (
             <RhsHeader
-              chatName={messages.length > 0 ? "Placeholder for chat-name" : null}
+              chatName={chatName}
               showSidebarToggle={true}
+              sidebarCollapsed={lhsCollapsed}
               onToggleSidebar={() => setLhsCollapsed(prev => !prev)}
               onMinimize={() => setIsExpanded(false)}
               onClose={onCloseInterface}
@@ -1810,6 +2052,19 @@ The content has been updated across all channels to reflect your changes.`;
             isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "gap-[12px] pl-[12px]",
             isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "px-[12px]"
           )}>
+          {/* Chats / Bookmarks full page — overlays the conversation when active */}
+          {isExpanded && activePage !== 'home' && (
+            <div className="absolute inset-0 z-20 rounded-[16px] overflow-hidden bg-white">
+              <ChatListPage
+                title={activePage === 'chats' ? 'Chats' : 'Bookmarks'}
+                searchPlaceholder={activePage === 'chats' ? 'Search chats' : 'Search bookmarks'}
+                chats={activePage === 'chats' ? defaultChats : bookmarkedChats}
+                showNewChat={activePage === 'chats'}
+                onNewChat={handleNewChat}
+                onSelectChat={() => setActivePage('home')}
+              />
+            </div>
+          )}
           {/* Conversation column — 60% when artifact open, hidden when full-expanded, expands back while closing */}
           <div
             className={cn(
@@ -1835,18 +2090,42 @@ The content has been updated across all channels to reflect your changes.`;
               )}>
                 <div className={cn(
                   "flex flex-col items-start space-y-0 max-w-full",
-                  isExpanded ? "w-[768px]" : "w-full"
+                  isExpanded ? "w-[768px]" : "w-full",
+                  messages.length > 0 ? "pb-8" : ""
                 )}>
                 {messages.length === 0 && !isGeneratingOutput && (
                   <div className="w-full flex flex-col items-center">
                     <div className={cn("w-full flex flex-col gap-[24px] items-center", isExpanded ? "max-w-[768px]" : "max-w-full")}>
-                      {/* "Hello" greeting */}
-                      <p
-                        className="font-bold text-[16px] leading-[22px] text-[#40474C] text-center tracking-[0.42px] whitespace-nowrap"
-                        style={{ fontFamily: "Manrope, sans-serif" }}
-                      >
-                        Hello, what can I do for you?
-                      </p>
+                      {/* Greeting: "Good morning Amit," then, on one line,
+                          "what can I do for you?" + the rotating slot-text topic */}
+                      <div className="flex flex-col gap-[6px] items-center">
+                        <GradientShimmer
+                          as="p"
+                          className="font-semibold text-[24px] leading-[30px] text-center tracking-[0.42px] whitespace-nowrap"
+                          style={{ fontFamily: "Manrope, sans-serif" }}
+                          baseColor="#40474C"
+                          gradient={[
+                            { position: 0.2, color: "#5c80ff" },  /* shimmer-blue */
+                            { position: 0.4, color: "#ffa8dc" },  /* shimmer-pink */
+                            { position: 0.6, color: "#fc5e02" },  /* shimmer-orange */
+                            { position: 0.8, color: "#085286" },  /* shimmer-teal */
+                          ]}
+                          duration={2}
+                          pauseBetween={1200}
+                        >
+                          {`${getGreeting()}, Amit`}
+                        </GradientShimmer>
+                        <div
+                          className="flex items-center justify-center gap-[6px] text-[16px] leading-[22px] text-[#40474C] text-center tracking-[0.42px] whitespace-nowrap"
+                          style={{ fontFamily: "Manrope, sans-serif" }}
+                        >
+                          <span className="font-semibold">What can I do for you?</span>
+                          <RotatingWord
+                            words={GREETING_TOPICS}
+                            className="font-medium text-[#143F93]"
+                          />
+                        </div>
+                      </div>
                       <div className="w-full flex flex-col gap-[16px] items-center">
                         <ChatInput
                           onSend={handleSendMessage}
@@ -1862,11 +2141,11 @@ The content has been updated across all channels to reflect your changes.`;
                               <button
                                 key={index}
                                 type="button"
-                                className="bg-white border-[0.5px] border-[#DDE2EE] px-[12px] py-[5px] rounded-[6px] whitespace-nowrap hover:bg-[#F9FAFB] transition-colors shrink-0"
+                                className="fig-chip flex items-center justify-center px-[12px] py-[6px] rounded-[6px] whitespace-nowrap shrink-0"
                                 onClick={() => setSelectedStarterChip(chipLabel)}
                               >
                                 <span
-                                  className="font-medium text-[14px] leading-[20px] text-[#6F6F8D] tracking-[0.42px]"
+                                  className="font-normal text-[14px] leading-[20px] text-[#17173A] tracking-[0.42px]"
                                   style={{ fontFamily: "Manrope, sans-serif" }}
                                 >
                                   {chipLabel}
@@ -1877,14 +2156,26 @@ The content has been updated across all channels to reflect your changes.`;
                         )}
                         {selectedStarterChip && (
                           <div className="w-full flex flex-col gap-[8px]">
+                            <p
+                              className="px-[2px] font-semibold text-[13px] leading-[18px] text-[#6F6F8D] tracking-[0.42px]"
+                              style={{ fontFamily: "Manrope, sans-serif" }}
+                            >
+                              {starterPromptHeaderByChip[selectedStarterChip] ?? "Suggested prompts"}
+                            </p>
                             {(starterPromptsByChip[selectedStarterChip] ?? []).map((suggestion, index) => (
-                              <Card
+                              <button
                                 key={`${selectedStarterChip}-${index}`}
-                                className="p-[12px] bg-white border-[0.5px] border-[#E5E7EB] rounded-md hover:shadow-md cursor-pointer transition-shadow duration-150 hover:bg-muted"
+                                type="button"
+                                className="fig-chip w-full text-left p-[12px] rounded-[6px] cursor-pointer"
                                 onClick={() => handleSendMessage(suggestion)}
                               >
-                                <p className="text-primary text-sm">{suggestion}</p>
-                              </Card>
+                                <p
+                                  className="text-[14px] leading-[20px] text-[#17173A]"
+                                  style={{ fontFamily: "Manrope, sans-serif" }}
+                                >
+                                  {suggestion}
+                                </p>
+                              </button>
                             ))}
                           </div>
                         )}
@@ -1894,9 +2185,9 @@ The content has been updated across all channels to reflect your changes.`;
                 )}
 
                 {messages.map((message, index) => (
-                  message.type === 'system' ? (
+                  <div key={index} id={`msg-${index}`} className="w-full scroll-mt-2">
+                  {message.type === 'system' ? (
                     <SystemMessage
-                      key={index}
                       type={message.systemType || 'join'}
                       agentName={message.agentName || ''}
                       agentIcon={message.agentIcon}
@@ -1904,7 +2195,6 @@ The content has been updated across all channels to reflect your changes.`;
                     />
                   ) : (
                     <ChatMessage
-                      key={index}
                       messageId={`msg-${index}`}
                       isAI={message.isAI ?? false}
                       content={message.content}
@@ -1939,6 +2229,8 @@ The content has been updated across all channels to reflect your changes.`;
                         !message.isThinkingState &&
                         !message.hidePerformanceDashboard
                       }
+                      statCards={message.statCards}
+                      miniChart={message.miniChart}
                       onContinueSegment={() => {
                         if (message.isSegmentAgentRationale) {
                           const idx = mockMessagesDefinitionRef.current.findIndex(msg => msg.isSegmentAgentRationale);
@@ -2025,7 +2317,8 @@ The content has been updated across all channels to reflect your changes.`;
                       onDownloadArtifact={() => {}}
                       onPreviewArtifact={handleOpenArtifactPreview}
                     />
-                  )
+                  )}
+                  </div>
                 ))}
                 {isGeneratingOutput && (
                   <div className="w-full py-2">
@@ -2060,6 +2353,13 @@ The content has been updated across all channels to reflect your changes.`;
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+            )}
+
+            {/* Vertical line-nav for jumping between conversation turns. Shown in
+                expanded view while L1 is collapsed, and hidden while the artifact
+                preview is open (no room beside the split-view). */}
+            {isExpanded && lhsCollapsed && !showArtifactPreview && navItems.length > 0 && (
+              <LineNav items={navItems} containerRef={chatContainerRef} />
             )}
 
             {messages.length > 0 && (

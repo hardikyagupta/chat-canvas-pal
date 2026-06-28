@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { User, ThumbsUp, ThumbsDown, Copy, ChevronDown } from 'lucide-react';
+import { User, ThumbsUp, ThumbsDown, Copy, Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -449,6 +450,9 @@ interface ChatMessageProps {
   onPreviewArtifact?: () => void;
   // Inline campaign performance dashboard (cards + charts)
   showPerformanceDashboard?: boolean;
+  // Lightweight per-message graphics (used by follow-up answers for visual parity)
+  statCards?: { label: string; value: string; sub?: string }[];
+  miniChart?: 'delivery' | 'rates';
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -498,6 +502,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   onDownloadArtifact,
   onPreviewArtifact,
   showPerformanceDashboard = false,
+  statCards,
+  miniChart,
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isAnimationDone, setIsAnimationDone] = useState(false);
@@ -515,6 +521,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   
   // Enhanced animation states for instant "pop" token streaming
   const [isLoading, setIsLoading] = useState(false);
+  // chanhdai-style copy button: swap Copy → Check on click, revert after a beat.
+  const [copied, setCopied] = useState(false);
+  const [copyTipOpen, setCopyTipOpen] = useState(false); // controls the "Copied" nudge
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isTextVisible, setIsTextVisible] = useState(false);
   const [textOpacity, setTextOpacity] = useState(0);
   const [textBlur, setTextBlur] = useState(1.5);
@@ -1134,11 +1144,22 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       }
       
       await navigator.clipboard.writeText(textToCopy);
-      console.log('Content copied to clipboard');
+      setCopied(true);
+      setCopyTipOpen(true); // nudge the "Copied" tooltip open
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => {
+        setCopied(false);
+        setCopyTipOpen(false);
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy content:', err);
     }
   };
+
+  // Clear the copy-reset timer if the message unmounts mid-animation.
+  useEffect(() => () => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+  }, []);
 
   if (!isAI) {
     return (
@@ -1366,6 +1387,28 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     )}
                   </div>
                 )}
+                {/* Per-message stat tiles — same card style as the opening recap,
+                    so follow-up answers stay visually consistent (revealed after stream) */}
+                {statCards && statCards.length > 0 && isAnimationDone && (
+                  <div className="py-2 grid grid-cols-2 sm:grid-cols-3 gap-[8px] font-['Manrope'] transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-1">
+                    {statCards.map((c) => (
+                      <div
+                        key={c.label}
+                        className="border border-[#E5E7EB] bg-white rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[2px]"
+                      >
+                        <span className="text-[11px] text-[#6F6F8D] font-medium">{c.label}</span>
+                        <span className="text-[20px] font-bold text-[#17173A] leading-tight">{c.value}</span>
+                        {c.sub && <span className="text-[10px] text-[#9AA3B2]">{c.sub}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Optional relevant chart, reusing the dashboard charts */}
+                {miniChart && isAnimationDone && (
+                  <div className="py-2 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-1">
+                    {miniChart === 'delivery' ? <PublishedVsDeliveredChart /> : <RatesChart />}
+                  </div>
+                )}
                 {/* Executive Summary Content Accordion - only shown for executive summary messages */}
                 {isExecutiveSummaryWithContent && (
                   <div className="py-2">
@@ -1393,21 +1436,67 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         {/* Feedback icons at bottom-left of AI content (ChatGPT style) - only show after animation completes */}
             {isAnimationDone && (
               <div className="flex justify-start w-full mt-2">
-                <div className="flex items-center gap-3 text-gray-400 dark:text-gray-500">
-                  <Button variant="ghost" size="sm" className="p-1 h-auto hover:text-green-600 hover:bg-green-50 focus-visible:ring-0 focus-visible:ring-offset-0">
+                <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500">
+                  <Button variant="ghost" size="sm" className="p-2 h-auto rounded-md hover:text-green-600 hover:bg-green-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Good response">
                     <ThumbsUp className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="p-1 h-auto hover:text-red-600 hover:bg-red-50 focus-visible:ring-0 focus-visible:ring-offset-0">
+                  <Button variant="ghost" size="sm" className="p-2 h-auto rounded-md hover:text-red-600 hover:bg-red-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Bad response">
                     <ThumbsDown className="h-3.5 w-3.5" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="p-1 h-auto hover:text-gray-600 hover:bg-gray-100 focus-visible:ring-0 focus-visible:ring-offset-0"
-                    onClick={handleCopy}
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip open={copyTipOpen} onOpenChange={(o) => { if (!copied) setCopyTipOpen(o); }}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-2 h-auto rounded-md hover:text-gray-600 hover:bg-gray-100 focus-visible:ring-0 focus-visible:ring-offset-0"
+                          onClick={handleCopy}
+                          aria-label={copied ? 'Copied' : 'Copy'}
+                        >
+                          {/* chanhdai copy interaction: Copy fades/scales out, Check in */}
+                          <span className="relative inline-flex h-3.5 w-3.5 items-center justify-center">
+                            <Copy
+                              className={cn(
+                                'absolute h-3.5 w-3.5 transition-all duration-200 ease-out',
+                                copied ? 'scale-50 opacity-0' : 'scale-100 opacity-100'
+                              )}
+                            />
+                            <Check
+                              className={cn(
+                                'absolute h-3.5 w-3.5 text-green-600 transition-all duration-200 ease-out',
+                                copied ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+                              )}
+                            />
+                          </span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="border-0 bg-[#1C1C1E] px-[8px] py-[4px] text-white"
+                        style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+                      >
+                        {/* "Copy" ↔ "Copied!" using the same scale/fade transition */}
+                        <span className="relative grid h-[16px] place-items-center text-[12px] leading-[16px]">
+                          <span
+                            className={cn(
+                              'col-start-1 row-start-1 transition-all duration-200 ease-out',
+                              copied ? 'scale-50 opacity-0' : 'scale-100 opacity-100'
+                            )}
+                          >
+                            Copy
+                          </span>
+                          <span
+                            className={cn(
+                              'col-start-1 row-start-1 transition-all duration-200 ease-out',
+                              copied ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+                            )}
+                          >
+                            Copied!
+                          </span>
+                        </span>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             )}

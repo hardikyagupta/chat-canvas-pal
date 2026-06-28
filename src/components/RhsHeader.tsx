@@ -1,15 +1,44 @@
 import React from 'react';
-import { Minimize2, X, PanelLeft } from 'lucide-react';
+import { Minimize2, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface RhsHeaderProps {
   chatName?: string | null; // hidden when null/empty (no active chat)
   showSidebarToggle?: boolean; // show the expand/collapse panel icon (collapsed state)
+  sidebarCollapsed?: boolean; // current sidebar state, drives the toggle tooltip text
   onToggleSidebar?: () => void;
   onMinimize?: () => void;
   onClose?: () => void;
 }
 
-const RhsHeader: React.FC<RhsHeaderProps> = ({ chatName, showSidebarToggle, onToggleSidebar, onMinimize, onClose }) => {
+// Small dark tooltip shown below a header icon on hover.
+// align: where the tooltip anchors relative to the button (avoids clipping at window edges).
+const HeaderTooltip: React.FC<{ label: string; align?: 'left' | 'center' | 'right' }> = ({
+  label,
+  align = 'center',
+}) => (
+  <span
+    className={
+      'pointer-events-none absolute top-full mt-[6px] z-50 whitespace-nowrap rounded-[6px] bg-[#1C1C1E] px-[8px] py-[4px] text-[12px] leading-[16px] text-white opacity-0 translate-y-[-4px] transition-all duration-150 group-hover:opacity-100 group-hover:translate-y-0 ' +
+      (align === 'left'
+        ? 'left-0'
+        : align === 'right'
+          ? 'right-0'
+          : 'left-1/2 -translate-x-1/2 group-hover:-translate-x-1/2')
+    }
+    style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+  >
+    {label}
+  </span>
+);
+
+const RhsHeader: React.FC<RhsHeaderProps> = ({
+  chatName,
+  showSidebarToggle,
+  sidebarCollapsed,
+  onToggleSidebar,
+  onMinimize,
+  onClose,
+}) => {
   return (
     <div className="flex items-start pl-[16px] w-full shrink-0">
       <div className="flex flex-1 min-w-0 items-center justify-end h-[56px] pr-[24px] self-stretch">
@@ -20,10 +49,13 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({ chatName, showSidebarToggle, onTo
               <button
                 type="button"
                 onClick={onToggleSidebar}
-                className="flex items-center p-[4px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
-                aria-label="Expand sidebar"
+                className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[#F2F4F7] transition-colors shrink-0"
+                aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
-                <PanelLeft className="size-[16px] text-[#40474C]" />
+                {sidebarCollapsed
+                  ? <PanelLeftOpen className="size-[16px] text-[#40474C]" />
+                  : <PanelLeftClose className="size-[16px] text-[#40474C]" />}
+                <HeaderTooltip label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} align="left" />
               </button>
             )}
             {chatName ? (
@@ -41,18 +73,20 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({ chatName, showSidebarToggle, onTo
             <button
               type="button"
               onClick={onMinimize}
-              className="flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[#F2F4F7] transition-colors"
+              className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[#F2F4F7] transition-colors"
               aria-label="Minimize"
             >
               <Minimize2 className="size-[16px] text-[#40474C]" />
+              <HeaderTooltip label="Minimize" align="center" />
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[#F2F4F7] transition-colors"
+              className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[#F2F4F7] transition-colors"
               aria-label="Close"
             >
               <X className="size-[16px] text-[#40474C]" />
+              <HeaderTooltip label="Close" align="right" />
             </button>
           </div>
         </div>

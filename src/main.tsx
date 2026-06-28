@@ -8,6 +8,7 @@ import '@fontsource/manrope/600.css'
 import '@fontsource/manrope/700.css'
 import '@fontsource/manrope/800.css'
 import './index.css'
+import 'slot-text/style.css'
 import { ThemeProvider } from '../components/theme-provider'
 
 console.log('Initializing application...');

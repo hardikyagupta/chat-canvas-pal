@@ -1,9 +1,15 @@
 import React from 'react';
-import { PanelLeft, Download, ArrowLeftToLine, ArrowRightToLine } from 'lucide-react';
+import { PanelRightClose, Download, ArrowLeftToLine, ArrowRightToLine } from 'lucide-react';
 import {
   PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const MANROPE = 'Manrope, sans-serif';
 const chartTick = { fontSize: 11, fill: '#6F6F8D', fontFamily: MANROPE };
@@ -91,43 +97,66 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   return (
     <div className="flex flex-col h-full w-full bg-white border border-[#DDE2EE] rounded-[12px] overflow-hidden">
       {/* top-nav-artifact */}
-      <div className="flex gap-[8px] items-center px-[8px] py-[4px] w-full shrink-0 border-b border-[#DDE2EE]">
-        {/* Left cluster: 1) expand arrow  2) collapse/close  then label */}
-        <div className="flex min-w-0 gap-[4px] items-center">
-          <button
-            type="button"
-            onClick={onToggleExpand}
-            className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
-            aria-label={isFullExpanded ? 'Restore split view' : 'Expand artifact'}
-          >
-            {isFullExpanded
-              ? <ArrowRightToLine className="size-[16px] text-[#40474C]" />
-              : <ArrowLeftToLine className="size-[16px] text-[#40474C]" />}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
-            aria-label="Close artifact"
-          >
-            <PanelLeft className="size-[16px] text-[#40474C]" />
-          </button>
-          <p className="min-w-0 truncate text-[14px] font-medium text-black">
-            {fileName}
-          </p>
+      <TooltipProvider delayDuration={200}>
+        <div className="flex gap-[8px] items-center px-[8px] py-[4px] w-full shrink-0 border-b border-[#DDE2EE]">
+          {/* Left cluster: 1) expand arrow  2) collapse/close  then label */}
+          <div className="flex min-w-0 gap-[4px] items-center">
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onToggleExpand}
+                  className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
+                  aria-label={isFullExpanded ? 'Restore split view' : 'Expand artifact'}
+                >
+                  {isFullExpanded
+                    ? <ArrowRightToLine className="size-[16px] text-[#40474C]" />
+                    : <ArrowLeftToLine className="size-[16px] text-[#40474C]" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="border-0 bg-[#1C1C1E] text-white text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
+                <p>{isFullExpanded ? 'Restore split view' : 'Expand artifact'}</p>
+              </TooltipContent>
+            </UITooltip>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
+                  aria-label="Close artifact"
+                >
+                  <PanelRightClose className="size-[16px] text-[#40474C]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="border-0 bg-[#1C1C1E] text-white text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
+                <p>Close artifact</p>
+              </TooltipContent>
+            </UITooltip>
+            <p className="min-w-0 truncate text-[14px] font-medium text-black">
+              {fileName}
+            </p>
+          </div>
+          {/* Spacer */}
+          <div className="flex-1" />
+          {/* Right: download */}
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onDownload}
+                className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
+                aria-label="Download artifact"
+              >
+                <Download className="size-[16px] text-[#40474C]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="border-0 bg-[#1C1C1E] text-white text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
+              <p>Download document</p>
+            </TooltipContent>
+          </UITooltip>
         </div>
-        {/* Spacer */}
-        <div className="flex-1" />
-        {/* Right: download */}
-        <button
-          type="button"
-          onClick={onDownload}
-          className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
-          aria-label="Download artifact"
-        >
-          <Download className="size-[16px] text-[#40474C]" />
-        </button>
-      </div>
+      </TooltipProvider>
 
       {/* content-area (scrollable) */}
       <div className="flex flex-col gap-[16px] items-start px-[16px] py-[16px] w-full flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">

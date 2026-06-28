@@ -37,7 +37,7 @@ const LhsSidebarCollapsed: React.FC<LhsSidebarCollapsedProps> = ({
       </div>
 
       {/* Middle: icon-only menu actions (32x32 squares) */}
-      <div className="flex flex-1 flex-col items-center min-h-0 overflow-hidden pt-[16px]">
+      <div className="flex flex-1 flex-col items-center min-h-0 overflow-hidden pt-[20px]">
         <div className="flex flex-col gap-[4px] items-center">
           {actions.map(({ key, icon: Icon, label, onClick }) => (
             <button
@@ -61,7 +61,7 @@ const LhsSidebarCollapsed: React.FC<LhsSidebarCollapsedProps> = ({
           onClick={onOpenSettings}
           aria-label="Settings"
           title="Settings"
-          className="flex items-center justify-center size-[32px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors"
+          className="flex items-center justify-center size-[40px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors"
         >
           <Settings className="size-[18px] text-[#212E36] shrink-0" />
         </button>
