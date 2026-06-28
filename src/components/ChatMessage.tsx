@@ -5,6 +5,7 @@ import { User, ThumbsUp, ThumbsDown, Copy, Check, ChevronDown } from 'lucide-rea
 import { cn } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { playCopyCue } from '@/lib/playCue';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -453,6 +454,9 @@ interface ChatMessageProps {
   // Lightweight per-message graphics (used by follow-up answers for visual parity)
   statCards?: { label: string; value: string; sub?: string }[];
   miniChart?: 'delivery' | 'rates';
+  // Feedback actions — open the matching feedback modal
+  onThumbsUp?: () => void;
+  onThumbsDown?: () => void;
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -504,6 +508,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   showPerformanceDashboard = false,
   statCards,
   miniChart,
+  onThumbsUp,
+  onThumbsDown,
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isAnimationDone, setIsAnimationDone] = useState(false);
@@ -1144,6 +1150,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       }
       
       await navigator.clipboard.writeText(textToCopy);
+      playCopyCue(); // confirmation blip
       setCopied(true);
       setCopyTipOpen(true); // nudge the "Copied" tooltip open
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
@@ -1435,12 +1442,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             
         {/* Feedback icons at bottom-left of AI content (ChatGPT style) - only show after animation completes */}
             {isAnimationDone && (
-              <div className="flex justify-start w-full mt-2">
+              <div className="flex justify-start w-full mt-3 pt-3 border-t border-[#E5E7EB] dark:border-[#2A2A2A]">
                 <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500">
-                  <Button variant="ghost" size="sm" className="p-2 h-auto rounded-md hover:text-green-600 hover:bg-green-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Good response">
+                  <Button variant="ghost" size="sm" onClick={onThumbsUp} className="p-2 h-auto rounded-md hover:text-green-600 hover:bg-green-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Good response">
                     <ThumbsUp className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="p-2 h-auto rounded-md hover:text-red-600 hover:bg-red-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Bad response">
+                  <Button variant="ghost" size="sm" onClick={onThumbsDown} className="p-2 h-auto rounded-md hover:text-red-600 hover:bg-red-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Bad response">
                     <ThumbsDown className="h-3.5 w-3.5" />
                   </Button>
                   <TooltipProvider delayDuration={200}>

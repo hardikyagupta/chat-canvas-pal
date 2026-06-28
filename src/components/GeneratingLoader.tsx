@@ -10,7 +10,9 @@ const loaderLabels = [
   'Finalizing results...',
 ];
 
-const GeneratingLoader: React.FC = () => {
+// `pill`: floating white pill (rounded, grey outline, shadow) — used in the
+// collapse view as a "still loading" nudge centered above the input field.
+const GeneratingLoader: React.FC<{ pill?: boolean }> = ({ pill = false }) => {
   const [labelIndex, setLabelIndex] = useState(0);
 
   useEffect(() => {
@@ -21,20 +23,32 @@ const GeneratingLoader: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const content = (
+    <>
+      <div className="w-6 h-6 shrink-0 overflow-hidden flex items-center justify-center" aria-hidden="true">
+        <img
+          src="/thinking-loader.gif"
+          alt=""
+          className="w-6 h-6 pointer-events-none"
+        />
+      </div>
+      <span className="text-sm thinking-shimmer-gradient whitespace-nowrap">
+        {loaderLabels[labelIndex]}
+      </span>
+    </>
+  );
+
+  if (pill) {
+    return (
+      <div className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white pl-[8px] pr-[14px] py-[6px] shadow-[0_8px_20px_-6px_rgba(16,24,40,0.22)]">
+        {content}
+      </div>
+    );
+  }
+
   return (
     <div className="flex justify-start w-full">
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 shrink-0 overflow-hidden flex items-center justify-center" aria-hidden="true">
-          <img
-            src="/thinking-loader.gif"
-            alt=""
-            className="w-6 h-6 pointer-events-none"
-          />
-        </div>
-        <span className="text-sm thinking-shimmer-gradient">
-          {loaderLabels[labelIndex]}
-        </span>
-      </div>
+      <div className="flex items-center gap-2">{content}</div>
     </div>
   );
 };

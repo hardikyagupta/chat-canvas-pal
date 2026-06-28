@@ -50,14 +50,14 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
         className="absolute inset-y-0 left-0 w-[88%] max-w-[360px] flex flex-col gap-[8px] items-start bg-white border border-[#DDE2EE] rounded-[12px] shadow-[0px_0px_50px_-6px_rgba(97,97,97,0.25)] px-[24px] py-[16px] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close */}
+        {/* Close — compact square hover to match the other icon buttons */}
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center pr-[16px] py-[8px] rounded-[4px] w-full shrink-0 hover:bg-[#F2F4F7] transition-colors"
+          className="flex items-center justify-center p-[8px] rounded-[8px] shrink-0 hover:bg-[#F2F4F7] transition-colors"
           aria-label="Close menu"
         >
-          <X className="size-[24px] text-[#212E36]" />
+          <X className="size-[20px] text-[#212E36]" />
         </button>
 
         {/* Scrollable content */}

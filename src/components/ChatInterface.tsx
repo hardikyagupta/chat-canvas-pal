@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback } from 'react';
 // Lucide icons for various UI elements
-import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, Users, Trash2, Info, ChevronDown, StopCircle, MoreVertical, ArrowDown, Menu } from 'lucide-react';
+import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, MessageSquarePlus, Users, Trash2, Info, ChevronDown, StopCircle, MoreVertical, ArrowDown, Menu } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SystemMessage from './SystemMessage';
@@ -30,6 +30,9 @@ import { GradientShimmer } from 'gradient-shimmer';
 import MinViewLhsOverlay from './MinViewLhsOverlay';
 import ArtifactPreview from './ArtifactPreview';
 import LineNav, { LineNavItem } from './LineNav';
+import FeedbackModal, { FeedbackSentiment } from './FeedbackModal';
+import { ThumbsUp, ThumbsDown, CheckCircle2 } from 'lucide-react';
+import { playResponseCue, playToggleCue, playExpandCue } from '@/lib/playCue';
 import { ContentAgentSegmentAccordions } from './ContentAgentSegmentAccordions';
 import GeneratingLoader from './GeneratingLoader';
 import { BorderBeam } from 'border-beam';
@@ -139,6 +142,15 @@ const STORY_OUTPUT =
 // Short nav label for the opening story turn (shown in the vertical line-nav).
 const STORY_NAV_LABEL = "June 8–19 recap";
 
+// Suggested follow-up prompts shown under the first output. Tapping any one
+// starts thread 2 (the follow-up drill-down). Mix of short and longer phrasings.
+const SUGGESTED_PROMPTS = [
+  "Why is WhatsApp delivery only ~38%?",
+  "What's the single biggest fix before the next send?",
+  "If we recover WhatsApp delivery, what's the realistic upside?",
+  "Draft the next-cycle plan I can share with the team",
+];
+
 // --- Follow-up "chapter 2" thread ---------------------------------------
 // After the story, the user's next message auto-plays this scripted batch of
 // follow-up Q&A that drills deeper into the same June campaign data. Each
@@ -204,6 +216,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const inputShimmerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [mockChatCompleted, setMockChatCompleted] = useState(false); // New state
+  // Shows the suggested follow-up chips after the first output completes (until thread 2 starts)
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  // End-of-conversation feedback: floating prompt → modal (up/down) → success toast
+  const [showFeedbackPrompt, setShowFeedbackPrompt] = useState(false);
+  const [feedbackModal, setFeedbackModal] = useState<FeedbackSentiment | null>(null);
+  const [showFeedbackToast, setShowFeedbackToast] = useState(false);
+  const feedbackToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleFeedbackSubmit = () => {
+    setFeedbackModal(null);
+    setShowFeedbackPrompt(false);
+    setShowFeedbackToast(true);
+    if (feedbackToastTimerRef.current) clearTimeout(feedbackToastTimerRef.current);
+    feedbackToastTimerRef.current = setTimeout(() => setShowFeedbackToast(false), 3000);
+  };
+
+  const resetFeedback = () => {
+    setShowFeedbackPrompt(false);
+    setFeedbackModal(null);
+    setShowFeedbackToast(false);
+    if (feedbackToastTimerRef.current) clearTimeout(feedbackToastTimerRef.current);
+  };
   const [isGeneratingOutput, setIsGeneratingOutput] = useState(false); // Drives the persistent bottom-of-thread loader
   const [contentApproved, setContentApproved] = useState(false); // New state for content approval
   const [segmentsApproved, setSegmentsApproved] = useState(false); // New state for segments approval
@@ -590,6 +624,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     hasRunFollowupsRef.current = false;
     setActivePage('home');
     setMessages([]);
+    setShowSuggestions(false);
+    resetFeedback();
     setMockChatCompleted(false);
     setContentApproved(false);
     setContentGenerated(false);
@@ -628,6 +664,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       isStoryFlowActiveRef.current = false;
       hasRunStoryRef.current = false;
       hasRunFollowupsRef.current = false;
+      setShowSuggestions(false);
+      resetFeedback();
       setIsGeneratingOutput(false);
       setMockChatCompleted(false);
       setContentApproved(false);
@@ -805,9 +843,20 @@ The content has been updated across all channels to reflect your changes.`;
       isAI: false,
       onAnimationComplete: () => {}
     };
+    // The just-sent message lands at this index — used to pin it near the top
+    // after sending so the start of the incoming response is revealed.
+    const sentMsgIndex = messages.length;
     setMessages(prev => [...prev, userMessage]);
+    setShowSuggestions(false); // hide follow-up chips once a message is sent
+    resetFeedback(); // clear any feedback prompt/toast on a new send
     setMockChatCompleted(false); // Reset when user sends a new message
     setIsGeneratingOutput(true); // Show the persistent bottom loader until this response finishes
+
+    // Slight scroll: bring the user's message toward the top so they can see the
+    // response begin loading below it, then scroll freely from there.
+    setTimeout(() => {
+      document.getElementById(`msg-${sentMsgIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
 
     // Shimmer the input for the whole generation. Mock flows keep it on via
     // isMockAgentChatActive; non-mock responses clear it when their streaming
@@ -914,6 +963,11 @@ The content has been updated across all channels to reflect your changes.`;
           setIsGeneratingOutput(false);
           clearInputShimmer();
           setMockChatCompleted(true);
+          // After the opening recap, surface follow-up chips; after thread 2 (followups),
+          // clear chips and float the end-of-conversation feedback prompt instead.
+          setShowSuggestions(storyPhase === 'story');
+          if (storyPhase === 'followups') setShowFeedbackPrompt(true);
+          playResponseCue(); // response finished — audible cue
           if (mockMessageTimeoutRef.current) {
             clearTimeout(mockMessageTimeoutRef.current);
             mockMessageTimeoutRef.current = null;
@@ -1251,6 +1305,7 @@ The content has been updated across all channels to reflect your changes.`;
           setIsGeneratingOutput(false);
           clearInputShimmer();
           setMockChatCompleted(true); // <-- Set mock chat completed true
+          playResponseCue(); // response finished — audible cue
           if (mockMessageTimeoutRef.current) { // Clear ref if sequence ends naturally
             clearTimeout(mockMessageTimeoutRef.current);
             mockMessageTimeoutRef.current = null;
@@ -1556,6 +1611,7 @@ The content has been updated across all channels to reflect your changes.`;
                 if (inputShimmerTimerRef.current) clearTimeout(inputShimmerTimerRef.current);
                 setInputShimmer(false);
                 setIsGeneratingOutput(false);
+                playResponseCue(); // response finished — audible cue
               },
             };
             setMessages(prev => [...prev, aiResponse]);
@@ -1593,7 +1649,7 @@ The content has been updated across all channels to reflect your changes.`;
   const WidgetViewHeader = () => (
     <div
       className={cn(
-        "flex items-start shrink-0 w-full",
+        "flex items-start shrink-0 w-full border-b border-[#DDE2EE]",
         !isExpanded && (isDragging ? "cursor-grabbing" : "cursor-grab")
       )}
       onMouseDown={!isExpanded ? handleDragMouseDown : undefined}
@@ -1998,6 +2054,16 @@ The content has been updated across all channels to reflect your changes.`;
           />
         )}
 
+        {/* Feedback modal (👍 happy / 👎 improvement) — overlays the whole chat window */}
+        {feedbackModal && (
+          <FeedbackModal
+            sentiment={feedbackModal}
+            onClose={() => setFeedbackModal(null)}
+            onSubmit={handleFeedbackSubmit}
+          />
+        )}
+
+
         {/* Main content area: Layout changes based on view mode */}
         <div className={cn(
           "flex flex-1 overflow-hidden",
@@ -2027,13 +2093,13 @@ The content has been updated across all channels to reflect your changes.`;
           )}
 
           {/* Right column: header + chat (expanded) / chat only (widget) */}
-          <div className={cn("flex flex-col flex-1 min-w-0", isExpanded ? "overflow-hidden" : "")}>
+          <div className={cn("flex flex-col flex-1 min-w-0 min-h-0", isExpanded ? "overflow-hidden" : "")}>
           {isExpanded && (
             <RhsHeader
               chatName={chatName}
               showSidebarToggle={true}
               sidebarCollapsed={lhsCollapsed}
-              onToggleSidebar={() => setLhsCollapsed(prev => !prev)}
+              onToggleSidebar={() => { setLhsCollapsed(prev => !prev); playToggleCue(); }}
               onMinimize={() => setIsExpanded(false)}
               onClose={onCloseInterface}
             />
@@ -2042,7 +2108,7 @@ The content has been updated across all channels to reflect your changes.`;
           {/* Chat messages and input area.
               Window is full screen; the chat-area itself is the Figma bordered card. */}
           <div className={cn(
-            "flex flex-col flex-1 overflow-hidden",
+            "flex flex-col flex-1 overflow-hidden min-h-0",
             isExpanded && "p-[8px]"
           )}>
           <ChatCardBeam enabled={isExpanded} active={messages.length === 0 && !isGeneratingOutput}>
@@ -2068,10 +2134,12 @@ The content has been updated across all channels to reflect your changes.`;
           {/* Conversation column — 60% when artifact open, hidden when full-expanded, expands back while closing */}
           <div
             className={cn(
-              "relative z-10 flex flex-col overflow-hidden min-w-0 transition-[width] duration-300 ease-in-out",
+              "relative z-10 flex flex-col overflow-hidden min-w-0 min-h-0 transition-[width] duration-300 ease-in-out",
               isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "w-0 opacity-0 pointer-events-none",
               isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "w-[60%]",
-              !(isExpanded && showArtifactPreview && !artifactClosing) && "w-full flex-1"
+              !(isExpanded && showArtifactPreview && !artifactClosing) && "w-full flex-1",
+              // Widget view: the artifact takes over full-screen, so hide (not unmount) the chat
+              !isExpanded && showArtifactPreview && "hidden"
             )}
           >
             {/* Scrollable chat messages area */}
@@ -2231,6 +2299,8 @@ The content has been updated across all channels to reflect your changes.`;
                       }
                       statCards={message.statCards}
                       miniChart={message.miniChart}
+                      onThumbsUp={() => setFeedbackModal('up')}
+                      onThumbsDown={() => setFeedbackModal('down')}
                       onContinueSegment={() => {
                         if (message.isSegmentAgentRationale) {
                           const idx = mockMessagesDefinitionRef.current.findIndex(msg => msg.isSegmentAgentRationale);
@@ -2320,11 +2390,23 @@ The content has been updated across all channels to reflect your changes.`;
                   )}
                   </div>
                 ))}
-                {isGeneratingOutput && (
-                  <div className="w-full py-2">
-                    <GeneratingLoader />
+                {/* Suggested follow-up prompts after the first output — tapping any starts thread 2 */}
+                {showSuggestions && !isGeneratingOutput && messages.length > 0 && (
+                  <div className="w-full flex flex-col items-start gap-[8px] py-2 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                    {SUGGESTED_PROMPTS.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => handleSendMessage(p)}
+                        className="group flex w-fit max-w-full items-start gap-[10px] text-left rounded-[10px] border border-[#E5E7EB] bg-white px-[12px] py-[8px] hover:bg-[#F9FAFB] hover:border-[#D4D4D4] transition-colors"
+                      >
+                        <MessageSquarePlus className="size-[16px] text-[#6F6F8D] shrink-0 mt-[1px]" strokeWidth={1.75} />
+                        <span className="text-[14px] leading-[20px] text-[#475467]" style={{ fontFamily: 'Manrope, sans-serif' }}>{p}</span>
+                      </button>
+                    ))}
                   </div>
                 )}
+                {/* Loader is shown as a floating pill above the input (both views) — see below. */}
                 <div ref={messagesEndRef} />
                 </div>
               </div>
@@ -2340,7 +2422,7 @@ The content has been updated across all channels to reflect your changes.`;
                       size="icon"
                       className={cn(
                         "absolute right-6 h-10 w-10 rounded-full shadow-lg z-50 bg-white dark:bg-white border-[1.5px] hover:bg-gray-50 dark:hover:bg-gray-50",
-                        isExpanded ? "bottom-[112px]" : "bottom-[106px]"
+                        isExpanded ? "bottom-[112px]" : "bottom-[150px]"
                       )}
                       style={{ borderColor: '#DDE2EE' }}
                       aria-label="Scroll to latest"
@@ -2362,19 +2444,73 @@ The content has been updated across all channels to reflect your changes.`;
               <LineNav items={navItems} containerRef={chatContainerRef} />
             )}
 
+
             {messages.length > 0 && (
               <div className={cn(
-                "flex-shrink-0",
-                isExpanded ? "" : "h-[82px] px-4 py-5"
+                "relative flex-shrink-0",
+                // Widget: match the messages area's 16px on left/right/bottom
+                isExpanded ? "" : "px-[16px] pt-[8px] pb-[16px]"
               )}>
+                {/* Feedback popover / success toast — pinned to the chat's right edge,
+                    on the line just above the input field (not over its face). */}
+                {(showFeedbackToast || (showFeedbackPrompt && !feedbackModal)) && (
+                  <div className="absolute right-[24px] bottom-full mb-[12px] z-30 flex justify-end max-w-[calc(100%-48px)]">
+                    {showFeedbackToast ? (
+                      <div className="inline-flex items-center gap-[8px] rounded-full border border-[#E5E7EB] bg-white px-[14px] py-[8px] shadow-[0px_8px_20px_-6px_rgba(16,24,40,0.22)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <CheckCircle2 className="size-[16px] text-[#22A565] shrink-0" />
+                        <span className="text-[13px] text-[#17173A] whitespace-nowrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                          Feedback sent successfully. Thank you
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-[10px] rounded-[12px] border border-[#E5E7EB] bg-white px-[16px] py-[10px] shadow-[0px_8px_24px_-6px_rgba(16,24,40,0.22)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <span className="text-[14px] text-[#17173A] whitespace-nowrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                          Was your Co-marketer experience helpful?
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setFeedbackModal('up')}
+                          aria-label="Helpful"
+                          className="flex items-center justify-center p-[6px] rounded-md text-[#6F6F8D] hover:bg-green-50 hover:text-green-600 transition-colors"
+                        >
+                          <ThumbsUp className="size-[16px]" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFeedbackModal('down')}
+                          aria-label="Not helpful"
+                          className="flex items-center justify-center p-[6px] rounded-md text-[#6F6F8D] hover:bg-red-50 hover:text-red-600 transition-colors"
+                        >
+                          <ThumbsDown className="size-[16px]" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowFeedbackPrompt(false)}
+                          aria-label="Dismiss"
+                          className="flex items-center justify-center p-[6px] rounded-md text-[#6F6F8D] hover:bg-[#F2F4F7] transition-colors"
+                        >
+                          <X className="size-[16px]" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* Centered container for chat input - 768px width as per Figma */}
                 <div className={cn(
                   "flex items-center justify-center w-full bg-transparent outline-none",
-                  isExpanded ? "pb-2 pt-0" : "pb-2"
+                  isExpanded ? "pb-2 pt-0" : ""
                 )}>
                   <div className={cn(
+                    "relative",
                     isExpanded ? "w-[768px]" : "w-full"
                   )}>
+                    {/* Floating "still loading" pill, centered just above the input (both views) */}
+                    {isGeneratingOutput && (
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[10px] z-20">
+                        <GeneratingLoader pill />
+                      </div>
+                    )}
+
                     <ChatInput
                       onSend={handleSendMessage}
                       isMockAgentChatActive={isMockAgentChatActive}
@@ -2439,22 +2575,27 @@ The content has been updated across all channels to reflect your changes.`;
               </div>
             )}
           </div>
-          {/* Artifact preview panel — 40% split, or full width when expanded.
-              On close it slides right + fades + collapses width before unmounting. */}
-          {isExpanded && showArtifactPreview && (
+          {/* Artifact preview panel.
+              Expanded view: 40% split (or full width when expanded), slides out on close.
+              Widget (collapse) view: full-bleed take-over below the Co-marketer nav,
+              with the artifact's own top-nav acting as the close sub-nav. */}
+          {showArtifactPreview && (
             <div className={cn(
-              "relative z-10 shrink-0 h-full py-[12px] transition-all duration-300 ease-in-out will-change-[width,transform,opacity]",
-              artifactClosing
-                ? "w-0 opacity-0 translate-x-6 pr-0"
-                : artifactFullExpanded
-                  ? "w-full"
-                  : "w-[40%] pr-[12px]"
+              "relative z-10 shrink-0 h-full transition-all duration-300 ease-in-out will-change-[width,transform,opacity]",
+              !isExpanded
+                ? "w-full"
+                : artifactClosing
+                  ? "w-0 opacity-0 translate-x-6 pr-0"
+                  : artifactFullExpanded
+                    ? "w-full py-[12px]"
+                    : "w-[40%] pr-[12px] py-[12px]"
             )}>
               <ArtifactPreview
                 onClose={handleCloseArtifactPreview}
                 onDownload={() => {}}
                 isFullExpanded={artifactFullExpanded}
-                onToggleExpand={() => setArtifactFullExpanded(prev => !prev)}
+                onToggleExpand={isExpanded ? () => { setArtifactFullExpanded(prev => !prev); playExpandCue(); } : undefined}
+                bare={!isExpanded}
               />
             </div>
           )}
@@ -2483,22 +2624,18 @@ function ChatCardBeam({ enabled, active, children }: ChatCardBeamProps) {
   const beamRef = useRef<HTMLDivElement>(null);
   const [beamId, setBeamId] = useState<string | null>(null);
 
+  // Read the generated beam id once; the wrapper is always rendered so that
+  // toggling `enabled` (widget ⇄ full screen) never changes the element type
+  // above the conversation — otherwise React remounts every message and the
+  // typing animations replay. We only inject the beam CSS / activate when enabled.
   useLayoutEffect(() => {
-    if (!enabled) {
-      setBeamId(null);
-      return;
-    }
     const id = beamRef.current?.getAttribute('data-beam') ?? null;
     if (id) setBeamId(id);
-  }, [enabled, active]);
-
-  if (!enabled) {
-    return <>{children}</>;
-  }
+  }, []);
 
   return (
     <>
-      {beamId ? <style>{welcomeCardBeamStyleBlock(beamId)}</style> : null}
+      {enabled && beamId ? <style>{welcomeCardBeamStyleBlock(beamId)}</style> : null}
       <BorderBeam
         ref={beamRef}
         size="md"
@@ -2510,7 +2647,7 @@ function ChatCardBeam({ enabled, active, children }: ChatCardBeamProps) {
         brightness={1.55}
         saturation={1.85}
         duration={3.2}
-        active={active}
+        active={enabled && active}
         className="welcome-card-beam flex flex-1 min-h-0 min-w-0"
       >
         {children}

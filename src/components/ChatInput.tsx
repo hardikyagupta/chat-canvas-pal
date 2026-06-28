@@ -187,10 +187,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
         {/* Outer container — height grows smoothly when chip appears */}
         <div
           className={cn(
-            "relative overflow-hidden w-full bg-white rounded-[16px] border-[0.5px] border-[#DDE2EE] p-[12px]",
+            "relative overflow-hidden w-full rounded-[16px] border-[0.5px] border-[#DDE2EE] p-[12px]",
             "drop-shadow-[0px_1px_1px_rgba(16,24,40,0.05)]",
             "focus-within:ring-1 focus-within:ring-[#0056F8] transition-shadow",
-            isQuestionnaireActive && "cursor-not-allowed opacity-50"
+            // Disabled (questionnaire) OR generating: greyish fill + not-allowed across the field
+            (isQuestionnaireActive || isLoading) ? "bg-[#F2F4F7] cursor-not-allowed" : "bg-white"
           )}
         >
           {/* Shimmer layers — active while a response is being generated (mock
@@ -216,8 +217,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Co-marketer..."
-                  disabled={isQuestionnaireActive}
-                  className="flex-1 min-w-0 bg-transparent border-0 p-0 font-medium text-[14px] leading-[22px] text-foreground placeholder:text-[#6F6F8D] focus:outline-none"
+                  disabled={isQuestionnaireActive || isLoading}
+                  className="flex-1 min-w-0 bg-transparent border-0 p-0 font-medium text-[14px] leading-[22px] text-foreground placeholder:text-[#6F6F8D] focus:outline-none disabled:cursor-not-allowed"
                   style={{ fontFamily: "Manrope, sans-serif" }}
                   autoComplete="off"
                 />

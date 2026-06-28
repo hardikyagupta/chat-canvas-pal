@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelRightClose, Download, ArrowLeftToLine, ArrowRightToLine } from 'lucide-react';
+import { PanelRightClose, Download, ArrowLeftToLine, ArrowRightToLine, ArrowLeft } from 'lucide-react';
 import {
   PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -22,7 +22,8 @@ interface ArtifactPreviewProps {
   onClose?: () => void;        // collapse/close the artifact panel
   onDownload?: () => void;
   isFullExpanded?: boolean;    // artifact occupies full width (chat hidden)
-  onToggleExpand?: () => void; // expand to full / restore split
+  onToggleExpand?: () => void; // expand to full / restore split (omit to hide the toggle)
+  bare?: boolean;              // drop the outer card border/radius (full-bleed, e.g. widget view)
 }
 
 // ---- KPI cards ----
@@ -86,6 +87,19 @@ const tableRows = [
   { q: 'Aug 2025', conv: '1,249', rev: '935,654', ctr: '0.54%', open: '78.17%', cr: '0.0%' },
 ];
 
+// ---- Campaign performance table (minimal, scrolls horizontally when narrow) ----
+const campaignCols = ['Campaign', 'Date', 'Published', 'Sent', 'Delivered', 'Delivery %', 'Read', 'Read %'] as const;
+const campaignRows = [
+  { name: 'custom only2 19th june26',                   date: 'Jun 19', published: '14,188', sent: '14,188', delivered: '7,482', delivery: '52.7%', read: '3,765', readPct: '50.3%' },
+  { name: 'custom only2 19th june26 part2',             date: 'Jun 19', published: '14,432', sent: '14,432', delivered: '8,177', delivery: '56.7%', read: '5,174', readPct: '63.3%' },
+  { name: 'custom data 19th june 26',                   date: 'Jun 19', published: '47,746', sent: '42,638', delivered: '8,119', delivery: '19.0%', read: '3,108', readPct: '38.3%' },
+  { name: 'App users pop sale extented 19th june26',    date: 'Jun 19', published: '23,712', sent: '23,712', delivered: '6,142', delivery: '25.9%', read: '3,492', readPct: '56.9%' },
+  { name: 'restock dolchi cross sell ghee 18th june26', date: 'Jun 18', published: '4,297',  sent: '4,297',  delivered: '2,665', delivery: '62.0%', read: '1,284', readPct: '48.2%' },
+  { name: 'likely to click 18th june26',                date: 'Jun 18', published: '10,046', sent: '10,046', delivered: '7,179', delivery: '71.5%', read: '3,639', readPct: '50.7%' },
+  { name: 'wa preferred weknd weekday 18th june26',     date: 'Jun 18', published: '7,698',  sent: '7,698',  delivered: '3,880', delivery: '50.4%', read: '1,835', readPct: '47.3%' },
+];
+const campaignTotals = { published: '3,54,774', sent: '3,49,666', delivered: '1,80,572', delivery: '50.9%', read: '91,405' };
+
 const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   fileName = 'Ui launch usage readout combined · PDF',
   title = 'Highest Engagement Last Quarter',
@@ -93,14 +107,16 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   onDownload,
   isFullExpanded = false,
   onToggleExpand,
+  bare = false,
 }) => {
   return (
-    <div className="flex flex-col h-full w-full bg-white border border-[#DDE2EE] rounded-[12px] overflow-hidden">
+    <div className={`flex flex-col h-full w-full bg-white overflow-hidden${bare ? '' : ' border border-[#DDE2EE] rounded-[12px]'}`}>
       {/* top-nav-artifact */}
       <TooltipProvider delayDuration={200}>
         <div className="flex gap-[8px] items-center px-[8px] py-[4px] w-full shrink-0 border-b border-[#DDE2EE]">
           {/* Left cluster: 1) expand arrow  2) collapse/close  then label */}
           <div className="flex min-w-0 gap-[4px] items-center">
+            {onToggleExpand && (
             <UITooltip>
               <TooltipTrigger asChild>
                 <button
@@ -118,6 +134,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
                 <p>{isFullExpanded ? 'Restore split view' : 'Expand artifact'}</p>
               </TooltipContent>
             </UITooltip>
+            )}
             <UITooltip>
               <TooltipTrigger asChild>
                 <button
@@ -126,7 +143,9 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
                   className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
                   aria-label="Close artifact"
                 >
-                  <PanelRightClose className="size-[16px] text-[#40474C]" />
+                  {bare
+                    ? <ArrowLeft className="size-[16px] text-[#40474C]" />
+                    : <PanelRightClose className="size-[16px] text-[#40474C]" />}
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="border-0 bg-[#1C1C1E] text-white text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
@@ -164,8 +183,8 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
           {title}
         </p>
 
-        {/* Top dashboard card */}
-        <div className="w-full border border-[#E5E7EB] rounded-[12px] p-[16px] flex flex-col gap-[16px] bg-white">
+        {/* Top dashboard section — no outer box; the tiles and chart blocks carry their own borders */}
+        <div className="w-full flex flex-col gap-[16px]">
           {/* KPI row */}
           <div className="grid grid-cols-3 gap-[8px]">
             {kpis.map((k) => (
@@ -259,6 +278,54 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Campaign performance table — minimal; scrolls horizontally on narrow widths */}
+        <div className="w-full flex flex-col gap-[4px]">
+          <p className="text-[12px] font-semibold text-[#17173A]">Campaign performance</p>
+          <p className="text-[10px] text-[#6F6F8D]">Delivery and read rates by campaign</p>
+          <div className="w-full border border-[#E5E7EB] rounded-[8px] overflow-hidden mt-[4px]">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[13px]">
+                <thead>
+                  <tr className="bg-[#F2F5F9]">
+                    {campaignCols.map((h, i) => (
+                      <th
+                        key={h}
+                        className={`font-medium text-[#64758B] px-[10px] py-[8px] whitespace-nowrap tracking-[0.33px] ${i === 0 ? 'text-left' : 'text-right'}`}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {campaignRows.map((r, i) => (
+                    <tr key={i} className="bg-white border-t border-[#E5E7EB]">
+                      <td className="px-[10px] py-[8px] text-[#17173A] font-medium whitespace-nowrap">{r.name}</td>
+                      <td className="px-[10px] py-[8px] text-[#6F6F8D] whitespace-nowrap text-right">{r.date}</td>
+                      <td className="px-[10px] py-[8px] text-[#17173A] whitespace-nowrap text-right">{r.published}</td>
+                      <td className="px-[10px] py-[8px] text-[#17173A] whitespace-nowrap text-right">{r.sent}</td>
+                      <td className="px-[10px] py-[8px] text-[#17173A] whitespace-nowrap text-right">{r.delivered}</td>
+                      <td className="px-[10px] py-[8px] text-[#17173A] whitespace-nowrap text-right">{r.delivery}</td>
+                      <td className="px-[10px] py-[8px] text-[#17173A] whitespace-nowrap text-right">{r.read}</td>
+                      <td className="px-[10px] py-[8px] text-[#17173A] whitespace-nowrap text-right">{r.readPct}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-white border-t border-[#E5E7EB]">
+                    <td className="px-[10px] py-[8px] text-[#17173A] font-semibold whitespace-nowrap">Totals (23 campaigns)</td>
+                    <td className="px-[10px] py-[8px] text-[#6F6F8D] whitespace-nowrap text-right">—</td>
+                    <td className="px-[10px] py-[8px] text-[#17173A] font-semibold whitespace-nowrap text-right">{campaignTotals.published}</td>
+                    <td className="px-[10px] py-[8px] text-[#17173A] font-semibold whitespace-nowrap text-right">{campaignTotals.sent}</td>
+                    <td className="px-[10px] py-[8px] text-[#17173A] font-semibold whitespace-nowrap text-right">{campaignTotals.delivered}</td>
+                    <td className="px-[10px] py-[8px] text-[#17173A] font-semibold whitespace-nowrap text-right">{campaignTotals.delivery}</td>
+                    <td className="px-[10px] py-[8px] text-[#17173A] font-semibold whitespace-nowrap text-right">{campaignTotals.read}</td>
+                    <td className="px-[10px] py-[8px] text-[#6F6F8D] whitespace-nowrap text-right">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
