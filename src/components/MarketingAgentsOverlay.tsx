@@ -26,7 +26,7 @@ const MarketingAgentsOverlay: React.FC<Props> = ({
   const renderAgentCard = (agent: MarketingAgent) => {
     const Icon = agent.icon;
     return (
-      <div className="group flex items-start gap-4 p-4 rounded-lg border border-[#E7E7E8] transition-colors transition-shadow duration-200 hover:shadow-md bg-white">
+      <div className="group flex items-start gap-4 p-4 rounded-lg border border-[var(--color-line)] transition-colors transition-shadow duration-200 hover:shadow-md bg-white">
         {/* Priority: avatarSrc (SVG) > Icon (Lucide) > GIF fallback */}
         {agent.avatarSrc ? (
           <div className="flex items-center justify-center w-10 h-10">
@@ -53,7 +53,7 @@ const MarketingAgentsOverlay: React.FC<Props> = ({
         )}
         <div className="flex-1">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-[#051C2C] cursor-default select-none">{agent.name}</h3>
+            <h3 className="font-semibold text-[var(--color-ink)] cursor-default select-none">{agent.name}</h3>
             {agent.id === "co-marketer" ? (
               <>
                 {/* Switch for Co-marketer intentionally removed as per request */}
@@ -66,22 +66,22 @@ const MarketingAgentsOverlay: React.FC<Props> = ({
               />
             )}
           </div>
-          <p className="text-sm text-[#6B7280] mt-1 cursor-default select-none">{agent.description}</p>
+          <p className="text-sm text-[var(--color-grey)] mt-1 cursor-default select-none">{agent.description}</p>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="w-[400px] bg-white rounded-lg shadow-lg overflow-hidden h-[776px] border border-[#E7E7E8]">
-      <div className="p-4 border-b border-[#E7E7E8]">
+    <div className="w-[400px] bg-white rounded-lg shadow-lg overflow-hidden h-[776px] border border-[var(--color-line)]">
+      <div className="p-4 border-b border-[var(--color-line)]">
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-[#051C2C]">Marketing agents</h2>
+          <h2 className="text-lg font-semibold text-[var(--color-ink)]">Marketing agents</h2>
           <button 
             onClick={() => onOpenChange(false)}
-            className="p-1.5 hover:bg-[#F6F7F9] rounded-md"
+            className="p-1.5 hover:bg-[var(--color-surface-0)] rounded-md"
           >
-            <X className="w-4 h-4 text-[#6B7280]" />
+            <X className="w-4 h-4 text-[var(--color-grey)]" />
           </button>
         </div>
       </div>

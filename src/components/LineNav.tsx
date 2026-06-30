@@ -75,8 +75,8 @@ const LineNav: React.FC<LineNavProps> = ({ items, containerRef }) => {
               className={cn(
                 'max-w-[180px] truncate text-right text-[13px] leading-[18px] transition-colors duration-150',
                 active
-                  ? 'font-medium text-[#17173A]'
-                  : 'text-[#9AA3B2] group-hover/navitem:text-[#17173A]',
+                  ? 'font-medium text-[var(--color-ink)]'
+                  : 'text-[var(--color-grey-soft)] group-hover/navitem:text-[var(--color-ink)]',
               )}
             >
               {it.label}
@@ -85,8 +85,8 @@ const LineNav: React.FC<LineNavProps> = ({ items, containerRef }) => {
               className={cn(
                 'h-[2px] shrink-0 rounded-full transition-all duration-150',
                 active
-                  ? 'w-[28px] bg-[#17173A]'
-                  : 'w-[16px] bg-[#C7CDD8] group-hover/navitem:w-[24px] group-hover/navitem:bg-[#17173A]',
+                  ? 'w-[28px] bg-[var(--color-ink)]'
+                  : 'w-[16px] bg-[var(--color-line-strong)] group-hover/navitem:w-[24px] group-hover/navitem:bg-[var(--color-ink)]',
               )}
             />
           </button>

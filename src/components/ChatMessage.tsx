@@ -1171,8 +1171,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   if (!isAI) {
     return (
       <div className="flex justify-end w-full py-2">
-        <div className="bg-white dark:bg-white border border-[#E5E7EB] rounded-[12px] p-[12px] w-fit max-w-[60%]">
-          <p className="text-[#17173A] dark:text-[#17173A] text-sm font-semibold leading-[24px] font-['Manrope']">
+        <div className="bg-white dark:bg-white border border-[var(--color-line)] rounded-[12px] p-[12px] w-fit max-w-[60%]">
+          <p className="text-[var(--color-ink)] dark:text-[var(--color-ink)] text-sm font-medium leading-[24px] font-['Manrope']">
             {displayedText}
           </p>
         </div>
@@ -1352,7 +1352,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             const renderContentBlock = (block: string, index: number) => (
               <div
                 key={index}
-                className="py-2 text-[#17173A] dark:text-white leading-[22px] font-['Manrope'] font-normal whitespace-pre-line transition-all duration-50 ease-out"
+                className="py-2 text-[var(--color-ink)] dark:text-white leading-[22px] font-['Manrope'] font-normal whitespace-pre-line transition-all duration-50 ease-out"
                 style={{
                   opacity: textOpacity,
                   filter: `blur(${textBlur}px)`,
@@ -1401,11 +1401,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     {statCards.map((c) => (
                       <div
                         key={c.label}
-                        className="border border-[#E5E7EB] bg-white rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[2px]"
+                        className="border border-[var(--color-line)] bg-white rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[2px]"
                       >
-                        <span className="text-[11px] text-[#6F6F8D] font-medium">{c.label}</span>
-                        <span className="text-[20px] font-bold text-[#17173A] leading-tight">{c.value}</span>
-                        {c.sub && <span className="text-[10px] text-[#9AA3B2]">{c.sub}</span>}
+                        <span className="text-[11px] text-[var(--color-grey)] font-medium">{c.label}</span>
+                        <span className="text-[20px] font-bold text-[var(--color-ink)] leading-tight">{c.value}</span>
+                        {c.sub && <span className="text-[10px] text-[var(--color-grey-soft)]">{c.sub}</span>}
                       </div>
                     ))}
                   </div>
@@ -1442,15 +1442,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             
         {/* Feedback icons at bottom-left of AI content (ChatGPT style) - only show after animation completes */}
             {isAnimationDone && (
-              <div className="flex justify-start w-full mt-3 pt-3 border-t border-[#E5E7EB] dark:border-[#2A2A2A]">
+              <div className="flex justify-start w-full mt-3 pt-3 border-t border-[var(--color-line)] dark:border-[var(--color-charcoal)]">
                 <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500">
-                  <Button variant="ghost" size="sm" onClick={onThumbsUp} className="p-2 h-auto rounded-md hover:text-green-600 hover:bg-green-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Good response">
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={onThumbsDown} className="p-2 h-auto rounded-md hover:text-red-600 hover:bg-red-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Bad response">
-                    <ThumbsDown className="h-3.5 w-3.5" />
-                  </Button>
                   <TooltipProvider delayDuration={200}>
+                    {/* Copy — first position */}
                     <Tooltip open={copyTipOpen} onOpenChange={(o) => { if (!copied) setCopyTipOpen(o); }}>
                       <TooltipTrigger asChild>
                         <Button
@@ -1479,7 +1474,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                       </TooltipTrigger>
                       <TooltipContent
                         side="top"
-                        className="border-0 bg-[#1C1C1E] px-[8px] py-[4px] text-white"
+                        className="border-0 bg-[var(--color-ink)] px-[8px] py-[4px] text-white"
                         style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
                       >
                         {/* "Copy" ↔ "Copied!" using the same scale/fade transition */}
@@ -1503,6 +1498,36 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                         </span>
                       </TooltipContent>
                     </Tooltip>
+                    {/* Thumbs up */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" onClick={onThumbsUp} className="p-2 h-auto rounded-md hover:text-green-600 hover:bg-green-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Good response">
+                          <ThumbsUp className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="border-0 bg-[var(--color-ink)] px-[8px] py-[4px] text-white text-[12px] leading-[16px]"
+                        style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+                      >
+                        Good response
+                      </TooltipContent>
+                    </Tooltip>
+                    {/* Thumbs down */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" onClick={onThumbsDown} className="p-2 h-auto rounded-md hover:text-red-600 hover:bg-red-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Bad response">
+                          <ThumbsDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="border-0 bg-[var(--color-ink)] px-[8px] py-[4px] text-white text-[12px] leading-[16px]"
+                        style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+                      >
+                        Bad response
+                      </TooltipContent>
+                    </Tooltip>
                   </TooltipProvider>
                 </div>
               </div>
@@ -1519,7 +1544,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                           setIsContentGenerating(true);
                           onGenerateContent?.();
                         }}
-                        className="bg-[#002D72] text-white hover:bg-[#001f4d] font-normal text-xs uppercase px-3.5 py-1.5 rounded-[4px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="bg-[var(--color-navy-deep)] text-white hover:bg-[var(--color-navy-deepest)] font-normal text-xs uppercase px-3.5 py-1.5 rounded-[4px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         style={{ letterSpacing: '0.42px', lineHeight: 'normal' }}
                       >
                         Generate Content
@@ -1535,7 +1560,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                           setIsAnsweringQuestions(true);
                           onAnswerQuestions?.();
                         }}
-                        className="bg-[#143F93] hover:bg-[#0f2d70] text-white font-medium px-4 py-2 rounded-md text-sm transition-colors uppercase"
+                        className="bg-[var(--color-navy)] hover:bg-[var(--color-navy-deep)] text-white font-medium px-4 py-2 rounded-md text-sm transition-colors uppercase"
                       >
                         Answer Questions
                       </Button>
@@ -1546,7 +1571,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                           onSkipAndGenerate?.();
                         }}
                         variant="outline"
-                        className="border-[#143F93] text-[#143F93] bg-white hover:bg-[#143F93]/15 hover:text-[#143F93] hover:border-[#143F93] dark:border-[#143F93] dark:text-[#143F93] dark:bg-white dark:hover:bg-[#143F93]/15 dark:hover:text-[#143F93] font-medium px-4 py-2 rounded-md text-sm transition-colors uppercase"
+                        className="border-[var(--color-navy)] text-[var(--color-navy)] bg-white hover:bg-[var(--color-navy)]/15 hover:text-[var(--color-navy)] hover:border-[var(--color-navy)] dark:border-[var(--color-navy)] dark:text-[var(--color-navy)] dark:bg-white dark:hover:bg-[var(--color-navy)]/15 dark:hover:text-[var(--color-navy)] font-medium px-4 py-2 rounded-md text-sm transition-colors uppercase"
                       >
                         Skip And Generate
                       </Button>
@@ -1567,7 +1592,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                       <Button
                         onClick={handleUpdateContent}
                         disabled={isUpdatingContent}
-                        className="bg-cobalt-blue text-white font-normal text-xs uppercase px-3.5 py-1.5 rounded-[4px] hover:bg-[#0f2d70] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="bg-cobalt-blue text-white font-normal text-xs uppercase px-3.5 py-1.5 rounded-[4px] hover:bg-[var(--color-navy-deep)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         style={{ letterSpacing: '0.42px', lineHeight: 'normal' }}
                       >
                         {isUpdatingContent ? 'Updating...' : 'Update and Continue'}
@@ -1583,7 +1608,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                           setIsContentApproving(true);
                           onApproveContent?.();
                         }}
-                        className="bg-cobalt-blue text-white font-normal text-xs uppercase px-3.5 py-1.5 rounded-[4px] hover:bg-[#0f2d70] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="bg-cobalt-blue text-white font-normal text-xs uppercase px-3.5 py-1.5 rounded-[4px] hover:bg-[var(--color-navy-deep)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         style={{ letterSpacing: '0.42px', lineHeight: 'normal' }} 
                       >
                         Approve content
@@ -1599,7 +1624,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                           setIsSegmentsApproving(true);
                           onApproveSegments?.();
                         }}
-                        className="bg-cobalt-blue text-white font-normal text-xs uppercase px-3.5 py-1.5 rounded-[4px] hover:bg-[#0f2d70] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="bg-cobalt-blue text-white font-normal text-xs uppercase px-3.5 py-1.5 rounded-[4px] hover:bg-[var(--color-navy-deep)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         style={{ letterSpacing: '0.42px', lineHeight: 'normal' }} 
                       >
                         Approve segments
@@ -1614,7 +1639,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                           setIsFlowExecuting(true);
                           onExecuteFlow?.();
                         }}
-                        className="bg-cobalt-blue text-white font-normal text-xs uppercase px-3.5 py-1.5 rounded-l-[4px] rounded-r-none hover:bg-[#0f2d70] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="bg-cobalt-blue text-white font-normal text-xs uppercase px-3.5 py-1.5 rounded-l-[4px] rounded-r-none hover:bg-[var(--color-navy-deep)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         style={{ letterSpacing: '0.42px', lineHeight: 'normal' }} 
                       >
                         Execute flow
@@ -1623,24 +1648,24 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                         <DropdownMenuTrigger asChild>
                           <Button
                             aria-label="More options"
-                            className="bg-cobalt-blue text-white p-1.5 rounded-r-[4px] rounded-l-none border-l border-white/30 hover:bg-[#0f2d70] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            className="bg-cobalt-blue text-white p-1.5 rounded-r-[4px] rounded-l-none border-l border-white/30 hover:bg-[var(--color-navy-deep)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           >
                             <ChevronDown className="h-3.5 w-3.5" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent 
                           align="start" 
-                          className="w-[300px] bg-white dark:bg-popover border border-[#DDE2EE] dark:border-border rounded-[4px] p-0 shadow-lg"
+                          className="w-[300px] bg-white dark:bg-popover border border-[var(--color-line-input)] dark:border-border rounded-[4px] p-0 shadow-lg"
                         >
                           <DropdownMenuItem
                             onSelect={() => {}}
-                            className="flex items-center h-[50px] px-[15px] cursor-pointer text-xs font-normal text-[#17173A] dark:text-popover-foreground focus:bg-[#F4F8FF] dark:focus:bg-accent focus:text-[#17173A] dark:focus:text-accent-foreground data-[highlighted]:bg-[#F4F8FF] dark:data-[highlighted]:bg-accent data-[highlighted]:text-[#17173A] dark:data-[highlighted]:text-accent-foreground rounded-none"
+                            className="flex items-center h-[50px] px-[15px] cursor-pointer text-xs font-normal text-[var(--color-ink)] dark:text-popover-foreground focus:bg-[var(--color-royal-pale-soft)] dark:focus:bg-accent focus:text-[var(--color-ink)] dark:focus:text-accent-foreground data-[highlighted]:bg-[var(--color-royal-pale-soft)] dark:data-[highlighted]:bg-accent data-[highlighted]:text-[var(--color-ink)] dark:data-[highlighted]:text-accent-foreground rounded-none"
                           >
                             Create content template(s)
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onSelect={() => {}}
-                            className="flex items-center h-[50px] px-[15px] cursor-pointer text-xs font-normal text-[#17173A] dark:text-popover-foreground focus:bg-[#F4F8FF] dark:focus:bg-accent focus:text-[#17173A] dark:focus:text-accent-foreground data-[highlighted]:bg-[#F4F8FF] dark:data-[highlighted]:bg-accent data-[highlighted]:text-[#17173A] dark:data-[highlighted]:text-accent-foreground rounded-none"
+                            className="flex items-center h-[50px] px-[15px] cursor-pointer text-xs font-normal text-[var(--color-ink)] dark:text-popover-foreground focus:bg-[var(--color-royal-pale-soft)] dark:focus:bg-accent focus:text-[var(--color-ink)] dark:focus:text-accent-foreground data-[highlighted]:bg-[var(--color-royal-pale-soft)] dark:data-[highlighted]:bg-accent data-[highlighted]:text-[var(--color-ink)] dark:data-[highlighted]:text-accent-foreground rounded-none"
                           >
                             Create segment(s) only
                           </DropdownMenuItem>

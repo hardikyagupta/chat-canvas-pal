@@ -187,11 +187,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
         {/* Outer container — height grows smoothly when chip appears */}
         <div
           className={cn(
-            "relative overflow-hidden w-full rounded-[16px] border-[0.5px] border-[#DDE2EE] p-[12px]",
-            "drop-shadow-[0px_1px_1px_rgba(16,24,40,0.05)]",
-            "focus-within:ring-1 focus-within:ring-[#0056F8] transition-shadow",
+            "relative overflow-hidden w-full border-[0.5px] border-[var(--color-line-input)] p-[12px]",
+            // Pill + fixed 56px in the default state (border-box absorbs the 0.5px
+            // borders so total height is exactly 56px, not 57px). When a context
+            // chip is selected the field relaxes to 16px and grows to fit.
+            selectedContextChip ? "rounded-[16px]" : "rounded-[48px] h-[56px]",
+            "drop-shadow-[0px_1px_1px_oklch(0.21_0.034_263.436_/_0.05)]",
+            "focus-within:ring-1 focus-within:ring-[var(--color-royal)] transition-shadow",
             // Disabled (questionnaire) OR generating: greyish fill + not-allowed across the field
-            (isQuestionnaireActive || isLoading) ? "bg-[#F2F4F7] cursor-not-allowed" : "bg-white"
+            (isQuestionnaireActive || isLoading) ? "bg-[var(--color-surface-1)] cursor-not-allowed" : "bg-white"
           )}
         >
           {/* Shimmer layers — active while a response is being generated (mock
@@ -218,8 +222,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Co-marketer..."
                   disabled={isQuestionnaireActive || isLoading}
-                  className="flex-1 min-w-0 bg-transparent border-0 p-0 font-medium text-[14px] leading-[22px] text-foreground placeholder:text-[#6F6F8D] focus:outline-none disabled:cursor-not-allowed"
-                  style={{ fontFamily: "Manrope, sans-serif" }}
+                  className="flex-1 min-w-0 bg-transparent border-0 p-0 text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed"
+                  style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500 }}
                   autoComplete="off"
                 />
               </div>
@@ -227,23 +231,31 @@ const ChatInput: React.FC<ChatInputProps> = ({
               {/* Context chip — animates in/out using grid-rows trick */}
               <div
                 className="grid transition-[grid-template-rows,margin-top] duration-200 ease-in-out"
-                style={{ gridTemplateRows: selectedContextChip ? '1fr' : '0fr', marginTop: selectedContextChip ? '24px' : '0px' }}
+                style={{ gridTemplateRows: selectedContextChip ? '1fr' : '0fr', marginTop: selectedContextChip ? '21px' : '0px' }}
               >
+                {/* overflow-hidden drives the collapse animation; inner padding gives the
+                    chip's border/shadow room so it isn't clipped at the box edges. */}
                 <div className="overflow-hidden min-h-0">
                   {selectedContextChip && (
-                    <button
-                      type="button"
-                      onClick={onClearSelectedContextChip}
-                      className="inline-flex items-center gap-[4px] bg-[#F9FAFB] border border-[#2F68E5] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_rgba(10,143,253,0.1)] whitespace-nowrap transition-opacity duration-200"
-                    >
-                      <span
-                        className="text-[12px] leading-[16px] text-[#2F68E5] tracking-[0.42px]"
-                        style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
+                    <div className="p-[3px]">
+                      <button
+                        type="button"
+                        onClick={onClearSelectedContextChip}
+                        className="inline-flex items-center gap-[4px] border border-[var(--color-royal)] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_oklch(0.554_0.199_263.043_/_0.1)] whitespace-nowrap transition-opacity duration-200"
+                        style={{
+                          backgroundImage:
+                            "linear-gradient(180deg, var(--color-white) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)",
+                        }}
                       >
-                        {selectedContextChip}
-                      </span>
-                      <X className="w-[12px] h-[12px] text-[#6F6F8D] shrink-0" />
-                    </button>
+                        <span
+                          className="text-[12px] leading-[16px] text-[var(--color-royal)]"
+                          style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
+                        >
+                          {selectedContextChip}
+                        </span>
+                        <X className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -256,16 +268,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 onClick={handleSendClick}
                 disabled={isQuestionnaireActive || isLoading}
                 className={cn(
-                  "relative flex items-center justify-center overflow-hidden rounded-[30px] p-[8px] transition-all duration-200",
+                  // Fixed 32×32 in every state so the field height never changes
+                  // (default field height = 56px: 32px button + 2×12px padding).
+                  "relative flex items-center justify-center overflow-hidden rounded-[30px] w-[32px] h-[32px] shrink-0 transition-all duration-200",
                   isActive
-                    ? "border-[0.75px] border-[#0043C1] shadow-[0px_1px_0px_0px_rgba(0,0,0,0.02)]"
+                    ? "border-[0.75px] border-[var(--color-royal-strong)] shadow-[0px_1px_0px_0px_oklch(0_0_0_/_0.02)]"
                     : "border-0",
                   isQuestionnaireActive && "opacity-50 cursor-not-allowed"
                 )}
                 style={{
                   background: isActive
-                    ? "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.24) 100%), linear-gradient(90deg, rgb(0,86,248) 0%, rgb(0,86,248) 100%)"
-                    : "linear-gradient(90deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.08) 100%), linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.24) 100%)",
+                    ? "linear-gradient(180deg, oklch(1 0 0 / 0) 0%, oklch(1 0 0 / 0.24) 100%), linear-gradient(90deg, var(--color-royal) 0%, var(--color-royal) 100%)"
+                    : "linear-gradient(90deg, oklch(0 0 0 / 0.08) 0%, oklch(0 0 0 / 0.08) 100%), linear-gradient(180deg, oklch(1 0 0 / 0) 0%, oklch(1 0 0 / 0.24) 100%)",
                 }}
                 aria-label={isLoading ? "Generating response" : "Send message"}
               >
@@ -273,12 +287,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 {isActive && (
                   <span
                     className="absolute inset-0 rounded-[30px] pointer-events-none"
-                    style={{ boxShadow: "inset 0px 1px 1px 0px rgba(255,255,255,0.25)" }}
+                    style={{ boxShadow: "inset 0px 1px 1px 0px oklch(1 0 0 / 0.25)" }}
                   />
                 )}
                 {isLoading ? (
                   /* Loading/disabled state — grey rounded square per Figma (node 16318:13144) */
-                  <span className="block w-3 h-3 rounded-[4px] bg-[#6F6F8D] relative z-10" />
+                  <span className="block w-3 h-3 rounded-[4px] bg-[var(--color-grey)] relative z-10" />
                 ) : (
                   <ArrowUp className="w-4 h-4 text-white relative z-10" />
                 )}
@@ -325,7 +339,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             placeholder="Type your message or use '@' to mention an agent..."
             disabled={isQuestionnaireActive}
             className={cn(
-              "w-full h-[56px] pl-4 pr-0 pt-3 pb-3 rounded-lg border border-[#DDE2EE] dark:border-input-border dark:bg-input focus:outline-none focus:ring-1 focus:ring-[#007BFF] dark:focus:ring-ring transition-shadow text-sm placeholder:text-[#6F6F8D] dark:placeholder:text-foreground-muted dark:text-foreground shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)]",
+              "w-full h-[56px] pl-4 pr-0 pt-3 pb-3 rounded-lg border border-[var(--color-line-input)] dark:border-input-border dark:bg-input focus:outline-none focus:ring-1 focus:ring-[var(--color-royal)] dark:focus:ring-ring transition-shadow text-sm placeholder:text-[var(--color-grey)] dark:placeholder:text-foreground-muted dark:text-foreground shadow-[0px_1px_2px_0px_oklch(0.21_0.034_263.436_/_0.05)]",
               isQuestionnaireActive && "cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800"
             )}
             autoComplete="off"
@@ -387,9 +401,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
         className={cn(
           "absolute right-3 top-1/2 -translate-y-1/2 rounded-lg w-8 h-8 flex items-center justify-center transition-colors",
           isMockAgentChatActive 
-            ? "text-[#6F6F8D] dark:text-foreground-muted hover:text-cobalt-blue dark:hover:text-accent" 
+            ? "text-[var(--color-grey)] dark:text-foreground-muted hover:text-cobalt-blue dark:hover:text-accent" 
             : inputValue.trim() 
-              ? "bg-[#002D72] text-white hover:bg-[#001f4d]" 
+              ? "bg-[var(--color-navy-deep)] text-white hover:bg-[var(--color-navy-deepest)]" 
               : "bg-gray-200 text-gray-400 cursor-not-allowed",
           isQuestionnaireActive && "opacity-50 cursor-not-allowed"
         )}

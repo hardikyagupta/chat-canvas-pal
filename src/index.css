@@ -5,105 +5,146 @@
 @tailwind utilities;
 
 @layer base {
+  /* =========================================================================
+     COLOR SYSTEM — all colors live here, expressed in OKLCH.
+     See COLORS.md for the full palette, roles, and source-hex mapping.
+
+     Two conventions:
+     1. Functional shadcn tokens (--background, --primary, --border, …) are
+        stored as BARE oklch channels "L C H" so Tailwind can inject alpha via
+        `oklch(var(--x) / <alpha-value>)` (keeps utilities like `bg-primary/80`).
+     2. Palette tokens (--color-*) are the brand/neutral library, stored as
+        full `oklch(...)` values and used directly via `var(--color-*)`.
+     ========================================================================= */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* ---- Functional tokens (bare oklch channels) ---- */
+    --background: 1 0 0;
+    --foreground: 0.137 0.036 258.526;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 1 0 0;
+    --card-foreground: 0.137 0.036 258.526;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 1 0 0;
+    --popover-foreground: 0.137 0.036 258.526;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 0.208 0.04 265.727;
+    --primary-foreground: 0.984 0.003 247.858;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 0.968 0.007 247.895;
+    --secondary-foreground: 0.208 0.04 265.727;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 0.968 0.007 247.895;
+    --muted-foreground: 0.555 0.041 257.44;
 
-    --accent: 206 92% 68%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0.754 0.125 243.665;
+    --accent-foreground: 1 0 0;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0.637 0.208 25.326;
+    --destructive-foreground: 0.984 0.003 247.858;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --input-border: 215 27.9% 83.5%;
-    --ring: 222.2 84% 4.9%;
+    --border: 0.929 0.013 255.532;
+    --input: 0.929 0.013 255.532;
+    --input-border: 0.863 0.022 256.738;
+    --ring: 0.137 0.036 258.526;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 0.985 0 0;
+    --sidebar-foreground: 0.37 0.012 285.801;
+    --sidebar-primary: 0.21 0.006 285.884;
+    --sidebar-primary-foreground: 0.985 0 0;
+    --sidebar-accent: 0.968 0.001 286.375;
+    --sidebar-accent-foreground: 0.21 0.006 285.884;
+    --sidebar-border: 0.928 0.006 264.531;
+    --sidebar-ring: 0.623 0.188 259.796;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --avatar-bg: oklch(0.911 0.018 271.219 / 0.2);
+    --tertiary-foreground: 0.523 0.036 285.093;
+    --header-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+    --footer-shadow: 0 -1px 2px 0 oklch(0 0 0 / 0.05);
+    --input-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* ---- Palette library (full oklch) ---- */
+    /* Neutrals — text & surfaces (dark → light) */
+    --color-ink: oklch(0.227 0.066 279.78);          /* primary text / darkest */
+    --color-charcoal: oklch(0.293 0.023 235.598);    /* dark slate surfaces/text */
+    --color-slate: oklch(0.393 0.012 238.826);       /* secondary text (Slate/800) */
+    --color-grey: oklch(0.553 0.046 284.785);        /* secondary/tertiary grey text */
+    --color-grey-soft: oklch(0.713 0.024 260.709);   /* muted / placeholder / disabled */
+    --color-line-strong: oklch(0.87 0 0);            /* strong borders & dividers */
+    --color-line: oklch(0.928 0.006 264.531);        /* default borders */
+    --color-line-input: oklch(0.913 0.017 267.783);  /* input / field borders */
+    --color-surface-2: oklch(0.952 0.006 264.532);   /* soft surface */
+    --color-surface-1: oklch(0.966 0.005 258.325);   /* muted surface */
+    --color-surface-0: oklch(0.985 0.002 247.839);   /* subtle surface */
+    --color-white: oklch(1 0 0);
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    /* Royal blue — primary action (unified from all action blues) */
+    --color-royal: oklch(0.554 0.199 263.043);       /* #2F68E5 primary action */
+    --color-royal-strong: oklch(0.441 0.205 262.067);/* pressed / border / hover-dark */
+    --color-royal-pale: oklch(0.953 0.022 260.723);  /* pale tint background */
+    --color-royal-pale-soft: oklch(0.978 0.01 261.789);/* softer pale tint */
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    /* Navy / cobalt — kept brand secondary (gradients, avatars) */
+    --color-navy: oklch(0.394 0.147 261.904);
+    --color-navy-deep: oklch(0.32 0.128 259.637);
+    --color-navy-deepest: oklch(0.251 0.093 258.021);
+    --color-steel: oklch(0.426 0.108 247.015);
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-
-    --avatar-bg: 225 33% 90% / 0.2;
-    --tertiary-foreground: 240 10% 45%;
-    --header-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --footer-shadow: 0 -1px 2px 0 rgb(0 0 0 / 0.05);
-    --input-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    /* Semantic / accent */
+    --color-success: oklch(0.639 0.145 155.921);
+    --color-mint: oklch(0.726 0.155 164.016);
+    --color-warning: oklch(0.765 0.144 81.869);
+    --color-orange: oklch(0.681 0.208 41.372);
+    --color-danger: oklch(0.576 0.209 29.482);
+    --color-pink: oklch(0.832 0.12 343.407);
+    --color-plum: oklch(0.257 0.038 310.318);        /* logo disc background */
   }
 
   .dark {
-    --background: 228 3% 13%;
-    --foreground: 0 0% 100%;
+    --background: 0.246 0.003 274.881;
+    --foreground: 1 0 0;
 
-    --card: 225 4% 17%;
-    --card-foreground: 0 0% 100%;
+    --card: 0.287 0.005 271.245;
+    --card-foreground: 1 0 0;
 
-    --popover: 223 6% 16%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0.276 0.007 268.603;
+    --popover-foreground: 1 0 0;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    --primary: 0.985 0 0;
+    --primary-foreground: 0.21 0.006 285.884;
 
-    --secondary: 225 4% 17%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0.287 0.005 271.245;
+    --secondary-foreground: 0.985 0 0;
 
-    --muted: 225 4% 17%;
-    --muted-foreground: 0 0% 73%;
+    --muted: 0.287 0.005 271.245;
+    --muted-foreground: 0.789 0 0;
 
-    --accent: 206 92% 68%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0.754 0.125 243.665;
+    --accent-foreground: 1 0 0;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0.396 0.133 25.721;
+    --destructive-foreground: 0.985 0 0;
 
-    --border: 220 2% 26%;
-    --input: 225 3% 21%;
-    --input-border: 240 1% 35%;
-    --ring: 206 92% 68%;
+    --border: 0.378 0.003 264.524;
+    --input: 0.328 0.004 271.282;
+    --input-border: 0.462 0.003 286.288;
+    --ring: 0.754 0.125 243.665;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 0.21 0.006 285.884;
+    --sidebar-foreground: 0.968 0.001 286.375;
+    --sidebar-primary: 0.488 0.217 264.388;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.274 0.006 286.033;
+    --sidebar-accent-foreground: 0.968 0.001 286.375;
+    --sidebar-border: 0.274 0.006 286.033;
+    --sidebar-ring: 0.623 0.188 259.796;
 
-    --avatar-bg: 225 33% 90% / 0.2;
-    --tertiary-foreground: 0 0% 73%;
-    --header-shadow: 0px 14px 23px rgba(22, 22, 24, 0.6);
-    --footer-shadow: 0px -14px 23px rgba(18, 18, 19, 0.6);
-    --input-shadow: 0px 4px 8px rgba(0, 0, 0, 0.12);
+    --avatar-bg: oklch(0.911 0.018 271.219 / 0.2);
+    --tertiary-foreground: 0.789 0 0;
+    --header-shadow: 0px 14px 23px oklch(0.243 0 0 / 0.6);
+    --footer-shadow: 0px -14px 23px oklch(0.221 0 0 / 0.6);
+    --input-shadow: 0px 4px 8px oklch(0 0 0 / 0.12);
   }
 }
 
@@ -147,11 +188,11 @@
 .thinking-shimmer-gradient {
   background: linear-gradient(
     to right,
-    #737373 0%,
-    #737373 40%,
-    #171717 50%,
-    #737373 60%,
-    #737373 100%
+    var(--color-grey) 0%,
+    var(--color-grey) 40%,
+    var(--color-ink) 50%,
+    var(--color-grey) 60%,
+    var(--color-grey) 100%
   );
   background-size: 200% 100%;
   background-clip: text;
@@ -163,11 +204,11 @@
 .dark .thinking-shimmer-gradient {
   background: linear-gradient(
     to right,
-    #737373 0%,
-    #737373 40%,
-    #d4d4d4 50%,
-    #737373 60%,
-    #737373 100%
+    var(--color-grey) 0%,
+    var(--color-grey) 40%,
+    var(--color-line-strong) 50%,
+    var(--color-grey) 60%,
+    var(--color-grey) 100%
   );
   background-size: 200% 100%;
   background-clip: text;
@@ -184,12 +225,60 @@
   }
 }
 
+/* ===========================================================================
+   Atmosphere (Settings → Translucent sidebar theme).
+   When enabled, the selected preset gradient replaces the page background and
+   surfaces tagged `.atmo-glass` turn into frosted glass (56% white + 40px blur)
+   so the gradient shows through. Driven by AtmosphereContext via the
+   data-atmo attribute + --atmo-page-gradient on :root.
+   =========================================================================== */
+/* Atmosphere is always active when enabled — EXCEPT in the minimized widget view
+   where we suppress it so the default app background image shows through. */
+:root[data-atmo="on"]:not([data-chat-minimized]) body {
+  background-image: var(--atmo-page-gradient, none);
+  background-attachment: fixed;
+}
+
+/* Frosted-glass surface — only "activates" while atmosphere is on and not minimized;
+   otherwise stays a normal opaque surface so the off-state look is unchanged.
+   Values match the Figma translucent spec: 88% white + 20px backdrop blur. */
+:root[data-atmo="on"]:not([data-chat-minimized]) .atmo-glass {
+  background-color: oklch(1 0 0 / 0.88) !important;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+/* RHS header gets the frosted background WITHOUT backdrop-filter.
+   backdrop-filter creates a clipping context in WebKit/Blink that swallows
+   absolutely-positioned tooltip children — using background-color only avoids
+   that browser quirk while keeping the same visual frosted appearance. */
+:root[data-atmo="on"]:not([data-chat-minimized]) .atmo-glass-header {
+  background-color: oklch(1 0 0 / 0.88) !important;
+}
+
+/* End-of-conversation feedback nudge — rises in from the bottom with a soft
+   ease-out overshoot so it doesn't pop in abruptly. */
+@keyframes feedbackNudgeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(28px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.feedback-nudge-in {
+  animation: feedbackNudgeIn 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
 /* Figma shimmer palette — shared by input + welcome card shimmers */
 :root {
-  --shimmer-blue: #5c80ff;
-  --shimmer-pink: #ffa8dc;
-  --shimmer-orange: #fc5e02;
-  --shimmer-teal: #085286;
+  --shimmer-blue: var(--color-royal);
+  --shimmer-pink: var(--color-pink);
+  --shimmer-orange: var(--color-orange);
+  --shimmer-teal: var(--color-steel);
 }
 
 /* Chat-input shimmer (active while a conversation is in progress).
@@ -215,19 +304,19 @@
     var(--shimmer-blue) 0deg,
     var(--shimmer-pink) 40deg,
     var(--shimmer-orange) 75deg,
-    #ffffff 105deg,
-    #ffffff 255deg,
+    var(--color-white) 105deg,
+    var(--color-white) 255deg,
     var(--shimmer-teal) 285deg,
     var(--shimmer-blue) 325deg,
     var(--shimmer-blue) 360deg
   );
   -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
+    linear-gradient(var(--color-white) 0 0) content-box,
+    linear-gradient(var(--color-white) 0 0);
   -webkit-mask-composite: xor;
   mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
+    linear-gradient(var(--color-white) 0 0) content-box,
+    linear-gradient(var(--color-white) 0 0);
   mask-composite: exclude;
   animation: inputShimmerSpin 4s linear infinite;
 }
@@ -253,13 +342,13 @@
       from var(--input-shimmer-angle),
       transparent 0%,
       transparent 18%,
-      rgba(255, 255, 255, 0.24) 26%,
-      rgba(255, 255, 255, 0.52) 38%,
-      rgba(255, 255, 255, 0.7) 50%,
-      rgba(255, 255, 255, 0.78) 62%,
-      rgba(255, 255, 255, 0.78) 82%,
-      rgba(255, 255, 255, 0.56) 90%,
-      rgba(255, 255, 255, 0.26) 96%,
+      oklch(1 0 0 / 0.24) 26%,
+      oklch(1 0 0 / 0.52) 38%,
+      oklch(1 0 0 / 0.7) 50%,
+      oklch(1 0 0 / 0.78) 62%,
+      oklch(1 0 0 / 0.78) 82%,
+      oklch(1 0 0 / 0.56) 90%,
+      oklch(1 0 0 / 0.26) 96%,
       transparent 99%,
       transparent 100%
     ),
@@ -271,13 +360,13 @@
       from var(--input-shimmer-angle),
       transparent 0%,
       transparent 18%,
-      rgba(255, 255, 255, 0.24) 26%,
-      rgba(255, 255, 255, 0.52) 38%,
-      rgba(255, 255, 255, 0.7) 50%,
-      rgba(255, 255, 255, 0.78) 62%,
-      rgba(255, 255, 255, 0.78) 82%,
-      rgba(255, 255, 255, 0.56) 90%,
-      rgba(255, 255, 255, 0.26) 96%,
+      oklch(1 0 0 / 0.24) 26%,
+      oklch(1 0 0 / 0.52) 38%,
+      oklch(1 0 0 / 0.7) 50%,
+      oklch(1 0 0 / 0.78) 62%,
+      oklch(1 0 0 / 0.78) 82%,
+      oklch(1 0 0 / 0.56) 90%,
+      oklch(1 0 0 / 0.26) 96%,
       transparent 99%,
       transparent 100%
     ),
@@ -381,7 +470,7 @@
   font-weight: 600;
   line-height: 20px;
   letter-spacing: 0.42px;
-  color: #6f6f8d;
+  color: var(--color-grey);
 }
 
 /* Table styling - 4px border radius */
@@ -410,7 +499,7 @@
   transition: background 0.2s;
 }
 .chat-scroll.is-scrolling::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.18);
+  background: oklch(0 0 0 / 0.18);
 }
 
 /* Figma "Primary button" style (node 1357:205) — used for starter chips and
@@ -418,21 +507,13 @@
    hairline border, a 1px drop and a subtle inner bottom shadow.
    Hover: gradient/fill deepen slightly to a light grey. */
 .fig-chip {
-  border: 0.75px solid #d4d4d4;
-  /* Gradient is anchored to a fixed 18px bottom strip (not a full-height %) so
-     the sheen looks identical on a short chip and a tall multi-line prompt. */
-  background-image:
-    linear-gradient(180deg, rgba(255, 255, 255, 0) calc(100% - 18px), rgba(0, 0, 0, 0.04) 100%),
-    linear-gradient(90deg, #ffffff 0%, #ffffff 100%);
-  box-shadow: 0px 1px 0px 0px rgba(0, 0, 0, 0.02),
-    inset 0px -1px 2px 0px rgba(0, 0, 0, 0.05);
-  transition: background-image 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+  border: 0.5px solid var(--color-line-strong);
+  background-color: var(--color-white);
+  /* No shadow in the default state — flat white chip. */
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 .fig-chip:hover {
-  border-color: #c9c9c9;
-  background-image:
-    linear-gradient(180deg, rgba(255, 255, 255, 0) calc(100% - 18px), rgba(0, 0, 0, 0.07) 100%),
-    linear-gradient(90deg, #f5f5f6 0%, #f5f5f6 100%);
-  box-shadow: 0px 1px 0px 0px rgba(0, 0, 0, 0.03),
-    inset 0px -1px 2px 0px rgba(0, 0, 0, 0.06);
+  /* Light, subtle hover (previous grey was too dark). */
+  border-color: var(--color-line-strong);
+  background-color: var(--color-surface-0);
 }

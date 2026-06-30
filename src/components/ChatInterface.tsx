@@ -1,4 +1,6 @@
 import React, { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAtmosphere } from '@/contexts/AtmosphereContext';
 // Lucide icons for various UI elements
 import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, MessageSquarePlus, Users, Trash2, Info, ChevronDown, StopCircle, MoreVertical, ArrowDown, Menu } from 'lucide-react';
 import { Card } from "@/components/ui/card";
@@ -207,6 +209,8 @@ const FOLLOWUPS: { label: string; q: string; a: string; statCards?: StatCard[]; 
 ];
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface }) => {
+  const navigate = useNavigate();
+  const { active: atmoActive } = useAtmosphere();
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -380,6 +384,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       setPosition(null);
       setIsDragging(false); // Ensure dragging stops if expanded mid-drag
     }
+    // Suppress the atmosphere gradient in minimized/widget view only
+    if (isExpanded) {
+      document.documentElement.removeAttribute('data-chat-minimized');
+    } else {
+      document.documentElement.setAttribute('data-chat-minimized', 'true');
+    }
+    return () => { document.documentElement.removeAttribute('data-chat-minimized'); };
   }, [isExpanded]);
 
   // Keep the ref synchronized with the state
@@ -1057,57 +1068,57 @@ The content has been updated across all channels to reflect your changes.`;
             type: 'chat', 
             isAI: true, 
             agentName: segmentAgent?.name, 
-            content: `Based on the segmentation rules and available segments, I'll create targeted micro-segments that incorporate:\n\n• RFM checks (Rule #1)\n• Product and Category Affinity (Enhanced Rules #1 & #2)\n• Price Sensitivity (Enhanced Rule #4)\n• Gender-Specific targeting (Enhanced Rule #5)\n• Channel Interactions (Enhanced Rule #6)\n• Avoiding overlap and campaign fatigue (Rule #2)\n\nLet me structure the segments optimally for the Valentine's campaign.\n\n<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; table-layout: fixed; border: 1px solid hsl(var(--border)); background-color: hsl(var(--background));">
+            content: `Based on the segmentation rules and available segments, I'll create targeted micro-segments that incorporate:\n\n• RFM checks (Rule #1)\n• Product and Category Affinity (Enhanced Rules #1 & #2)\n• Price Sensitivity (Enhanced Rule #4)\n• Gender-Specific targeting (Enhanced Rule #5)\n• Channel Interactions (Enhanced Rule #6)\n• Avoiding overlap and campaign fatigue (Rule #2)\n\nLet me structure the segments optimally for the Valentine's campaign.\n\n<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; table-layout: fixed; border: 1px solid oklch(var(--border)); background-color: oklch(var(--background));">
                       <thead>
                         <tr>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 22%;">Segment info</th>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 30%;">Segment description</th>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 12%;">WhatsApp</th>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 12%;">Email</th>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 12%;">APN</th>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 12%;">Total users</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 22%;">Segment info</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 30%;">Segment description</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 12%;">WhatsApp</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 12%;">Email</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 12%;">APN</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 12%;">Total users</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Premium Perfume Enthusiasts</strong></td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who clicked emails in the last 90 days AND have a high PBL_HI score AND engaged with luxury perfume categories</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">156,850</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">183,237</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">83,631</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>423,718</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Premium Perfume Enthusiasts</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who clicked emails in the last 90 days AND have a high PBL_HI score AND engaged with luxury perfume categories</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">156,850</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">183,237</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">83,631</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>423,718</strong></td>
                         </tr>
                         <tr>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Recent Beauty Browsers</strong></td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who opened emails in the last 90 days AND viewed skin or beauty/perfume category pages recently AND have not purchased yet</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">202,362</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">231,664</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">144,306</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>578,332</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Recent Beauty Browsers</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who opened emails in the last 90 days AND viewed skin or beauty/perfume category pages recently AND have not purchased yet</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">202,362</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">231,664</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">144,306</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>578,332</strong></td>
                         </tr>
                         <tr>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Loyal Beauty Shoppers</strong></td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who bought skincare products in the last 90 days AND are repeat buyers based on PBL_buyers tag</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">171,724</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">196,177</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">122,452</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>490,353</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Loyal Beauty Shoppers</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who bought skincare products in the last 90 days AND are repeat buyers based on PBL_buyers tag</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">171,724</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">196,177</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">122,452</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>490,353</strong></td>
                         </tr>
                         <tr>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>High Intent New Customers</strong></td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">New buyers with high intent in the last 30 days (HI_NB_L30D) AND have opened emails recently AND haven't made a purchase yet</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">155,832</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">178,381</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">110,736</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>444,949</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>High Intent New Customers</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">New buyers with high intent in the last 30 days (HI_NB_L30D) AND have opened emails recently AND haven't made a purchase yet</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">155,832</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">178,381</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">110,736</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>444,949</strong></td>
                         </tr>
                         <tr>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Welcome Premium Segment</strong></td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users in the high-tier Welcome segment AND clicked emails in the last 180 days</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">205,200</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">234,515</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">146,571</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>586,286</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Welcome Premium Segment</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users in the high-tier Welcome segment AND clicked emails in the last 180 days</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">205,200</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">234,515</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">146,571</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>586,286</strong></td>
                         </tr>
                       </tbody>
                     </table>`, 
@@ -1213,49 +1224,49 @@ The content has been updated across all channels to reflect your changes.`;
           animate: true, 
           animationSpeed: 50, 
           content: `
-                    <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; table-layout: fixed; border: 1px solid hsl(var(--border)); background-color: hsl(var(--background));">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem; table-layout: fixed; border: 1px solid oklch(var(--border)); background-color: oklch(var(--background));">
                       <thead>
                         <tr>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 22%;">Segment info</th>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 30%;">Segment description</th>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 12%;">WhatsApp</th>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 12%;">Email</th>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 12%;">APN</th>
-                          <th style="border: 1px solid hsl(var(--border)); padding: 8px; text-align: left; background-color: hsl(var(--muted)); color: hsl(var(--muted-foreground)); width: 12%;">Total users</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 22%;">Segment info</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 30%;">Segment description</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 12%;">WhatsApp</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 12%;">Email</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 12%;">APN</th>
+                          <th style="border: 1px solid oklch(var(--border)); padding: 8px; text-align: left; background-color: oklch(var(--muted)); color: oklch(var(--muted-foreground)); width: 12%;">Total users</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Affinity_based_segment</strong></td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who clicked emails in the last 90 days AND have a high PBL_HI score AND engaged with luxury perfume categories</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">19,537</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">22,321</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">10,820</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>52,678</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Affinity_based_segment</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who clicked emails in the last 90 days AND have a high PBL_HI score AND engaged with luxury perfume categories</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">19,537</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">22,321</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">10,820</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>52,678</strong></td>
                         </tr>
                         <tr>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>High_AOV_segment</strong></td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who opened emails in the last 90 days AND viewed skin or beauty/perfume category pages recently AND have not purchased yet</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">4,578</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">5,234</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">2,533</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>12,345</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>High_AOV_segment</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who opened emails in the last 90 days AND viewed skin or beauty/perfume category pages recently AND have not purchased yet</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">4,578</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">5,234</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">2,533</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>12,345</strong></td>
                         </tr>
                         <tr>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Seasonal_buyers</strong></td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who bought skincare products in the last 90 days AND are repeat buyers based on PBL_buyers tag</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">12,810</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">14,647</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">7,110</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>34,567</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Seasonal_buyers</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users who bought skincare products in the last 90 days AND are repeat buyers based on PBL_buyers tag</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">12,810</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">14,647</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">7,110</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>34,567</strong></td>
                         </tr>
                         <tr>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Loyalty_program_members</strong></td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users in the high-tier Welcome segment AND clicked emails in the last 180 days</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">3,304</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">3,777</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">1,829</td>
-                          <td style="border: 1px solid hsl(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>8,910</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;"><strong>Loyalty_program_members</strong></td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; overflow-wrap: break-word;">Users in the high-tier Welcome segment AND clicked emails in the last 180 days</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">3,304</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">3,777</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;">1,829</td>
+                          <td style="border: 1px solid oklch(var(--border)); padding: 8px; vertical-align: top; text-align: right; overflow-wrap: break-word;"><strong>8,910</strong></td>
                         </tr>
                       </tbody>
                     </table>
@@ -1649,7 +1660,7 @@ The content has been updated across all channels to reflect your changes.`;
   const WidgetViewHeader = () => (
     <div
       className={cn(
-        "flex items-start shrink-0 w-full border-b border-[#DDE2EE]",
+        "flex items-start shrink-0 w-full border-b border-[var(--color-line-input)]",
         !isExpanded && (isDragging ? "cursor-grabbing" : "cursor-grab")
       )}
       onMouseDown={!isExpanded ? handleDragMouseDown : undefined}
@@ -1660,26 +1671,26 @@ The content has been updated across all channels to reflect your changes.`;
           {/* Menu icon — minimized mode only */}
           <button
             type="button"
-            className="flex items-center justify-center p-[4px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors shrink-0"
+            className="flex items-center justify-center p-[4px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
             aria-label="Menu"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => setShowMinOverlay(true)}
           >
-            <Menu className="w-[16px] h-[16px] text-[#40474C]" />
+            <Menu className="w-[16px] h-[16px] text-[var(--color-slate)]" />
           </button>
           {/* Logo + title group (4px gap per Figma) */}
           <div className="flex gap-[4px] items-center min-w-0">
-            {/* Blue gradient circle icon */}
-            <div
-              className="flex items-center justify-center rounded-full shrink-0 size-[24px]"
-              style={{ background: "linear-gradient(to top, #143f93 13.75%, #97baff 76.25%)" }}
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 1L7.545 4.455L11 6L7.545 7.545L6 11L4.455 7.545L1 6L4.455 4.455L6 1Z" fill="white" fillOpacity="0.9" />
-              </svg>
+            {/* Co-marketer animated logo — purple disc behind the gif so the
+                circular clip reads as a full circle (per Figma node 16367:9415) */}
+            <div className="flex items-center justify-center rounded-full overflow-hidden shrink-0 size-[24px] bg-[var(--color-plum)]">
+              <img
+                src="/co-marketer-logo.gif"
+                alt="Co-marketer"
+                className="size-full object-cover"
+              />
             </div>
             <span
-              className="font-bold text-[16px] leading-[20px] text-[#101828] whitespace-nowrap"
+              className="font-bold text-[16px] leading-[20px] text-[var(--color-ink)] whitespace-nowrap"
               style={{ fontFamily: "Manrope, sans-serif" }}
             >
               Co-marketer
@@ -1692,17 +1703,17 @@ The content has been updated across all channels to reflect your changes.`;
       <div className="flex flex-1 h-[56px] items-center justify-end pr-[24px] gap-[4px]">
         <button
           onClick={() => setIsExpanded(true)}
-          className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors"
+          className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors"
           aria-label="Expand"
         >
-          <Maximize2 className="w-[16px] h-[16px] text-[#40474C]" />
+          <Maximize2 className="w-[16px] h-[16px] text-[var(--color-slate)]" />
         </button>
         <button
           onClick={() => onCloseInterface?.()}
-          className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors"
+          className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors"
           aria-label="Close"
         >
-          <X className="w-[16px] h-[16px] text-[#40474C]" />
+          <X className="w-[16px] h-[16px] text-[var(--color-slate)]" />
         </button>
       </div>
     </div>
@@ -2019,7 +2030,7 @@ The content has been updated across all channels to reflect your changes.`;
       />
       
       {/* Overlay for expanded view background, click to minimize */}
-      {isExpanded && <div className="fixed inset-0 z-40 bg-black/10 backdrop-blur-sm" onClick={() => setIsExpanded(false)}></div>}
+      {isExpanded && <div className={cn("fixed inset-0 z-40", atmoActive ? "bg-transparent" : "bg-black/10 backdrop-blur-sm")} onClick={() => setIsExpanded(false)}></div>}
 
       {/* 
         Main container: Switches between expanded and widget styles.
@@ -2030,7 +2041,9 @@ The content has been updated across all channels to reflect your changes.`;
         ref={chatWindowRef} // Attach ref here
         className={cn(
           isExpanded
-            ? "fixed z-50 inset-0 bg-background flex flex-col overflow-hidden"
+            // When atmosphere is on, go transparent so the page gradient shows
+            // through the frosted nav surfaces (homepage reflect).
+            ? cn("fixed z-50 inset-0 flex flex-col overflow-hidden", atmoActive ? "bg-transparent" : "bg-background")
             // For widget view, if position is null, it uses these classes. If position is set, inline style takes over for pos.
             : "w-[470px] h-[776px] bg-background border border-border shadow-lg rounded-xl flex flex-col overflow-hidden relative",
             !isExpanded && position && "fixed z-50" // Ensure it's fixed and on top when dragged
@@ -2080,7 +2093,7 @@ The content has been updated across all channels to reflect your changes.`;
               onOpenChats={() => setActivePage('chats')}
               onOpenBookmarks={() => setActivePage('bookmarks')}
               onSelectChat={() => setActivePage('home')}
-              onOpenSettings={() => window.open('https://www.figma.com/proto/PpMyMSpfteIiBlbsBYryx2/Raman-AI---Co-Marketer---Co-Pilot?page-id=5891:1439&node-id=7073-4874&viewport=-442,2798,0.17&t=3ThX3Yd3gjcwJf8j-1&scaling=contain&content-scaling=responsive&starting-point-node-id=7073:4873&hide-ui=1', '_blank')}
+              onOpenSettings={() => navigate('/settings')}
             />
           )}
           {/* Conditional rendering of AgentsSidebar in expanded view */}
@@ -2093,7 +2106,7 @@ The content has been updated across all channels to reflect your changes.`;
           )}
 
           {/* Right column: header + chat (expanded) / chat only (widget) */}
-          <div className={cn("flex flex-col flex-1 min-w-0 min-h-0", isExpanded ? "overflow-hidden" : "")}>
+          <div className="flex flex-col flex-1 min-w-0 min-h-0">
           {isExpanded && (
             <RhsHeader
               chatName={chatName}
@@ -2109,12 +2122,14 @@ The content has been updated across all channels to reflect your changes.`;
               Window is full screen; the chat-area itself is the Figma bordered card. */}
           <div className={cn(
             "flex flex-col flex-1 overflow-hidden min-h-0",
-            isExpanded && "p-[8px]"
+            // Frosted "outside" gutter around the grey card (matches Settings) when
+            // atmosphere is on; the grey card itself stays opaque surface-0.
+            isExpanded && "atmo-glass p-[8px]"
           )}>
           <ChatCardBeam enabled={isExpanded} active={messages.length === 0 && !isGeneratingOutput}>
           <div className={cn(
             "relative flex flex-1 overflow-hidden min-h-0 min-w-0",
-            isExpanded ? "bg-[#F9FAFB] border-[0.5px] border-[#DDE2EE] rounded-[16px]" : "bg-[#F9FAFB]",
+            isExpanded ? "bg-[var(--color-surface-0)] border-[0.5px] border-[var(--color-line-input)] rounded-[16px]" : "bg-[var(--color-surface-0)]",
             isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "gap-[12px] pl-[12px]",
             isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "px-[12px]"
           )}>
@@ -2171,12 +2186,12 @@ The content has been updated across all channels to reflect your changes.`;
                           as="p"
                           className="font-semibold text-[24px] leading-[30px] text-center tracking-[0.42px] whitespace-nowrap"
                           style={{ fontFamily: "Manrope, sans-serif" }}
-                          baseColor="#40474C"
+                          baseColor="var(--color-slate)"
                           gradient={[
-                            { position: 0.2, color: "#5c80ff" },  /* shimmer-blue */
-                            { position: 0.4, color: "#ffa8dc" },  /* shimmer-pink */
-                            { position: 0.6, color: "#fc5e02" },  /* shimmer-orange */
-                            { position: 0.8, color: "#085286" },  /* shimmer-teal */
+                            { position: 0.2, color: "var(--color-royal)" },  /* shimmer-blue */
+                            { position: 0.4, color: "var(--color-pink)" },  /* shimmer-pink */
+                            { position: 0.6, color: "var(--color-orange)" },  /* shimmer-orange */
+                            { position: 0.8, color: "var(--color-steel)" },  /* shimmer-teal */
                           ]}
                           duration={2}
                           pauseBetween={1200}
@@ -2184,13 +2199,13 @@ The content has been updated across all channels to reflect your changes.`;
                           {`${getGreeting()}, Amit`}
                         </GradientShimmer>
                         <div
-                          className="flex items-center justify-center gap-[6px] text-[16px] leading-[22px] text-[#40474C] text-center tracking-[0.42px] whitespace-nowrap"
+                          className="flex items-center justify-center gap-[6px] text-[16px] leading-[22px] text-[var(--color-slate)] text-center tracking-[0.42px] whitespace-nowrap"
                           style={{ fontFamily: "Manrope, sans-serif" }}
                         >
                           <span className="font-semibold">What can I do for you?</span>
                           <RotatingWord
                             words={GREETING_TOPICS}
-                            className="font-medium text-[#143F93]"
+                            className="font-medium text-[var(--color-royal)]"
                           />
                         </div>
                       </div>
@@ -2209,11 +2224,11 @@ The content has been updated across all channels to reflect your changes.`;
                               <button
                                 key={index}
                                 type="button"
-                                className="fig-chip flex items-center justify-center px-[12px] py-[6px] rounded-[6px] whitespace-nowrap shrink-0"
+                                className="fig-chip flex items-center justify-center px-[12px] py-[6px] rounded-[8px] whitespace-nowrap shrink-0"
                                 onClick={() => setSelectedStarterChip(chipLabel)}
                               >
                                 <span
-                                  className="font-normal text-[14px] leading-[20px] text-[#17173A] tracking-[0.42px]"
+                                  className="font-normal text-[14px] leading-[20px] text-[var(--color-ink)] tracking-[0.42px]"
                                   style={{ fontFamily: "Manrope, sans-serif" }}
                                 >
                                   {chipLabel}
@@ -2225,7 +2240,7 @@ The content has been updated across all channels to reflect your changes.`;
                         {selectedStarterChip && (
                           <div className="w-full flex flex-col gap-[8px]">
                             <p
-                              className="px-[2px] font-semibold text-[13px] leading-[18px] text-[#6F6F8D] tracking-[0.42px]"
+                              className="px-[2px] font-semibold text-[13px] leading-[18px] text-[var(--color-grey)] tracking-[0.42px]"
                               style={{ fontFamily: "Manrope, sans-serif" }}
                             >
                               {starterPromptHeaderByChip[selectedStarterChip] ?? "Suggested prompts"}
@@ -2234,11 +2249,11 @@ The content has been updated across all channels to reflect your changes.`;
                               <button
                                 key={`${selectedStarterChip}-${index}`}
                                 type="button"
-                                className="fig-chip w-full text-left p-[12px] rounded-[6px] cursor-pointer"
+                                className="w-full text-left p-[12px] rounded-[8px] cursor-pointer bg-white border border-[var(--color-line)] hover:bg-[var(--color-surface-0)] transition-colors"
                                 onClick={() => handleSendMessage(suggestion)}
                               >
                                 <p
-                                  className="text-[14px] leading-[20px] text-[#17173A]"
+                                  className="text-[14px] leading-[20px] text-[var(--color-slate)]"
                                   style={{ fontFamily: "Manrope, sans-serif" }}
                                 >
                                   {suggestion}
@@ -2398,10 +2413,10 @@ The content has been updated across all channels to reflect your changes.`;
                         key={p}
                         type="button"
                         onClick={() => handleSendMessage(p)}
-                        className="group flex w-fit max-w-full items-start gap-[10px] text-left rounded-[10px] border border-[#E5E7EB] bg-white px-[12px] py-[8px] hover:bg-[#F9FAFB] hover:border-[#D4D4D4] transition-colors"
+                        className="group flex w-fit max-w-full items-start gap-[10px] text-left rounded-[10px] border border-[var(--color-line)] bg-white px-[12px] py-[8px] hover:bg-[var(--color-surface-0)] hover:border-[var(--color-line-strong)] transition-colors"
                       >
-                        <MessageSquarePlus className="size-[16px] text-[#6F6F8D] shrink-0 mt-[1px]" strokeWidth={1.75} />
-                        <span className="text-[14px] leading-[20px] text-[#475467]" style={{ fontFamily: 'Manrope, sans-serif' }}>{p}</span>
+                        <MessageSquarePlus className="size-[16px] text-[var(--color-grey)] shrink-0 mt-[1px]" strokeWidth={1.75} />
+                        <span className="text-[14px] leading-[20px] text-[var(--color-slate)]" style={{ fontFamily: 'Manrope, sans-serif' }}>{p}</span>
                       </button>
                     ))}
                   </div>
@@ -2424,7 +2439,7 @@ The content has been updated across all channels to reflect your changes.`;
                         "absolute right-6 h-10 w-10 rounded-full shadow-lg z-50 bg-white dark:bg-white border-[1.5px] hover:bg-gray-50 dark:hover:bg-gray-50",
                         isExpanded ? "bottom-[112px]" : "bottom-[150px]"
                       )}
-                      style={{ borderColor: '#DDE2EE' }}
+                      style={{ borderColor: 'var(--color-line-input)' }}
                       aria-label="Scroll to latest"
                     >
                       <ArrowDown className="h-4 w-4 text-gray-700" />
@@ -2454,24 +2469,24 @@ The content has been updated across all channels to reflect your changes.`;
                 {/* Feedback popover / success toast — pinned to the chat's right edge,
                     on the line just above the input field (not over its face). */}
                 {(showFeedbackToast || (showFeedbackPrompt && !feedbackModal)) && (
-                  <div className="absolute right-[24px] bottom-full mb-[12px] z-30 flex justify-end max-w-[calc(100%-48px)]">
+                  <div className="absolute right-[24px] bottom-full mb-[28px] z-40 flex justify-end max-w-[calc(100%-48px)]">
                     {showFeedbackToast ? (
-                      <div className="inline-flex items-center gap-[8px] rounded-full border border-[#E5E7EB] bg-white px-[14px] py-[8px] shadow-[0px_8px_20px_-6px_rgba(16,24,40,0.22)] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <CheckCircle2 className="size-[16px] text-[#22A565] shrink-0" />
-                        <span className="text-[13px] text-[#17173A] whitespace-nowrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                      <div className="feedback-nudge-in inline-flex items-center gap-[8px] rounded-full border border-[var(--color-line)] bg-white px-[14px] py-[8px] shadow-[0px_8px_20px_-6px_oklch(0.21_0.034_263.436_/_0.22)]">
+                        <CheckCircle2 className="size-[16px] text-[var(--color-success)] shrink-0" />
+                        <span className="text-[13px] text-[var(--color-ink)] whitespace-nowrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
                           Feedback sent successfully. Thank you
                         </span>
                       </div>
                     ) : (
-                      <div className="inline-flex items-center gap-[10px] rounded-[12px] border border-[#E5E7EB] bg-white px-[16px] py-[10px] shadow-[0px_8px_24px_-6px_rgba(16,24,40,0.22)] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <span className="text-[14px] text-[#17173A] whitespace-nowrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                      <div className="feedback-nudge-in inline-flex items-center gap-[10px] rounded-[12px] border border-[var(--color-line)] bg-white px-[16px] py-[10px] shadow-[0px_8px_24px_-6px_oklch(0.21_0.034_263.436_/_0.22)]">
+                        <span className="text-[14px] text-[var(--color-ink)] whitespace-nowrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
                           Was your Co-marketer experience helpful?
                         </span>
                         <button
                           type="button"
                           onClick={() => setFeedbackModal('up')}
                           aria-label="Helpful"
-                          className="flex items-center justify-center p-[6px] rounded-md text-[#6F6F8D] hover:bg-green-50 hover:text-green-600 transition-colors"
+                          className="flex items-center justify-center p-[6px] rounded-md text-[var(--color-grey)] hover:bg-green-50 hover:text-green-600 transition-colors"
                         >
                           <ThumbsUp className="size-[16px]" />
                         </button>
@@ -2479,7 +2494,7 @@ The content has been updated across all channels to reflect your changes.`;
                           type="button"
                           onClick={() => setFeedbackModal('down')}
                           aria-label="Not helpful"
-                          className="flex items-center justify-center p-[6px] rounded-md text-[#6F6F8D] hover:bg-red-50 hover:text-red-600 transition-colors"
+                          className="flex items-center justify-center p-[6px] rounded-md text-[var(--color-grey)] hover:bg-red-50 hover:text-red-600 transition-colors"
                         >
                           <ThumbsDown className="size-[16px]" />
                         </button>
@@ -2487,7 +2502,7 @@ The content has been updated across all channels to reflect your changes.`;
                           type="button"
                           onClick={() => setShowFeedbackPrompt(false)}
                           aria-label="Dismiss"
-                          className="flex items-center justify-center p-[6px] rounded-md text-[#6F6F8D] hover:bg-[#F2F4F7] transition-colors"
+                          className="flex items-center justify-center p-[6px] rounded-md text-[var(--color-grey)] hover:bg-[var(--color-surface-1)] transition-colors"
                         >
                           <X className="size-[16px]" />
                         </button>
@@ -2561,13 +2576,13 @@ The content has been updated across all channels to reflect your changes.`;
             {isExpanded && (
               <div className="flex flex-col items-center justify-center gap-1 py-[8px] w-full shrink-0">
                 <p
-                  className="text-[12px] text-[#6F6F8D] text-center w-[768px]"
+                  className="text-[12px] text-[var(--color-grey)] text-center w-[768px]"
                   style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                 >
                   Co-marketer can make mistakes. Please double check responses
                 </p>
                 <p
-                  className="text-[10px] text-[#6F6F8D] text-center w-[768px]"
+                  className="text-[10px] text-[var(--color-grey)] text-center w-[768px]"
                   style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                 >
                   This AI doesn&apos;t take coffee breaks. Made with ❤️ by design engineer.

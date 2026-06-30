@@ -186,13 +186,13 @@ export function WhatsAppMediaBased({ data, onDataChange }: WhatsAppMediaBasedPro
                             className={cn(
                               "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                               cta?.buttonType === option
-                                ? "bg-[#E7F0FF]"
+                                ? "bg-[var(--color-royal-pale)]"
                                 : "hover:bg-gray-100 dark:hover:bg-gray-800"
                             )}
                           >
                             <span className="font-medium text-xs">{option}</span>
                             {cta?.buttonType === option && (
-                              <Check className="h-4 w-4 text-[#143F93]" />
+                              <Check className="h-4 w-4 text-[var(--color-navy)]" />
                             )}
                           </div>
                         ))}

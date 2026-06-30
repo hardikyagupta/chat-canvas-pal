@@ -620,13 +620,13 @@ export function ContentAgentResponse({
                     className={cn(
                       "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                       selectedEmailSegment === segment.id 
-                        ? "bg-[#E7F0FF]" 
+                        ? "bg-[var(--color-royal-pale)]" 
                         : "hover:bg-gray-100 dark:hover:bg-gray-800"
                     )}
                   >
                     <span className="font-medium">{segment.name}</span>
                     {selectedEmailSegment === segment.id && (
-                      <Check className="h-4 w-4 text-[#143F93]" />
+                      <Check className="h-4 w-4 text-[var(--color-navy)]" />
                     )}
                   </div>
                 ))}
@@ -686,13 +686,13 @@ export function ContentAgentResponse({
                     className={cn(
                       "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                       selectedApnSegment === segment.id 
-                        ? "bg-[#E7F0FF]" 
+                        ? "bg-[var(--color-royal-pale)]" 
                         : "hover:bg-gray-100 dark:hover:bg-gray-800"
                     )}
                   >
                     <span className="font-medium">{segment.name}</span>
                     {selectedApnSegment === segment.id && (
-                      <Check className="h-4 w-4 text-[#143F93]" />
+                      <Check className="h-4 w-4 text-[var(--color-navy)]" />
                     )}
                   </div>
                 ))}
@@ -782,7 +782,7 @@ export function ContentAgentResponse({
                 <RadioGroupItem 
                   value={template.id} 
                   id={template.id} 
-                  className="mr-1 border-[#143F93] text-[#143F93] data-[state=checked]:border-[#143F93] data-[state=checked]:text-[#143F93] focus-visible:ring-[#143F93]" 
+                  className="mr-1 border-[var(--color-navy)] text-[var(--color-navy)] data-[state=checked]:border-[var(--color-navy)] data-[state=checked]:text-[var(--color-navy)] focus-visible:ring-[var(--color-navy)]" 
                 />
               </div>
               <label
@@ -790,8 +790,8 @@ export function ContentAgentResponse({
                 className={cn(
                   "cursor-pointer block transition-all duration-200 rounded-md overflow-hidden",
                   isSelected 
-                    ? "ring-2 ring-[#143F93] shadow-md" 
-                    : "ring-1 ring-gray-200 hover:ring-2 hover:ring-[#143F93]/50 hover:shadow-md"
+                    ? "ring-2 ring-[var(--color-navy)] shadow-md" 
+                    : "ring-1 ring-gray-200 hover:ring-2 hover:ring-[var(--color-navy)]/50 hover:shadow-md"
                 )}
               >
                 <div className="relative pt-[65%] overflow-hidden">
@@ -885,7 +885,7 @@ export function ContentAgentResponse({
                       className={cn(
                         "flex items-center justify-between py-3 px-3 rounded-md cursor-pointer transition-colors",
                         selectedExistingTemplate === template.id 
-                          ? "bg-[#E7F0FF] text-gray-900 dark:bg-[#1E3A8A] dark:text-white" 
+                          ? "bg-[var(--color-royal-pale)] text-gray-900 dark:bg-[var(--color-navy)] dark:text-white" 
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                       )}
                     >
@@ -905,7 +905,7 @@ export function ContentAgentResponse({
                         </div>
                       </div>
                       {selectedExistingTemplate === template.id && (
-                        <Check className="h-4 w-4 text-[#143F93] dark:text-blue-400 ml-2" />
+                        <Check className="h-4 w-4 text-[var(--color-navy)] dark:text-blue-400 ml-2" />
                       )}
                     </div>
                   ))
@@ -1067,7 +1067,7 @@ export function ContentAgentResponse({
                     >
                       <span className="font-medium">{segment.name}</span>
                       {selectedCollaborativeSegment === segment.id && (
-                        <Check className="h-4 w-4 text-[#143F93]" />
+                        <Check className="h-4 w-4 text-[var(--color-navy)]" />
                       )}
                     </div>
                   ))}
@@ -1150,13 +1150,13 @@ export function ContentAgentResponse({
                                 className={cn(
                                   "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                                   selectedWhatsappSegment === segment.id 
-                                    ? "bg-[#E7F0FF]" 
+                                    ? "bg-[var(--color-royal-pale)]" 
                                     : "hover:bg-gray-100 dark:hover:bg-gray-800"
                                 )}
                               >
                                 <span className="font-medium">{segment.name}</span>
                                 {selectedWhatsappSegment === segment.id && (
-                                  <Check className="h-4 w-4 text-[#143F93]" />
+                                  <Check className="h-4 w-4 text-[var(--color-navy)]" />
                                 )}
                               </div>
                             ))}
@@ -1221,13 +1221,13 @@ export function ContentAgentResponse({
                                 className={cn(
                                   "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                                   selectedWhatsappSegment === segment.id 
-                                    ? "bg-[#E7F0FF]" 
+                                    ? "bg-[var(--color-royal-pale)]" 
                                     : "hover:bg-gray-100 dark:hover:bg-gray-800"
                                 )}
                               >
                                 <span className="font-medium">{segment.name}</span>
                                 {selectedWhatsappSegment === segment.id && (
-                                  <Check className="h-4 w-4 text-[#143F93]" />
+                                  <Check className="h-4 w-4 text-[var(--color-navy)]" />
                                 )}
                               </div>
                             ))}
@@ -1292,13 +1292,13 @@ export function ContentAgentResponse({
                                 className={cn(
                                   "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                                   selectedWhatsappSegment === segment.id 
-                                    ? "bg-[#E7F0FF]" 
+                                    ? "bg-[var(--color-royal-pale)]" 
                                     : "hover:bg-gray-100 dark:hover:bg-gray-800"
                                 )}
                               >
                                 <span className="font-medium">{segment.name}</span>
                                 {selectedWhatsappSegment === segment.id && (
-                                  <Check className="h-4 w-4 text-[#143F93]" />
+                                  <Check className="h-4 w-4 text-[var(--color-navy)]" />
                                 )}
                               </div>
                             ))}

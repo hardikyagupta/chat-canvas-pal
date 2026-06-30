@@ -5,7 +5,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 
 const MANROPE = 'Manrope, sans-serif';
-const chartTick = { fontSize: 11, fill: '#6F6F8D', fontFamily: MANROPE };
+const chartTick = { fontSize: 11, fill: 'var(--color-grey)', fontFamily: MANROPE };
 const chartLegend = { fontSize: 11, fontFamily: MANROPE };
 const chartTooltip = { fontSize: 12, borderRadius: 8, fontFamily: MANROPE };
 
@@ -50,30 +50,30 @@ export const MetricCards: React.FC = () => (
     {metrics.map((m) => (
       <div
         key={m.label}
-        className="border border-[#E5E7EB] bg-white rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[2px]"
+        className="border border-[var(--color-line)] bg-white rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[2px]"
       >
-        <span className="text-[11px] text-[#6F6F8D] font-medium">{m.label}</span>
-        <span className="text-[20px] font-bold text-[#17173A] leading-tight">{m.value}</span>
-        <span className="text-[10px] text-[#9AA3B2]">{m.sub}</span>
+        <span className="text-[11px] text-[var(--color-grey)] font-medium">{m.label}</span>
+        <span className="text-[20px] font-bold text-[var(--color-ink)] leading-tight">{m.value}</span>
+        <span className="text-[10px] text-[var(--color-grey-soft)]">{m.sub}</span>
       </div>
     ))}
   </div>
 );
 
 export const PublishedVsDeliveredChart: React.FC = () => (
-  <div className="w-full border border-[#E5E7EB] bg-white rounded-[8px] p-[12px] flex flex-col gap-[4px] font-['Manrope']">
-    <p className="text-[12px] font-semibold text-[#17173A]">Published vs Delivered by Channel</p>
-    <p className="text-[10px] text-[#6F6F8D]">Volume comparison across channels</p>
+  <div className="w-full border border-[var(--color-line)] bg-white rounded-[8px] p-[12px] flex flex-col gap-[4px] font-['Manrope']">
+    <p className="text-[12px] font-semibold text-[var(--color-ink)]">Published vs Delivered by Channel</p>
+    <p className="text-[10px] text-[var(--color-grey)]">Volume comparison across channels</p>
     <div className="w-full h-[220px] mt-[8px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={publishedVsDelivered} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#EDEFF3" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-surface-2)" vertical={false} />
           <XAxis dataKey="channel" tick={chartTick} axisLine={false} tickLine={false} />
           <YAxis tickFormatter={formatThousands} tick={chartTick} axisLine={false} tickLine={false} />
           <Tooltip contentStyle={chartTooltip} formatter={(value: number) => value.toLocaleString()} />
           <Legend wrapperStyle={chartLegend} />
-          <Bar dataKey="Published" fill="#3B82F6" radius={[3, 3, 0, 0]} />
-          <Bar dataKey="Delivered" fill="#22A565" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="Published" fill="var(--color-royal)" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="Delivered" fill="var(--color-success)" radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -81,19 +81,19 @@ export const PublishedVsDeliveredChart: React.FC = () => (
 );
 
 export const RatesChart: React.FC = () => (
-  <div className="w-full border border-[#E5E7EB] bg-white rounded-[8px] p-[12px] flex flex-col gap-[4px] font-['Manrope']">
-    <p className="text-[12px] font-semibold text-[#17173A]">Click Rate & Conversion Rate by Channel</p>
-    <p className="text-[10px] text-[#6F6F8D]">Engagement efficiency across channels</p>
+  <div className="w-full border border-[var(--color-line)] bg-white rounded-[8px] p-[12px] flex flex-col gap-[4px] font-['Manrope']">
+    <p className="text-[12px] font-semibold text-[var(--color-ink)]">Click Rate & Conversion Rate by Channel</p>
+    <p className="text-[10px] text-[var(--color-grey)]">Engagement efficiency across channels</p>
     <div className="w-full h-[220px] mt-[8px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={ratesByChannel} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#EDEFF3" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-surface-2)" vertical={false} />
           <XAxis dataKey="channel" tick={chartTick} axisLine={false} tickLine={false} />
           <YAxis tickFormatter={(v: number) => `${v}%`} tick={chartTick} axisLine={false} tickLine={false} />
           <Tooltip contentStyle={chartTooltip} formatter={(value: number) => `${value}%`} />
           <Legend wrapperStyle={chartLegend} />
-          <Bar dataKey="Click rate %" fill="#3B82F6" radius={[3, 3, 0, 0]} />
-          <Bar dataKey="Conversion rate %" fill="#E0A82E" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="Click rate %" fill="var(--color-royal)" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="Conversion rate %" fill="var(--color-warning)" radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -106,7 +106,7 @@ export const MetricCardsSkeleton: React.FC = () => (
     {Array.from({ length: metrics.length }).map((_, i) => (
       <div
         key={i}
-        className="border border-[#E5E7EB] bg-white rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[6px]"
+        className="border border-[var(--color-line)] bg-white rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[6px]"
       >
         <Skeleton className="h-[10px] w-[60%]" />
         <Skeleton className="h-[18px] w-[40%]" />
@@ -117,7 +117,7 @@ export const MetricCardsSkeleton: React.FC = () => (
 );
 
 export const ChartSkeleton: React.FC = () => (
-  <div className="w-full border border-[#E5E7EB] bg-white rounded-[8px] p-[12px] flex flex-col gap-[8px]">
+  <div className="w-full border border-[var(--color-line)] bg-white rounded-[8px] p-[12px] flex flex-col gap-[8px]">
     <Skeleton className="h-[12px] w-[45%]" />
     <Skeleton className="h-[8px] w-[30%]" />
     <Skeleton className="h-[220px] w-full mt-[8px]" />

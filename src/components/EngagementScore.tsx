@@ -35,7 +35,7 @@ export function EngagementScore({
           {/* Outer dotted circle */}
           <path 
             d="M9 17C4.58172 17 1 13.4183 1 9C1 4.58172 4.58172 1 9 1C13.4183 1 17 4.58172 17 9C17 13.4183 13.4183 17 9 17Z" 
-            stroke="#DDE2EE" 
+            stroke="var(--color-line-input)" 
             strokeWidth="2" 
             strokeLinecap="round" 
             strokeLinejoin="round" 
@@ -44,7 +44,7 @@ export function EngagementScore({
           {/* Inner circle outline */}
           <path 
             d="M14 9C14 6.23858 11.7614 4 9 4C6.23858 4 4 6.23858 4 9C4 11.7614 6.23858 14 9 14C11.7614 14 14 11.7614 14 9Z" 
-            stroke="#DDE2EE" 
+            stroke="var(--color-line-input)" 
             strokeWidth="2" 
             strokeLinecap="round" 
             strokeLinejoin="round"
@@ -53,7 +53,7 @@ export function EngagementScore({
           <g filter="url(#filter0_d_10214_8281)">
             <path 
               d={progressPath}
-              stroke={score >= 70 ? '#00C48C' : '#E7B231'}
+              stroke={score >= 70 ? 'var(--color-mint)' : 'var(--color-warning)'}
               strokeWidth="2" 
               strokeLinecap="round" 
               strokeLinejoin="round"
@@ -78,7 +78,7 @@ export function EngagementScore({
       <div className="flex items-center gap-1">
         <div 
           className="text-xs font-bold font-['Manrope'] leading-none"
-          style={{ color: score >= 70 ? '#00C48C' : '#E7B231' }}
+          style={{ color: score >= 70 ? 'var(--color-mint)' : 'var(--color-warning)' }}
         >
           {score}%
         </div>

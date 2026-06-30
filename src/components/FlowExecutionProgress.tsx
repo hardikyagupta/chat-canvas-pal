@@ -276,7 +276,7 @@ export function FlowExecutionProgress({ onComplete }: FlowExecutionProgressProps
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[#17173A] dark:text-white leading-normal font-['Manrope'] mb-4">
+      <p className="text-sm text-[var(--color-ink)] dark:text-white leading-normal font-['Manrope'] mb-4">
         Great! I'm setting up the respective campaigns, which will be visible on the product within the next 30 minutes. Feel free to take a stroll while I get things ready!
       </p>
       
@@ -284,7 +284,7 @@ export function FlowExecutionProgress({ onComplete }: FlowExecutionProgressProps
         {campaigns.map((campaign, campaignIndex) => (
           <div key={campaign.id} className="space-y-3">
             {/* Campaign Header - Always show */}
-            <div className="text-sm font-medium text-[#17173A] dark:text-white leading-normal font-['Manrope']">
+            <div className="text-sm font-medium text-[var(--color-ink)] dark:text-white leading-normal font-['Manrope']">
               Creating campaign {campaignIndex + 1} ({campaign.name})
             </div>
             
@@ -298,7 +298,7 @@ export function FlowExecutionProgress({ onComplete }: FlowExecutionProgressProps
                   <div className="flex-1">
                     <div className={cn(
                       "text-sm leading-normal font-['Manrope']",
-                      "text-[#17173A] dark:text-white"
+                      "text-[var(--color-ink)] dark:text-white"
                     )}>
                       {getText(step)}
                     </div>
