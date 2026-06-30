@@ -245,7 +245,7 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
                 id="save-for-later"
                 checked={saveForLater}
                 onCheckedChange={(checked) => setSaveForLater(checked as boolean)}
-                className="data-[state=checked]:bg-[#143F93] data-[state=checked]:border-[#143F93] border-border"
+                className="data-[state=checked]:bg-[var(--color-navy)] data-[state=checked]:border-[var(--color-navy)] border-border"
               />
               <Label htmlFor="save-for-later" className="text-sm font-medium text-muted-foreground">
                 Save this for later
@@ -276,11 +276,11 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
       {/* Radio buttons for selection mode */}
       <RadioGroup value={selectionMode} onValueChange={setSelectionMode} className="flex flex-row gap-6">
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="questionaire" id="questionaire" className="border-[#143F93] text-[#143F93] dark:border-white dark:text-white" />
+          <RadioGroupItem value="questionaire" id="questionaire" className="border-[var(--color-navy)] text-[var(--color-navy)] dark:border-white dark:text-white" />
           <Label htmlFor="questionaire" className="text-sm font-medium text-foreground cursor-pointer">Fill questionaire</Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="template" id="template" className="border-[#143F93] text-[#143F93] dark:border-white dark:text-white" />
+          <RadioGroupItem value="template" id="template" className="border-[var(--color-navy)] text-[var(--color-navy)] dark:border-white dark:text-white" />
           <Label htmlFor="template" className="text-sm font-medium text-foreground cursor-pointer">Use a saved template</Label>
         </div>
       </RadioGroup>
@@ -652,7 +652,7 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
                   id="save-template-edit" 
                   checked={saveAsTemplate}
                   onCheckedChange={(checked) => setSaveAsTemplate(checked === true)}
-                  className="data-[state=checked]:bg-[#143F93] data-[state=checked]:border-[#143F93] border-border"
+                  className="data-[state=checked]:bg-[var(--color-navy)] data-[state=checked]:border-[var(--color-navy)] border-border"
                 />
                 <Label htmlFor="save-template-edit" className="text-sm font-medium text-foreground cursor-pointer">
                   Save this as a template
@@ -944,7 +944,7 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
                   id="save-template" 
                   checked={saveAsTemplate}
                   onCheckedChange={(checked) => setSaveAsTemplate(checked === true)}
-                  className="data-[state=checked]:bg-[#143F93] data-[state=checked]:border-[#143F93] border-border"
+                  className="data-[state=checked]:bg-[var(--color-navy)] data-[state=checked]:border-[var(--color-navy)] border-border"
                 />
                 <Label htmlFor="save-template" className="text-sm font-medium text-foreground cursor-pointer">
                   Save this as a template

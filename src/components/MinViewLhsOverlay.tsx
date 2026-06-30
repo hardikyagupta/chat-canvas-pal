@@ -42,22 +42,22 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
 
   return (
     <div
-      className="absolute inset-0 z-50 bg-[rgba(0,0,0,0.15)]"
+      className="absolute inset-0 z-50 bg-[oklch(0_0_0_/_0.15)]"
       onClick={onClose}
     >
       {/* Sliding panel anchored to the left */}
       <div
-        className="absolute inset-y-0 left-0 w-[88%] max-w-[360px] flex flex-col gap-[8px] items-start bg-white border border-[#DDE2EE] rounded-[12px] shadow-[0px_0px_50px_-6px_rgba(97,97,97,0.25)] px-[24px] py-[16px] overflow-hidden"
+        className="absolute inset-y-0 left-0 w-[88%] max-w-[360px] flex flex-col gap-[8px] items-start bg-white border border-[var(--color-line-input)] rounded-[12px] shadow-[0px_0px_50px_-6px_oklch(0.493_0_0_/_0.25)] px-[24px] py-[16px] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close — compact square hover to match the other icon buttons */}
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center justify-center p-[8px] rounded-[8px] shrink-0 hover:bg-[#F2F4F7] transition-colors"
+          className="flex items-center justify-center p-[8px] rounded-[8px] shrink-0 hover:bg-[var(--color-surface-1)] transition-colors"
           aria-label="Close menu"
         >
-          <X className="size-[20px] text-[#212E36]" />
+          <X className="size-[20px] text-[var(--color-charcoal)]" />
         </button>
 
         {/* Scrollable content */}
@@ -69,11 +69,11 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
                 key={key}
                 type="button"
                 onClick={onClick}
-                className="flex gap-[12px] h-[38px] items-center px-[6px] w-full rounded-[8px] hover:bg-[#F2F4F7] transition-colors"
+                className="flex gap-[12px] h-[38px] items-center px-[6px] w-full rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors"
               >
-                <Icon className="size-[16px] text-[#212E36] shrink-0" />
+                <Icon className="size-[16px] text-[var(--color-charcoal)] shrink-0" />
                 <span
-                  className="text-[14px] text-[#212E36] whitespace-nowrap"
+                  className="text-[14px] text-[var(--color-charcoal)] whitespace-nowrap"
                   style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
                 >
                   {label}
@@ -90,12 +90,12 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
               className="flex gap-[8px] items-center pl-[8px] py-[8px] w-full"
             >
               <span
-                className="text-[14px] leading-[20px] text-[#6F6F8D] tracking-[0.035px] whitespace-nowrap"
+                className="text-[14px] leading-[20px] text-[var(--color-grey)] tracking-[0.035px] whitespace-nowrap"
                 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
               >
                 Chats
               </span>
-              <ChevronDown className="size-[14px] text-[#6F6F8D] shrink-0" />
+              <ChevronDown className="size-[14px] text-[var(--color-grey)] shrink-0" />
             </button>
 
             <div className="flex flex-col gap-[2px] items-start w-full">
@@ -108,18 +108,18 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
                     onClick={() => onSelectChat?.(chat.id)}
                     className={cn(
                       'flex gap-[8px] h-[34px] items-center px-[8px] w-full rounded-[10px] overflow-hidden transition-colors',
-                      isActive ? 'bg-[rgba(0,0,0,0.12)]' : 'hover:bg-[#F2F4F7]'
+                      isActive ? 'bg-[oklch(0_0_0_/_0.12)]' : 'hover:bg-[var(--color-surface-1)]'
                     )}
                   >
                     <span
-                      className="text-[13px] text-[#212E36] whitespace-nowrap overflow-hidden text-ellipsis"
+                      className="text-[13px] text-[var(--color-charcoal)] whitespace-nowrap overflow-hidden text-ellipsis"
                       style={{ fontFamily: 'Manrope, sans-serif', fontWeight: isActive ? 500 : 400 }}
                     >
                       {chat.title}
                     </span>
                     <span className="flex-1 min-w-0" />
                     <span
-                      className="text-[12px] text-[#637882] whitespace-nowrap shrink-0"
+                      className="text-[12px] text-[var(--color-grey)] whitespace-nowrap shrink-0"
                       style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
                     >
                       {chat.time}

@@ -40,7 +40,7 @@ const GeneratingLoader: React.FC<{ pill?: boolean }> = ({ pill = false }) => {
 
   if (pill) {
     return (
-      <div className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white pl-[8px] pr-[14px] py-[6px] shadow-[0_8px_20px_-6px_rgba(16,24,40,0.22)]">
+      <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-line)] bg-white pl-[8px] pr-[14px] py-[6px] shadow-[0_8px_20px_-6px_oklch(0.21_0.034_263.436_/_0.22)]">
         {content}
       </div>
     );

@@ -1,14 +1,14 @@
 /** Figma palette on border-beam `md` blob layout (C.colorful.border scale). */
 const WELCOME_BEAM_FIGMA_BORDER = [
-  { color: 'rgba(255, 168, 220, 0.55)', pos: '33% -7.4%', size: '70px 40px' },
-  { color: 'rgba(92, 128, 255, 0.52)', pos: '12% -5%', size: '60px 35px' },
-  { color: 'rgba(8, 82, 134, 0.5)', pos: '2.1% 68.3%', size: '40px 70px' },
-  { color: 'rgba(8, 82, 134, 0.45)', pos: '2.1% 68.3%', size: '20px 35px' },
-  { color: 'rgba(252, 94, 2, 0.48)', pos: '74.4% 100%', size: '180px 32px' },
-  { color: 'rgba(255, 168, 220, 0.45)', pos: '55% 100%', size: '85px 26px' },
-  { color: 'rgba(252, 94, 2, 0.5)', pos: '93.9% 0%', size: '74px 32px' },
-  { color: 'rgba(255, 168, 220, 0.48)', pos: '100% 27.1%', size: '26px 42px' },
-  { color: 'rgba(92, 128, 255, 0.45)', pos: '100% 27.1%', size: '52px 48px' },
+  { color: 'oklch(0.832 0.12 343.407 / 0.55)', pos: '33% -7.4%', size: '70px 40px' },
+  { color: 'oklch(0.554 0.199 263.043 / 0.52)', pos: '12% -5%', size: '60px 35px' },
+  { color: 'oklch(0.426 0.108 247.015 / 0.5)', pos: '2.1% 68.3%', size: '40px 70px' },
+  { color: 'oklch(0.426 0.108 247.015 / 0.45)', pos: '2.1% 68.3%', size: '20px 35px' },
+  { color: 'oklch(0.681 0.208 41.372 / 0.48)', pos: '74.4% 100%', size: '180px 32px' },
+  { color: 'oklch(0.832 0.12 343.407 / 0.45)', pos: '55% 100%', size: '85px 26px' },
+  { color: 'oklch(0.681 0.208 41.372 / 0.5)', pos: '93.9% 0%', size: '74px 32px' },
+  { color: 'oklch(0.832 0.12 343.407 / 0.48)', pos: '100% 27.1%', size: '26px 42px' },
+  { color: 'oklch(0.554 0.199 263.043 / 0.45)', pos: '100% 27.1%', size: '52px 48px' },
 ] as const;
 
 function figmaBorderBackground(): string {
@@ -22,13 +22,13 @@ function rotatingWedge(beamId: string): string {
   return `conic-gradient(
       from var(--beam-angle-${beamId}),
       transparent 0%, transparent 54%,
-      rgba(0, 0, 0, 0.08) 57%,
-      rgba(0, 0, 0, 0.2) 60%,
-      rgba(0, 0, 0, 0.4) 63%,
-      rgba(0, 0, 0, 0.55) 66%,
-      rgba(0, 0, 0, 0.4) 69%,
-      rgba(0, 0, 0, 0.2) 72%,
-      rgba(0, 0, 0, 0.08) 75%,
+      oklch(0 0 0 / 0.08) 57%,
+      oklch(0 0 0 / 0.2) 60%,
+      oklch(0 0 0 / 0.4) 63%,
+      oklch(0 0 0 / 0.55) 66%,
+      oklch(0 0 0 / 0.4) 69%,
+      oklch(0 0 0 / 0.2) 72%,
+      oklch(0 0 0 / 0.08) 75%,
       transparent 78%, transparent 100%
     )`;
 }

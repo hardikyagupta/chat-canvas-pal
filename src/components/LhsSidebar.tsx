@@ -53,7 +53,7 @@ const ICON_SLOT = 'flex items-center justify-center w-[40px] h-[40px] shrink-0';
 // Small dark tooltip shown to the right of an icon (only rendered when collapsed)
 const RailTooltip: React.FC<{ label: string }> = ({ label }) => (
   <span
-    className="pointer-events-none absolute left-full ml-[10px] top-1/2 -translate-y-1/2 z-[100] whitespace-nowrap rounded-[6px] bg-[#1C1C1E] px-[8px] py-[4px] text-[12px] leading-[16px] text-white opacity-0 translate-x-[-4px] transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0"
+    className="pointer-events-none absolute left-full ml-[10px] top-1/2 -translate-y-1/2 z-[100] whitespace-nowrap rounded-[6px] bg-[var(--color-ink)] px-[8px] py-[4px] text-[12px] leading-[16px] text-white opacity-0 translate-x-[-4px] transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0"
     style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
   >
     {label}
@@ -104,26 +104,25 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   return (
     <div
       className={cn(
-        'relative z-30 flex flex-col items-start h-full bg-white flex-shrink-0',
+        'atmo-glass relative z-30 flex flex-col items-start h-full bg-white flex-shrink-0',
         // overflow-visible when collapsed lets the rail tooltips escape the 64px width
         collapsed ? 'overflow-visible' : 'overflow-hidden'
       )}
       style={{ width: collapsed ? 64 : 288, transition: 'width 300ms cubic-bezier(0.22, 1, 0.36, 1)' }}
     >
       {/* Logo — circle sits in the centered icon slot; the wordmark clips/fades */}
-      <div className="flex items-center px-[12px] pt-[12px] pb-[16px] w-full shrink-0">
+      <div className="flex items-center px-[12px] h-[56px] w-full shrink-0">
         <div className={ICON_SLOT}>
-          <div
-            className="flex items-center justify-center rounded-full shrink-0 size-[24px]"
-            style={{ background: 'linear-gradient(to top, #143f93 13.75%, #97baff 76.25%)' }}
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 1L7.545 4.455L11 6L7.545 7.545L6 11L4.455 7.545L1 6L4.455 4.455L6 1Z" fill="white" fillOpacity="0.9" />
-            </svg>
+          <div className="flex items-center justify-center rounded-full overflow-hidden shrink-0 size-[24px] bg-[var(--color-plum)]">
+            <img
+              src="/co-marketer-logo.gif"
+              alt="Co-marketer"
+              className="size-full object-cover"
+            />
           </div>
         </div>
         <span
-          className={cn('font-bold text-[16px] leading-[20px] text-[#101828]', labelCls)}
+          className={cn('font-bold text-[16px] leading-[20px] text-[var(--color-ink)]', labelCls)}
           style={labelStyle({ fontFamily: 'Manrope, sans-serif' })}
         >
           Co-marketer
@@ -138,13 +137,13 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
             type="button"
             onClick={onClick}
             aria-label={label}
-            className="group relative flex h-[40px] items-center w-full rounded-[8px] hover:bg-[#F2F4F7] transition-colors"
+            className="group relative flex h-[40px] items-center w-full rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
           >
             <span className={ICON_SLOT}>
-              <Icon className="size-[16px] text-[#212E36]" />
+              <Icon className="size-[16px] text-[var(--color-charcoal)]" />
             </span>
             <span
-              className={cn('text-[14px] text-[#212E36]', labelCls)}
+              className={cn('text-[14px] text-[var(--color-charcoal)]', labelCls)}
               style={labelStyle({ fontFamily: 'Manrope, sans-serif', fontWeight: 400 })}
             >
               {label}
@@ -168,14 +167,14 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
           className="flex gap-[8px] items-center pl-[24px] py-[8px] w-full shrink-0 mt-[8px]"
         >
           <span
-            className="text-[14px] leading-[20px] text-[#6F6F8D] tracking-[0.035px] whitespace-nowrap"
+            className="text-[12px] leading-[16px] text-[var(--color-grey)] tracking-[0.035px] whitespace-nowrap"
             style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
           >
             Chats
           </span>
           <ChevronDown
             className={cn(
-              'size-[14px] text-[#6F6F8D] shrink-0 transition-transform duration-200',
+              'size-[14px] text-[var(--color-grey)] shrink-0 transition-transform duration-200',
               !chatsOpen && '-rotate-90'
             )}
           />
@@ -195,11 +194,11 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
                     onClick={() => onSelectChat?.(chat.id)}
                     className={cn(
                       'flex gap-[8px] h-[34px] items-center pl-[12px] pr-[12px] w-full rounded-[8px] overflow-hidden transition-colors',
-                      isActive ? 'bg-[rgba(0,0,0,0.12)]' : 'hover:bg-[#F2F4F7]'
+                      isActive ? 'bg-[oklch(0_0_0_/_0.12)]' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
                     )}
                   >
                     <span
-                      className="flex-1 min-w-0 text-left text-[13px] text-[#212E36] whitespace-nowrap overflow-hidden text-ellipsis"
+                      className="flex-1 min-w-0 text-left text-[13px] text-[var(--color-charcoal)] whitespace-nowrap overflow-hidden text-ellipsis"
                       style={{ fontFamily: 'Manrope, sans-serif', fontWeight: isActive ? 500 : 400 }}
                     >
                       {chat.title}
@@ -207,12 +206,12 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
                     {isBusy ? (
                       // Live "active" indicator while this chat is generating output
                       <span className="relative flex size-[8px] shrink-0" aria-label="Generating">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0A8FFD] opacity-75" />
-                        <span className="relative inline-flex size-[8px] rounded-full bg-[#0A8FFD]" />
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-royal)] opacity-75" />
+                        <span className="relative inline-flex size-[8px] rounded-full bg-[var(--color-royal)]" />
                       </span>
                     ) : (
                       <span
-                        className="text-[12px] text-[#637882] whitespace-nowrap shrink-0"
+                        className="text-[12px] text-[var(--color-grey)] whitespace-nowrap shrink-0"
                         style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
                       >
                         {chat.time}
@@ -231,13 +230,13 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
         type="button"
         onClick={onOpenSettings}
         aria-label="Settings"
-        className="group relative flex h-[40px] items-center mx-[12px] w-[calc(100%-24px)] rounded-[8px] bg-white hover:bg-[#F2F4F7] transition-colors shrink-0 mt-[4px] mb-[8px]"
+        className="group relative flex h-[40px] items-center mx-[12px] w-[calc(100%-24px)] rounded-[8px] bg-white hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0 mt-[4px] mb-[8px]"
       >
         <span className={ICON_SLOT}>
-          <Settings className="size-[18px] text-[#212E36]" />
+          <Settings className="size-[18px] text-[var(--color-charcoal)]" />
         </span>
         <span
-          className={cn('text-[14px] text-[#212E36]', labelCls)}
+          className={cn('text-[14px] text-[var(--color-charcoal)]', labelCls)}
           style={labelStyle({ fontFamily: 'Manrope, sans-serif', fontWeight: 400 })}
         >
           Settings

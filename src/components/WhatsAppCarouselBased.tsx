@@ -165,7 +165,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
           style={{
             width: '220px',
             height: '26px',
-            border: '0.5px solid #F2F5F9',
+            border: '0.5px solid var(--color-surface-2)',
             borderRadius: '2px',
             boxSizing: 'border-box'
           }}
@@ -177,7 +177,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
               className={cn(
                 "flex justify-center items-center cursor-pointer",
                 activeCard === item.id 
-                  ? "bg-[#143F93]" 
+                  ? "bg-[var(--color-navy)]" 
                   : "bg-white"
               )}
               style={{
@@ -192,7 +192,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                   "justify-start font-['Manrope']",
                   activeCard === item.id 
                     ? "text-white" 
-                    : "text-[#64748B]"
+                    : "text-[var(--color-grey)]"
                 )}
                 style={{
                   width: '39px',
@@ -318,13 +318,13 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                             className={cn(
                               "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                               activeItem.cta1?.buttonType === option
-                                ? "bg-[#E7F0FF]"
+                                ? "bg-[var(--color-royal-pale)]"
                                 : "hover:bg-gray-100 dark:hover:bg-gray-800"
                             )}
                           >
                             <span className="font-medium text-xs">{option}</span>
                             {activeItem.cta1?.buttonType === option && (
-                              <Check className="h-4 w-4 text-[#143F93]" />
+                              <Check className="h-4 w-4 text-[var(--color-navy)]" />
                             )}
                           </div>
                         ))}
@@ -397,13 +397,13 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                             className={cn(
                               "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                               activeItem.cta2?.buttonType === option
-                                ? "bg-[#E7F0FF]"
+                                ? "bg-[var(--color-royal-pale)]"
                                 : "hover:bg-gray-100 dark:hover:bg-gray-800"
                             )}
                           >
                             <span className="font-medium text-xs">{option}</span>
                             {activeItem.cta2?.buttonType === option && (
-                              <Check className="h-4 w-4 text-[#143F93]" />
+                              <Check className="h-4 w-4 text-[var(--color-navy)]" />
                             )}
                           </div>
                         ))}

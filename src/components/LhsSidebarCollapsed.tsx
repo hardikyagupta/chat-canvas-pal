@@ -25,13 +25,12 @@ const LhsSidebarCollapsed: React.FC<LhsSidebarCollapsedProps> = ({
       {/* Top: logo only — h-56 to align center with RHS header icons */}
       <div className="flex items-center justify-center h-[56px] shrink-0">
         <div className="flex items-center justify-center size-[40px]">
-          <div
-            className="flex items-center justify-center rounded-full shrink-0 size-[24px]"
-            style={{ background: 'linear-gradient(to top, #143f93 13.75%, #97baff 76.25%)' }}
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 1L7.545 4.455L11 6L7.545 7.545L6 11L4.455 7.545L1 6L4.455 4.455L6 1Z" fill="white" fillOpacity="0.9" />
-            </svg>
+          <div className="flex items-center justify-center rounded-full overflow-hidden shrink-0 size-[24px] bg-[var(--color-plum)]">
+            <img
+              src="/co-marketer-logo.gif"
+              alt="Co-marketer"
+              className="size-full object-cover"
+            />
           </div>
         </div>
       </div>
@@ -46,9 +45,9 @@ const LhsSidebarCollapsed: React.FC<LhsSidebarCollapsedProps> = ({
               onClick={onClick}
               aria-label={label}
               title={label}
-              className="flex items-center justify-center size-[40px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors"
+              className="flex items-center justify-center size-[40px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors"
             >
-              <Icon className="size-[16px] text-[#212E36] shrink-0" />
+              <Icon className="size-[16px] text-[var(--color-charcoal)] shrink-0" />
             </button>
           ))}
         </div>
@@ -61,9 +60,9 @@ const LhsSidebarCollapsed: React.FC<LhsSidebarCollapsedProps> = ({
           onClick={onOpenSettings}
           aria-label="Settings"
           title="Settings"
-          className="flex items-center justify-center size-[40px] rounded-[8px] hover:bg-[#F2F4F7] transition-colors"
+          className="flex items-center justify-center size-[40px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors"
         >
-          <Settings className="size-[18px] text-[#212E36] shrink-0" />
+          <Settings className="size-[18px] text-[var(--color-charcoal)] shrink-0" />
         </button>
       </div>
     </div>

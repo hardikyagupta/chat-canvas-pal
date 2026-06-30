@@ -110,14 +110,14 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
               aria-expanded={isExpanded}
               aria-label={isExpanded ? "Collapse thinking details" : "Expand thinking details"}
             >
-              <Brain className="w-4 h-4 text-[#6f6f8d] flex-shrink-0" />
-              <span className="text-sm font-semibold text-[#6f6f8d] leading-[20px] tracking-[0.42px]">
+              <Brain className="w-4 h-4 text-[var(--color-grey)] flex-shrink-0" />
+              <span className="text-sm font-semibold text-[var(--color-grey)] leading-[20px] tracking-[0.42px]">
                 Thought for {thinkingDuration.toFixed(0)} second{thinkingDuration !== 1 ? 's' : ''}
               </span>
               {isExpanded ? (
-                <ChevronUp className="w-4 h-4 text-[#6f6f8d] transition-transform duration-200 ml-auto" />
+                <ChevronUp className="w-4 h-4 text-[var(--color-grey)] transition-transform duration-200 ml-auto" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-[#6f6f8d] transition-transform duration-200 ml-auto" />
+                <ChevronDown className="w-4 h-4 text-[var(--color-grey)] transition-transform duration-200 ml-auto" />
               )}
             </button>
             

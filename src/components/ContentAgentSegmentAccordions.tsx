@@ -136,7 +136,7 @@ export function ContentAgentSegmentAccordions() {
 
   return (
     <div className="w-full space-y-4">
-      <p className="text-sm text-[#17173A] dark:text-white">I've created communication templates for your Valentine's Day perfume campaign across all segments:</p>
+      <p className="text-sm text-[var(--color-ink)] dark:text-white">I've created communication templates for your Valentine's Day perfume campaign across all segments:</p>
       
       <div className="space-y-3">
         {segmentData.map((segment, index) => {
@@ -162,7 +162,7 @@ export function ContentAgentSegmentAccordions() {
                   // Transition for smooth hover
                   "transition-all duration-200",
                   // Background based on state - exactly matching Figma
-                  isHovered ? "bg-[#F3F4F6]" : "bg-white",
+                  isHovered ? "bg-[var(--color-surface-1)]" : "bg-white",
                   // Focus styles
                   "focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 )}
@@ -174,7 +174,7 @@ export function ContentAgentSegmentAccordions() {
                       className={cn(
                         "w-4 h-4 transition-all duration-200",
                         // Color based on hover state
-                        isHovered ? "text-[#394150]" : "text-[#6C717F]"
+                        isHovered ? "text-[var(--color-slate)]" : "text-[var(--color-grey)]"
                       )} 
                     />
                   ) : (
@@ -182,7 +182,7 @@ export function ContentAgentSegmentAccordions() {
                       className={cn(
                         "w-4 h-4 transition-all duration-200",
                         // Color based on hover state  
-                        isHovered ? "text-[#394150]" : "text-[#6C717F]"
+                        isHovered ? "text-[var(--color-slate)]" : "text-[var(--color-grey)]"
                       )} 
                     />
                   )}
@@ -196,7 +196,7 @@ export function ContentAgentSegmentAccordions() {
                     // Height: 16px, flex: none, order: 1, flex-grow: 0
                     "h-4 flex-none",
                     // Color based on hover state
-                    isHovered ? "text-[#394150]" : "text-[#6C717F]",
+                    isHovered ? "text-[var(--color-slate)]" : "text-[var(--color-grey)]",
                     "transition-colors duration-200"
                   )}
                 >
@@ -209,14 +209,14 @@ export function ContentAgentSegmentAccordions() {
                 <div className="ml-6 space-y-3 transition-all duration-300 ease-in-out">
                   {/* Email Section */}
                   <div>
-                    <h4 className="font-semibold text-sm mb-1 text-[#17173A] dark:text-white">Email</h4>
-                    <p className="text-sm text-[#17173A] dark:text-white"><span className="font-medium">Subject:</span> {segment.email.subject}</p>
+                    <h4 className="font-semibold text-sm mb-1 text-[var(--color-ink)] dark:text-white">Email</h4>
+                    <p className="text-sm text-[var(--color-ink)] dark:text-white"><span className="font-medium">Subject:</span> {segment.email.subject}</p>
                   </div>
 
                   {/* App Push Section */}
                   <div>
-                    <h4 className="font-semibold text-sm mb-1 text-[#17173A] dark:text-white">App Push</h4>
-                    <div className="text-sm text-[#17173A] dark:text-white space-y-1">
+                    <h4 className="font-semibold text-sm mb-1 text-[var(--color-ink)] dark:text-white">App Push</h4>
+                    <div className="text-sm text-[var(--color-ink)] dark:text-white space-y-1">
                       <p><span className="font-medium">Title:</span> {segment.appPush.title}</p>
                       <p><span className="font-medium">Message:</span> {segment.appPush.message}</p>
                       <p><span className="font-medium">CTA:</span> {segment.appPush.cta}</p>
@@ -225,8 +225,8 @@ export function ContentAgentSegmentAccordions() {
 
                   {/* WhatsApp Section */}
                   <div>
-                    <h4 className="font-semibold text-sm mb-1 text-[#17173A] dark:text-white">WhatsApp</h4>
-                    <div className="text-sm text-[#17173A] dark:text-white space-y-1">
+                    <h4 className="font-semibold text-sm mb-1 text-[var(--color-ink)] dark:text-white">WhatsApp</h4>
+                    <div className="text-sm text-[var(--color-ink)] dark:text-white space-y-1">
                       <p><span className="font-medium">Header:</span> {segment.whatsapp.header}</p>
                       <p><span className="font-medium">Body:</span> {segment.whatsapp.body}</p>
                       <p><span className="font-medium">Footer:</span> {segment.whatsapp.footer}</p>

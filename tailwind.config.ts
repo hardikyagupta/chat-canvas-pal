@@ -28,58 +28,90 @@ export default {
         'main-app-bg': "url('/background.png')",
       },
       colors: {
-        border: "hsl(var(--border))",
+        border: "oklch(var(--border) / <alpha-value>)",
         input: {
-          DEFAULT: "hsl(var(--input))",
-          border: "hsl(var(--input-border))"
+          DEFAULT: "oklch(var(--input) / <alpha-value>)",
+          border: "oklch(var(--input-border) / <alpha-value>)"
         },
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
+        ring: "oklch(var(--ring) / <alpha-value>)",
+        background: "oklch(var(--background) / <alpha-value>)",
         foreground: {
-          DEFAULT: "hsl(var(--foreground))",
-          muted: "hsl(var(--muted-foreground))",
-          tertiary: "hsl(var(--tertiary-foreground))"
+          DEFAULT: "oklch(var(--foreground) / <alpha-value>)",
+          muted: "oklch(var(--muted-foreground) / <alpha-value>)",
+          tertiary: "oklch(var(--tertiary-foreground) / <alpha-value>)"
         },
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))"
+          DEFAULT: "oklch(var(--primary) / <alpha-value>)",
+          foreground: "oklch(var(--primary-foreground) / <alpha-value>)"
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))"
+          DEFAULT: "oklch(var(--secondary) / <alpha-value>)",
+          foreground: "oklch(var(--secondary-foreground) / <alpha-value>)"
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))"
+          DEFAULT: "oklch(var(--destructive) / <alpha-value>)",
+          foreground: "oklch(var(--destructive-foreground) / <alpha-value>)"
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))"
+          DEFAULT: "oklch(var(--muted) / <alpha-value>)",
+          foreground: "oklch(var(--muted-foreground) / <alpha-value>)"
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))"
+          DEFAULT: "oklch(var(--accent) / <alpha-value>)",
+          foreground: "oklch(var(--accent-foreground) / <alpha-value>)"
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))"
+          DEFAULT: "oklch(var(--popover) / <alpha-value>)",
+          foreground: "oklch(var(--popover-foreground) / <alpha-value>)"
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))"
+          DEFAULT: "oklch(var(--card) / <alpha-value>)",
+          foreground: "oklch(var(--card-foreground) / <alpha-value>)"
         },
         sidebar: {
-          DEFAULT: 'hsl(var(--sidebar-background))',
-          foreground: 'hsl(var(--sidebar-foreground))',
-          primary: 'hsl(var(--sidebar-primary))',
-          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-          accent: 'hsl(var(--sidebar-accent))',
-          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-          border: 'hsl(var(--sidebar-border))',
-          ring: 'hsl(var(--sidebar-ring))'
+          DEFAULT: 'oklch(var(--sidebar-background) / <alpha-value>)',
+          foreground: 'oklch(var(--sidebar-foreground) / <alpha-value>)',
+          primary: 'oklch(var(--sidebar-primary) / <alpha-value>)',
+          'primary-foreground': 'oklch(var(--sidebar-primary-foreground) / <alpha-value>)',
+          accent: 'oklch(var(--sidebar-accent) / <alpha-value>)',
+          'accent-foreground': 'oklch(var(--sidebar-accent-foreground) / <alpha-value>)',
+          border: 'oklch(var(--sidebar-border) / <alpha-value>)',
+          ring: 'oklch(var(--sidebar-ring) / <alpha-value>)'
         },
-        'cobalt-blue': '#143F93',
         'avatar-bg': 'var(--avatar-bg)',
+        // Palette library (semantic names → OKLCH tokens; see COLORS.md)
+        ink: 'var(--color-ink)',
+        charcoal: 'var(--color-charcoal)',
+        slate: 'var(--color-slate)',
+        grey: 'var(--color-grey)',
+        'grey-soft': 'var(--color-grey-soft)',
+        'line-strong': 'var(--color-line-strong)',
+        line: 'var(--color-line)',
+        'line-input': 'var(--color-line-input)',
+        'surface-2': 'var(--color-surface-2)',
+        'surface-1': 'var(--color-surface-1)',
+        'surface-0': 'var(--color-surface-0)',
+        royal: {
+          DEFAULT: 'var(--color-royal)',
+          strong: 'var(--color-royal-strong)',
+          pale: 'var(--color-royal-pale)',
+          'pale-soft': 'var(--color-royal-pale-soft)',
+        },
+        navy: {
+          DEFAULT: 'var(--color-navy)',
+          deep: 'var(--color-navy-deep)',
+          deepest: 'var(--color-navy-deepest)',
+        },
+        // Back-compat alias for the previous token name
+        'cobalt-blue': 'var(--color-navy)',
+        steel: 'var(--color-steel)',
+        success: 'var(--color-success)',
+        mint: 'var(--color-mint)',
+        warning: 'var(--color-warning)',
+        orange: 'var(--color-orange)',
+        danger: 'var(--color-danger)',
+        pink: 'var(--color-pink)',
+        plum: 'var(--color-plum)',
       },
       borderRadius: {
         xl: "0.75rem",

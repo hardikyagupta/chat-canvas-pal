@@ -149,7 +149,7 @@ export function ExecutiveSummaryContentAccordion() {
             // Transition for smooth hover
             "transition-all duration-200",
             // Background based on state - exactly matching Figma
-            isHovered ? "bg-[#F3F4F6]" : "bg-white",
+            isHovered ? "bg-[var(--color-surface-1)]" : "bg-white",
             // Focus styles
             "focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           )}
@@ -161,7 +161,7 @@ export function ExecutiveSummaryContentAccordion() {
                 className={cn(
                   "w-4 h-4 transition-all duration-200",
                   // Color based on hover state
-                  isHovered ? "text-[#394150]" : "text-[#6C717F]"
+                  isHovered ? "text-[var(--color-slate)]" : "text-[var(--color-grey)]"
                 )} 
               />
             ) : (
@@ -169,7 +169,7 @@ export function ExecutiveSummaryContentAccordion() {
                 className={cn(
                   "w-4 h-4 transition-all duration-200",
                   // Color based on hover state  
-                  isHovered ? "text-[#394150]" : "text-[#6C717F]"
+                  isHovered ? "text-[var(--color-slate)]" : "text-[var(--color-grey)]"
                 )} 
               />
             )}
@@ -183,7 +183,7 @@ export function ExecutiveSummaryContentAccordion() {
               // Height: 16px, flex: none, order: 1, flex-grow: 0
               "h-4 flex-none",
               // Color based on hover state
-              isHovered ? "text-[#394150]" : "text-[#6C717F]",
+              isHovered ? "text-[var(--color-slate)]" : "text-[var(--color-grey)]",
               "transition-colors duration-200"
             )}
           >
