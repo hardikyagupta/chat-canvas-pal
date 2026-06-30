@@ -230,7 +230,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
         type="button"
         onClick={onOpenSettings}
         aria-label="Settings"
-        className="group relative flex h-[40px] items-center mx-[12px] w-[calc(100%-24px)] rounded-[8px] bg-white hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0 mt-[4px] mb-[8px]"
+        className="group relative flex h-[40px] items-center mx-[12px] w-[calc(100%-24px)] rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0 mt-[4px] mb-[8px]"
       >
         <span className={ICON_SLOT}>
           <Settings className="size-[18px] text-[var(--color-charcoal)]" />

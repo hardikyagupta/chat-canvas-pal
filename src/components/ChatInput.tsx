@@ -2,7 +2,8 @@ import React, { useState, useRef, KeyboardEvent, CSSProperties, useEffect } from
 import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowUp, StopCircle, X } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { ArrowUp, StopCircle, X, Plus } from 'lucide-react';
 import { marketingAgents, MarketingAgent } from '@/data/agents';
 import { cn } from "@/lib/utils";
 
@@ -47,9 +48,29 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [cursorPosition, setCursorPosition] = useState(0);
   const [mentionSearch, setMentionSearch] = useState("");
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
-  const inputRef = useRef<HTMLInputElement>(null);
+  // True once the textarea wraps past one line — drives the container's grow +
+  // radius change (mirrors the chip-expanded state).
+  const [isMultiline, setIsMultiline] = useState(false);
+  // True when content exceeds the 4-line cap (drives the bottom fade overlay).
+  const [isScrollable, setIsScrollable] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const measurementRef = useRef<HTMLSpanElement>(null);
+
+  // Auto-grow the textarea: reset to content height, capped at 4 lines (88px),
+  // then scroll. Runs on every value change (typing, paste, clear-after-send).
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const MAX_H = 88; // 4 lines × 22px line-height
+    el.style.height = 'auto';
+    const next = Math.min(el.scrollHeight, MAX_H);
+    el.style.height = `${next}px`;
+    const scrollable = el.scrollHeight > MAX_H;
+    el.style.overflowY = scrollable ? 'auto' : 'hidden';
+    setIsMultiline(next > 23);
+    setIsScrollable(scrollable);
+  }, [inputValue]);
 
   const calculatePopoverPosition = (atIndex: number) => {
     if (!ALLOW_AGENT_MENTION) return {};
@@ -143,8 +164,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
     agent.name.toLowerCase().includes(mentionSearch.toLowerCase())
   );
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !showMentionList && inputValue.trim()) {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    // Enter sends; Shift+Enter inserts a newline (modern multiline input).
+    if (e.key === 'Enter' && !e.shiftKey && !showMentionList && inputValue.trim()) {
       e.preventDefault();
       if (onSend) {
         onSend(inputValue.trim());
@@ -182,16 +204,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
     // it switches to the disabled/grey state with the Figma square icon.
     const isLoading = !!isMockAgentChatActive || shimmer;
     const isActive = !isLoading;
+    // Expanded = a chip is selected OR the text has wrapped past one line. In this
+    // state the textarea spans the full width (text reaches the right edge, like
+    // ChatGPT) and the chip + send button drop to a row below.
+    const expanded = !!selectedContextChip || isMultiline;
     return (
       <div className="relative w-full">
         {/* Outer container — height grows smoothly when chip appears */}
         <div
           className={cn(
-            "relative overflow-hidden w-full border-[0.5px] border-[var(--color-line-input)] p-[12px]",
-            // Pill + fixed 56px in the default state (border-box absorbs the 0.5px
-            // borders so total height is exactly 56px, not 57px). When a context
-            // chip is selected the field relaxes to 16px and grows to fit.
-            selectedContextChip ? "rounded-[16px]" : "rounded-[48px] h-[56px]",
+            "relative overflow-hidden w-full border-[0.5px] border-[var(--color-line-input)] min-h-[56px] pt-[12px] pr-[12px] pb-[12px] pl-[12px] transition-[border-radius] duration-200",
+            // Pill at 56px in the default single-line state (border-box absorbs the
+            // 0.5px borders so it's exactly 56px). Once the field grows past one
+            // line — or a context chip is selected — it relaxes to a 16px radius
+            // and grows to fit (textarea handles the height, capped at 4 lines).
+            expanded ? "rounded-[16px]" : "rounded-[48px]",
             "drop-shadow-[0px_1px_1px_oklch(0.21_0.034_263.436_/_0.05)]",
             "focus-within:ring-1 focus-within:ring-[var(--color-royal)] transition-shadow",
             // Disabled (questionnaire) OR generating: greyish fill + not-allowed across the field
@@ -207,62 +234,82 @@ const ChatInput: React.FC<ChatInputProps> = ({
               <span aria-hidden="true" className="input-border-shimmer" />
             </>
           )}
-          {/* Single flex row: lhs-area + rhs-area.
-              Center-aligned in zero state; bottom-aligned when chip expands it. */}
-          <div className={cn("relative z-10 flex gap-[8px]", selectedContextChip ? "items-end" : "items-center")}>
-            {/* lhs-area: input on top, chip below (gap-[24px]) */}
-            <div className="flex-1 min-w-0 flex flex-col">
-              {/* Placeholder / input row */}
-              <div className="flex items-center">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask Co-marketer..."
-                  disabled={isQuestionnaireActive || isLoading}
-                  className="flex-1 min-w-0 bg-transparent border-0 p-0 text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed"
-                  style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500 }}
-                  autoComplete="off"
+          {/* Flex-wrap row: textarea + chip + send. Compact single row by default;
+              when `expanded`, the textarea takes the full width (basis-full) so it
+              wraps everything else (chip, send) to a row below — text reaches the
+              right edge and the send button sits bottom-right (ChatGPT-style). */}
+          <div className={cn("relative z-10 flex flex-wrap items-center gap-x-[8px]", expanded ? "gap-y-[26px]" : "gap-y-[10px]")}>
+            {/* Auto-growing textarea — grows from 1 to 4 lines, then scrolls.
+                Sits on top (row 1) when expanded; otherwise shares the row. */}
+            <div className={cn("relative min-w-0", expanded ? "order-1 basis-full w-full" : "order-2 flex-1")}>
+              <textarea
+                ref={inputRef}
+                rows={1}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask Co-marketer..."
+                disabled={isQuestionnaireActive || isLoading}
+                className="chat-input-scroll block w-full min-w-0 resize-none bg-transparent border-0 p-0 text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed"
+                style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500, maxHeight: "88px" }}
+                autoComplete="off"
+              />
+              {/* Bottom fade — appears once content scrolls past the 4-line cap */}
+              {isScrollable && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-[22px] bg-gradient-to-t from-white to-transparent"
                 />
-              </div>
-
-              {/* Context chip — animates in/out using grid-rows trick */}
-              <div
-                className="grid transition-[grid-template-rows,margin-top] duration-200 ease-in-out"
-                style={{ gridTemplateRows: selectedContextChip ? '1fr' : '0fr', marginTop: selectedContextChip ? '21px' : '0px' }}
-              >
-                {/* overflow-hidden drives the collapse animation; inner padding gives the
-                    chip's border/shadow room so it isn't clipped at the box edges. */}
-                <div className="overflow-hidden min-h-0">
-                  {selectedContextChip && (
-                    <div className="p-[3px]">
-                      <button
-                        type="button"
-                        onClick={onClearSelectedContextChip}
-                        className="inline-flex items-center gap-[4px] border border-[var(--color-royal)] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_oklch(0.554_0.199_263.043_/_0.1)] whitespace-nowrap transition-opacity duration-200"
-                        style={{
-                          backgroundImage:
-                            "linear-gradient(180deg, var(--color-white) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)",
-                        }}
-                      >
-                        <span
-                          className="text-[12px] leading-[16px] text-[var(--color-royal)]"
-                          style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
-                        >
-                          {selectedContextChip}
-                        </span>
-                        <X className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* rhs-area: send button (alignment handled by parent row) */}
-            <div className="flex shrink-0">
+            {/* + button — "Add files and more" (no action yet). Left edge by default,
+                bottom-left when expanded. Matches the 32×32 send-button size. */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Add files and more"
+                  disabled={isQuestionnaireActive || isLoading}
+                  className={cn(
+                    "flex items-center justify-center w-[32px] h-[32px] rounded-full shrink-0 transition-colors",
+                    (isQuestionnaireActive || isLoading)
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-[oklch(0_0_0_/_0.06)]",
+                    expanded ? "order-2" : "order-1"
+                  )}
+                >
+                  <Plus className="w-[20px] h-[20px] text-[var(--color-charcoal)]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="start" className="border-0 bg-[var(--color-ink)] text-white">
+                Add files and more
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Context chip — bottom-left when selected (after the + button) */}
+            {selectedContextChip && (
+              <button
+                type="button"
+                onClick={onClearSelectedContextChip}
+                className="order-3 inline-flex items-center gap-[4px] border border-[var(--color-royal)] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_oklch(0.554_0.199_263.043_/_0.1)] whitespace-nowrap animate-in fade-in duration-200"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(180deg, var(--color-white) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)",
+                }}
+              >
+                <span
+                  className="text-[12px] leading-[16px] text-[var(--color-royal)]"
+                  style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
+                >
+                  {selectedContextChip}
+                </span>
+                <X className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" />
+              </button>
+            )}
+
+            {/* Send button — far right (always last in the row) */}
+            <div className="order-4 flex shrink-0 ml-auto">
               <button
                 type="button"
                 onClick={handleSendClick}
@@ -326,7 +373,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       <Popover open={showMentionList} onOpenChange={setShowMentionList}>
         <PopoverTrigger asChild>
           <input
-            ref={inputRef}
+            ref={inputRef as unknown as React.Ref<HTMLInputElement>}
             type="text"
             value={inputValue}
             onChange={handleInputChange}

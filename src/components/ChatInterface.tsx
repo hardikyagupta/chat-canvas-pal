@@ -2178,7 +2178,7 @@ The content has been updated across all channels to reflect your changes.`;
                 )}>
                 {messages.length === 0 && !isGeneratingOutput && (
                   <div className="w-full flex flex-col items-center">
-                    <div className={cn("w-full flex flex-col gap-[24px] items-center", isExpanded ? "max-w-[768px]" : "max-w-full")}>
+                    <div className={cn("w-full flex flex-col gap-[40px] items-center", isExpanded ? "max-w-[768px]" : "max-w-full")}>
                       {/* Greeting: "Good morning Amit," then, on one line,
                           "what can I do for you?" + the rotating slot-text topic */}
                       <div className="flex flex-col gap-[6px] items-center">

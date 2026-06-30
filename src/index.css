@@ -225,6 +225,28 @@
   }
 }
 
+/* Chat input textarea — stays scrollable past 4 lines, but the scrollbar only
+   appears on hover (modern, uncluttered). */
+.chat-input-scroll {
+  scrollbar-width: none; /* Firefox */
+}
+.chat-input-scroll::-webkit-scrollbar {
+  width: 0;
+}
+.chat-input-scroll:hover {
+  scrollbar-width: thin;
+}
+.chat-input-scroll:hover::-webkit-scrollbar {
+  width: 6px;
+}
+.chat-input-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 9999px;
+}
+.chat-input-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: var(--color-line-strong);
+}
+
 /* ===========================================================================
    Atmosphere (Settings → Translucent sidebar theme).
    When enabled, the selected preset gradient replaces the page background and
