@@ -1,11 +1,13 @@
 import React from 'react';
-import { Minimize2, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Minimize2, X, PanelLeftClose, PanelLeftOpen, Bookmark } from 'lucide-react';
 
 interface RhsHeaderProps {
   chatName?: string | null; // hidden when null/empty (no active chat)
   showSidebarToggle?: boolean; // show the expand/collapse panel icon (collapsed state)
   sidebarCollapsed?: boolean; // current sidebar state, drives the toggle tooltip text
   onToggleSidebar?: () => void;
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
   onMinimize?: () => void;
   onClose?: () => void;
 }
@@ -36,6 +38,8 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
   showSidebarToggle,
   sidebarCollapsed,
   onToggleSidebar,
+  isBookmarked,
+  onToggleBookmark,
   onMinimize,
   onClose,
 }) => {
@@ -59,12 +63,29 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
               </button>
             )}
             {chatName ? (
-              <p
-                className="font-medium text-[13px] text-[var(--color-charcoal)] whitespace-nowrap overflow-hidden text-ellipsis"
-                style={{ fontFamily: 'Manrope, sans-serif' }}
-              >
-                {chatName}
-              </p>
+              <div className="flex items-center gap-[2px] min-w-0">
+                <p
+                  className="font-medium text-[13px] text-[var(--color-charcoal)] whitespace-nowrap overflow-hidden text-ellipsis"
+                  style={{ fontFamily: 'Manrope, sans-serif' }}
+                >
+                  {chatName}
+                </p>
+                {onToggleBookmark ? (
+                  <button
+                    type="button"
+                    onClick={onToggleBookmark}
+                    className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                    aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark chat'}
+                    aria-pressed={isBookmarked}
+                  >
+                    <Bookmark
+                      className="size-[16px] text-[var(--color-slate)]"
+                      fill={isBookmarked ? 'currentColor' : 'none'}
+                    />
+                    <HeaderTooltip label={isBookmarked ? 'Remove bookmark' : 'Bookmark chat'} align="left" />
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </div>
 

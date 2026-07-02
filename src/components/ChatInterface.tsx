@@ -312,6 +312,69 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     "Revenue Monitoring": "Track revenue performance",
   };
 
+  // Live mirror of the ChatInput textarea value — drives the typed-trigger suggestions below.
+  const [liveInputValue, setLiveInputValue] = useState("");
+  // Recognized opening phrases → 5 curated, product-grounded prompt completions each.
+  const typedSuggestionTriggers: { trigger: string; suggestions: string[] }[] = [
+    {
+      trigger: "I want to",
+      suggestions: [
+        "I want to plan a campaign around this month's seasonal trends.",
+        "I want to create content variants for our next email campaign.",
+        "I want to segment our customer base by engagement level.",
+        "I want to find the best send times for our WhatsApp campaigns.",
+        "I want to improve the conversion rate on our last campaign.",
+      ],
+    },
+    {
+      trigger: "How do I",
+      suggestions: [
+        "How do I set up A/B testing for a new campaign?",
+        "How do I write subject lines that improve open rates?",
+        "How do I build a lookalike segment from my top customers?",
+        "How do I choose the right channel mix for a launch?",
+        "How do I fix a campaign with high CTR but low conversions?",
+      ],
+    },
+    {
+      trigger: "What is",
+      suggestions: [
+        "What is the best performing channel for us this quarter?",
+        "What is driving the drop in email engagement this month?",
+        "What is the ideal send time for my SMS campaigns?",
+        "What is the size of our high-value customer segment?",
+        "What is causing the anomaly in yesterday's delivery rates?",
+      ],
+    },
+    {
+      trigger: "Show me",
+      suggestions: [
+        "Show me seasonal engagement trends across channels for the last 12 months.",
+        "Show me the top 5 and bottom 5 campaigns from the last 30 days.",
+        "Show me a breakdown of customers by lifecycle stage.",
+        "Show me the best time slots to send campaigns by channel.",
+        "Show me revenue trends by channel with week-over-week changes.",
+      ],
+    },
+    {
+      trigger: "Help me",
+      suggestions: [
+        "Help me plan next quarter's campaign calendar.",
+        "Help me write content for a re-engagement campaign.",
+        "Help me identify at-risk customers before they churn.",
+        "Help me schedule campaigns for maximum engagement.",
+        "Help me understand why our QBR numbers dipped this quarter.",
+      ],
+    },
+  ];
+  const matchedTypedTrigger = useMemo(() => {
+    const normalized = liveInputValue.trim().toLowerCase();
+    if (!normalized) return null;
+    return typedSuggestionTriggers.find((t) =>
+      normalized.startsWith(t.trigger.toLowerCase())
+    ) ?? null;
+  }, [liveInputValue]);
+
   const handleCopyChatId = (chatId: string) => {
     navigator.clipboard.writeText(chatId);
     setOpenChatId(null);
@@ -518,6 +581,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     return marketingAgents.filter(agent => enabledAgents.has(agent.id));
   }, [enabledAgents]);
 
+  // Whether the current live conversation has been bookmarked from the RHS header.
+  const [isChatBookmarked, setIsChatBookmarked] = useState(false);
+
   // Chat name shown in the header — derived from the first user turn, kept short.
   const chatName = useMemo(() => {
     const firstUser = messages.find(m => m.type === 'chat' && !m.isAI);
@@ -636,12 +702,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     setActivePage('home');
     setMessages([]);
     setShowSuggestions(false);
+    setIsChatBookmarked(false);
     resetFeedback();
     setMockChatCompleted(false);
     setContentApproved(false);
     setContentGenerated(false);
     setAutonomousWaitingForInput(false);
     setSelectedStarterChip(null);
+    setLiveInputValue("");
     setShowMinOverlay(false);
     // Tear down the artifact preview split-view
     if (artifactCloseTimerRef.current) {
@@ -2113,6 +2181,8 @@ The content has been updated across all channels to reflect your changes.`;
               showSidebarToggle={true}
               sidebarCollapsed={lhsCollapsed}
               onToggleSidebar={() => { setLhsCollapsed(prev => !prev); playToggleCue(); }}
+              isBookmarked={isChatBookmarked}
+              onToggleBookmark={() => setIsChatBookmarked(prev => !prev)}
               onMinimize={() => setIsExpanded(false)}
               onClose={onCloseInterface}
             />
@@ -2217,8 +2287,33 @@ The content has been updated across all channels to reflect your changes.`;
                           isQuestionnaireActive={false}
                           selectedContextChip={selectedStarterChip}
                           onClearSelectedContextChip={() => setSelectedStarterChip(null)}
+                          onInputValueChange={setLiveInputValue}
                         />
-                        {!selectedStarterChip && (
+                        {matchedTypedTrigger && (
+                          <div className="w-full flex flex-col gap-[8px]">
+                            {matchedTypedTrigger.suggestions.map((suggestion, index) => {
+                              const prefix = suggestion.slice(0, matchedTypedTrigger.trigger.length);
+                              const rest = suggestion.slice(matchedTypedTrigger.trigger.length);
+                              return (
+                                <button
+                                  key={`typed-${index}`}
+                                  type="button"
+                                  className="w-full text-left p-[12px] rounded-[8px] cursor-pointer bg-white border border-[var(--color-line)] hover:bg-[var(--color-surface-0)] transition-colors"
+                                  onClick={() => handleSendMessage(suggestion)}
+                                >
+                                  <p
+                                    className="text-[14px] leading-[20px]"
+                                    style={{ fontFamily: "Manrope, sans-serif" }}
+                                  >
+                                    <span className="text-[var(--color-grey)]">{prefix}</span>
+                                    <span className="text-[var(--color-ink)]">{rest}</span>
+                                  </p>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {!matchedTypedTrigger && !selectedStarterChip && (
                           <div className="flex flex-wrap gap-[8px] items-center justify-center w-full">
                             {starterChips.map((chipLabel, index) => (
                               <button
@@ -2237,7 +2332,7 @@ The content has been updated across all channels to reflect your changes.`;
                             ))}
                           </div>
                         )}
-                        {selectedStarterChip && (
+                        {!matchedTypedTrigger && selectedStarterChip && (
                           <div className="w-full flex flex-col gap-[8px]">
                             <p
                               className="px-[2px] font-semibold text-[13px] leading-[18px] text-[var(--color-grey)] tracking-[0.42px]"

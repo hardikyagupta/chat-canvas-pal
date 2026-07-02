@@ -29,6 +29,8 @@ interface ChatInputProps {
   onClearSelectedContextChip?: () => void;
   /** Drives the input shimmer (set by parent on every send / while generating). */
   shimmer?: boolean;
+  /** Fired with the live textarea value on every change (typing, clear-on-send). */
+  onInputValueChange?: (value: string) => void;
 }
 
 // Temporary feature flag to disable @-agent mention dropdown
@@ -42,6 +44,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   selectedContextChip = null,
   onClearSelectedContextChip,
   shimmer = false,
+  onInputValueChange,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [showMentionList, setShowMentionList] = useState(false);
@@ -71,6 +74,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
     setIsMultiline(next > 23);
     setIsScrollable(scrollable);
   }, [inputValue]);
+
+  useEffect(() => {
+    onInputValueChange?.(inputValue);
+  }, [inputValue, onInputValueChange]);
 
   const calculatePopoverPosition = (atIndex: number) => {
     if (!ALLOW_AGENT_MENTION) return {};
