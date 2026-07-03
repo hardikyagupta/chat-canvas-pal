@@ -247,6 +247,16 @@
   background-color: var(--color-line-strong);
 }
 
+/* Attachments row — single horizontal line, scrollable but with no visible
+   scrollbar handle in any state. */
+.attachments-scroll {
+  scrollbar-width: none; /* Firefox */
+}
+.attachments-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 /* ===========================================================================
    Atmosphere (Settings → Translucent sidebar theme).
    When enabled, the selected preset gradient replaces the page background and

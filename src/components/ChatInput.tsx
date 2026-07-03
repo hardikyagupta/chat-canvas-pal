@@ -3,7 +3,7 @@ import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ArrowUp, StopCircle, X, Plus } from 'lucide-react';
+import { ArrowUp, StopCircle, X, Plus, ImagePlus, Blocks, FileVideo, FileAudio, FileText, File as FileIcon, Loader2 } from 'lucide-react';
 import { marketingAgents, MarketingAgent } from '@/data/agents';
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,53 @@ interface Agent {
   id: string;
   name: string;
 }
+
+type AttachmentCategory = 'image' | 'video' | 'audio' | 'document';
+
+interface Attachment {
+  id: string;
+  name: string;
+  size: number;
+  category: AttachmentCategory;
+  /** Object URL for image previews (revoked on remove). */
+  previewUrl?: string;
+  status: 'uploading' | 'done';
+}
+
+const CATEGORY_LABEL: Record<AttachmentCategory, string> = {
+  image: 'Image',
+  video: 'Video',
+  audio: 'Audio',
+  document: 'Document',
+};
+
+const getAttachmentCategory = (file: File): AttachmentCategory => {
+  const t = file.type;
+  if (t.startsWith('image/')) return 'image';
+  if (t.startsWith('video/')) return 'video';
+  if (t.startsWith('audio/')) return 'audio';
+  return 'document';
+};
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+// Icon + tint used for the non-image (doc/video/audio) attachment cards.
+const getDocVisual = (category: AttachmentCategory) => {
+  switch (category) {
+    case 'video':
+      return { Icon: FileVideo, className: 'bg-[#f24e34] text-white' };
+    case 'audio':
+      return { Icon: FileAudio, className: 'bg-[var(--color-royal)] text-white' };
+    case 'document':
+      return { Icon: FileText, className: 'bg-[var(--color-surface-1)] text-[var(--color-charcoal)]' };
+    default:
+      return { Icon: FileIcon, className: 'bg-[var(--color-surface-1)] text-[var(--color-charcoal)]' };
+  }
+};
 
 const agents: Agent[] = [
   { id: "co-marketer", name: "Co-marketer" },
@@ -51,6 +98,61 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [cursorPosition, setCursorPosition] = useState(0);
   const [mentionSearch, setMentionSearch] = useState("");
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
+  // Controls the "+" attachment menu (Add files or photos / Skills)
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
+  // Files/photos attached to the current message (shown above the textarea).
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFilesSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
+    const newItems: Attachment[] = files.map((file, i) => {
+      const category = getAttachmentCategory(file);
+      return {
+        id: `${Date.now()}-${i}-${file.name}`,
+        name: file.name,
+        size: file.size,
+        category,
+        previewUrl: category === 'image' ? URL.createObjectURL(file) : undefined,
+        status: 'uploading',
+      };
+    });
+    setAttachments((prev) => [...prev, ...newItems]);
+    // Simulate an upload completing (swap "Uploading …" → "Type · Size").
+    newItems.forEach((item) => {
+      setTimeout(() => {
+        setAttachments((prev) =>
+          prev.map((a) => (a.id === item.id ? { ...a, status: 'done' } : a))
+        );
+      }, 1500);
+    });
+    // Allow re-selecting the same file later.
+    event.target.value = '';
+  };
+
+  const attachmentsScrollRef = useRef<HTMLDivElement>(null);
+  // Whether content is clipped on each side → drives the edge fade overlays.
+  const [attFade, setAttFade] = useState({ left: false, right: false });
+  const updateAttFade = () => {
+    const el = attachmentsScrollRef.current;
+    if (!el) return;
+    setAttFade({
+      left: el.scrollLeft > 1,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+    });
+  };
+  useEffect(() => {
+    updateAttFade();
+  }, [attachments]);
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => {
+      const found = prev.find((a) => a.id === id);
+      if (found?.previewUrl) URL.revokeObjectURL(found.previewUrl);
+      return prev.filter((a) => a.id !== id);
+    });
+  };
   // True once the textarea wraps past one line — drives the container's grow +
   // radius change (mirrors the chip-expanded state).
   const [isMultiline, setIsMultiline] = useState(false);
@@ -179,6 +281,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         onSend(inputValue.trim());
       }
       setInputValue('');
+      setAttachments([]);
     } else if (e.key === 'Escape' && showMentionList) {
       setShowMentionList(false);
     }
@@ -188,6 +291,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     if (inputValue.trim() && onSend) {
       onSend(inputValue.trim());
       setInputValue('');
+      setAttachments([]);
       inputRef.current?.focus();
     }
   };
@@ -214,7 +318,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     // Expanded = a chip is selected OR the text has wrapped past one line. In this
     // state the textarea spans the full width (text reaches the right edge, like
     // ChatGPT) and the chip + send button drop to a row below.
-    const expanded = !!selectedContextChip || isMultiline;
+    const expanded = !!selectedContextChip || isMultiline || attachments.length > 0;
     return (
       <div className="relative w-full">
         {/* Outer container — height grows smoothly when chip appears */}
@@ -241,6 +345,104 @@ const ChatInput: React.FC<ChatInputProps> = ({
               <span aria-hidden="true" className="input-border-shimmer" />
             </>
           )}
+          {/* Hidden file picker driven by the "+" → "Add files or photos" menu item. */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv"
+            className="hidden"
+            onChange={handleFilesSelected}
+          />
+
+          {/* Attachments — always render above the text. Image files show as square
+              thumbnails; docs/video/audio show as a row card (icon + name + type·size). */}
+          {attachments.length > 0 && (
+            <div className="relative z-10 mb-[10px]">
+              {/* Edge fades — appear only when the row is clipped on that side. */}
+              {attFade.left && (
+                <div aria-hidden="true" className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-[24px] bg-gradient-to-r from-white to-transparent" />
+              )}
+              {attFade.right && (
+                <div aria-hidden="true" className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-[24px] bg-gradient-to-l from-white to-transparent" />
+              )}
+              <div
+                ref={attachmentsScrollRef}
+                onScroll={updateAttFade}
+                className="attachments-scroll flex flex-nowrap gap-[8px] overflow-x-auto"
+              >
+              {attachments.map((a) => {
+                if (a.category === 'image' && a.previewUrl) {
+                  return (
+                    <div
+                      key={a.id}
+                      className="group relative w-[64px] h-[64px] rounded-[12px] overflow-hidden border border-[var(--color-line-input)] shrink-0"
+                    >
+                      <img src={a.previewUrl} alt={a.name} className="w-full h-full object-cover" />
+                      {a.status === 'uploading' && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                          <Loader2 className="w-4 h-4 text-white animate-spin" />
+                        </div>
+                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={`Remove ${a.name}`}
+                            onClick={() => removeAttachment(a.id)}
+                            className="absolute top-[3px] right-[3px] flex items-center justify-center w-[18px] h-[18px] rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                          >
+                            <X className="w-[12px] h-[12px]" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" align="start" className="border-0 bg-[var(--color-ink)] text-white">
+                          Remove file
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  );
+                }
+                const { Icon, className: iconClass } = getDocVisual(a.category);
+                return (
+                  <div
+                    key={a.id}
+                    className="group relative flex items-center gap-[10px] rounded-[12px] border border-[var(--color-line-input)] bg-white pl-[10px] pr-[12px] py-[8px] shrink-0"
+                  >
+                    <div className={cn("flex items-center justify-center w-[40px] h-[40px] rounded-[8px] shrink-0", iconClass)}>
+                      <Icon className="w-[20px] h-[20px]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[14px] font-medium text-[var(--color-ink)] truncate max-w-[220px]">
+                        {a.name}
+                      </p>
+                      <p className="text-[12px] text-[var(--color-grey)]">
+                        {a.status === 'uploading'
+                          ? 'Uploading …'
+                          : `${CATEGORY_LABEL[a.category]} · ${formatFileSize(a.size)}`}
+                      </p>
+                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${a.name}`}
+                          onClick={() => removeAttachment(a.id)}
+                          className="flex items-center justify-center w-[20px] h-[20px] rounded-full text-[var(--color-grey)] opacity-0 transition-opacity hover:bg-[oklch(0_0_0_/_0.06)] group-hover:opacity-100 shrink-0"
+                        >
+                          <X className="w-[14px] h-[14px]" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" align="start" className="border-0 bg-[var(--color-ink)] text-white">
+                        Remove file
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                );
+              })}
+              </div>
+            </div>
+          )}
+
           {/* Flex-wrap row: textarea + chip + send. Compact single row by default;
               when `expanded`, the textarea takes the full width (basis-full) so it
               wraps everything else (chip, send) to a row below — text reaches the
@@ -272,27 +474,64 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
             {/* + button — "Add files and more" (no action yet). Left edge by default,
                 bottom-left when expanded. Matches the 32×32 send-button size. */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Add files and more"
-                  disabled={isQuestionnaireActive || isLoading}
-                  className={cn(
-                    "flex items-center justify-center w-[32px] h-[32px] rounded-full shrink-0 transition-colors",
-                    (isQuestionnaireActive || isLoading)
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-[oklch(0_0_0_/_0.06)]",
-                    expanded ? "order-2" : "order-1"
-                  )}
-                >
-                  <Plus className="w-[20px] h-[20px] text-[var(--color-charcoal)]" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="start" className="border-0 bg-[var(--color-ink)] text-white">
-                Add files and more
-              </TooltipContent>
-            </Tooltip>
+            <Popover open={showPlusMenu} onOpenChange={setShowPlusMenu}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Add files and more"
+                      disabled={isQuestionnaireActive || isLoading}
+                      className={cn(
+                        "flex items-center justify-center w-[32px] h-[32px] rounded-full shrink-0 transition-colors",
+                        (isQuestionnaireActive || isLoading)
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:bg-[oklch(0_0_0_/_0.06)]",
+                        expanded ? "order-2" : "order-1"
+                      )}
+                    >
+                      <Plus className="w-[20px] h-[20px] text-[var(--color-charcoal)]" />
+                    </button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="start" className="border-0 bg-[var(--color-ink)] text-white">
+                  Add files and more
+                </TooltipContent>
+              </Tooltip>
+              <PopoverContent
+                side="bottom"
+                align="start"
+                alignOffset={-5}
+                sideOffset={8}
+                className="w-auto min-w-[180px] p-0 border-[#dbe0e3] rounded-[12px] shadow-[0px_8px_20px_0px_rgba(0,0,0,0.12)]"
+              >
+                <div className="flex flex-col gap-[2px] p-[6px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPlusMenu(false);
+                      fileInputRef.current?.click();
+                    }}
+                    className="flex items-center gap-[8px] h-[32px] px-[8px] rounded-[8px] w-full transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
+                  >
+                    <ImagePlus className="w-[16px] h-[16px] text-[var(--color-charcoal)] shrink-0" />
+                    <span className="text-[13px] font-medium text-[var(--color-charcoal)] whitespace-nowrap">
+                      Add files or photos
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPlusMenu(false)}
+                    className="flex items-center gap-[8px] h-[32px] px-[8px] rounded-[8px] w-full transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
+                  >
+                    <Blocks className="w-[16px] h-[16px] text-[var(--color-charcoal)] shrink-0" />
+                    <span className="text-[13px] font-medium text-[var(--color-charcoal)] whitespace-nowrap">
+                      Skills
+                    </span>
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
 
             {/* Context chip — bottom-left when selected (after the + button) */}
             {selectedContextChip && (
