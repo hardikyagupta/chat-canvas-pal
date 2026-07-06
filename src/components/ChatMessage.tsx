@@ -39,7 +39,7 @@ const LoadingIndicator: React.FC = () => {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="w-1.5 h-1.5 bg-gray-500 dark:bg-gray-400 rounded-full"
+            className="w-1.5 h-1.5 bg-muted-foreground rounded-full"
             style={{
               animation: 'cursorDots 1.4s infinite ease-in-out',
               animationDelay: `${i * 0.16}s`,
@@ -76,7 +76,7 @@ const SimpleThinkingLoader: React.FC = () => {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full"
+            className="w-1 h-1 bg-muted-foreground rounded-full"
             style={{
               animation: 'simpleDots 1.4s infinite ease-in-out',
               animationDelay: `${i * 0.16}s`,
@@ -119,8 +119,8 @@ const SegmentAgentThinking: React.FC = () => {
   }, []);
   
   return (
-    <div className="flex items-center gap-2 py-2 px-3 bg-white dark:bg-white rounded-lg border border-gray-200 dark:border-gray-200 shadow-sm w-fit h-8">
-      <div className="text-xs text-gray-600 dark:text-gray-600 font-['Manrope'] font-medium">
+    <div className="flex items-center gap-2 py-2 px-3 bg-card rounded-lg border border-line shadow-sm w-fit h-8">
+      <div className="text-xs text-muted-foreground font-['Manrope'] font-medium">
         Segment Agent thinking
       </div>
       <div className="flex items-center">
@@ -130,7 +130,7 @@ const SegmentAgentThinking: React.FC = () => {
           height="12" 
           fill="currentColor" 
           viewBox="0 0 256 256"
-          className="text-gray-500 dark:text-gray-500"
+          className="text-muted-foreground"
           style={{
             animation: 'infinityRotate 1.5s ease-in-out infinite'
           }}
@@ -1171,8 +1171,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   if (!isAI) {
     return (
       <div className="flex justify-end w-full py-2">
-        <div className="bg-white dark:bg-white border border-[var(--color-line)] rounded-[12px] p-[12px] w-fit max-w-[60%]">
-          <p className="text-[var(--color-ink)] dark:text-[var(--color-ink)] text-sm font-medium leading-[24px] font-['Manrope']">
+        <div className="bg-card border border-[var(--color-line)] rounded-[12px] p-[12px] w-fit max-w-[60%]">
+          <p className="text-[var(--color-ink)] text-sm font-medium leading-[24px] font-['Manrope']">
             {displayedText}
           </p>
         </div>
@@ -1181,8 +1181,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   }
 
 
-  const iconContainerBgClass = avatarBgClass ? avatarBgClass.split(' ').find(cls => cls.startsWith('bg-')) : 'bg-gray-200';
-  const iconFileClass = avatarBgClass ? avatarBgClass.split(' ').find(cls => cls.startsWith('text-')) : 'text-gray-700';
+  const iconContainerBgClass = avatarBgClass ? avatarBgClass.split(' ').find(cls => cls.startsWith('bg-')) : 'bg-surface-2';
+  const iconFileClass = avatarBgClass ? avatarBgClass.split(' ').find(cls => cls.startsWith('text-')) : 'text-slate';
 
   // Render ThinkingState component if this is a thinking state message
   if (isThinkingState) {
@@ -1352,7 +1352,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             const renderContentBlock = (block: string, index: number) => (
               <div
                 key={index}
-                className="py-2 text-[var(--color-ink)] dark:text-white leading-[22px] font-['Manrope'] font-normal whitespace-pre-line transition-all duration-50 ease-out"
+                className="py-2 text-[var(--color-ink)] leading-[22px] font-['Manrope'] font-normal whitespace-pre-line transition-all duration-50 ease-out"
                 style={{
                   opacity: textOpacity,
                   filter: `blur(${textBlur}px)`,
@@ -1401,7 +1401,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     {statCards.map((c) => (
                       <div
                         key={c.label}
-                        className="border border-[var(--color-line)] bg-white rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[2px]"
+                        className="border border-[var(--color-line)] bg-card rounded-[8px] px-[12px] py-[10px] flex flex-col gap-[2px]"
                       >
                         <span className="text-[11px] text-[var(--color-grey)] font-medium">{c.label}</span>
                         <span className="text-[20px] font-bold text-[var(--color-ink)] leading-tight">{c.value}</span>
@@ -1443,7 +1443,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         {/* Feedback icons at bottom-left of AI content (ChatGPT style) - only show after animation completes */}
             {isAnimationDone && (
               <div className="flex justify-start w-full mt-3 pt-3 border-t border-[var(--color-line)] dark:border-[var(--color-charcoal)]">
-                <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500">
+                <div className="flex items-center gap-1 text-grey-soft">
                   <TooltipProvider delayDuration={200}>
                     {/* Copy — first position */}
                     <Tooltip open={copyTipOpen} onOpenChange={(o) => { if (!copied) setCopyTipOpen(o); }}>
@@ -1451,7 +1451,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="p-2 h-auto rounded-md hover:text-gray-600 hover:bg-gray-100 focus-visible:ring-0 focus-visible:ring-offset-0"
+                          className="p-2 h-auto rounded-md hover:text-muted-foreground hover:bg-muted focus-visible:ring-0 focus-visible:ring-offset-0"
                           onClick={handleCopy}
                           aria-label={copied ? 'Copied' : 'Copy'}
                         >
@@ -1465,7 +1465,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                             />
                             <Check
                               className={cn(
-                                'absolute h-3.5 w-3.5 text-green-600 transition-all duration-200 ease-out',
+                                'absolute h-3.5 w-3.5 text-success transition-all duration-200 ease-out',
                                 copied ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
                               )}
                             />
@@ -1474,7 +1474,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                       </TooltipTrigger>
                       <TooltipContent
                         side="top"
-                        className="border-0 bg-[var(--color-ink)] px-[8px] py-[4px] text-white"
+                        className="border-0 bg-foreground px-[8px] py-[4px] text-background"
                         style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
                       >
                         {/* "Copy" ↔ "Copied!" using the same scale/fade transition */}
@@ -1501,13 +1501,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     {/* Thumbs up */}
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" onClick={onThumbsUp} className="p-2 h-auto rounded-md hover:text-green-600 hover:bg-green-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Good response">
+                        <Button variant="ghost" size="sm" onClick={onThumbsUp} className="p-2 h-auto rounded-md hover:text-success hover:bg-[color-mix(in_oklab,var(--color-success)_10%,transparent)] focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Good response">
                           <ThumbsUp className="h-3.5 w-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent
                         side="top"
-                        className="border-0 bg-[var(--color-ink)] px-[8px] py-[4px] text-white text-[12px] leading-[16px]"
+                        className="border-0 bg-foreground px-[8px] py-[4px] text-background text-[12px] leading-[16px]"
                         style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
                       >
                         Good response
@@ -1516,13 +1516,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     {/* Thumbs down */}
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" onClick={onThumbsDown} className="p-2 h-auto rounded-md hover:text-red-600 hover:bg-red-50 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Bad response">
+                        <Button variant="ghost" size="sm" onClick={onThumbsDown} className="p-2 h-auto rounded-md hover:text-destructive hover:bg-destructive/10 focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Bad response">
                           <ThumbsDown className="h-3.5 w-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent
                         side="top"
-                        className="border-0 bg-[var(--color-ink)] px-[8px] py-[4px] text-white text-[12px] leading-[16px]"
+                        className="border-0 bg-foreground px-[8px] py-[4px] text-background text-[12px] leading-[16px]"
                         style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
                       >
                         Bad response
@@ -1571,7 +1571,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                           onSkipAndGenerate?.();
                         }}
                         variant="outline"
-                        className="border-[var(--color-navy)] text-[var(--color-navy)] bg-white hover:bg-[var(--color-navy)]/15 hover:text-[var(--color-navy)] hover:border-[var(--color-navy)] dark:border-[var(--color-navy)] dark:text-[var(--color-navy)] dark:bg-white dark:hover:bg-[var(--color-navy)]/15 dark:hover:text-[var(--color-navy)] font-medium px-4 py-2 rounded-md text-sm transition-colors uppercase"
+                        className="border-[var(--color-navy)] text-[var(--color-navy)] bg-card hover:bg-[var(--color-navy)]/15 hover:text-[var(--color-navy)] hover:border-[var(--color-navy)] dark:border-[var(--color-navy)] dark:text-[var(--color-navy)] dark:hover:bg-[var(--color-navy)]/15 dark:hover:text-[var(--color-navy)] font-medium px-4 py-2 rounded-md text-sm transition-colors uppercase"
                       >
                         Skip And Generate
                       </Button>
@@ -1655,7 +1655,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent 
                           align="start" 
-                          className="w-[300px] bg-white dark:bg-popover border border-[var(--color-line-input)] dark:border-border rounded-[4px] p-0 shadow-lg"
+                          className="w-[300px] bg-popover border border-[var(--color-line-input)] dark:border-border rounded-[4px] p-0 shadow-lg"
                         >
                           <DropdownMenuItem
                             onSelect={() => {}}

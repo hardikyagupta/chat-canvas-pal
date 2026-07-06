@@ -110,7 +110,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   bare = false,
 }) => {
   return (
-    <div className={`flex flex-col h-full w-full bg-white overflow-hidden${bare ? '' : ' border border-[var(--color-line-input)] rounded-[12px]'}`}>
+    <div className={`flex flex-col h-full w-full bg-card overflow-hidden${bare ? '' : ' border border-[var(--color-line-input)] rounded-[12px]'}`}>
       {/* top-nav-artifact */}
       <TooltipProvider delayDuration={200}>
         <div className="flex gap-[8px] items-center px-[8px] py-[4px] w-full shrink-0 border-b border-[var(--color-line-input)]">
@@ -130,7 +130,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
                     : <ArrowLeftToLine className="size-[16px] text-[var(--color-slate)]" />}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="border-0 bg-[var(--color-ink)] text-white text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
+              <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
                 <p>{isFullExpanded ? 'Restore split view' : 'Expand artifact'}</p>
               </TooltipContent>
             </UITooltip>
@@ -148,11 +148,11 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
                     : <PanelRightClose className="size-[16px] text-[var(--color-slate)]" />}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="border-0 bg-[var(--color-ink)] text-white text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
+              <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
                 <p>Close artifact</p>
               </TooltipContent>
             </UITooltip>
-            <p className="min-w-0 truncate text-[14px] font-medium text-black">
+            <p className="min-w-0 truncate text-[14px] font-medium text-foreground">
               {fileName}
             </p>
           </div>
@@ -170,7 +170,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
                 <Download className="size-[16px] text-[var(--color-slate)]" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="border-0 bg-[var(--color-ink)] text-white text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
+            <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
               <p>Download document</p>
             </TooltipContent>
           </UITooltip>
@@ -267,7 +267,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
               </thead>
               <tbody>
                 {tableRows.map((r, i) => (
-                  <tr key={i} className="bg-white border-t border-[var(--color-line)]">
+                  <tr key={i} className="bg-card border-t border-[var(--color-line)]">
                     <td className="px-[10px] py-[10px] text-[var(--color-ink)] font-medium whitespace-nowrap">{r.q}</td>
                     <td className="px-[10px] py-[10px] text-[var(--color-ink)] whitespace-nowrap">{r.conv}</td>
                     <td className="px-[10px] py-[10px] text-[var(--color-ink)] font-medium whitespace-nowrap">{r.rev}</td>
@@ -302,7 +302,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
                 </thead>
                 <tbody>
                   {campaignRows.map((r, i) => (
-                    <tr key={i} className="bg-white border-t border-[var(--color-line)]">
+                    <tr key={i} className="bg-card border-t border-[var(--color-line)]">
                       <td className="px-[10px] py-[8px] text-[var(--color-ink)] font-medium whitespace-nowrap">{r.name}</td>
                       <td className="px-[10px] py-[8px] text-[var(--color-grey)] whitespace-nowrap text-right">{r.date}</td>
                       <td className="px-[10px] py-[8px] text-[var(--color-ink)] whitespace-nowrap text-right">{r.published}</td>
@@ -313,7 +313,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
                       <td className="px-[10px] py-[8px] text-[var(--color-ink)] whitespace-nowrap text-right">{r.readPct}</td>
                     </tr>
                   ))}
-                  <tr className="bg-white border-t border-[var(--color-line)]">
+                  <tr className="bg-card border-t border-[var(--color-line)]">
                     <td className="px-[10px] py-[8px] text-[var(--color-ink)] font-semibold whitespace-nowrap">Totals (23 campaigns)</td>
                     <td className="px-[10px] py-[8px] text-[var(--color-grey)] whitespace-nowrap text-right">—</td>
                     <td className="px-[10px] py-[8px] text-[var(--color-ink)] font-semibold whitespace-nowrap text-right">{campaignTotals.published}</td>

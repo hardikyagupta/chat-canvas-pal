@@ -26,7 +26,7 @@ const MarketingAgentsOverlay: React.FC<Props> = ({
   const renderAgentCard = (agent: MarketingAgent) => {
     const Icon = agent.icon;
     return (
-      <div className="group flex items-start gap-4 p-4 rounded-lg border border-[var(--color-line)] transition-colors transition-shadow duration-200 hover:shadow-md bg-white">
+      <div className="group flex items-start gap-4 p-4 rounded-lg border border-[var(--color-line)] transition-colors transition-shadow duration-200 hover:shadow-md bg-card">
         {/* Priority: avatarSrc (SVG) > Icon (Lucide) > GIF fallback */}
         {agent.avatarSrc ? (
           <div className="flex items-center justify-center w-10 h-10">
@@ -73,7 +73,7 @@ const MarketingAgentsOverlay: React.FC<Props> = ({
   };
 
   return (
-    <div className="w-[400px] bg-white rounded-lg shadow-lg overflow-hidden h-[776px] border border-[var(--color-line)]">
+    <div className="w-[400px] bg-popover rounded-lg shadow-lg overflow-hidden h-[776px] border border-[var(--color-line)]">
       <div className="p-4 border-b border-[var(--color-line)]">
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-semibold text-[var(--color-ink)]">Marketing agents</h2>

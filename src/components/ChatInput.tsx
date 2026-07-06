@@ -50,7 +50,7 @@ const formatFileSize = (bytes: number): string => {
 const getDocVisual = (category: AttachmentCategory) => {
   switch (category) {
     case 'video':
-      return { Icon: FileVideo, className: 'bg-[#f24e34] text-white' };
+      return { Icon: FileVideo, className: 'bg-orange text-white' };
     case 'audio':
       return { Icon: FileAudio, className: 'bg-[var(--color-royal)] text-white' };
     case 'document':
@@ -334,7 +334,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             "drop-shadow-[0px_1px_1px_oklch(0.21_0.034_263.436_/_0.05)]",
             "focus-within:ring-1 focus-within:ring-[var(--color-royal)] transition-shadow",
             // Disabled (questionnaire) OR generating: greyish fill + not-allowed across the field
-            (isQuestionnaireActive || isLoading) ? "bg-[var(--color-surface-1)] cursor-not-allowed" : "bg-white"
+            (isQuestionnaireActive || isLoading) ? "bg-[var(--color-surface-1)] cursor-not-allowed" : "bg-card"
           )}
         >
           {/* Shimmer layers — active while a response is being generated (mock
@@ -396,7 +396,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                             <X className="w-[12px] h-[12px]" />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" align="start" className="border-0 bg-[var(--color-ink)] text-white">
+                        <TooltipContent side="bottom" align="start" className="border-0 bg-foreground text-background">
                           Remove file
                         </TooltipContent>
                       </Tooltip>
@@ -407,7 +407,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 return (
                   <div
                     key={a.id}
-                    className="group relative flex items-center gap-[10px] rounded-[12px] border border-[var(--color-line-input)] bg-white pl-[10px] pr-[12px] py-[8px] shrink-0"
+                    className="group relative flex items-center gap-[10px] rounded-[12px] border border-[var(--color-line-input)] bg-card pl-[10px] pr-[12px] py-[8px] shrink-0"
                   >
                     <div className={cn("flex items-center justify-center w-[40px] h-[40px] rounded-[8px] shrink-0", iconClass)}>
                       <Icon className="w-[20px] h-[20px]" />
@@ -433,7 +433,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                           <X className="w-[14px] h-[14px]" />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side="bottom" align="start" className="border-0 bg-[var(--color-ink)] text-white">
+                      <TooltipContent side="bottom" align="start" className="border-0 bg-foreground text-background">
                         Remove file
                       </TooltipContent>
                     </Tooltip>
@@ -495,7 +495,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     </button>
                   </ActionMenuTrigger>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" align="start" className="border-0 bg-[var(--color-ink)] text-white">
+                <TooltipContent side="bottom" align="start" className="border-0 bg-foreground text-background">
                   Add files and more
                 </TooltipContent>
               </Tooltip>
@@ -520,7 +520,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 className="order-3 inline-flex items-center gap-[4px] border border-[var(--color-royal)] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_oklch(0.554_0.199_263.043_/_0.1)] whitespace-nowrap animate-in fade-in duration-200"
                 style={{
                   backgroundImage:
-                    "linear-gradient(180deg, var(--color-white) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)",
+                    "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)",
                 }}
               >
                 <span
@@ -612,7 +612,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             disabled={isQuestionnaireActive}
             className={cn(
               "w-full h-[56px] pl-4 pr-0 pt-3 pb-3 rounded-lg border border-[var(--color-line-input)] dark:border-input-border dark:bg-input focus:outline-none focus:ring-1 focus:ring-[var(--color-royal)] dark:focus:ring-ring transition-shadow text-sm placeholder:text-[var(--color-grey)] dark:placeholder:text-foreground-muted dark:text-foreground shadow-[0px_1px_2px_0px_oklch(0.21_0.034_263.436_/_0.05)]",
-              isQuestionnaireActive && "cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800"
+              isQuestionnaireActive && "cursor-not-allowed opacity-50 bg-muted"
             )}
             autoComplete="off"
           />
@@ -676,7 +676,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             ? "text-[var(--color-grey)] dark:text-foreground-muted hover:text-cobalt-blue dark:hover:text-accent" 
             : inputValue.trim() 
               ? "bg-[var(--color-navy-deep)] text-white hover:bg-[var(--color-navy-deepest)]" 
-              : "bg-gray-200 text-gray-400 cursor-not-allowed",
+              : "bg-surface-2 text-grey-soft cursor-not-allowed",
           isQuestionnaireActive && "opacity-50 cursor-not-allowed"
         )}
         aria-label={isMockAgentChatActive ? "Stop conversation" : "Send message"}

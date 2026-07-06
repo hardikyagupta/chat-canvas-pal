@@ -24,7 +24,7 @@ export const ModeSwitchConfirmation: React.FC<ModeSwitchConfirmationProps> = ({
       <div className="fixed inset-0 bg-black/20 z-[60] flex items-center justify-center">
         {/* Popup Container - Following Figma specs */}
         <div 
-          className="relative bg-white shadow-[0px_5px_10px_oklch(0.227_0.066_279.78_/_0.05)] rounded-[5px] p-8"
+          className="relative bg-card shadow-[0px_5px_10px_oklch(0.227_0.066_279.78_/_0.05)] rounded-[5px] p-8"
           style={{ width: '620px' }}
         >
           {/* Content Container */}
@@ -50,7 +50,7 @@ export const ModeSwitchConfirmation: React.FC<ModeSwitchConfirmationProps> = ({
               {/* Cancel Button */}
               <Button
                 onClick={onCancel}
-                className="px-[18px] py-2 h-9 bg-white border-[1.5px] border-[var(--color-navy)] rounded-[4px] font-['Manrope'] font-semibold text-sm leading-5 uppercase text-[var(--color-navy)] hover:bg-white hover:text-[var(--color-navy)] hover:border-[var(--color-navy)]"
+                className="px-[18px] py-2 h-9 bg-card border-[1.5px] border-[var(--color-navy)] rounded-[4px] font-['Manrope'] font-semibold text-sm leading-5 uppercase text-[var(--color-navy)] hover:bg-card hover:text-[var(--color-navy)] hover:border-[var(--color-navy)]"
                 style={{ letterSpacing: '0.42px' }}
                 variant="outline"
               >

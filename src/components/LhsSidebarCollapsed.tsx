@@ -21,7 +21,7 @@ const LhsSidebarCollapsed: React.FC<LhsSidebarCollapsedProps> = ({
   ];
 
   return (
-    <div className="flex flex-col items-center w-[64px] h-full bg-white pb-[16px] flex-shrink-0">
+    <div className="flex flex-col items-center w-[64px] h-full bg-sidebar-background pb-[16px] flex-shrink-0">
       {/* Top: logo only — h-56 to align center with RHS header icons */}
       <div className="flex items-center justify-center h-[56px] shrink-0">
         <div className="flex items-center justify-center size-[40px]">

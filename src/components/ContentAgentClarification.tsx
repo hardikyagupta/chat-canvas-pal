@@ -276,11 +276,11 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
       {/* Radio buttons for selection mode */}
       <RadioGroup value={selectionMode} onValueChange={setSelectionMode} className="flex flex-row gap-6">
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="questionaire" id="questionaire" className="border-[var(--color-navy)] text-[var(--color-navy)] dark:border-white dark:text-white" />
+          <RadioGroupItem value="questionaire" id="questionaire" className="border-[var(--color-navy)] text-[var(--color-navy)]" />
           <Label htmlFor="questionaire" className="text-sm font-medium text-foreground cursor-pointer">Fill questionaire</Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="template" id="template" className="border-[var(--color-navy)] text-[var(--color-navy)] dark:border-white dark:text-white" />
+          <RadioGroupItem value="template" id="template" className="border-[var(--color-navy)] text-[var(--color-navy)]" />
           <Label htmlFor="template" className="text-sm font-medium text-foreground cursor-pointer">Use a saved template</Label>
         </div>
       </RadioGroup>
@@ -334,9 +334,9 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowTemplateFields(true)}
-                  className="h-9 w-9 p-0 border border-border hover:bg-muted hover:border-border dark:hover:bg-muted dark:hover:border-border"
+                  className="h-9 w-9 p-0 border border-border hover:bg-muted hover:border-border"
                 >
-                  <Pencil className="h-4 w-4 text-muted-foreground hover:text-muted-foreground dark:hover:text-white" />
+                  <Pencil className="h-4 w-4 text-muted-foreground hover:text-muted-foreground" />
                 </Button>
               </div>
             ) : (
@@ -437,15 +437,15 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
               <Accordion type="single" collapsible defaultValue="email" className="w-full">
                 
                 <AccordionItem value="email" className="border-b-0 last:border-0">
-                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
                     <div className="flex items-center gap-2">
-                      <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                      <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                         <Mail className="h-5 w-5" />
                       </span>
                       <span>Email</span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+                  <AccordionContent className="px-4 py-3 bg-surface-0">
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-muted-foreground">Additional remarks for Email</Label>
@@ -461,15 +461,15 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
                 </AccordionItem>
 
                 <AccordionItem value="whatsapp" className="border-b-0 last:border-0">
-                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
                     <div className="flex items-center gap-2">
-                      <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                      <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                         <MessageSquare className="h-5 w-5" />
                       </span>
                       <span>WhatsApp</span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+                  <AccordionContent className="px-4 py-3 bg-surface-0">
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-muted-foreground">Category</Label>
@@ -560,15 +560,15 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
                 </AccordionItem>
 
                 <AccordionItem value="app-push" className="border-b-0 last:border-0">
-                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
                     <div className="flex items-center gap-2">
-                      <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                      <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                         <BellRing className="h-5 w-5" />
                       </span>
                       <span>App push</span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+                  <AccordionContent className="px-4 py-3 bg-surface-0">
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-muted-foreground">Layout</Label>
@@ -729,15 +729,15 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
               <Accordion type="single" collapsible defaultValue="email" className="w-full">
                 
                 <AccordionItem value="email" className="border-b-0 last:border-0">
-                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
                     <div className="flex items-center gap-2">
-                      <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                      <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                         <Mail className="h-5 w-5" />
                       </span>
                       <span>Email</span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+                  <AccordionContent className="px-4 py-3 bg-surface-0">
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-muted-foreground">Additional remarks for Email</Label>
@@ -753,15 +753,15 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
                 </AccordionItem>
 
                 <AccordionItem value="whatsapp" className="border-b-0 last:border-0">
-                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
                     <div className="flex items-center gap-2">
-                      <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                      <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                         <MessageSquare className="h-5 w-5" />
                       </span>
                       <span>WhatsApp</span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+                  <AccordionContent className="px-4 py-3 bg-surface-0">
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-muted-foreground">Category</Label>
@@ -852,15 +852,15 @@ export function ContentAgentClarification({ onGenerateContent, showGenerateButto
                 </AccordionItem>
 
                 <AccordionItem value="app-push" className="border-b-0 last:border-0">
-                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+                  <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
                     <div className="flex items-center gap-2">
-                      <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                      <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                         <BellRing className="h-5 w-5" />
                       </span>
                       <span>App push</span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+                  <AccordionContent className="px-4 py-3 bg-surface-0">
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-muted-foreground">Layout</Label>

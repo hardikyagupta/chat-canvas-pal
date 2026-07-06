@@ -15,12 +15,12 @@ const SystemMessage = ({ type, agentName, agentIcon: Icon, agentColorClass }: Sy
     <div className="flex items-center justify-center gap-1 py-1">
       {/* Render the agent's specific icon if available */}
       {Icon ? (
-        <Icon className="w-3.5 h-3.5 text-gray-400" /> // Reverted to fixed gray color
+        <Icon className="w-3.5 h-3.5 text-grey-soft" /> // Reverted to fixed gray color
       ) : (
         // Fallback if no icon is provided (shouldn't happen with current logic)
         <span className="w-3.5 h-3.5"></span> // Placeholder or default icon
       )}
-      <span className="text-xs text-gray-400">
+      <span className="text-xs text-grey-soft">
         {agentName} {type === 'join' ? 'joined' : 'left'} the chat
       </span>
     </div>

@@ -130,7 +130,7 @@ export function ExecutiveSummaryContentAccordion() {
   };
 
   return (
-    <div className="w-full mt-4 pt-4 border-t border-gray-200">
+    <div className="w-full mt-4 pt-4 border-t border-line">
       <div className="space-y-3">
         {/* Single Accordion Trigger - "View content" */}
         <button
@@ -149,7 +149,7 @@ export function ExecutiveSummaryContentAccordion() {
             // Transition for smooth hover
             "transition-all duration-200",
             // Background based on state - exactly matching Figma
-            isHovered ? "bg-[var(--color-surface-1)]" : "bg-white",
+            isHovered ? "bg-[var(--color-surface-1)]" : "bg-card",
             // Focus styles
             "focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           )}
@@ -195,22 +195,22 @@ export function ExecutiveSummaryContentAccordion() {
         {isOpen && (
           <div className="ml-6 space-y-6 transition-all duration-300 ease-in-out">
             {segmentData.map((segment, index) => (
-              <div key={segment.id} className="space-y-3 pb-4 border-b border-gray-100 last:border-b-0">
+              <div key={segment.id} className="space-y-3 pb-4 border-b border-line last:border-b-0">
                 {/* Segment Title */}
-                <h3 className="font-semibold text-sm text-gray-900 mb-3">
+                <h3 className="font-semibold text-sm text-foreground mb-3">
                   {segment.name}
                 </h3>
 
                 {/* Email Section */}
                 <div>
-                  <h4 className="font-semibold text-sm mb-1 text-gray-800">Email</h4>
-                  <p className="text-sm text-gray-700"><span className="font-medium">Subject:</span> {segment.email.subject}</p>
+                  <h4 className="font-semibold text-sm mb-1 text-slate">Email</h4>
+                  <p className="text-sm text-slate"><span className="font-medium">Subject:</span> {segment.email.subject}</p>
                 </div>
 
                 {/* App Push Section */}
                 <div>
-                  <h4 className="font-semibold text-sm mb-1 text-gray-800">App Push</h4>
-                  <div className="text-sm text-gray-700 space-y-1">
+                  <h4 className="font-semibold text-sm mb-1 text-slate">App Push</h4>
+                  <div className="text-sm text-slate space-y-1">
                     <p><span className="font-medium">Title:</span> {segment.appPush.title}</p>
                     <p><span className="font-medium">Message:</span> {segment.appPush.message}</p>
                     <p><span className="font-medium">CTA:</span> {segment.appPush.cta}</p>
@@ -219,8 +219,8 @@ export function ExecutiveSummaryContentAccordion() {
 
                 {/* WhatsApp Section */}
                 <div>
-                  <h4 className="font-semibold text-sm mb-1 text-gray-800">WhatsApp</h4>
-                  <div className="text-sm text-gray-700 space-y-1">
+                  <h4 className="font-semibold text-sm mb-1 text-slate">WhatsApp</h4>
+                  <div className="text-sm text-slate space-y-1">
                     <p><span className="font-medium">Header:</span> {segment.whatsapp.header}</p>
                     <p><span className="font-medium">Body:</span> {segment.whatsapp.body}</p>
                     <p><span className="font-medium">Footer:</span> {segment.whatsapp.footer}</p>

@@ -83,7 +83,7 @@ export function EngagementScore({
           {score}%
         </div>
         {showLabel && (
-          <div className="text-slate-900 dark:text-white text-[10px] font-normal font-['Manrope'] leading-none">
+          <div className="text-foreground text-[10px] font-normal font-['Manrope'] leading-none">
             Engagement score
           </div>
         )}

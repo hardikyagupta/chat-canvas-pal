@@ -38,7 +38,7 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
   }, [chats, query]);
 
   return (
-    <div className={cn('flex flex-col h-full w-full bg-white', className)}>
+    <div className={cn('flex flex-col h-full w-full bg-card', className)}>
       {/* Header */}
       <div className="flex flex-col gap-[12px] px-[24px] pt-[20px] pb-[12px] w-full shrink-0 border-b border-[var(--color-surface-2)]">
         <div className="flex items-center justify-between gap-[12px]">
@@ -66,7 +66,7 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
         </div>
 
         {/* Search */}
-        <div className="flex items-center gap-[8px] h-[40px] px-[12px] w-full rounded-[8px] border border-[var(--color-line-input)] bg-white focus-within:border-[var(--color-line-strong)] transition-colors">
+        <div className="flex items-center gap-[8px] h-[40px] px-[12px] w-full rounded-[8px] border border-[var(--color-line-input)] bg-card focus-within:border-[var(--color-line-strong)] transition-colors">
           <Search className="size-[16px] text-[var(--color-grey-soft)] shrink-0" />
           <input
             type="text"

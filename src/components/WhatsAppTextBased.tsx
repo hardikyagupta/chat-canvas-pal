@@ -91,20 +91,20 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
   };
 
   return (
-    <div className="space-y-5 bg-white">
+    <div className="space-y-5 bg-card">
       <h3 className="text-sm font-medium text-foreground">Content agent suggests:</h3>
       
       {/* Header */}
       <div className="space-y-2">
         <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
           Header
-          <span className="text-red-500 text-xs">*</span>
+          <span className="text-danger text-xs">*</span>
         </Label>
         <Input
           value={currentData.header}
           onChange={(e) => updateField('header', e.target.value)}
           placeholder="Enter header text..."
-          className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+          className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-surface-0"
         />
       </div>
 
@@ -112,13 +112,13 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
       <div className="space-y-2">
         <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
           Body
-          <span className="text-red-500 text-xs">*</span>
+          <span className="text-danger text-xs">*</span>
         </Label>
         <Textarea
           value={currentData.body}
           onChange={(e) => updateField('body', e.target.value)}
           placeholder="Enter body text..."
-          className="border-border shadow-none resize-none min-h-[100px] focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+          className="border-border shadow-none resize-none min-h-[100px] focus:border-border focus:ring-0 hover:border-border bg-surface-0"
         />
       </div>
 
@@ -126,13 +126,13 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
       <div className="space-y-2">
         <Label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
           Footer
-          <span className="text-red-500 text-xs">*</span>
+          <span className="text-danger text-xs">*</span>
         </Label>
         <Input
           value={currentData.footer}
           onChange={(e) => updateField('footer', e.target.value)}
           placeholder="Enter footer text..."
-          className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+          className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-surface-0"
         />
       </div>
 
@@ -143,7 +143,7 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
           if (!cta) return null;
           
           return (
-            <div key={ctaKey} className="space-y-3 p-3 border border-border rounded-lg bg-white dark:bg-gray-800/20">
+            <div key={ctaKey} className="space-y-3 p-3 border border-border rounded-lg bg-card">
               <Label className="text-sm font-medium text-foreground">
                 CTA {index + 1}
               </Label>
@@ -159,7 +159,7 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
                         variant="outline"
                         role="combobox"
                         aria-expanded={openCtaPopover === ctaKey}
-                        className="w-full justify-between border-border bg-gray-50 hover:bg-gray-50 hover:outline-slate-200 focus:bg-gray-50 focus:outline-slate-300 text-foreground hover:text-foreground text-xs dark:bg-gray-900/40 dark:hover:bg-gray-900/60"
+                        className="w-full justify-between border-border bg-surface-0 hover:bg-surface-0 hover:outline-line focus:bg-surface-0 focus:outline-line-input text-foreground hover:text-foreground text-xs"
                       >
                         {cta.buttonType || "Select type..."}
                         <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -178,7 +178,7 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
                               "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                               cta.buttonType === option
                                 ? "bg-[var(--color-royal-pale)]"
-                                : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                                : "hover:bg-muted"
                             )}
                           >
                             <span className="font-medium text-xs">{option}</span>
@@ -201,7 +201,7 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
                     value={cta.ctaText}
                     onChange={(e) => updateCtaField(ctaKey, 'ctaText', e.target.value)}
                     placeholder="Enter CTA text"
-                    className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"
+                    className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-surface-0"
                   />
                 </div>
 
@@ -215,7 +215,7 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
                       value={cta.websiteLink || ''}
                       onChange={(e) => updateCtaField(ctaKey, 'websiteLink', e.target.value)}
                       placeholder="https://example.com"
-                      className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"
+                      className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-surface-0"
                     />
                   </div>
                 )}
@@ -230,7 +230,7 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
                         value={(cta as any).country || ''}
                         onChange={(e) => updateCtaField(ctaKey, 'country', e.target.value)}
                         placeholder="+1"
-                        className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"
+                        className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-surface-0"
                       />
                     </div>
                     <div className="space-y-2">
@@ -241,7 +241,7 @@ export function WhatsAppTextBased({ data, onDataChange }: WhatsAppTextBasedProps
                         value={(cta as any).phoneNumber || ''}
                         onChange={(e) => updateCtaField(ctaKey, 'phoneNumber', e.target.value)}
                         placeholder="800-555-0199"
-                        className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"
+                        className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-surface-0"
                       />
                     </div>
                   </>

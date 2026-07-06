@@ -81,7 +81,7 @@ export function SchedulerAgentCampaignAccordions() {
 
   return (
     <div className="w-full space-y-4">
-      <p className="text-sm text-[var(--color-ink)] dark:text-white">Based on the campaign parameters and segments, I've created an optimal schedule considering the 7-day duration and established engagement patterns:</p>
+      <p className="text-sm text-[var(--color-ink)]">Based on the campaign parameters and segments, I've created an optimal schedule considering the 7-day duration and established engagement patterns:</p>
       
       <div className="space-y-3">
         {campaignData.map((campaign, index) => {
@@ -107,9 +107,9 @@ export function SchedulerAgentCampaignAccordions() {
                   // Transition for smooth hover
                   "transition-all duration-200",
                   // Background based on state - exactly matching Figma
-                  isHovered ? "bg-[var(--color-surface-1)]" : "bg-white",
+                  isHovered ? "bg-[var(--color-surface-1)]" : "bg-card",
                   // Focus styles
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  "focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--color-royal)_20%,transparent)]"
                 )}
               >
                 {/* Chevron Icon - 16x16px */}
@@ -154,14 +154,14 @@ export function SchedulerAgentCampaignAccordions() {
                 <div className="ml-6 space-y-3 transition-all duration-300 ease-in-out">
                   {/* Segment Section */}
                   <div>
-                    <h4 className="font-semibold text-sm mb-1 text-[var(--color-ink)] dark:text-white">Segment of campaign</h4>
-                    <p className="text-sm text-[var(--color-ink)] dark:text-white">{campaign.segment} | Reachable count: {formatNumber(campaign.reachableCount)} users</p>
+                    <h4 className="font-semibold text-sm mb-1 text-[var(--color-ink)]">Segment of campaign</h4>
+                    <p className="text-sm text-[var(--color-ink)]">{campaign.segment} | Reachable count: {formatNumber(campaign.reachableCount)} users</p>
                   </div>
 
                   {/* Schedule Section */}
                   <div>
-                    <h4 className="font-semibold text-sm mb-1 text-[var(--color-ink)] dark:text-white">Schedule of campaign</h4>
-                    <div className="text-sm text-[var(--color-ink)] dark:text-white space-y-1">
+                    <h4 className="font-semibold text-sm mb-1 text-[var(--color-ink)]">Schedule of campaign</h4>
+                    <div className="text-sm text-[var(--color-ink)] space-y-1">
                       <p><span className="font-medium">Send Time Optimization (STO):</span> {campaign.schedule.stoEnabled ? 'Enabled' : 'Not used'}</p>
                       <p><span className="font-medium">Schedule:</span> {campaign.schedule.schedule}</p>
                       <p><span className="font-medium">Push TTL:</span> {campaign.schedule.pushTTL}</p>

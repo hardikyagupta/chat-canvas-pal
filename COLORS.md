@@ -5,6 +5,14 @@ Single source of truth for every color in the app. All colors are expressed in
 (`:root` for light, `.dark` for dark). Tailwind exposes them as utilities via
 [`tailwind.config.ts`](tailwind.config.ts).
 
+Both conventions flip in dark mode: the functional shadcn tokens **and** the
+`--color-*` palette library are re-declared under `.dark {}`. So a single `.dark`
+class on `<html>` (applied by [`components/theme-provider.tsx`](components/theme-provider.tsx))
+drives the entire theme — components should never need a `dark:` variant; the
+token they reference flips for them. The theme is chosen via the header
+Sun/Moon toggle or the Settings → Theme "Interface mode" selector, both wired to
+the same `ThemeProvider` (localStorage key `ui-theme`, supports `system`).
+
 > **Rule:** never hardcode a hex / rgb / hsl color in a component. Use a token.
 > If a needed shade is missing, add a token here + in `index.css` first.
 
@@ -83,6 +91,31 @@ to it (buttons, focus ring, links, selected chip, shimmer-blue).
 | `--color-danger` | `danger` | `0.576 0.209 29.482` | Destructive / error | #D92D20 |
 | `--color-pink` | `pink` | `0.832 0.12 343.407` | Pink accent | #FFA8DC |
 | `--color-plum` | `plum` | `0.257 0.038 310.318` | Logo disc background | #291E31 |
+
+### Dark overrides for the palette
+
+Under `.dark {}` the `--color-*` ramp inverts so token-based utilities
+(`text-ink`, `bg-surface-0`, `border-line`, …) read correctly on a dark canvas.
+The neutral ramp flips (ink→near-white text, surfaces darken, lines lighten);
+brand/semantic accents are lifted in `L` for contrast. Notably `--color-white`
+becomes a dark surface (`0.287 0.005 271`) so existing `bg-[var(--color-white)]`
+usages don't stay pure-white in dark mode.
+
+| Token | Dark OKLCH | Token | Dark OKLCH |
+| --- | --- | --- | --- |
+| `--color-ink` | `0.985 0 0` | `--color-line` | `0.378 0.003 265` |
+| `--color-charcoal` | `0.92 0.005 260` | `--color-line-input` | `0.42 0.004 267` |
+| `--color-slate` | `0.85 0.008 260` | `--color-surface-2` | `0.33 0.004 271` |
+| `--color-grey` | `0.72 0.02 264` | `--color-surface-1` | `0.3 0.004 271` |
+| `--color-grey-soft` | `0.6 0.02 262` | `--color-surface-0` | `0.276 0.004 274` |
+| `--color-line-strong` | `0.44 0.004 264` | `--color-white` | `0.287 0.005 271` |
+| `--color-royal` | `0.62 0.19 263` | `--color-success` | `0.72 0.16 156` |
+| `--color-royal-strong` | `0.7 0.16 263` | `--color-warning` | `0.8 0.15 82` |
+| `--color-royal-pale` | `0.33 0.06 263` | `--color-danger` | `0.68 0.2 26` |
+| `--color-navy` | `0.55 0.15 262` | `--color-orange` | `0.72 0.2 41` |
+| `--color-steel` | `0.58 0.11 247` | `--color-plum` | `0.4 0.08 310` |
+
+See `.dark {}` in `index.css` for the complete list.
 
 ---
 

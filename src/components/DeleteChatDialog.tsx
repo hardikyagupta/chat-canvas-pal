@@ -39,7 +39,7 @@ const DeleteChatDialog: React.FC<DeleteChatDialogProps> = ({
       </AlertDialogHeader>
       <AlertDialogFooter>
         {/* Secondary button — matches the artifact "Download" style */}
-        <AlertDialogCancel className="mt-0 flex items-center justify-center px-[16px] py-[6px] h-auto rounded-[6px] border-[0.75px] border-[var(--color-line-strong)] bg-white shadow-[0px_1px_0px_0px_oklch(0_0_0_/_0.02)] text-[14px] leading-[20px] font-normal text-[var(--color-ink)] hover:bg-[var(--color-surface-0)] hover:text-[var(--color-ink)]">
+        <AlertDialogCancel className="mt-0 flex items-center justify-center px-[16px] py-[6px] h-auto rounded-[6px] border-[0.75px] border-[var(--color-line-strong)] bg-card shadow-[0px_1px_0px_0px_oklch(0_0_0_/_0.02)] text-[14px] leading-[20px] font-normal text-[var(--color-ink)] hover:bg-[var(--color-surface-0)] hover:text-[var(--color-ink)]">
           Cancel
         </AlertDialogCancel>
         {/* Primary (destructive) — matches the artifact primary button, red fill */}

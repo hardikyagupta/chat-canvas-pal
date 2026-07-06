@@ -68,7 +68,7 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="w-1.5 h-1.5 bg-gray-500 dark:bg-gray-400 rounded-full"
+                  className="w-1.5 h-1.5 bg-muted-foreground rounded-full"
                   style={{
                     animation: 'cursorDots 1.4s infinite ease-in-out',
                     animationDelay: `${i * 0.16}s`,
