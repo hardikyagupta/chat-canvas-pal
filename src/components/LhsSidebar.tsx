@@ -1,6 +1,9 @@
-import React, { useState, useRef } from 'react';
-import { SquarePen, MessageSquare, Bookmark, Settings, ChevronDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { SquarePen, MessageSquare, Bookmark, Settings, ChevronDown, MoreHorizontal, X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import ChatActionsMenu from './ChatActionsMenu';
+import DeleteChatDialog from './DeleteChatDialog';
 
 export interface LhsChatItem {
   id: string;
@@ -74,6 +77,51 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   const [chatsOpen, setChatsOpen] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Local (prototype) state for per-chat actions: rename overrides, deletions,
+  // bookmarks, which row's menu is open, and the inline-rename editing state.
+  const [titleOverrides, setTitleOverrides] = useState<Record<string, string>>({});
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (renamingId) renameInputRef.current?.focus();
+  }, [renamingId]);
+
+  const startRename = (id: string, current: string) => {
+    setMenuOpenId(null);
+    setRenamingId(id);
+    setRenameValue(current);
+  };
+  const commitRename = () => {
+    if (renamingId) {
+      const next = renameValue.trim();
+      if (next) setTitleOverrides((prev) => ({ ...prev, [renamingId]: next }));
+    }
+    setRenamingId(null);
+  };
+  const cancelRename = () => setRenamingId(null);
+  const toggleBookmark = (id: string) =>
+    setBookmarkedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  // Delete goes through a confirmation dialog first.
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const requestDelete = (id: string, title: string) => {
+    setMenuOpenId(null);
+    setDeleteTarget({ id, title });
+  };
+  const confirmDelete = () => {
+    if (deleteTarget) setDeletedIds((prev) => new Set(prev).add(deleteTarget.id));
+    setDeleteTarget(null);
+  };
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -184,40 +232,117 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
         {chatsOpen && (
           <div ref={scrollRef} onScroll={handleScroll} className="chat-scroll flex-1 min-h-0 overflow-y-auto w-full px-[12px] pb-[8px]">
             <div className="flex flex-col gap-[2px] items-start w-full">
-              {chats.map((chat) => {
+              {chats.filter((chat) => !deletedIds.has(chat.id)).map((chat) => {
                 const isActive = chat.id === activeChatId;
                 const isBusy = chat.id === busyChatId;
+                const isRenaming = chat.id === renamingId;
+                const isMenuOpen = chat.id === menuOpenId;
+                const title = titleOverrides[chat.id] ?? chat.title;
                 return (
-                  <button
+                  <div
                     key={chat.id}
-                    type="button"
-                    onClick={() => onSelectChat?.(chat.id)}
                     className={cn(
-                      'flex gap-[8px] h-[34px] items-center pl-[12px] pr-[12px] w-full rounded-[8px] overflow-hidden transition-colors',
-                      isActive ? 'bg-[oklch(0_0_0_/_0.12)]' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
+                      'group relative flex gap-[8px] h-[34px] items-center pl-[12px] pr-[8px] w-full rounded-[8px] overflow-hidden transition-colors',
+                      (isActive || isRenaming) ? 'bg-[oklch(0_0_0_/_0.12)]' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
                     )}
                   >
-                    <span
-                      className="flex-1 min-w-0 text-left text-[13px] text-[var(--color-charcoal)] whitespace-nowrap overflow-hidden text-ellipsis"
-                      style={{ fontFamily: 'Manrope, sans-serif', fontWeight: isActive ? 500 : 400 }}
-                    >
-                      {chat.title}
-                    </span>
-                    {isBusy ? (
-                      // Live "active" indicator while this chat is generating output
-                      <span className="relative flex size-[8px] shrink-0" aria-label="Generating">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-royal)] opacity-75" />
-                        <span className="relative inline-flex size-[8px] rounded-full bg-[var(--color-royal)]" />
-                      </span>
+                    {isRenaming ? (
+                      <>
+                        <input
+                          ref={renameInputRef}
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitRename();
+                            else if (e.key === 'Escape') cancelRename();
+                          }}
+                          className="flex-1 min-w-0 bg-transparent border-0 p-0 text-[13px] text-[var(--color-charcoal)] focus:outline-none"
+                          style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+                        />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={cancelRename}
+                              aria-label="Cancel"
+                              className="flex items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
+                            >
+                              <X className="size-[16px]" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="border-0 bg-[var(--color-ink)] text-white">
+                            Cancel
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={commitRename}
+                              aria-label="Save"
+                              className="flex items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
+                            >
+                              <Check className="size-[16px]" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="border-0 bg-[var(--color-ink)] text-white">
+                            Save
+                          </TooltipContent>
+                        </Tooltip>
+                      </>
                     ) : (
-                      <span
-                        className="text-[12px] text-[var(--color-grey)] whitespace-nowrap shrink-0"
-                        style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
-                      >
-                        {chat.time}
-                      </span>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onSelectChat?.(chat.id)}
+                          className="flex-1 min-w-0 text-left text-[13px] text-[var(--color-charcoal)] whitespace-nowrap overflow-hidden text-ellipsis"
+                          style={{ fontFamily: 'Manrope, sans-serif', fontWeight: isActive ? 500 : 400 }}
+                        >
+                          {title}
+                        </button>
+                        {/* Right slot: time / busy dot by default; three-dot on hover or when its menu is open */}
+                        {isBusy ? (
+                          <span className="relative flex size-[8px] shrink-0 mr-[4px]" aria-label="Generating">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-royal)] opacity-75" />
+                            <span className="relative inline-flex size-[8px] rounded-full bg-[var(--color-royal)]" />
+                          </span>
+                        ) : (
+                          <span
+                            className={cn(
+                              'text-[12px] text-[var(--color-grey)] whitespace-nowrap shrink-0 mr-[4px]',
+                              isMenuOpen ? 'hidden' : 'group-hover:hidden'
+                            )}
+                            style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
+                          >
+                            {chat.time}
+                          </span>
+                        )}
+                        <ChatActionsMenu
+                          open={isMenuOpen}
+                          onOpenChange={(o) => setMenuOpenId(o ? chat.id : null)}
+                          align="start"
+                          side="bottom"
+                          isBookmarked={bookmarkedIds.has(chat.id)}
+                          onRename={() => startRename(chat.id, title)}
+                          onBookmark={() => toggleBookmark(chat.id)}
+                          onDelete={() => requestDelete(chat.id, title)}
+                          trigger={
+                            <button
+                              type="button"
+                              onClick={(e) => e.stopPropagation()}
+                              aria-label="Chat options"
+                              className={cn(
+                                'items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] data-[state=open]:bg-[oklch(0_0_0_/_0.1)] shrink-0',
+                                isMenuOpen ? 'flex' : 'hidden group-hover:flex'
+                              )}
+                            >
+                              <MoreHorizontal className="size-[16px]" />
+                            </button>
+                          }
+                        />
+                      </>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -243,6 +368,13 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
         </span>
         {collapsed && <RailTooltip label="Settings" />}
       </button>
+
+      <DeleteChatDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        chatName={deleteTarget?.title}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 };
