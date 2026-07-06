@@ -1,5 +1,7 @@
-import React from 'react';
-import { Minimize2, X, PanelLeftClose, PanelLeftOpen, Bookmark } from 'lucide-react';
+import React, { useState } from 'react';
+import { Minimize2, X, PanelLeftClose, PanelLeftOpen, MoreHorizontal } from 'lucide-react';
+import ChatActionsMenu from './ChatActionsMenu';
+import DeleteChatDialog from './DeleteChatDialog';
 
 interface RhsHeaderProps {
   chatName?: string | null; // hidden when null/empty (no active chat)
@@ -8,6 +10,8 @@ interface RhsHeaderProps {
   onToggleSidebar?: () => void;
   isBookmarked?: boolean;
   onToggleBookmark?: () => void;
+  onRenameChat?: () => void;
+  onDeleteChat?: () => void;
   onMinimize?: () => void;
   onClose?: () => void;
 }
@@ -40,9 +44,12 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
   onToggleSidebar,
   isBookmarked,
   onToggleBookmark,
+  onRenameChat,
+  onDeleteChat,
   onMinimize,
   onClose,
 }) => {
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   return (
     <div className="atmo-glass-header flex items-start pl-[16px] w-full shrink-0 overflow-visible">
       <div className="flex flex-1 min-w-0 items-center justify-end h-[56px] pr-[24px] self-stretch">
@@ -70,21 +77,24 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                 >
                   {chatName}
                 </p>
-                {onToggleBookmark ? (
-                  <button
-                    type="button"
-                    onClick={onToggleBookmark}
-                    className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
-                    aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark chat'}
-                    aria-pressed={isBookmarked}
-                  >
-                    <Bookmark
-                      className="size-[16px] text-[var(--color-slate)]"
-                      fill={isBookmarked ? 'currentColor' : 'none'}
-                    />
-                    <HeaderTooltip label={isBookmarked ? 'Remove bookmark' : 'Bookmark chat'} align="left" />
-                  </button>
-                ) : null}
+                <ChatActionsMenu
+                  align="start"
+                  side="bottom"
+                  isBookmarked={isBookmarked}
+                  onRename={onRenameChat}
+                  onBookmark={onToggleBookmark}
+                  onDelete={() => setConfirmDeleteOpen(true)}
+                  trigger={
+                    <button
+                      type="button"
+                      className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                      aria-label="Chat options"
+                    >
+                      <MoreHorizontal className="size-[16px] text-[var(--color-slate)]" />
+                      <HeaderTooltip label="Chat options" align="left" />
+                    </button>
+                  }
+                />
               </div>
             ) : null}
           </div>
@@ -112,6 +122,16 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
           </div>
         </div>
       </div>
+
+      <DeleteChatDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        chatName={chatName}
+        onConfirm={() => {
+          setConfirmDeleteOpen(false);
+          onDeleteChat?.();
+        }}
+      />
     </div>
   );
 };

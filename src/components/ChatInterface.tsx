@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallba
 import { useNavigate } from 'react-router-dom';
 import { useAtmosphere } from '@/contexts/AtmosphereContext';
 // Lucide icons for various UI elements
-import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, MessageSquarePlus, Users, Trash2, Info, ChevronDown, StopCircle, MoreVertical, ArrowDown, Menu } from 'lucide-react';
+import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, CornerDownRight, Users, Trash2, Info, ChevronDown, StopCircle, MoreVertical, ArrowDown, Menu } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import SystemMessage from './SystemMessage';
@@ -2183,6 +2183,7 @@ The content has been updated across all channels to reflect your changes.`;
               onToggleSidebar={() => { setLhsCollapsed(prev => !prev); playToggleCue(); }}
               isBookmarked={isChatBookmarked}
               onToggleBookmark={() => setIsChatBookmarked(prev => !prev)}
+              onDeleteChat={handleNewChat}
               onMinimize={() => setIsExpanded(false)}
               onClose={onCloseInterface}
             />
@@ -2510,7 +2511,7 @@ The content has been updated across all channels to reflect your changes.`;
                         onClick={() => handleSendMessage(p)}
                         className="group flex w-fit max-w-full items-start gap-[10px] text-left rounded-[10px] border border-[var(--color-line)] bg-white px-[12px] py-[8px] hover:bg-[var(--color-surface-0)] hover:border-[var(--color-line-strong)] transition-colors"
                       >
-                        <MessageSquarePlus className="size-[16px] text-[var(--color-grey)] shrink-0 mt-[1px]" strokeWidth={1.75} />
+                        <CornerDownRight className="size-[16px] text-[var(--color-grey)] shrink-0 mt-[1px]" strokeWidth={1.75} />
                         <span className="text-[14px] leading-[20px] text-[var(--color-slate)]" style={{ fontFamily: 'Manrope, sans-serif' }}>{p}</span>
                       </button>
                     ))}
