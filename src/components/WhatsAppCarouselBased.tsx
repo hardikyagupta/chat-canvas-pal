@@ -156,12 +156,12 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
   };
 
   return (
-    <div className="w-full max-w-[873px] space-y-5 bg-white">
+    <div className="w-full max-w-[873px] space-y-5 bg-card">
       {/* Content agent suggests and Card navigation */}
       <div className="w-56 flex flex-col justify-start items-start gap-3.5">
         <div className="self-stretch justify-start text-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Content agent suggests:</div>
         <div 
-          className="self-stretch rounded-sm outline outline-[0.50px] outline-offset-[-0.50px] outline-slate-100 inline-flex justify-start items-center overflow-hidden"
+          className="self-stretch rounded-sm outline outline-[0.50px] outline-offset-[-0.50px] outline-line inline-flex justify-start items-center overflow-hidden"
           style={{
             width: '220px',
             height: '26px',
@@ -177,8 +177,8 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
               className={cn(
                 "flex justify-center items-center cursor-pointer",
                 activeCard === item.id 
-                  ? "bg-[var(--color-navy)]" 
-                  : "bg-white"
+                  ? "bg-[var(--color-navy)]"
+                  : "bg-card"
               )}
               style={{
                 width: '55px',
@@ -218,14 +218,14 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
             <div className="flex flex-col justify-start items-start gap-1">
               <div className="justify-start">
                 <span className="text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Message bubble </span>
-                <span className="text-red-500 text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
+                <span className="text-danger text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
               </div>
             </div>
             <Input
               value={activeItem.messageBubble}
               onChange={(e) => updateItemField(activeCard, 'messageBubble', e.target.value)}
               placeholder="Enter message bubble text..."
-              className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+              className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-surface-0"
             />
           </div>
         </div>
@@ -236,14 +236,14 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
             <div className="flex flex-col justify-start items-start gap-1">
               <div className="justify-start">
                 <span className="text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Header </span>
-                <span className="text-red-500 text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
+                <span className="text-danger text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
               </div>
             </div>
             <Input
               value={activeItem.header}
               onChange={(e) => updateItemField(activeCard, 'header', e.target.value)}
               placeholder="Enter header text..."
-              className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+              className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-surface-0"
             />
           </div>
         </div>
@@ -254,14 +254,14 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
             <div className="flex flex-col justify-start items-start gap-1">
               <div className="justify-start">
                 <span className="text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Body </span>
-                <span className="text-red-500 text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
+                <span className="text-danger text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
               </div>
             </div>
             <Textarea
               value={activeItem.body}
               onChange={(e) => updateItemField(activeCard, 'body', e.target.value)}
               placeholder="Enter body text..."
-              className="border-border shadow-none resize-none min-h-[100px] focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+              className="border-border shadow-none resize-none min-h-[100px] focus:border-border focus:ring-0 hover:border-border bg-surface-0"
             />
           </div>
         </div>
@@ -272,20 +272,20 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
             <div className="flex flex-col justify-start items-start gap-1">
               <div className="justify-start">
                 <span className="text-muted-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">Footer </span>
-                <span className="text-red-500 text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
+                <span className="text-danger text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">*</span>
               </div>
             </div>
             <Input
               value={activeItem.footer}
               onChange={(e) => updateItemField(activeCard, 'footer', e.target.value)}
               placeholder="Enter footer text..."
-              className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+              className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-surface-0"
             />
           </div>
         </div>
 
         {/* CTA 1 */}
-        <div className="self-stretch p-4 bg-white dark:bg-gray-800/20 rounded border border-border flex flex-col justify-start items-start gap-2.5">
+        <div className="self-stretch p-4 bg-card rounded border border-border flex flex-col justify-start items-start gap-2.5">
           <div className="self-stretch flex flex-col justify-start items-start gap-3.5">
             <div className="justify-start text-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">CTA 1</div>
             <div className="self-stretch inline-flex justify-start items-start gap-6">
@@ -300,7 +300,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                         variant="outline"
                         role="combobox"
                         aria-expanded={openCtaPopover?.itemId === activeCard && openCtaPopover?.ctaKey === 'cta1'}
-                        className="w-full justify-between border-border bg-gray-50 hover:bg-gray-50 hover:outline-slate-200 focus:bg-gray-50 focus:outline-slate-300 text-foreground hover:text-foreground text-xs dark:bg-gray-900/40 dark:hover:bg-gray-900/60"
+                        className="w-full justify-between border-border bg-surface-0 hover:bg-surface-0 hover:outline-line focus:bg-surface-0 focus:outline-line-input text-foreground hover:text-foreground text-xs"
                       >
                         {activeItem.cta1?.buttonType || "Select type..."}
                         <ChevronDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
@@ -319,7 +319,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                               "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                               activeItem.cta1?.buttonType === option
                                 ? "bg-[var(--color-royal-pale)]"
-                                : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                                : "hover:bg-muted"
                             )}
                           >
                             <span className="font-medium text-xs">{option}</span>
@@ -342,7 +342,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                     value={activeItem.cta1?.ctaText || ''}
                     onChange={(e) => updateItemCtaField(activeCard, 'cta1', 'ctaText', e.target.value)}
                     placeholder="Enter CTA text"
-                    className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"
+                    className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-surface-0"
                   />
                 </div>
               </div>
@@ -356,7 +356,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                   value={activeItem.cta1?.websiteLink || ''}
                   onChange={(e) => updateItemCtaField(activeCard, 'cta1', 'websiteLink', e.target.value)}
                   placeholder="https://example.com"
-                  className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"
+                  className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-surface-0"
                 />
               </div>
             </div>
@@ -364,7 +364,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
         </div>
 
         {/* CTA 2 */}
-        <div className="self-stretch p-4 bg-white dark:bg-gray-800/20 rounded border border-border flex flex-col justify-start items-start gap-2.5">
+        <div className="self-stretch p-4 bg-card rounded border border-border flex flex-col justify-start items-start gap-2.5">
           <div className="self-stretch flex flex-col justify-start items-start gap-3.5">
             <div className="justify-start text-foreground text-sm font-semibold font-['Manrope'] leading-tight tracking-wide">CTA 2</div>
             <div className="self-stretch inline-flex justify-start items-start gap-6">
@@ -379,7 +379,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                         variant="outline"
                         role="combobox"
                         aria-expanded={openCtaPopover?.itemId === activeCard && openCtaPopover?.ctaKey === 'cta2'}
-                        className="w-full justify-between border-border bg-gray-50 hover:bg-gray-50 hover:outline-slate-200 focus:bg-gray-50 focus:outline-slate-300 text-foreground hover:text-foreground text-xs dark:bg-gray-900/40 dark:hover:bg-gray-900/60"
+                        className="w-full justify-between border-border bg-surface-0 hover:bg-surface-0 hover:outline-line focus:bg-surface-0 focus:outline-line-input text-foreground hover:text-foreground text-xs"
                       >
                         {activeItem.cta2?.buttonType || "Select type..."}
                         <ChevronDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
@@ -398,7 +398,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                               "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                               activeItem.cta2?.buttonType === option
                                 ? "bg-[var(--color-royal-pale)]"
-                                : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                                : "hover:bg-muted"
                             )}
                           >
                             <span className="font-medium text-xs">{option}</span>
@@ -421,7 +421,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                     value={activeItem.cta2?.ctaText || ''}
                     onChange={(e) => updateItemCtaField(activeCard, 'cta2', 'ctaText', e.target.value)}
                     placeholder="Enter CTA text"
-                    className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"
+                    className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-surface-0"
                   />
                 </div>
               </div>
@@ -435,7 +435,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
                   value={activeItem.cta2?.websiteLink || ''}
                   onChange={(e) => updateItemCtaField(activeCard, 'cta2', 'websiteLink', e.target.value)}
                   placeholder="https://example.com"
-                  className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"
+                  className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-surface-0"
                 />
               </div>
             </div>
@@ -451,7 +451,7 @@ export function WhatsAppCarouselBased({ data, onDataChange }: WhatsAppCarouselBa
             value={activeItem.imageUrl}
             onChange={(e) => updateItemField(activeCard, 'imageUrl', e.target.value)}
             placeholder="https://example.com/image.jpg"
-            className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-gray-50 dark:bg-gray-900/40"
+            className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border text-xs bg-surface-0"
           />
         </div>
 

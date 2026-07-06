@@ -621,7 +621,7 @@ export function ContentAgentResponse({
                       "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                       selectedEmailSegment === segment.id 
                         ? "bg-[var(--color-royal-pale)]" 
-                        : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                        : "hover:bg-muted"
                     )}
                   >
                     <span className="font-medium">{segment.name}</span>
@@ -687,7 +687,7 @@ export function ContentAgentResponse({
                       "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                       selectedApnSegment === segment.id 
                         ? "bg-[var(--color-royal-pale)]" 
-                        : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                        : "hover:bg-muted"
                     )}
                   >
                     <span className="font-medium">{segment.name}</span>
@@ -751,7 +751,7 @@ export function ContentAgentResponse({
   const customEmailContent = (
     <div className="space-y-5">
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-gray-600">Subject line</Label>
+        <Label className="text-sm font-medium text-muted-foreground">Subject line</Label>
         <Input
           value={collaborativeContentDataState.email[selectedCollaborativeSegment as keyof typeof collaborativeContentDataState.email].subject}
           onChange={(e) => {
@@ -760,11 +760,11 @@ export function ContentAgentResponse({
             setCollaborativeContentDataState(updatedData);
           }}
           placeholder="Enter email subject line"
-          className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+          className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-surface-0"
         />
       </div>
       
-      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Content agent suggests:</h3>
+      <h3 className="text-sm font-medium text-slate">Content agent suggests:</h3>
       
       <RadioGroup 
         value={selectedTemplate} 
@@ -791,7 +791,7 @@ export function ContentAgentResponse({
                   "cursor-pointer block transition-all duration-200 rounded-md overflow-hidden",
                   isSelected 
                     ? "ring-2 ring-[var(--color-navy)] shadow-md" 
-                    : "ring-1 ring-gray-200 hover:ring-2 hover:ring-[var(--color-navy)]/50 hover:shadow-md"
+                    : "ring-1 ring-line hover:ring-2 hover:ring-[var(--color-navy)]/50 hover:shadow-md"
                 )}
               >
                 <div className="relative pt-[65%] overflow-hidden">
@@ -808,15 +808,15 @@ export function ContentAgentResponse({
                     </div>
                   </div>
                 </div>
-                <div className="px-3 py-2 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
-                  <div className="text-xs font-medium text-gray-700 dark:text-white truncate">
+                <div className="px-3 py-2 bg-card border-t border-line">
+                  <div className="text-xs font-medium text-slate truncate">
                     {template.name}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <div className="text-[10px] text-gray-500 dark:text-gray-300">
+                    <div className="text-[10px] text-muted-foreground">
                       ID: {template.templateId}
                     </div>
-                    <div className="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
+                    <div className="w-px h-3 bg-border"></div>
                     <EngagementScore score={template.engagementScore} />
                   </div>
                 </div>
@@ -827,13 +827,13 @@ export function ContentAgentResponse({
       </RadioGroup>
       
       <div className="relative flex items-center py-2">
-        <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
-        <span className="flex-shrink mx-4 text-gray-400 text-sm">OR</span>
-        <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+        <div className="flex-grow border-t border-line"></div>
+        <span className="flex-shrink mx-4 text-grey-soft text-sm">OR</span>
+        <div className="flex-grow border-t border-line"></div>
       </div>
       
       <div className="space-y-2">
-        <p className="text-sm text-gray-500 dark:text-gray-400">Select from existing templates:</p>
+        <p className="text-sm text-muted-foreground">Select from existing templates:</p>
         <div className="w-full max-w-[400px]">
           <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
             <PopoverTrigger asChild>
@@ -841,14 +841,14 @@ export function ContentAgentResponse({
                 variant="outline"
                 role="combobox"
                 aria-expanded={openCombobox}
-                className="w-full justify-between border-gray-200 bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
+                className="w-full justify-between border-line bg-background hover:bg-surface-0 text-slate hover:text-foreground"
               >
                 {selectedExistingTemplate
                   ? existingTemplates.find((template) => template.id === selectedExistingTemplate)?.name
                   : "Select a template..."}
                 {selectedExistingTemplate ? (
                   <X 
-                    className="ml-1 h-4 w-4 shrink-0 text-gray-400 hover:text-gray-600" 
+                    className="ml-1 h-4 w-4 shrink-0 text-grey-soft hover:text-muted-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedExistingTemplate("");
@@ -862,19 +862,19 @@ export function ContentAgentResponse({
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[400px] p-0 border-gray-200 shadow-lg dark:border-gray-700">
+            <PopoverContent className="w-[400px] p-0 border-line shadow-lg">
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-grey-soft pointer-events-none" />
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search templates..."
-                  className="h-9 w-full border-0 border-b border-gray-200 dark:border-gray-700 pl-9 pr-3 py-2 text-sm outline-none focus:ring-0 placeholder:text-gray-400"
+                  className="h-9 w-full border-0 border-b border-line pl-9 pr-3 py-2 text-sm outline-none focus:ring-0 placeholder:text-grey-soft"
                 />
               </div>
               <div className="max-h-[200px] overflow-auto p-1">
                 {filteredTemplates.length === 0 ? (
-                  <div className="py-6 text-center text-sm text-gray-500">
+                  <div className="py-6 text-center text-sm text-muted-foreground">
                     No templates found.
                   </div>
                 ) : (
@@ -884,9 +884,9 @@ export function ContentAgentResponse({
                       onClick={() => handleDropdownSelect(template.id)}
                       className={cn(
                         "flex items-center justify-between py-3 px-3 rounded-md cursor-pointer transition-colors",
-                        selectedExistingTemplate === template.id 
-                          ? "bg-[var(--color-royal-pale)] text-gray-900 dark:bg-[var(--color-navy)] dark:text-white" 
-                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        selectedExistingTemplate === template.id
+                          ? "bg-[var(--color-royal-pale)] text-foreground"
+                          : "text-slate hover:bg-muted"
                       )}
                     >
                       <div className="flex flex-col flex-1">
@@ -894,18 +894,18 @@ export function ContentAgentResponse({
                         <div className="flex items-center gap-2 mt-1">
                           <span className={cn(
                             "text-xs",
-                            selectedExistingTemplate === template.id 
-                              ? "text-gray-600 dark:text-gray-300" 
-                              : "text-gray-500 dark:text-gray-400"
+                            selectedExistingTemplate === template.id
+                              ? "text-muted-foreground"
+                              : "text-muted-foreground"
                           )}>
                             ID: {template.id}
                           </span>
-                          <div className="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
+                          <div className="w-px h-3 bg-border"></div>
                           <EngagementScore score={template.engagementScore} />
                         </div>
                       </div>
                       {selectedExistingTemplate === template.id && (
-                        <Check className="h-4 w-4 text-[var(--color-navy)] dark:text-blue-400 ml-2" />
+                        <Check className="h-4 w-4 text-[var(--color-navy)] ml-2" />
                       )}
                     </div>
                   ))
@@ -925,7 +925,7 @@ export function ContentAgentResponse({
               return (
                 <div className="grid grid-cols-3 gap-4">
                   <div className="relative">
-                    <div className="rounded-md overflow-hidden ring-1 ring-gray-200">
+                    <div className="rounded-md overflow-hidden ring-1 ring-line">
                       <div className="relative pt-[65%] overflow-hidden">
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className={cn(
@@ -939,15 +939,15 @@ export function ContentAgentResponse({
                           </div>
                         </div>
                       </div>
-                      <div className="px-3 py-2 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
-                        <div className="text-xs font-medium text-gray-700 dark:text-white truncate">
+                      <div className="px-3 py-2 bg-card border-t border-line">
+                        <div className="text-xs font-medium text-slate truncate">
                           {thumbnailData.name}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <div className="text-[10px] text-gray-500 dark:text-gray-300">
+                          <div className="text-[10px] text-muted-foreground">
                             ID: {thumbnailData.id}
                           </div>
-                          <div className="w-px h-3 bg-gray-300 dark:bg-gray-600"></div>
+                          <div className="w-px h-3 bg-border"></div>
                           <EngagementScore score={thumbnailData.engagementScore} />
                         </div>
                       </div>
@@ -965,12 +965,12 @@ export function ContentAgentResponse({
   // Custom App Push content for collaborative mode with segment-based content
   const customApnContent = (
     <div className="space-y-5">
-      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Content agent suggests:</h3>
+      <h3 className="text-sm font-medium text-slate">Content agent suggests:</h3>
 
       <div className="space-y-3">
         {/* Title Field */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-600">Title</Label>
+          <Label className="text-sm font-medium text-muted-foreground">Title</Label>
           <Input
             value={collaborativeContentDataState.apn[selectedCollaborativeSegment as keyof typeof collaborativeContentDataState.apn].title}
             onChange={(e) => {
@@ -979,13 +979,13 @@ export function ContentAgentResponse({
               setCollaborativeContentDataState(updatedData);
             }}
             placeholder="Enter push title"
-            className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+            className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-surface-0"
           />
         </div>
 
         {/* Message Field */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-600">Message</Label>
+          <Label className="text-sm font-medium text-muted-foreground">Message</Label>
           <Textarea
             value={collaborativeContentDataState.apn[selectedCollaborativeSegment as keyof typeof collaborativeContentDataState.apn].message}
             onChange={(e) => {
@@ -994,13 +994,13 @@ export function ContentAgentResponse({
               setCollaborativeContentDataState(updatedData);
             }}
             placeholder="Enter push message"
-            className="border-border shadow-none resize-none min-h-[60px] focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+            className="border-border shadow-none resize-none min-h-[60px] focus:border-border focus:ring-0 hover:border-border bg-surface-0"
           />
         </div>
 
         {/* CTA Field */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-600">Call to Action</Label>
+          <Label className="text-sm font-medium text-muted-foreground">Call to Action</Label>
           <Input
             value={collaborativeContentDataState.apn[selectedCollaborativeSegment as keyof typeof collaborativeContentDataState.apn].cta}
             onChange={(e) => {
@@ -1009,12 +1009,12 @@ export function ContentAgentResponse({
               setCollaborativeContentDataState(updatedData);
             }}
             placeholder="Enter CTA"
-            className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-gray-50 dark:bg-gray-900/40"
+            className="border-border shadow-none focus:border-border focus:ring-0 hover:border-border bg-surface-0"
           />
         </div>
 
         {/* Engagement Score */}
-        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="pt-3 border-t border-line">
           <EngagementScore score={85} />
         </div>
       </div>
@@ -1060,9 +1060,9 @@ export function ContentAgentResponse({
                       }}
                       className={cn(
                         "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
-                        selectedCollaborativeSegment === segment.id 
-                          ? "bg-gray-100 dark:bg-gray-800" 
-                          : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                        selectedCollaborativeSegment === segment.id
+                          ? "bg-muted"
+                          : "hover:bg-muted"
                       )}
                     >
                       <span className="font-medium">{segment.name}</span>
@@ -1081,43 +1081,43 @@ export function ContentAgentResponse({
       <div className="border rounded-lg overflow-hidden">
         <Accordion type="single" collapsible defaultValue="email" className="w-full">
           <AccordionItem value="email" className="border-b-0 last:border-0">
-            <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+            <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
               <div className="flex items-center gap-2">
-                <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                   <Mail className="h-5 w-5" />
                 </span>
                 <span>Email</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+            <AccordionContent className="px-4 py-3 bg-surface-0">
               {isPlanMode ? autonomousEmailContent : (emailContent || customEmailContent)}
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="apn" className="border-b-0 last:border-0">
-            <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+            <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
               <div className="flex items-center gap-2">
-                <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                   <BellRing className="h-5 w-5" />
                 </span>
                 <span>App push</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+            <AccordionContent className="px-4 py-3 bg-surface-0">
               {isPlanMode ? autonomousApnContent : (apnContent || customApnContent)}
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="whatsapp-text" className="border-b-0">
-            <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+            <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
               <div className="flex items-center gap-2">
-                <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                   <MessageSquare className="h-5 w-5" />
                 </span>
                 <span>WhatsApp - Text Based</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+            <AccordionContent className="px-4 py-3 bg-surface-0">
               {isPlanMode ? (
                 <div className="space-y-5">
                   {/* Segment Dropdown */}
@@ -1151,7 +1151,7 @@ export function ContentAgentResponse({
                                   "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                                   selectedWhatsappSegment === segment.id 
                                     ? "bg-[var(--color-royal-pale)]" 
-                                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    : "hover:bg-muted"
                                 )}
                               >
                                 <span className="font-medium">{segment.name}</span>
@@ -1180,15 +1180,15 @@ export function ContentAgentResponse({
           </AccordionItem>
 
           <AccordionItem value="whatsapp-carousel" className="border-b-0">
-            <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+            <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
               <div className="flex items-center gap-2">
-                <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                   <MessageSquare className="h-5 w-5" />
                 </span>
                 <span>WhatsApp - Carousel Based</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+            <AccordionContent className="px-4 py-3 bg-surface-0">
               {isPlanMode ? (
                 <div className="space-y-5">
                   {/* Segment Dropdown */}
@@ -1222,7 +1222,7 @@ export function ContentAgentResponse({
                                   "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                                   selectedWhatsappSegment === segment.id 
                                     ? "bg-[var(--color-royal-pale)]" 
-                                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    : "hover:bg-muted"
                                 )}
                               >
                                 <span className="font-medium">{segment.name}</span>
@@ -1251,15 +1251,15 @@ export function ContentAgentResponse({
           </AccordionItem>
 
           <AccordionItem value="whatsapp-media" className="border-b-0 last:border-0">
-            <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-gray-50 dark:hover:bg-gray-900">
+            <AccordionTrigger className="font-medium py-3 px-4 hover:no-underline hover:bg-surface-0">
               <div className="flex items-center gap-2">
-                <span className="h-6 w-6 flex items-center justify-center text-gray-500">
+                <span className="h-6 w-6 flex items-center justify-center text-muted-foreground">
                   <MessageSquare className="h-5 w-5" />
                 </span>
                 <span>WhatsApp - Media Based</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+            <AccordionContent className="px-4 py-3 bg-surface-0">
               {isPlanMode ? (
                 <div className="space-y-5">
                   {/* Segment Dropdown */}
@@ -1293,7 +1293,7 @@ export function ContentAgentResponse({
                                   "flex items-center justify-between py-2 px-2 rounded-md text-foreground cursor-pointer",
                                   selectedWhatsappSegment === segment.id 
                                     ? "bg-[var(--color-royal-pale)]" 
-                                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    : "hover:bg-muted"
                                 )}
                               >
                                 <span className="font-medium">{segment.name}</span>

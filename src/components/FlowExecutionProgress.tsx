@@ -234,15 +234,15 @@ export function FlowExecutionProgress({ onComplete }: FlowExecutionProgressProps
   const getIcon = (step: CampaignStep) => {
     switch (step.status) {
       case 'loading':
-        return <Loader2 className="w-4 h-4 animate-spin text-blue-600" />;
+        return <Loader2 className="w-4 h-4 animate-spin text-royal" />;
       case 'success':
-        return <Check className="w-4 h-4 text-green-600" />;
+        return <Check className="w-4 h-4 text-success" />;
       case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-amber-600" />;
+        return <AlertTriangle className="w-4 h-4 text-warning" />;
       case 'error':
-        return <AlertTriangle className="w-4 h-4 text-red-600" />;
+        return <AlertTriangle className="w-4 h-4 text-danger" />;
       default:
-        return <div className="w-4 h-4 rounded-full border-2 border-gray-300" />;
+        return <div className="w-4 h-4 rounded-full border-2 border-line-input" />;
     }
   };
 
@@ -250,11 +250,11 @@ export function FlowExecutionProgress({ onComplete }: FlowExecutionProgressProps
     if (step.status === 'error' && step.errorText) {
       return (
         <div>
-          <div className="text-red-600 font-medium">Action needed!</div>
-          <div dangerouslySetInnerHTML={{ 
+          <div className="text-danger font-medium">Action needed!</div>
+          <div dangerouslySetInnerHTML={{
             __html: step.errorText.replace(
-              'Learn more', 
-              '<a href="#" class="text-blue-600 hover:text-blue-800 underline">Learn more</a>'
+              'Learn more',
+              '<a href="#" class="text-royal hover:text-royal-strong underline">Learn more</a>'
             ) 
           }} />
         </div>
@@ -263,7 +263,7 @@ export function FlowExecutionProgress({ onComplete }: FlowExecutionProgressProps
     if (step.status === 'warning' && step.warningText) {
       return (
         <div>
-          <div className="text-amber-600 font-medium">Action needed!</div>
+          <div className="text-warning font-medium">Action needed!</div>
           <div>{step.warningText}</div>
         </div>
       );
@@ -276,7 +276,7 @@ export function FlowExecutionProgress({ onComplete }: FlowExecutionProgressProps
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[var(--color-ink)] dark:text-white leading-normal font-['Manrope'] mb-4">
+      <p className="text-sm text-[var(--color-ink)] leading-normal font-['Manrope'] mb-4">
         Great! I'm setting up the respective campaigns, which will be visible on the product within the next 30 minutes. Feel free to take a stroll while I get things ready!
       </p>
       
@@ -284,7 +284,7 @@ export function FlowExecutionProgress({ onComplete }: FlowExecutionProgressProps
         {campaigns.map((campaign, campaignIndex) => (
           <div key={campaign.id} className="space-y-3">
             {/* Campaign Header - Always show */}
-            <div className="text-sm font-medium text-[var(--color-ink)] dark:text-white leading-normal font-['Manrope']">
+            <div className="text-sm font-medium text-[var(--color-ink)] leading-normal font-['Manrope']">
               Creating campaign {campaignIndex + 1} ({campaign.name})
             </div>
             
@@ -298,7 +298,7 @@ export function FlowExecutionProgress({ onComplete }: FlowExecutionProgressProps
                   <div className="flex-1">
                     <div className={cn(
                       "text-sm leading-normal font-['Manrope']",
-                      "text-[var(--color-ink)] dark:text-white"
+                      "text-[var(--color-ink)]"
                     )}>
                       {getText(step)}
                     </div>

@@ -52,7 +52,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ sentiment, onClose, onSub
       style={MANROPE}
     >
       <div
-        className="w-full max-w-[520px] max-h-full overflow-y-auto bg-white rounded-[16px] shadow-[0px_20px_48px_-12px_oklch(0.21_0.034_263.436_/_0.28)] p-[20px] flex flex-col gap-[16px]"
+        className="w-full max-w-[520px] max-h-full overflow-y-auto bg-card rounded-[16px] shadow-[0px_20px_48px_-12px_oklch(0.21_0.034_263.436_/_0.28)] p-[20px] flex flex-col gap-[16px]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -83,8 +83,8 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ sentiment, onClose, onSub
                 className={cn(
                   'inline-flex items-center gap-[6px] rounded-full px-[12px] py-[6px] text-[14px] leading-[20px] transition-colors',
                   sel
-                    ? 'bg-[var(--color-ink)] text-white'
-                    : 'bg-white text-[var(--color-ink)] border border-[var(--color-line)] hover:bg-[var(--color-surface-0)]'
+                    ? 'bg-foreground text-background'
+                    : 'bg-card text-[var(--color-ink)] border border-[var(--color-line)] hover:bg-[var(--color-surface-0)]'
                 )}
               >
                 {/* Always render a 14px icon (Plus ↔ Check) so the chip width never shifts */}
@@ -110,7 +110,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ sentiment, onClose, onSub
             onChange={(e) => setDetails(e.target.value)}
             placeholder={cfg.placeholder}
             rows={4}
-            className="w-full resize-none rounded-[10px] border border-[var(--color-line)] bg-white px-[12px] py-[10px] text-[14px] leading-[20px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--color-royal)]"
+            className="w-full resize-none rounded-[10px] border border-[var(--color-line)] bg-card px-[12px] py-[10px] text-[14px] leading-[20px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] focus:outline-none focus:ring-1 focus:ring-[var(--color-royal)]"
           />
         </div>
 
@@ -123,7 +123,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ sentiment, onClose, onSub
           onClick={() => onSubmit({ sentiment, tags, details })}
           className={cn(
             'w-full rounded-[8px] py-[10px] text-[14px] font-medium transition-colors',
-            canSubmit ? 'bg-[var(--color-slate)] text-white hover:bg-[var(--color-charcoal)]' : 'bg-[var(--color-line)] text-[var(--color-grey-soft)] cursor-not-allowed'
+            canSubmit ? 'bg-foreground text-background hover:bg-foreground/90' : 'bg-[var(--color-line)] text-[var(--color-grey-soft)] cursor-not-allowed'
           )}
         >
           {cfg.submit}

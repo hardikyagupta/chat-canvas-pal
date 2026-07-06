@@ -12,8 +12,6 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
  * separate from the core token library in COLORS.md.
  */
 
-export type InterfaceMode = 'system' | 'light' | 'dark';
-
 export interface ThemePreset {
   id: string;
   name: string;
@@ -66,13 +64,11 @@ export const THEME_PRESETS: ThemePreset[] = [
 interface AtmosphereState {
   translucent: boolean;
   themeId: string;
-  interfaceMode: InterfaceMode;
 }
 
 interface AtmosphereContextValue extends AtmosphereState {
   setTranslucent: (v: boolean) => void;
   setThemeId: (id: string) => void;
-  setInterfaceMode: (m: InterfaceMode) => void;
   presets: ThemePreset[];
   activePreset: ThemePreset;
   /** true when the gradient + frosted glass should be visible */
@@ -80,7 +76,7 @@ interface AtmosphereContextValue extends AtmosphereState {
 }
 
 const STORAGE_KEY = 'co-marketer-atmosphere';
-const DEFAULT_STATE: AtmosphereState = { translucent: false, themeId: 'ruby-cloud', interfaceMode: 'system' };
+const DEFAULT_STATE: AtmosphereState = { translucent: false, themeId: 'ruby-cloud' };
 
 function loadState(): AtmosphereState {
   try {
@@ -120,7 +116,6 @@ export const AtmosphereProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     ...state,
     setTranslucent: (v) => setState((s) => ({ ...s, translucent: v })),
     setThemeId: (id) => setState((s) => ({ ...s, themeId: id })),
-    setInterfaceMode: (m) => setState((s) => ({ ...s, interfaceMode: m })),
     presets: THEME_PRESETS,
     activePreset,
     active,

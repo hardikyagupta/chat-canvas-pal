@@ -36,7 +36,7 @@ const AvatarStack: React.FC<AvatarStackProps> = ({ agents, maxVisible = 3 }) => 
                   key={agent.id} 
                   // Apply color class and base styles
                   className={cn(
-                    "h-6 w-6 border-2 border-white dark:border-gray-800 flex items-center justify-center",
+                    "h-6 w-6 border-2 border-background flex items-center justify-center",
                     // Only apply agent.colorClass if Icon exists and no avatarSrc, otherwise transparent or default
                     (Icon && !agent.avatarSrc) ? agent.colorClass : 'bg-transparent' 
                   )}
@@ -62,11 +62,11 @@ const AvatarStack: React.FC<AvatarStackProps> = ({ agents, maxVisible = 3 }) => 
             })}
             {hiddenCount > 0 && (
               <Avatar 
-                className="h-6 w-6 border-2 border-white dark:border-gray-800"
+                className="h-6 w-6 border-2 border-background"
                 style={{ zIndex: 0 }} 
               >
                 {/* Keep fallback for the +N count */}
-                <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
+                <AvatarFallback className="text-xs bg-surface-2 text-muted-foreground">
                   +{hiddenCount}
                 </AvatarFallback>
               </Avatar>

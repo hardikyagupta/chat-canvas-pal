@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
-import { useAtmosphere, InterfaceMode } from '@/contexts/AtmosphereContext';
+import { useAtmosphere } from '@/contexts/AtmosphereContext';
+import { useTheme } from '../../components/theme-provider';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
 // Matches the homepage sidebar's icon slot so the logo lands in the same spot.
@@ -36,7 +37,8 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = React.useState('theme');
-  const { translucent, setTranslucent, interfaceMode, setInterfaceMode, themeId, setThemeId, presets } = useAtmosphere();
+  const { translucent, setTranslucent, themeId, setThemeId, presets } = useAtmosphere();
+  const { theme, setTheme } = useTheme();
 
   return (
     // Mirrors the homepage shell: logo sits at the top of the left rail, and a
@@ -44,7 +46,7 @@ const Settings: React.FC = () => {
     // homepage doesn't shift the layout. No outer borders (matches homepage).
     <div className="fixed inset-0 flex overflow-hidden bg-transparent">
       {/* ── Left rail (logo + search + nav) ─────────────────────────── */}
-      <aside className="atmo-glass flex w-[288px] shrink-0 flex-col bg-white">
+      <aside className="atmo-glass flex w-[288px] shrink-0 flex-col bg-card">
         {/* Logo block — same paddings/slot as the homepage sidebar */}
         <div className="flex items-center px-[12px] h-[56px] shrink-0">
           <div className={ICON_SLOT}>
@@ -104,7 +106,7 @@ const Settings: React.FC = () => {
       {/* ── Right column: 56px header + content card ────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Header — Back, same 56px height as the homepage header */}
-        <div className="atmo-glass flex h-[56px] shrink-0 items-center bg-white pl-[16px]">
+        <div className="atmo-glass flex h-[56px] shrink-0 items-center bg-card pl-[16px]">
           <button
             type="button"
             onClick={() => navigate('/')}
@@ -116,15 +118,15 @@ const Settings: React.FC = () => {
         </div>
 
         {/* Content — frosted outer wrapper, neutral inner card (readable) */}
-        <main className="atmo-glass flex min-h-0 flex-1 flex-col bg-white p-[8px]">
+        <main className="atmo-glass flex min-h-0 flex-1 flex-col bg-card p-[8px]">
           <div className="flex min-h-0 flex-1 justify-center overflow-y-auto rounded-[16px] border-[0.5px] border-[var(--color-line-input)] bg-[var(--color-surface-0)]">
             <div className="w-full max-w-[940px] px-[24px] py-[40px]">
               {activeNav === 'theme' ? (
                 <ThemePanel
                   translucent={translucent}
                   setTranslucent={setTranslucent}
-                  interfaceMode={interfaceMode}
-                  setInterfaceMode={setInterfaceMode}
+                  theme={theme}
+                  setTheme={setTheme}
                   themeId={themeId}
                   setThemeId={setThemeId}
                   presets={presets}
@@ -141,7 +143,8 @@ const Settings: React.FC = () => {
 };
 
 /* ── Theme panel ─────────────────────────────────────────────────── */
-const MODES: { id: InterfaceMode; label: string }[] = [
+type Theme = ReturnType<typeof useTheme>['theme'];
+const MODES: { id: Theme; label: string }[] = [
   { id: 'system', label: 'System' },
   { id: 'light', label: 'Light' },
   { id: 'dark', label: 'Dark' },
@@ -150,12 +153,12 @@ const MODES: { id: InterfaceMode; label: string }[] = [
 const ThemePanel: React.FC<{
   translucent: boolean;
   setTranslucent: (v: boolean) => void;
-  interfaceMode: InterfaceMode;
-  setInterfaceMode: (m: InterfaceMode) => void;
+  theme: Theme;
+  setTheme: (t: Theme) => void;
   themeId: string;
   setThemeId: (id: string) => void;
   presets: ReturnType<typeof useAtmosphere>['presets'];
-}> = ({ translucent, setTranslucent, interfaceMode, setInterfaceMode, themeId, setThemeId, presets }) => {
+}> = ({ translucent, setTranslucent, theme, setTheme, themeId, setThemeId, presets }) => {
   return (
     <div className="flex flex-col gap-[16px]">
       {/* Heading */}
@@ -171,15 +174,15 @@ const ThemePanel: React.FC<{
         <SettingCopy title="Interface mode" sub="Use system appearance or choose a fixed mode." />
         <div className="flex items-center gap-[2px] rounded-[9px] bg-[var(--color-surface-1)] p-[3px]">
           {MODES.map((m) => {
-            const on = interfaceMode === m.id;
+            const on = theme === m.id;
             return (
               <button
                 key={m.id}
                 type="button"
-                onClick={() => setInterfaceMode(m.id)}
+                onClick={() => setTheme(m.id)}
                 className={cn(
                   'rounded-[7px] px-[13px] py-[7px] text-[12px] transition-colors',
-                  on ? 'bg-white font-medium text-[var(--color-slate)] shadow-[0px_1px_0px_0px_oklch(0_0_0_/_0.02)]' : 'text-[var(--color-grey)]'
+                  on ? 'bg-card font-medium text-[var(--color-slate)] shadow-[0px_1px_0px_0px_oklch(0_0_0_/_0.02)]' : 'text-[var(--color-grey)]'
                 )}
                 style={FONT}
               >
@@ -211,7 +214,7 @@ const ThemePanel: React.FC<{
                   type="button"
                   onClick={() => setThemeId(preset.id)}
                   className={cn(
-                    'relative flex h-[76px] items-center gap-[12px] rounded-[12px] border bg-white py-[11px] pl-[11px] pr-[12px] text-left transition-all',
+                    'relative flex h-[76px] items-center gap-[12px] rounded-[12px] border bg-card py-[11px] pl-[11px] pr-[12px] text-left transition-all',
                     selected ? 'border-[1.5px] border-[var(--color-royal)]' : 'border-[var(--color-line)] hover:border-[var(--color-line-strong)]'
                   )}
                 >

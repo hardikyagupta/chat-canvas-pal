@@ -47,7 +47,7 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
     >
       {/* Sliding panel anchored to the left */}
       <div
-        className="absolute inset-y-0 left-0 w-[88%] max-w-[360px] flex flex-col gap-[8px] items-start bg-white border border-[var(--color-line-input)] rounded-[12px] shadow-[0px_0px_50px_-6px_oklch(0.493_0_0_/_0.25)] px-[24px] py-[16px] overflow-hidden"
+        className="absolute inset-y-0 left-0 w-[88%] max-w-[360px] flex flex-col gap-[8px] items-start bg-sidebar-background border border-[var(--color-line-input)] rounded-[12px] shadow-[0px_0px_50px_-6px_oklch(0.493_0_0_/_0.25)] px-[24px] py-[16px] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close — compact square hover to match the other icon buttons */}

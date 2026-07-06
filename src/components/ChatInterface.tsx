@@ -1915,7 +1915,7 @@ The content has been updated across all channels to reflect your changes.`;
                       <DropdownMenuItem onClick={handleShareChat} className="hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground">
                         Share chat
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleDeleteChat} className="text-red-600 hover:bg-muted hover:text-red-600 focus:bg-muted focus:text-red-600">
+                      <DropdownMenuItem onClick={handleDeleteChat} className="text-destructive hover:bg-muted hover:text-destructive focus:bg-muted focus:text-destructive">
                         Delete chat
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -2002,9 +2002,9 @@ The content has been updated across all channels to reflect your changes.`;
           <TabsContent value="saved-content" className="flex-1 overflow-y-auto p-4">
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground pt-16">
               <div className="relative mb-4">
-                <Bookmark className="w-20 h-20 text-gray-300" />
+                <Bookmark className="w-20 h-20 text-grey-soft" />
                 <div className="absolute -top-1 -right-1 bg-background p-1 rounded-full shadow-md">
-                  <PlusCircle className="w-8 h-8 text-blue-500" />
+                  <PlusCircle className="w-8 h-8 text-royal" />
                 </div>
               </div>
               <p className="text-sm font-semibold">Nothing bookmarked yet</p>
@@ -2206,7 +2206,7 @@ The content has been updated across all channels to reflect your changes.`;
           )}>
           {/* Chats / Bookmarks full page — overlays the conversation when active */}
           {isExpanded && activePage !== 'home' && (
-            <div className="absolute inset-0 z-20 rounded-[16px] overflow-hidden bg-white">
+            <div className="absolute inset-0 z-20 rounded-[16px] overflow-hidden bg-card">
               <ChatListPage
                 title={activePage === 'chats' ? 'Chats' : 'Bookmarks'}
                 searchPlaceholder={activePage === 'chats' ? 'Search chats' : 'Search bookmarks'}
@@ -2299,7 +2299,7 @@ The content has been updated across all channels to reflect your changes.`;
                                 <button
                                   key={`typed-${index}`}
                                   type="button"
-                                  className="w-full text-left p-[12px] rounded-[8px] cursor-pointer bg-white border border-[var(--color-line)] hover:bg-[var(--color-surface-0)] transition-colors"
+                                  className="w-full text-left p-[12px] rounded-[8px] cursor-pointer bg-card border border-[var(--color-line)] hover:bg-[var(--color-surface-0)] transition-colors"
                                   onClick={() => handleSendMessage(suggestion)}
                                 >
                                   <p
@@ -2345,7 +2345,7 @@ The content has been updated across all channels to reflect your changes.`;
                               <button
                                 key={`${selectedStarterChip}-${index}`}
                                 type="button"
-                                className="w-full text-left p-[12px] rounded-[8px] cursor-pointer bg-white border border-[var(--color-line)] hover:bg-[var(--color-surface-0)] transition-colors"
+                                className="w-full text-left p-[12px] rounded-[8px] cursor-pointer bg-card border border-[var(--color-line)] hover:bg-[var(--color-surface-0)] transition-colors"
                                 onClick={() => handleSendMessage(suggestion)}
                               >
                                 <p
@@ -2509,7 +2509,7 @@ The content has been updated across all channels to reflect your changes.`;
                         key={p}
                         type="button"
                         onClick={() => handleSendMessage(p)}
-                        className="group flex w-fit max-w-full items-start gap-[10px] text-left rounded-[10px] border border-[var(--color-line)] bg-white px-[12px] py-[8px] hover:bg-[var(--color-surface-0)] hover:border-[var(--color-line-strong)] transition-colors"
+                        className="group flex w-fit max-w-full items-start gap-[10px] text-left rounded-[10px] border border-[var(--color-line)] bg-card px-[12px] py-[8px] hover:bg-[var(--color-surface-0)] hover:border-[var(--color-line-strong)] transition-colors"
                       >
                         <CornerDownRight className="size-[16px] text-[var(--color-grey)] shrink-0 mt-[1px]" strokeWidth={1.75} />
                         <span className="text-[14px] leading-[20px] text-[var(--color-slate)]" style={{ fontFamily: 'Manrope, sans-serif' }}>{p}</span>
@@ -2532,13 +2532,13 @@ The content has been updated across all channels to reflect your changes.`;
                       onClick={scrollToBottom}
                       size="icon"
                       className={cn(
-                        "absolute right-6 h-10 w-10 rounded-full shadow-lg z-50 bg-white dark:bg-white border-[1.5px] hover:bg-gray-50 dark:hover:bg-gray-50",
+                        "absolute right-6 h-10 w-10 rounded-full shadow-lg z-50 bg-card border-[1.5px] hover:bg-surface-0",
                         isExpanded ? "bottom-[112px]" : "bottom-[150px]"
                       )}
                       style={{ borderColor: 'var(--color-line-input)' }}
                       aria-label="Scroll to latest"
                     >
-                      <ArrowDown className="h-4 w-4 text-gray-700" />
+                      <ArrowDown className="h-4 w-4 text-slate" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="left">
@@ -2567,14 +2567,14 @@ The content has been updated across all channels to reflect your changes.`;
                 {(showFeedbackToast || (showFeedbackPrompt && !feedbackModal)) && (
                   <div className="absolute right-[24px] bottom-full mb-[28px] z-40 flex justify-end max-w-[calc(100%-48px)]">
                     {showFeedbackToast ? (
-                      <div className="feedback-nudge-in inline-flex items-center gap-[8px] rounded-full border border-[var(--color-line)] bg-white px-[14px] py-[8px] shadow-[0px_8px_20px_-6px_oklch(0.21_0.034_263.436_/_0.22)]">
+                      <div className="feedback-nudge-in inline-flex items-center gap-[8px] rounded-full border border-[var(--color-line)] bg-card px-[14px] py-[8px] shadow-[0px_8px_20px_-6px_oklch(0.21_0.034_263.436_/_0.22)]">
                         <CheckCircle2 className="size-[16px] text-[var(--color-success)] shrink-0" />
                         <span className="text-[13px] text-[var(--color-ink)] whitespace-nowrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
                           Feedback sent successfully. Thank you
                         </span>
                       </div>
                     ) : (
-                      <div className="feedback-nudge-in inline-flex items-center gap-[10px] rounded-[12px] border border-[var(--color-line)] bg-white px-[16px] py-[10px] shadow-[0px_8px_24px_-6px_oklch(0.21_0.034_263.436_/_0.22)]">
+                      <div className="feedback-nudge-in inline-flex items-center gap-[10px] rounded-[12px] border border-[var(--color-line)] bg-card px-[16px] py-[10px] shadow-[0px_8px_24px_-6px_oklch(0.21_0.034_263.436_/_0.22)]">
                         <span className="text-[14px] text-[var(--color-ink)] whitespace-nowrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
                           Was your Co-marketer experience helpful?
                         </span>
@@ -2582,7 +2582,7 @@ The content has been updated across all channels to reflect your changes.`;
                           type="button"
                           onClick={() => setFeedbackModal('up')}
                           aria-label="Helpful"
-                          className="flex items-center justify-center p-[6px] rounded-md text-[var(--color-grey)] hover:bg-green-50 hover:text-green-600 transition-colors"
+                          className="flex items-center justify-center p-[6px] rounded-md text-[var(--color-grey)] hover:bg-[color-mix(in_oklab,var(--color-success)_10%,transparent)] hover:text-success transition-colors"
                         >
                           <ThumbsUp className="size-[16px]" />
                         </button>
@@ -2590,7 +2590,7 @@ The content has been updated across all channels to reflect your changes.`;
                           type="button"
                           onClick={() => setFeedbackModal('down')}
                           aria-label="Not helpful"
-                          className="flex items-center justify-center p-[6px] rounded-md text-[var(--color-grey)] hover:bg-red-50 hover:text-red-600 transition-colors"
+                          className="flex items-center justify-center p-[6px] rounded-md text-[var(--color-grey)] hover:bg-destructive/10 hover:text-destructive transition-colors"
                         >
                           <ThumbsDown className="size-[16px]" />
                         </button>

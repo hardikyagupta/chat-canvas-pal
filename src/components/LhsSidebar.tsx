@@ -56,7 +56,7 @@ const ICON_SLOT = 'flex items-center justify-center w-[40px] h-[40px] shrink-0';
 // Small dark tooltip shown to the right of an icon (only rendered when collapsed)
 const RailTooltip: React.FC<{ label: string }> = ({ label }) => (
   <span
-    className="pointer-events-none absolute left-full ml-[10px] top-1/2 -translate-y-1/2 z-[100] whitespace-nowrap rounded-[6px] bg-[var(--color-ink)] px-[8px] py-[4px] text-[12px] leading-[16px] text-white opacity-0 translate-x-[-4px] transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0"
+    className="pointer-events-none absolute left-full ml-[10px] top-1/2 -translate-y-1/2 z-[100] whitespace-nowrap rounded-[6px] bg-foreground px-[8px] py-[4px] text-[12px] leading-[16px] text-background opacity-0 translate-x-[-4px] transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0"
     style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
   >
     {label}
@@ -152,7 +152,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   return (
     <div
       className={cn(
-        'atmo-glass relative z-30 flex flex-col items-start h-full bg-white flex-shrink-0',
+        'atmo-glass relative z-30 flex flex-col items-start h-full bg-sidebar-background flex-shrink-0',
         // overflow-visible when collapsed lets the rail tooltips escape the 64px width
         collapsed ? 'overflow-visible' : 'overflow-hidden'
       )}
@@ -270,7 +270,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
                               <X className="size-[16px]" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom" className="border-0 bg-[var(--color-ink)] text-white">
+                          <TooltipContent side="bottom">
                             Cancel
                           </TooltipContent>
                         </Tooltip>
@@ -285,7 +285,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
                               <Check className="size-[16px]" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom" className="border-0 bg-[var(--color-ink)] text-white">
+                          <TooltipContent side="bottom">
                             Save
                           </TooltipContent>
                         </Tooltip>
