@@ -1,6 +1,7 @@
 import React, { useState, useRef, KeyboardEvent, CSSProperties, useEffect } from 'react';
 import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ActionMenu, ActionMenuTrigger, ActionMenuContent, ActionMenuItem } from "@/components/ui/action-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ArrowUp, StopCircle, X, Plus, ImagePlus, Blocks, FileVideo, FileAudio, FileText, File as FileIcon, Loader2 } from 'lucide-react';
@@ -474,10 +475,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
             {/* + button — "Add files and more" (no action yet). Left edge by default,
                 bottom-left when expanded. Matches the 32×32 send-button size. */}
-            <Popover open={showPlusMenu} onOpenChange={setShowPlusMenu}>
+            <ActionMenu open={showPlusMenu} onOpenChange={setShowPlusMenu}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <PopoverTrigger asChild>
+                  <ActionMenuTrigger asChild>
                     <button
                       type="button"
                       aria-label="Add files and more"
@@ -486,52 +487,30 @@ const ChatInput: React.FC<ChatInputProps> = ({
                         "flex items-center justify-center w-[32px] h-[32px] rounded-full shrink-0 transition-colors",
                         (isQuestionnaireActive || isLoading)
                           ? "opacity-50 cursor-not-allowed"
-                          : "hover:bg-[oklch(0_0_0_/_0.06)]",
+                          : "hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)]",
                         expanded ? "order-2" : "order-1"
                       )}
                     >
                       <Plus className="w-[20px] h-[20px] text-[var(--color-charcoal)]" />
                     </button>
-                  </PopoverTrigger>
+                  </ActionMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" align="start" className="border-0 bg-[var(--color-ink)] text-white">
                   Add files and more
                 </TooltipContent>
               </Tooltip>
-              <PopoverContent
-                side="bottom"
-                align="start"
-                alignOffset={-5}
-                sideOffset={8}
-                className="w-auto min-w-[180px] p-0 border-[#dbe0e3] rounded-[12px] shadow-[0px_8px_20px_0px_rgba(0,0,0,0.12)]"
-              >
-                <div className="flex flex-col gap-[2px] p-[6px]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPlusMenu(false);
-                      fileInputRef.current?.click();
-                    }}
-                    className="flex items-center gap-[8px] h-[32px] px-[8px] rounded-[8px] w-full transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-                  >
-                    <ImagePlus className="w-[16px] h-[16px] text-[var(--color-charcoal)] shrink-0" />
-                    <span className="text-[13px] font-medium text-[var(--color-charcoal)] whitespace-nowrap">
-                      Add files or photos
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowPlusMenu(false)}
-                    className="flex items-center gap-[8px] h-[32px] px-[8px] rounded-[8px] w-full transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-                  >
-                    <Blocks className="w-[16px] h-[16px] text-[var(--color-charcoal)] shrink-0" />
-                    <span className="text-[13px] font-medium text-[var(--color-charcoal)] whitespace-nowrap">
-                      Skills
-                    </span>
-                  </button>
-                </div>
-              </PopoverContent>
-            </Popover>
+              <ActionMenuContent side="bottom" align="start" alignOffset={-5}>
+                <ActionMenuItem
+                  icon={ImagePlus}
+                  onSelect={() => fileInputRef.current?.click()}
+                >
+                  Add files or photos
+                </ActionMenuItem>
+                <ActionMenuItem icon={Blocks} onSelect={() => {}}>
+                  Skills
+                </ActionMenuItem>
+              </ActionMenuContent>
+            </ActionMenu>
 
             {/* Context chip — bottom-left when selected (after the + button) */}
             {selectedContextChip && (
