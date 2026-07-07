@@ -1,5 +1,6 @@
-import React from 'react';
-import { Copy, ChevronDown, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Copy, Check, ChevronDown, X } from 'lucide-react';
+import { ActionMenu, ActionMenuTrigger, ActionMenuContent, ActionMenuItem } from '@/components/ui/action-menu';
 import {
   PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -19,10 +20,11 @@ const chartTooltip = { fontSize: 12, borderRadius: 8, fontFamily: MANROPE };
 interface ArtifactPreviewProps {
   fileName?: string;
   title?: string;
-  onClose?: () => void;        // close the artifact panel
-  onCopy?: () => void;         // copy the artifact contents
-  onPublish?: () => void;      // publish the artifact
-  bare?: boolean;              // drop the outer card border/radius (full-bleed, e.g. widget view)
+  onClose?: () => void;              // close the artifact panel
+  onCopy?: () => void;               // copy the artifact contents
+  onDownloadMarkdown?: () => void;   // Copy ▾ → Download as Markdown
+  onDownloadPdf?: () => void;        // Copy ▾ → Download as PDF
+  bare?: boolean;                    // drop the outer card border/radius (full-bleed, e.g. widget view)
 }
 
 // ---- KPI cards ----
@@ -104,9 +106,17 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   title = 'Highest Engagement Last Quarter',
   onClose,
   onCopy,
-  onPublish,
+  onDownloadMarkdown,
+  onDownloadPdf,
   bare = false,
 }) => {
+  // "Copy" flips to a "Copied" checkmark briefly after a click.
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    onCopy?.();
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  };
   return (
     <div className={`flex flex-col h-full w-full bg-card overflow-hidden${bare ? '' : ' border border-[var(--color-line-input)] rounded-[12px]'}`}>
       {/* top-nav-artifact — Claude-style: title on the left; Copy / Publish / Close on the right */}
@@ -115,24 +125,41 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
           <p className="flex-1 min-w-0 truncate text-[14px] font-medium text-foreground">
             {fileName}
           </p>
-          {/* Copy (split-style with dropdown chevron) */}
-          <button
-            type="button"
-            onClick={onCopy}
-            className="flex items-center gap-[6px] px-[10px] py-[5px] rounded-[8px] border border-[var(--color-line-input)] text-[13px] font-medium text-foreground hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-          >
-            <Copy className="size-[14px] text-[var(--color-slate)]" />
-            Copy
-            <ChevronDown className="size-[14px] text-[var(--color-slate)]" />
-          </button>
-          {/* Publish */}
-          <button
-            type="button"
-            onClick={onPublish}
-            className="flex items-center px-[14px] py-[6px] rounded-[8px] bg-foreground text-background text-[13px] font-medium hover:opacity-90 transition-opacity shrink-0"
-          >
-            Publish
-          </button>
+          {/* Copy — split button: "Copy" copies; the chevron opens the download menu */}
+          <div className="flex items-center rounded-[8px] border border-[var(--color-line-input)] overflow-hidden shrink-0">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="flex items-center gap-[6px] pl-[10px] pr-[8px] py-[5px] text-[13px] font-medium text-foreground hover:bg-[var(--color-surface-1)] transition-colors"
+            >
+              {copied ? (
+                <>
+                  <Check className="size-[14px] text-success" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="size-[14px] text-[var(--color-slate)]" />
+                  Copy
+                </>
+              )}
+            </button>
+            <ActionMenu>
+              <ActionMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Download options"
+                  className="flex items-center justify-center self-stretch px-[6px] border-l border-[var(--color-line-input)] hover:bg-[var(--color-surface-1)] data-[state=open]:bg-[var(--color-surface-1)] transition-colors"
+                >
+                  <ChevronDown className="size-[14px] text-[var(--color-slate)]" />
+                </button>
+              </ActionMenuTrigger>
+              <ActionMenuContent align="end" side="bottom">
+                <ActionMenuItem onSelect={() => onDownloadMarkdown?.()}>Download as Markdown</ActionMenuItem>
+                <ActionMenuItem onSelect={() => onDownloadPdf?.()}>Download as PDF</ActionMenuItem>
+              </ActionMenuContent>
+            </ActionMenu>
+          </div>
           {/* Close */}
           <UITooltip>
             <TooltipTrigger asChild>
@@ -153,7 +180,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
       </TooltipProvider>
 
       {/* content-area (scrollable) */}
-      <div className="flex flex-col gap-[16px] items-start px-[16px] py-[16px] w-full flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+      <div className="flex flex-col gap-[16px] items-start px-[16px] py-[16px] w-full flex-1 overflow-y-auto hover-scroll">
         <p className="text-[20px] font-semibold leading-[28px] text-[var(--color-ink)] w-full">
           {title}
         </p>

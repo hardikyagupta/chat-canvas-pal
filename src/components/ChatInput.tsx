@@ -1,10 +1,9 @@
 import React, { useState, useRef, KeyboardEvent, CSSProperties, useEffect } from 'react';
 import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ActionMenu, ActionMenuTrigger, ActionMenuContent, ActionMenuItem } from "@/components/ui/action-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ArrowUp, StopCircle, X, Plus, ImagePlus, Blocks, FileVideo, FileAudio, FileText, File as FileIcon, Loader2 } from 'lucide-react';
+import { ArrowUp, StopCircle, X, Plus, FileVideo, FileAudio, FileText, File as FileIcon, Loader2 } from 'lucide-react';
 import { marketingAgents, MarketingAgent } from '@/data/agents';
 import { cn } from "@/lib/utils";
 
@@ -79,6 +78,8 @@ interface ChatInputProps {
   shimmer?: boolean;
   /** Fired with the live textarea value on every change (typing, clear-on-send). */
   onInputValueChange?: (value: string) => void;
+  /** Textarea placeholder. Defaults to the empty-state greeting prompt. */
+  placeholder?: string;
 }
 
 // Temporary feature flag to disable @-agent mention dropdown
@@ -93,14 +94,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onClearSelectedContextChip,
   shimmer = false,
   onInputValueChange,
+  placeholder = "How can I help you today?",
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [showMentionList, setShowMentionList] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [mentionSearch, setMentionSearch] = useState("");
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
-  // Controls the "+" attachment menu (Add files or photos / Skills)
-  const [showPlusMenu, setShowPlusMenu] = useState(false);
   // Files/photos attached to the current message (shown above the textarea).
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -330,7 +330,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             // 0.5px borders so it's exactly 56px). Once the field grows past one
             // line — or a context chip is selected — it relaxes to a 16px radius
             // and grows to fit (textarea handles the height, capped at 4 lines).
-            expanded ? "rounded-[16px]" : "rounded-[48px]",
+            expanded ? "rounded-[18px]" : "rounded-[48px]",
             "drop-shadow-[0px_1px_1px_oklch(0.21_0.034_263.436_/_0.05)]",
             "focus-within:ring-1 focus-within:ring-[var(--color-royal)] transition-shadow",
             // Disabled (questionnaire) OR generating: greyish fill + not-allowed across the field
@@ -458,9 +458,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="How can I help you today?"
+                placeholder={placeholder}
                 disabled={isQuestionnaireActive || isLoading}
-                className="chat-input-scroll block w-full min-w-0 resize-none bg-transparent border-0 p-0 pl-[6px] text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed"
+                className="chat-input-scroll block w-full min-w-0 resize-none bg-transparent border-0 p-0 pl-[8px] pt-[8px] text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed"
                 style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500, maxHeight: "88px" }}
                 autoComplete="off"
               />
@@ -473,44 +473,31 @@ const ChatInput: React.FC<ChatInputProps> = ({
               )}
             </div>
 
-            {/* + button — "Add files and more" (no action yet). Left edge by default,
-                bottom-left when expanded. Matches the 32×32 send-button size. */}
-            <ActionMenu open={showPlusMenu} onOpenChange={setShowPlusMenu}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ActionMenuTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label="Add files and more"
-                      disabled={isQuestionnaireActive || isLoading}
-                      className={cn(
-                        "flex items-center justify-center w-[32px] h-[32px] rounded-[8px] shrink-0 transition-colors",
-                        (isQuestionnaireActive || isLoading)
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)]",
-                        expanded ? "order-2" : "order-1"
-                      )}
-                    >
-                      <Plus className="w-[20px] h-[20px] text-[var(--color-charcoal)]" />
-                    </button>
-                  </ActionMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" align="start" className="border-0 bg-foreground text-background">
-                  Add files and more
-                </TooltipContent>
-              </Tooltip>
-              <ActionMenuContent side="bottom" align="start" alignOffset={-5}>
-                <ActionMenuItem
-                  icon={ImagePlus}
-                  onSelect={() => fileInputRef.current?.click()}
+            {/* + button — single action: opens the file picker to add files or
+                photos. Left edge by default, bottom-left when expanded. Matches
+                the 32×32 send-button size. */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Add files or photos"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isQuestionnaireActive || isLoading}
+                  className={cn(
+                    "flex items-center justify-center w-[32px] h-[32px] rounded-[8px] shrink-0 transition-colors",
+                    (isQuestionnaireActive || isLoading)
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-[oklch(0_0_0_/_0.06)]",
+                    expanded ? "order-2" : "order-1"
+                  )}
                 >
-                  Add files or photos
-                </ActionMenuItem>
-                <ActionMenuItem icon={Blocks} onSelect={() => {}}>
-                  Skills
-                </ActionMenuItem>
-              </ActionMenuContent>
-            </ActionMenu>
+                  <Plus className="w-[20px] h-[20px] text-[var(--color-charcoal)]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="start" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
+                Add files or photos
+              </TooltipContent>
+            </Tooltip>
 
             {/* Context chip — bottom-left when selected (after the + button) */}
             {selectedContextChip && (
@@ -542,7 +529,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 className={cn(
                   // Fixed 32×32 in every state so the field height never changes
                   // (default field height = 56px: 32px button + 2×12px padding).
-                  "relative flex items-center justify-center overflow-hidden rounded-[30px] w-[32px] h-[32px] shrink-0 transition-all duration-200",
+                  "relative flex items-center justify-center overflow-hidden rounded-[6px] w-[32px] h-[32px] shrink-0 transition-all duration-200",
                   isActive
                     ? "border-[0.75px] border-[var(--color-royal-strong)] shadow-[0px_1px_0px_0px_oklch(0_0_0_/_0.02)]"
                     : "border-0",
@@ -558,7 +545,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 {/* Inner highlight for active state */}
                 {isActive && (
                   <span
-                    className="absolute inset-0 rounded-[30px] pointer-events-none"
+                    className="absolute inset-0 rounded-[6px] pointer-events-none"
                     style={{ boxShadow: "inset 0px 1px 1px 0px oklch(1 0 0 / 0.25)" }}
                   />
                 )}
