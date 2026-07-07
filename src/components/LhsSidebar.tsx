@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { SquarePen, MessageSquare, Bookmark, Settings, ChevronDown, MoreHorizontal, X, Check, Search } from 'lucide-react';
+import { Plus, MessageSquare, Bookmark, Settings, ChevronDown, MoreHorizontal, X, Check, Search, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import ChatActionsMenu from './ChatActionsMenu';
@@ -23,6 +23,9 @@ interface LhsSidebarProps {
   onOpenChats?: () => void;
   onOpenBookmarks?: () => void;
   onOpenSettings?: () => void;
+  // Collapse/expand the sidebar. The header toggle collapses; when collapsed the
+  // logo doubles as the expand button.
+  onToggleCollapse?: () => void;
 }
 
 export const defaultChats: LhsChatItem[] = [
@@ -74,6 +77,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   onOpenChats,
   onOpenBookmarks,
   onOpenSettings,
+  onToggleCollapse,
 }) => {
   const [chatsOpen, setChatsOpen] = useState(true);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -136,7 +140,8 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   };
 
   const menuActions = [
-    { key: 'new-chat', label: 'New chat', icon: SquarePen, onClick: onNewChat },
+    // New chat's plus sits in a light-blue pill (Figma), so it renders specially.
+    { key: 'new-chat', label: 'New chat', icon: Plus, onClick: onNewChat, isNewChat: true },
     { key: 'search', label: 'Search', icon: Search, onClick: () => setSearchModalOpen(true) },
     { key: 'chats', label: 'Chats', icon: MessageSquare, onClick: onOpenChats },
     { key: 'bookmarks', label: 'Bookmarks', icon: Bookmark, onClick: onOpenBookmarks },
@@ -161,28 +166,70 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
       )}
       style={{ width: collapsed ? 64 : 288, transition: 'width 300ms cubic-bezier(0.22, 1, 0.36, 1)' }}
     >
-      {/* Logo — circle sits in the centered icon slot; the wordmark clips/fades */}
+      {/* Header — logo + wordmark + collapse toggle. The logo circle sits in the
+          centered icon slot; when collapsed it doubles as the expand button
+          (logo fades to a panel-open icon on hover). The wordmark clips/fades. */}
       <div className="flex items-center px-[12px] h-[56px] w-full shrink-0">
-        <div className={ICON_SLOT}>
-          <div className="flex items-center justify-center rounded-full overflow-hidden shrink-0 size-[24px] bg-[var(--color-plum)]">
+        <button
+          type="button"
+          onClick={collapsed ? onToggleCollapse : undefined}
+          aria-label={collapsed ? 'Expand sidebar' : 'Co-marketer'}
+          className={cn(
+            'group relative flex items-center justify-center w-[40px] h-[40px] shrink-0 rounded-[8px] transition-colors',
+            collapsed ? 'cursor-pointer hover:bg-[oklch(0_0_0_/_0.06)]' : 'cursor-default'
+          )}
+        >
+          <span
+            className={cn(
+              'flex items-center justify-center rounded-full overflow-hidden size-[24px] bg-[var(--color-plum)] transition-opacity duration-150',
+              collapsed && 'group-hover:opacity-0'
+            )}
+          >
             <img
               src="/co-marketer-logo.gif"
               alt="Co-marketer"
               className="size-full object-cover"
             />
-          </div>
-        </div>
+          </span>
+          {collapsed && (
+            <>
+              <span className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                <PanelLeftOpen className="size-[16px] text-[var(--color-slate)]" />
+              </span>
+              <RailTooltip label="Expand sidebar" />
+            </>
+          )}
+        </button>
+
         <span
-          className={cn('font-bold text-[16px] leading-[20px] text-[var(--color-ink)]', labelCls)}
+          className={cn('flex-1 min-w-0 font-bold text-[16px] leading-[20px] text-[var(--color-ink)]', labelCls)}
           style={labelStyle({ fontFamily: 'Manrope, sans-serif' })}
         >
           Co-marketer
         </span>
+
+        {!collapsed && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                aria-label="Collapse sidebar"
+                className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+              >
+                <PanelLeftClose className="size-[16px] text-[var(--color-slate)]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
+              Collapse sidebar
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {/* Menu actions — icons centered in 40×40 slots, aligned with the logo */}
       <div className="flex flex-col gap-[4px] items-start w-full px-[12px] pt-[20px] shrink-0">
-        {menuActions.map(({ key, label, icon: Icon, onClick }) => (
+        {menuActions.map(({ key, label, icon: Icon, onClick, isNewChat }) => (
           <button
             key={key}
             type="button"
@@ -191,7 +238,13 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
             className="group relative flex h-[40px] items-center w-full rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
           >
             <span className={ICON_SLOT}>
-              <Icon className="size-[16px] text-[var(--color-charcoal)]" />
+              {isNewChat ? (
+                <span className="flex items-center justify-center rounded-full bg-[var(--color-royal-pale)] p-[5px]">
+                  <Plus className="size-[12px] text-[var(--color-royal)]" strokeWidth={2.5} />
+                </span>
+              ) : (
+                <Icon className="size-[18px] text-[var(--color-charcoal)]" />
+              )}
             </span>
             <span
               className={cn('text-[14px] text-[var(--color-charcoal)]', labelCls)}
@@ -221,7 +274,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
             className="text-[12px] leading-[16px] text-[var(--color-grey)] tracking-[0.035px] whitespace-nowrap"
             style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
           >
-            Chats
+            Recent
           </span>
           <ChevronDown
             className={cn(
@@ -245,7 +298,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
                   <div
                     key={chat.id}
                     className={cn(
-                      'group relative flex gap-[8px] h-[34px] items-center pl-[12px] pr-[8px] w-full rounded-[8px] overflow-hidden transition-colors',
+                      'group relative flex gap-[8px] h-[34px] items-center pl-[12px] pr-[8px] w-full rounded-[10px] overflow-hidden transition-colors',
                       (isActive || isRenaming) ? 'bg-[oklch(0_0_0_/_0.12)]' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
                     )}
                   >

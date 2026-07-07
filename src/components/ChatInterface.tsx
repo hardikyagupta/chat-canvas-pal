@@ -2162,6 +2162,7 @@ The content has been updated across all channels to reflect your changes.`;
               onOpenBookmarks={() => setActivePage('bookmarks')}
               onSelectChat={() => setActivePage('home')}
               onOpenSettings={() => navigate('/settings')}
+              onToggleCollapse={() => { setLhsCollapsed(prev => !prev); playToggleCue(); }}
             />
           )}
           {/* Conditional rendering of AgentsSidebar in expanded view */}
@@ -2178,7 +2179,7 @@ The content has been updated across all channels to reflect your changes.`;
           {isExpanded && (
             <RhsHeader
               chatName={chatName}
-              showSidebarToggle={true}
+              showSidebarToggle={false}
               sidebarCollapsed={lhsCollapsed}
               onToggleSidebar={() => { setLhsCollapsed(prev => !prev); playToggleCue(); }}
               isBookmarked={isChatBookmarked}
