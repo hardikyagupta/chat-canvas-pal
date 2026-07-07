@@ -160,7 +160,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   return (
     <div
       className={cn(
-        'atmo-glass relative z-30 flex flex-col items-start h-full bg-sidebar-background flex-shrink-0 border-r border-[var(--color-line)]',
+        'group/lhs atmo-glass relative z-30 flex flex-col items-start h-full bg-sidebar-background flex-shrink-0 border-r border-[var(--color-line)]',
         // overflow-visible when collapsed lets the rail tooltips escape the 64px width
         collapsed ? 'overflow-visible' : 'overflow-hidden'
       )}
@@ -182,7 +182,8 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
           <span
             className={cn(
               'flex items-center justify-center rounded-full overflow-hidden size-[24px] bg-[var(--color-plum)] transition-opacity duration-150',
-              collapsed && 'group-hover:opacity-0'
+              // Hovering ANYWHERE in the collapsed rail reveals the expand hint.
+              collapsed && 'group-hover/lhs:opacity-0'
             )}
           >
             <img
@@ -193,7 +194,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
           </span>
           {collapsed && (
             <>
-              <span className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              <span className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover/lhs:opacity-100">
                 <PanelLeftOpen className="size-[16px] text-[var(--color-slate)]" />
               </span>
               <RailTooltip label="Expand sidebar" />
