@@ -2232,6 +2232,12 @@ The content has been updated across all channels to reflect your changes.`;
               )}
               ref={chatContainerRef}
             >
+              {/* Top fade edge — pins just under the navbar so messages fade out
+                  as they scroll up, for a smooth scroll-under-header effect.
+                  Only while a chat exists (expanded view). */}
+              {isExpanded && messages.length > 0 && (
+                <div className="sticky top-0 z-10 h-[32px] -mb-[32px] w-full pointer-events-none bg-gradient-to-b from-[var(--color-surface-0)] to-transparent" />
+              )}
               {/* Centered container for chat content - 768px width as per Figma */}
               <div className={cn(
                 "flex flex-col items-center w-full min-h-full",
@@ -2639,9 +2645,6 @@ The content has been updated across all channels to reflect your changes.`;
                         <p className="text-sm text-foreground-muted text-center">
                           Co-marketer can make mistakes. Please double check responses
                         </p>
-                        <p className="text-[12px] text-foreground-muted text-center">
-                          This AI doesn&apos;t take coffee breaks. Made with ❤️ by design engineer.
-                        </p>
                       </div>
                     )}
                   </div>
@@ -2657,12 +2660,6 @@ The content has been updated across all channels to reflect your changes.`;
                   style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                 >
                   Co-marketer can make mistakes. Please double check responses
-                </p>
-                <p
-                  className="text-[10px] text-[var(--color-grey)] text-center w-[768px]"
-                  style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
-                >
-                  This AI doesn&apos;t take coffee breaks. Made with ❤️ by design engineer.
                 </p>
               </div>
             )}
