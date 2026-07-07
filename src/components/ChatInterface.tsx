@@ -2191,23 +2191,18 @@ The content has been updated across all channels to reflect your changes.`;
           )}
 
           {/* Chat messages and input area.
-              Window is full screen; the chat-area itself is the Figma bordered card. */}
+              Edge-to-edge: the chat surface fills the RHS column with no gutter,
+              border, or rounding — it merges with the bordered LHS into one dashboard. */}
+          <div className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <ChatCardBeam enabled={isExpanded} active={false}>
           <div className={cn(
-            "flex flex-col flex-1 overflow-hidden min-h-0",
-            // Frosted "outside" gutter around the grey card (matches Settings) when
-            // atmosphere is on; the grey card itself stays opaque surface-0.
-            isExpanded && "atmo-glass p-[8px]"
-          )}>
-          <ChatCardBeam enabled={isExpanded} active={messages.length === 0 && !isGeneratingOutput}>
-          <div className={cn(
-            "relative flex flex-1 overflow-hidden min-h-0 min-w-0",
-            isExpanded ? "bg-[var(--color-surface-0)] border-[0.5px] border-[var(--color-line-input)] rounded-[16px]" : "bg-[var(--color-surface-0)]",
+            "relative flex flex-1 overflow-hidden min-h-0 min-w-0 bg-[var(--color-surface-0)]",
             isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "gap-[12px] pl-[12px]",
             isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "px-[12px]"
           )}>
           {/* Chats / Bookmarks full page — overlays the conversation when active */}
           {isExpanded && activePage !== 'home' && (
-            <div className="absolute inset-0 z-20 rounded-[16px] overflow-hidden bg-card">
+            <div className="absolute inset-0 z-20 overflow-hidden bg-card">
               <ChatListPage
                 title={activePage === 'chats' ? 'Chats' : 'Bookmarks'}
                 searchPlaceholder={activePage === 'chats' ? 'Search chats' : 'Search bookmarks'}
@@ -2754,7 +2749,7 @@ function ChatCardBeam({ enabled, active, children }: ChatCardBeamProps) {
         theme="light"
         colorVariant="colorful"
         staticColors={true}
-        borderRadius={16}
+        borderRadius={0}
         strength={0.72}
         brightness={1.55}
         saturation={1.85}

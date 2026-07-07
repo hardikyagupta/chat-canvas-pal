@@ -160,7 +160,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   return (
     <div
       className={cn(
-        'atmo-glass relative z-30 flex flex-col items-start h-full bg-sidebar-background flex-shrink-0',
+        'atmo-glass relative z-30 flex flex-col items-start h-full bg-sidebar-background flex-shrink-0 border-r border-[var(--color-line)]',
         // overflow-visible when collapsed lets the rail tooltips escape the 64px width
         collapsed ? 'overflow-visible' : 'overflow-hidden'
       )}
