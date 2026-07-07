@@ -17,27 +17,6 @@ interface RhsHeaderProps {
   onClose?: () => void;
 }
 
-// Small dark tooltip shown below a header icon on hover.
-// align: where the tooltip anchors relative to the button (avoids clipping at window edges).
-const HeaderTooltip: React.FC<{ label: string; align?: 'left' | 'center' | 'right' }> = ({
-  label,
-  align = 'center',
-}) => (
-  <span
-    className={
-      'pointer-events-none absolute top-full mt-[6px] z-50 whitespace-nowrap rounded-[6px] bg-foreground px-[8px] py-[4px] text-[12px] leading-[16px] text-background opacity-0 translate-y-[-4px] transition-all duration-150 group-hover:opacity-100 group-hover:translate-y-0 ' +
-      (align === 'left'
-        ? 'left-0'
-        : align === 'right'
-          ? 'right-0'
-          : 'left-1/2 -translate-x-1/2 group-hover:-translate-x-1/2')
-    }
-    style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
-  >
-    {label}
-  </span>
-);
-
 const RhsHeader: React.FC<RhsHeaderProps> = ({
   chatName,
   showSidebarToggle,
@@ -84,17 +63,23 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
           {/* Left: sidebar toggle (when collapsed) + chat-name context */}
           <div className="flex flex-1 min-w-0 h-full items-center gap-[8px]">
             {showSidebarToggle && (
-              <button
-                type="button"
-                onClick={onToggleSidebar}
-                className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
-                aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              >
-                {sidebarCollapsed
-                  ? <PanelLeftOpen className="size-[16px] text-[var(--color-slate)]" />
-                  : <PanelLeftClose className="size-[16px] text-[var(--color-slate)]" />}
-                <HeaderTooltip label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} align="left" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={onToggleSidebar}
+                    className="flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                    aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                  >
+                    {sidebarCollapsed
+                      ? <PanelLeftOpen className="size-[16px] text-[var(--color-slate)]" />
+                      : <PanelLeftClose className="size-[16px] text-[var(--color-slate)]" />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
+                  {sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                </TooltipContent>
+              </Tooltip>
             )}
             {displayName ? (
               isRenaming ? (
@@ -121,7 +106,7 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                         <X className="size-[16px]" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom">
+                    <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
                       Cancel
                     </TooltipContent>
                   </Tooltip>
@@ -136,7 +121,7 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                         <Check className="size-[16px]" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom">
+                    <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
                       Save
                     </TooltipContent>
                   </Tooltip>
@@ -149,24 +134,30 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                   >
                     {displayName}
                   </p>
-                  <ChatActionsMenu
-                    align="start"
-                    side="bottom"
-                    isBookmarked={isBookmarked}
-                    onRename={startRename}
-                    onBookmark={onToggleBookmark}
-                    onDelete={() => setConfirmDeleteOpen(true)}
-                    trigger={
-                      <button
-                        type="button"
-                        className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
-                        aria-label="Chat options"
-                      >
-                        <MoreHorizontal className="size-[16px] text-[var(--color-slate)]" />
-                        <HeaderTooltip label="Chat options" align="left" />
-                      </button>
-                    }
-                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ChatActionsMenu
+                        align="start"
+                        side="bottom"
+                        isBookmarked={isBookmarked}
+                        onRename={startRename}
+                        onBookmark={onToggleBookmark}
+                        onDelete={() => setConfirmDeleteOpen(true)}
+                        trigger={
+                          <button
+                            type="button"
+                            className="flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                            aria-label="Chat options"
+                          >
+                            <MoreHorizontal className="size-[16px] text-[var(--color-slate)]" />
+                          </button>
+                        }
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
+                      Chat options
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               )
             ) : null}
@@ -174,24 +165,36 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
 
           {/* Right: actions */}
           <div className="flex gap-[8px] items-center shrink-0">
-            <button
-              type="button"
-              onClick={onMinimize}
-              className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
-              aria-label="Minimize"
-            >
-              <Minimize2 className="size-[16px] text-[var(--color-slate)]" />
-              <HeaderTooltip label="Minimize" align="center" />
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
-              aria-label="Close"
-            >
-              <X className="size-[16px] text-[var(--color-slate)]" />
-              <HeaderTooltip label="Close" align="right" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onMinimize}
+                  className="flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+                  aria-label="Minimize"
+                >
+                  <Minimize2 className="size-[16px] text-[var(--color-slate)]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
+                Minimize
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="size-[16px] text-[var(--color-slate)]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
+                Close
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>
