@@ -141,8 +141,8 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
 
   const menuActions = [
     // New chat's plus sits in a light-blue pill (Figma), so it renders specially.
+    // Search now lives in the header (next to the collapse toggle), not here.
     { key: 'new-chat', label: 'New chat', icon: Plus, onClick: onNewChat, isNewChat: true },
-    { key: 'search', label: 'Search', icon: Search, onClick: () => setSearchModalOpen(true) },
     { key: 'chats', label: 'Chats', icon: MessageSquare, onClick: onOpenChats },
     { key: 'bookmarks', label: 'Bookmarks', icon: Bookmark, onClick: onOpenBookmarks },
   ];
@@ -209,21 +209,40 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
         </span>
 
         {!collapsed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                aria-label="Collapse sidebar"
-                className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
-              >
-                <PanelLeftClose className="size-[16px] text-[var(--color-slate)]" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
-              Collapse sidebar
-            </TooltipContent>
-          </Tooltip>
+          <div className="flex items-center gap-[2px] shrink-0">
+            {/* Search — opens the same modal as the old menu item */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setSearchModalOpen(true)}
+                  aria-label="Search"
+                  className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                >
+                  <Search className="size-[16px] text-[var(--color-slate)]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
+                Search
+              </TooltipContent>
+            </Tooltip>
+            {/* Collapse toggle */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  aria-label="Collapse sidebar"
+                  className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                >
+                  <PanelLeftClose className="size-[16px] text-[var(--color-slate)]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
+                Collapse sidebar
+              </TooltipContent>
+            </Tooltip>
+          </div>
         )}
       </div>
 

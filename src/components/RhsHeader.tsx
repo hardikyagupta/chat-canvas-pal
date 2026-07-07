@@ -76,7 +76,7 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
   const cancelRename = () => setIsRenaming(false);
 
   return (
-    <div className="atmo-glass-header flex items-start pl-[16px] w-full shrink-0 overflow-visible">
+    <div className="atmo-glass-header flex items-start pl-[16px] w-full shrink-0 overflow-visible bg-[var(--color-surface-0)]">
       <div className="flex flex-1 min-w-0 items-center justify-end h-[56px] pr-[24px] self-stretch">
         <div className="flex gap-[8px] items-center w-full">
           {/* Left: sidebar toggle (when collapsed) + chat-name context */}

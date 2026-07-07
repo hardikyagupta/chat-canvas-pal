@@ -2249,22 +2249,7 @@ The content has been updated across all channels to reflect your changes.`;
                       {/* Greeting: "Good morning Amit," then, on one line,
                           "what can I do for you?" + the rotating slot-text topic */}
                       <div className="flex flex-col gap-[6px] items-center">
-                        <GradientShimmer
-                          as="p"
-                          className="font-semibold text-[24px] leading-[30px] text-center tracking-[0.42px] whitespace-nowrap"
-                          style={{ fontFamily: "Manrope, sans-serif" }}
-                          baseColor="var(--color-slate)"
-                          gradient={[
-                            { position: 0.2, color: "var(--color-royal)" },  /* shimmer-blue */
-                            { position: 0.4, color: "var(--color-pink)" },  /* shimmer-pink */
-                            { position: 0.6, color: "var(--color-orange)" },  /* shimmer-orange */
-                            { position: 0.8, color: "var(--color-steel)" },  /* shimmer-teal */
-                          ]}
-                          duration={2}
-                          pauseBetween={1200}
-                        >
-                          {`${getGreeting()}, Amit`}
-                        </GradientShimmer>
+                        <GreetingShimmer text={`${getGreeting()}, Amit`} />
                         <div
                           className="flex items-center justify-center gap-[6px] text-[16px] leading-[22px] text-[var(--color-slate)] text-center tracking-[0.42px] whitespace-nowrap"
                           style={{ fontFamily: "Manrope, sans-serif" }}
@@ -2719,6 +2704,53 @@ The content has been updated across all channels to reflect your changes.`;
 };
 
 export default ChatInterface;
+
+// Greeting shimmer plays its gradient sweep only ONCE per browser session.
+// After the first sweep (or on any later mount in the same session) it renders
+// as plain static text so it doesn't re-shimmer every time you hit the empty state.
+const GREETING_SHIMMER_KEY = 'greeting-shimmer-played';
+
+function GreetingShimmer({ text }: { text: string }) {
+  const [play, setPlay] = useState(() => {
+    try { return sessionStorage.getItem(GREETING_SHIMMER_KEY) !== '1'; } catch { return true; }
+  });
+
+  useEffect(() => {
+    if (!play) return;
+    // Let one sweep run (~2s), then lock it static for the rest of the session.
+    const t = setTimeout(() => {
+      try { sessionStorage.setItem(GREETING_SHIMMER_KEY, '1'); } catch { /* ignore */ }
+      setPlay(false);
+    }, 2600);
+    return () => clearTimeout(t);
+  }, [play]);
+
+  const cls = 'font-semibold text-[24px] leading-[30px] text-center tracking-[0.42px] whitespace-nowrap';
+  const fontStyle: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
+
+  if (!play) {
+    return <p className={cls} style={{ ...fontStyle, color: 'var(--color-slate)' }}>{text}</p>;
+  }
+
+  return (
+    <GradientShimmer
+      as="p"
+      className={cls}
+      style={fontStyle}
+      baseColor="var(--color-slate)"
+      gradient={[
+        { position: 0.2, color: 'var(--color-royal)' },  /* shimmer-blue */
+        { position: 0.4, color: 'var(--color-pink)' },  /* shimmer-pink */
+        { position: 0.6, color: 'var(--color-orange)' },  /* shimmer-orange */
+        { position: 0.8, color: 'var(--color-steel)' },  /* shimmer-teal */
+      ]}
+      duration={2}
+      pauseBetween={99999}
+    >
+      {text}
+    </GradientShimmer>
+  );
+}
 
 type ChatCardBeamProps = {
   enabled: boolean;

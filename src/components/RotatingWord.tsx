@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { SlotText } from 'slot-text/react';
 
 interface RotatingWordProps {
   words: string[];
-  holdMs?: number; // how long each word stays before rolling to the next
+  holdMs?: number; // how long each word stays before the next fades in
   className?: string;
 }
 
 /**
- * Cycles a list of words through the `slot-text` library's text-roll animation
- * (https://textmotion.dev/lab). The library does all the animation — this only
- * advances the `text` prop on an interval; SlotText rolls whenever it changes.
+ * Cycles a list of words with a simple fade reveal — each new word fades in as a
+ * whole (with a subtle rise), replacing the previous per-letter roll animation.
  */
 const RotatingWord: React.FC<RotatingWordProps> = ({ words, holdMs = 2400, className }) => {
   const [i, setI] = useState(0);
@@ -22,17 +20,12 @@ const RotatingWord: React.FC<RotatingWordProps> = ({ words, holdMs = 2400, class
   }, [words.length, holdMs]);
 
   return (
-    <SlotText
-      text={words[i]}
-      className={className}
-      options={{
-        direction: 'up',
-        duration: 300,
-        stagger: 45,
-        bounce: 0.6,
-        easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-      }}
-    />
+    <span className={className} style={{ display: 'inline-block' }}>
+      {/* key remount replays the fade each time the word changes */}
+      <span key={i} className="inline-block animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out">
+        {words[i]}
+      </span>
+    </span>
   );
 };
 
