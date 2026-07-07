@@ -35,7 +35,7 @@ const getTimeGroup = (timeStr: string): TimeGroup => {
 };
 
 const CircularLoader: React.FC = () => (
-  <div className="flex flex-col items-center justify-center py-[40px] px-[16px] gap-[12px]">
+  <div className="flex flex-col items-center justify-center px-[16px] gap-[12px]">
     <div className="relative w-[28px] h-[28px]">
       <svg
         className="w-full h-full animate-spin"
@@ -293,12 +293,14 @@ export const SearchChatsModal: React.FC<SearchChatsModalProps> = ({
               }}
             >
               {isLoading && searchQuery ? (
-                <div className="flex flex-col py-[8px]">
-                  <CircularLoader />
-                  <div className="flex flex-col">
+                <div className="flex flex-col">
+                  <div className="flex flex-col py-[8px]">
                     {Array.from({ length: 3 }).map((_, i) => (
                       <SkeletonChatItem key={`skeleton-${i}`} />
                     ))}
+                  </div>
+                  <div className="flex items-center justify-center py-[40px]">
+                    <CircularLoader />
                   </div>
                 </div>
               ) : totalItems > 0 ? (
