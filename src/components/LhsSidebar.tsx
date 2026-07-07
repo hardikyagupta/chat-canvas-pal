@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { SquarePen, MessageSquare, Bookmark, Settings, ChevronDown, MoreHorizontal, X, Check } from 'lucide-react';
+import { SquarePen, MessageSquare, Bookmark, Settings, ChevronDown, MoreHorizontal, X, Check, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
+import SearchChatsModal from './SearchChatsModal';
 
 export interface LhsChatItem {
   id: string;
@@ -75,6 +76,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   onOpenSettings,
 }) => {
   const [chatsOpen, setChatsOpen] = useState(true);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -135,6 +137,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
 
   const menuActions = [
     { key: 'new-chat', label: 'New chat', icon: SquarePen, onClick: onNewChat },
+    { key: 'search', label: 'Search', icon: Search, onClick: () => setSearchModalOpen(true) },
     { key: 'chats', label: 'Chats', icon: MessageSquare, onClick: onOpenChats },
     { key: 'bookmarks', label: 'Bookmarks', icon: Bookmark, onClick: onOpenBookmarks },
   ];
@@ -270,7 +273,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
                               <X className="size-[16px]" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom">
+                          <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
                             Cancel
                           </TooltipContent>
                         </Tooltip>
@@ -285,7 +288,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
                               <Check className="size-[16px]" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom">
+                          <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
                             Save
                           </TooltipContent>
                         </Tooltip>
@@ -374,6 +377,17 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
         onOpenChange={(o) => !o && setDeleteTarget(null)}
         chatName={deleteTarget?.title}
         onConfirm={confirmDelete}
+      />
+
+      <SearchChatsModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        chats={chats}
+        onSelectChat={(id) => {
+          onSelectChat?.(id);
+          setSearchModalOpen(false);
+        }}
+        onNewChat={onNewChat}
       />
     </div>
   );
