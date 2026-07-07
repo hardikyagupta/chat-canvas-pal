@@ -253,7 +253,7 @@ export const SearchChatsModal: React.FC<SearchChatsModalProps> = ({
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-start justify-center pt-[80px] pointer-events-none">
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
         <div className="w-full max-w-[600px] mx-[16px] pointer-events-auto">
           <div className="rounded-[12px] bg-background shadow-[0px_20px_60px_-12px_oklch(0_0_0_/_0.2)] overflow-hidden">
             {/* Search Input */}
@@ -293,13 +293,15 @@ export const SearchChatsModal: React.FC<SearchChatsModalProps> = ({
               }}
             >
               {isLoading && searchQuery ? (
-                <div className="flex flex-col">
-                  <div className="flex flex-col py-[8px]">
+                <div className="relative">
+                  {/* Skeleton items in background */}
+                  <div className="flex flex-col py-[8px] opacity-40">
                     {Array.from({ length: 3 }).map((_, i) => (
                       <SkeletonChatItem key={`skeleton-${i}`} />
                     ))}
                   </div>
-                  <div className="flex items-center justify-center py-[40px]">
+                  {/* Centered loader overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center">
                     <CircularLoader />
                   </div>
                 </div>
