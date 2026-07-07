@@ -1,38 +1,48 @@
 import React, { useEffect, useState } from 'react';
-import { SlotText } from 'slot-text/react';
 
 interface RotatingWordProps {
   words: string[];
-  holdMs?: number; // how long each word stays before rolling to the next
+  holdMs?: number; // how long each word stays before crossfading to the next
   className?: string;
 }
 
 /**
- * Cycles a list of words through the `slot-text` library's text-roll animation
- * (https://textmotion.dev/lab). The library does all the animation — this only
- * advances the `text` prop on an interval; SlotText rolls whenever it changes.
+ * Cycles a list of words with a pure opacity crossfade — the current word fades
+ * out, swaps while invisible, then fades in. No vertical movement, so the text
+ * never jumps.
  */
 const RotatingWord: React.FC<RotatingWordProps> = ({ words, holdMs = 2400, className }) => {
   const [i, setI] = useState(0);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     if (words.length <= 1) return;
-    const t = setInterval(() => setI((p) => (p + 1) % words.length), holdMs);
-    return () => clearInterval(t);
+    const FADE = 300; // matches the CSS transition below
+    let swapTimer: ReturnType<typeof setTimeout>;
+    const cycle = setInterval(() => {
+      setVisible(false); // fade out
+      swapTimer = setTimeout(() => {
+        setI((p) => (p + 1) % words.length);
+        setVisible(true); // fade in the next word
+      }, FADE);
+    }, holdMs);
+    return () => {
+      clearInterval(cycle);
+      clearTimeout(swapTimer);
+    };
   }, [words.length, holdMs]);
 
   return (
-    <SlotText
-      text={words[i]}
+    <span
       className={className}
-      options={{
-        direction: 'up',
-        duration: 300,
-        stagger: 45,
-        bounce: 0.6,
-        easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      style={{
+        display: 'inline-block',
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 300ms ease',
       }}
-    />
+    >
+      {words[i]}
+    </span>
   );
 };
 

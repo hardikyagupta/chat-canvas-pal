@@ -33,7 +33,8 @@ import MinViewLhsOverlay from './MinViewLhsOverlay';
 import ArtifactPreview from './ArtifactPreview';
 import LineNav, { LineNavItem } from './LineNav';
 import FeedbackModal, { FeedbackSentiment } from './FeedbackModal';
-import { ThumbsUp, ThumbsDown, CheckCircle2 } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, CheckCircle2, TrendingUp, MousePointerClick, FileText, Activity, DollarSign } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { playResponseCue, playToggleCue, playExpandCue } from '@/lib/playCue';
 import { ContentAgentSegmentAccordions } from './ContentAgentSegmentAccordions';
 import GeneratingLoader from './GeneratingLoader';
@@ -276,6 +277,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     "Channel Anomalies",
     "Revenue Monitoring",
   ];
+  // A relevant icon for each starter chip.
+  const starterChipIcons: Record<string, LucideIcon> = {
+    "Seasonal Trend": TrendingUp,
+    "CTR Monitoring": MousePointerClick,
+    "QBR Report": FileText,
+    "Channel Anomalies": Activity,
+    "Revenue Monitoring": DollarSign,
+  };
   const starterPromptsByChip: Record<string, string[]> = {
     "Seasonal Trend": [
       "Show me seasonal engagement trends across channels for the last 12 months.",
@@ -411,6 +420,45 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [artifactClosing, setArtifactClosing] = useState(false); // exit-animation flag
   const hasOpenedArtifactRef = useRef(false);
   const artifactCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Artifact column is drag-resizable; width is a % of the whole content row.
+  // Minimum widths (px) that must hold while resizing so nothing overflows or
+  // bounces: the artifact never goes below ARTIFACT_MIN, and the chat keeps CHAT_MIN.
+  const ARTIFACT_MIN = 360;
+  const CHAT_MIN = 460;
+  const [artifactWidth, setArtifactWidth] = useState(50);
+  const [artifactResizing, setArtifactResizing] = useState(false);
+  const contentRowRef = useRef<HTMLDivElement>(null);
+
+  const startArtifactResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setArtifactResizing(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const onMove = (ev: MouseEvent) => {
+      const row = contentRowRef.current;
+      if (!row) return;
+      const rect = row.getBoundingClientRect();
+      // Artifact sits on the right, so its width is (right edge − cursor).
+      // Clamp in PIXELS to the valid range so it can't overshoot the min/max and
+      // then snap back — the panel stays exactly where the cursor leaves it.
+      const maxPx = Math.max(ARTIFACT_MIN, rect.width - CHAT_MIN);
+      const px = Math.min(maxPx, Math.max(ARTIFACT_MIN, rect.right - ev.clientX));
+      setArtifactWidth((px / rect.width) * 100);
+    };
+    const onUp = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove, true);
+      window.removeEventListener('mouseup', onUp, true);
+      setArtifactResizing(false);
+      // No snap — leave the panel where the user dropped it.
+    };
+    // Capture phase so charts/SVGs inside the artifact can't swallow mousemove
+    // via stopPropagation while dragging right to shrink the panel.
+    window.addEventListener('mousemove', onMove, true);
+    window.addEventListener('mouseup', onUp, true);
+  };
 
   const handleOpenArtifactPreview = () => {
     if (artifactCloseTimerRef.current) clearTimeout(artifactCloseTimerRef.current);
@@ -2146,7 +2194,8 @@ The content has been updated across all channels to reflect your changes.`;
 
 
         {/* Main content area: Layout changes based on view mode */}
-        <div className={cn(
+        <div
+          className={cn(
           "flex flex-1 overflow-hidden",
           isExpanded ? "flex-row pt-0" : "flex-col"
         )}>
@@ -2162,6 +2211,7 @@ The content has been updated across all channels to reflect your changes.`;
               onOpenBookmarks={() => setActivePage('bookmarks')}
               onSelectChat={() => setActivePage('home')}
               onOpenSettings={() => navigate('/settings')}
+              onToggleCollapse={() => setLhsCollapsed(prev => !prev)}
             />
           )}
           {/* Conditional rendering of AgentsSidebar in expanded view */}
@@ -2173,40 +2223,40 @@ The content has been updated across all channels to reflect your changes.`;
             />
           )}
 
+          {/* Chat + artifact region — flex-1 after the LHS. contentRowRef lives here
+              so the artifact width is a % of THIS region (excludes the LHS). That
+              keeps chat + artifact stable when the sidebar expands/collapses and
+              prevents the artifact from overflowing onto the chat. */}
+          <div ref={contentRowRef} className="flex flex-row flex-1 min-w-0 overflow-hidden">
           {/* Right column: header + chat (expanded) / chat only (widget) */}
-          <div className="flex flex-col flex-1 min-w-0 min-h-0">
+          <div className={cn(
+            "flex flex-col flex-1 min-h-0",
+            isExpanded && showArtifactPreview ? "min-w-[460px]" : "min-w-0"
+          )}>
           {isExpanded && (
             <RhsHeader
               chatName={chatName}
-              showSidebarToggle={true}
+              showSidebarToggle={false}
               sidebarCollapsed={lhsCollapsed}
-              onToggleSidebar={() => { setLhsCollapsed(prev => !prev); playToggleCue(); }}
+              onToggleSidebar={() => setLhsCollapsed(prev => !prev)}
               isBookmarked={isChatBookmarked}
               onToggleBookmark={() => setIsChatBookmarked(prev => !prev)}
               onDeleteChat={handleNewChat}
               onMinimize={() => setIsExpanded(false)}
               onClose={onCloseInterface}
+              hideClose={showArtifactPreview}
             />
           )}
 
           {/* Chat messages and input area.
-              Window is full screen; the chat-area itself is the Figma bordered card. */}
-          <div className={cn(
-            "flex flex-col flex-1 overflow-hidden min-h-0",
-            // Frosted "outside" gutter around the grey card (matches Settings) when
-            // atmosphere is on; the grey card itself stays opaque surface-0.
-            isExpanded && "atmo-glass p-[8px]"
-          )}>
-          <ChatCardBeam enabled={isExpanded} active={messages.length === 0 && !isGeneratingOutput}>
-          <div className={cn(
-            "relative flex flex-1 overflow-hidden min-h-0 min-w-0",
-            isExpanded ? "bg-[var(--color-surface-0)] border-[0.5px] border-[var(--color-line-input)] rounded-[16px]" : "bg-[var(--color-surface-0)]",
-            isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "gap-[12px] pl-[12px]",
-            isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "px-[12px]"
-          )}>
+              Edge-to-edge: the chat surface fills the RHS column with no gutter,
+              border, or rounding — it merges with the bordered LHS into one dashboard. */}
+          <div className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <ChatCardBeam enabled={isExpanded} active={false}>
+          <div className="relative flex flex-1 overflow-hidden min-h-0 min-w-0 bg-[var(--color-surface-0)]">
           {/* Chats / Bookmarks full page — overlays the conversation when active */}
           {isExpanded && activePage !== 'home' && (
-            <div className="absolute inset-0 z-20 rounded-[16px] overflow-hidden bg-card">
+            <div className="absolute inset-0 z-20 overflow-hidden bg-[var(--color-surface-0)]">
               <ChatListPage
                 title={activePage === 'chats' ? 'Chats' : 'Bookmarks'}
                 searchPlaceholder={activePage === 'chats' ? 'Search chats' : 'Search bookmarks'}
@@ -2217,25 +2267,29 @@ The content has been updated across all channels to reflect your changes.`;
               />
             </div>
           )}
-          {/* Conversation column — 60% when artifact open, hidden when full-expanded, expands back while closing */}
+          {/* Conversation column — fills the chat area. In expanded view the artifact
+              is now its own top-level third column (not a nested split). Widget view
+              still hides the chat when the artifact takes over full-screen. */}
           <div
             className={cn(
-              "relative z-10 flex flex-col overflow-hidden min-w-0 min-h-0 transition-[width] duration-300 ease-in-out",
-              isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "w-0 opacity-0 pointer-events-none",
-              isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "w-[60%]",
-              !(isExpanded && showArtifactPreview && !artifactClosing) && "w-full flex-1",
-              // Widget view: the artifact takes over full-screen, so hide (not unmount) the chat
+              "relative z-10 flex flex-col overflow-hidden min-w-0 min-h-0 w-full flex-1",
               !isExpanded && showArtifactPreview && "hidden"
             )}
           >
             {/* Scrollable chat messages area */}
             <div
               className={cn(
-                "relative z-0 flex-1 flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
-                isExpanded ? "" : "p-[16px]"
+                "relative z-0 flex-1 flex flex-col overflow-y-auto hover-scroll",
+                isExpanded ? "px-[28px]" : "p-[16px]"
               )}
               ref={chatContainerRef}
             >
+              {/* Top fade edge — pins just under the navbar so messages fade out
+                  as they scroll up, for a smooth scroll-under-header effect.
+                  Only while a chat exists (expanded view). */}
+              {isExpanded && messages.length > 0 && (
+                <div className="sticky top-0 z-10 h-[32px] -mb-[32px] w-full pointer-events-none bg-gradient-to-b from-[var(--color-surface-0)] to-transparent" />
+              )}
               {/* Centered container for chat content - 768px width as per Figma */}
               <div className={cn(
                 "flex flex-col items-center w-full min-h-full",
@@ -2243,42 +2297,16 @@ The content has been updated across all channels to reflect your changes.`;
                 messages.length === 0 ? "justify-center" : ""
               )}>
                 <div className={cn(
-                  "flex flex-col items-start space-y-0 max-w-full",
-                  isExpanded ? "w-[768px]" : "w-full",
+                  "flex flex-col items-start space-y-0 w-full",
+                  isExpanded ? "max-w-[768px]" : "max-w-full",
                   messages.length > 0 ? "pb-8" : ""
                 )}>
                 {messages.length === 0 && !isGeneratingOutput && (
                   <div className="w-full flex flex-col items-center">
-                    <div className={cn("w-full flex flex-col gap-[40px] items-center", isExpanded ? "max-w-[768px]" : "max-w-full")}>
-                      {/* Greeting: "Good morning Amit," then, on one line,
-                          "what can I do for you?" + the rotating slot-text topic */}
+                    <div className={cn("w-full flex flex-col gap-[32px] items-center", isExpanded ? "max-w-[768px]" : "max-w-full")}>
+                      {/* Greeting — single line ("Good evening, Amit"). */}
                       <div className="flex flex-col gap-[6px] items-center">
-                        <GradientShimmer
-                          as="p"
-                          className="font-semibold text-[24px] leading-[30px] text-center tracking-[0.42px] whitespace-nowrap"
-                          style={{ fontFamily: "Manrope, sans-serif" }}
-                          baseColor="var(--color-slate)"
-                          gradient={[
-                            { position: 0.2, color: "var(--color-royal)" },  /* shimmer-blue */
-                            { position: 0.4, color: "var(--color-pink)" },  /* shimmer-pink */
-                            { position: 0.6, color: "var(--color-orange)" },  /* shimmer-orange */
-                            { position: 0.8, color: "var(--color-steel)" },  /* shimmer-teal */
-                          ]}
-                          duration={2}
-                          pauseBetween={1200}
-                        >
-                          {`${getGreeting()}, Amit`}
-                        </GradientShimmer>
-                        <div
-                          className="flex items-center justify-center gap-[6px] text-[16px] leading-[22px] text-[var(--color-slate)] text-center tracking-[0.42px] whitespace-nowrap"
-                          style={{ fontFamily: "Manrope, sans-serif" }}
-                        >
-                          <span className="font-semibold">What can I do for you?</span>
-                          <RotatingWord
-                            words={GREETING_TOPICS}
-                            className="font-medium text-[var(--color-royal)]"
-                          />
-                        </div>
+                        <GreetingShimmer text={`${getGreeting()}, Amit`} />
                       </div>
                       <div className="w-full flex flex-col gap-[16px] items-center">
                         <ChatInput
@@ -2316,21 +2344,27 @@ The content has been updated across all channels to reflect your changes.`;
                         )}
                         {!matchedTypedTrigger && !selectedStarterChip && (
                           <div className="flex flex-wrap gap-[8px] items-center justify-center w-full">
-                            {starterChips.map((chipLabel, index) => (
-                              <button
-                                key={index}
-                                type="button"
-                                className="fig-chip flex items-center justify-center px-[12px] py-[6px] rounded-[8px] whitespace-nowrap shrink-0"
-                                onClick={() => setSelectedStarterChip(chipLabel)}
-                              >
-                                <span
-                                  className="font-normal text-[14px] leading-[20px] text-[var(--color-ink)] tracking-[0.42px]"
-                                  style={{ fontFamily: "Manrope, sans-serif" }}
+                            {starterChips.map((chipLabel, index) => {
+                              const ChipIcon = starterChipIcons[chipLabel];
+                              return (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  className="fig-chip flex items-center justify-center gap-[6px] px-[10px] py-[6px] rounded-[8px] whitespace-nowrap shrink-0"
+                                  onClick={() => setSelectedStarterChip(chipLabel)}
                                 >
-                                  {chipLabel}
-                                </span>
-                              </button>
-                            ))}
+                                  {ChipIcon && (
+                                    <ChipIcon className="size-[14px] text-[var(--color-slate)] shrink-0" />
+                                  )}
+                                  <span
+                                    className="font-normal text-[12px] leading-[16px] text-[var(--color-ink)] tracking-[0.36px]"
+                                    style={{ fontFamily: "Manrope, sans-serif" }}
+                                  >
+                                    {chipLabel}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
                         {!matchedTypedTrigger && selectedStarterChip && (
@@ -2559,8 +2593,9 @@ The content has been updated across all channels to reflect your changes.`;
             {messages.length > 0 && (
               <div className={cn(
                 "relative flex-shrink-0",
-                // Widget: match the messages area's 16px on left/right/bottom
-                isExpanded ? "" : "px-[16px] pt-[8px] pb-[16px]"
+                // Match the messages scroll area's horizontal padding so the input
+                // lines up with the conversation (28px expanded, 16px widget).
+                isExpanded ? "px-[28px]" : "px-[16px] pt-[8px] pb-[16px]"
               )}>
                 {/* Feedback popover / success toast — pinned to the chat's right edge,
                     on the line just above the input field (not over its face). */}
@@ -2613,7 +2648,7 @@ The content has been updated across all channels to reflect your changes.`;
                 )}>
                   <div className={cn(
                     "relative",
-                    isExpanded ? "w-[768px]" : "w-full"
+                    isExpanded ? "w-full max-w-[768px]" : "w-full"
                   )}>
                     {/* Floating "still loading" pill, centered just above the input (both views) */}
                     {isGeneratingOutput && (
@@ -2651,15 +2686,13 @@ The content has been updated across all channels to reflect your changes.`;
                         return false;
                       })()}
                       selectedContextChip={null}
+                      placeholder="Write a message"
                     />
                     {/* Footer text below input — widget view only (expanded uses card footer) */}
                     {!isExpanded && (
                       <div className="flex flex-col items-center gap-1 mt-2">
                         <p className="text-sm text-foreground-muted text-center">
                           Co-marketer can make mistakes. Please double check responses
-                        </p>
-                        <p className="text-[12px] text-foreground-muted text-center">
-                          This AI doesn&apos;t take coffee breaks. Made with ❤️ by design engineer.
                         </p>
                       </div>
                     )}
@@ -2672,41 +2705,21 @@ The content has been updated across all channels to reflect your changes.`;
             {isExpanded && (
               <div className="flex flex-col items-center justify-center gap-1 py-[8px] w-full shrink-0">
                 <p
-                  className="text-[12px] text-[var(--color-grey)] text-center w-[768px]"
+                  className="text-[12px] text-[var(--color-grey)] text-center w-full max-w-[768px] px-[28px]"
                   style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                 >
                   Co-marketer can make mistakes. Please double check responses
                 </p>
-                <p
-                  className="text-[10px] text-[var(--color-grey)] text-center w-[768px]"
-                  style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
-                >
-                  This AI doesn&apos;t take coffee breaks. Made with ❤️ by design engineer.
-                </p>
               </div>
             )}
           </div>
-          {/* Artifact preview panel.
-              Expanded view: 40% split (or full width when expanded), slides out on close.
-              Widget (collapse) view: full-bleed take-over below the Co-marketer nav,
-              with the artifact's own top-nav acting as the close sub-nav. */}
-          {showArtifactPreview && (
-            <div className={cn(
-              "relative z-10 shrink-0 h-full transition-all duration-300 ease-in-out will-change-[width,transform,opacity]",
-              !isExpanded
-                ? "w-full"
-                : artifactClosing
-                  ? "w-0 opacity-0 translate-x-6 pr-0"
-                  : artifactFullExpanded
-                    ? "w-full py-[12px]"
-                    : "w-[40%] pr-[12px] py-[12px]"
-            )}>
+          {/* Artifact — WIDGET view only: full-bleed take-over of the floating window.
+              (Expanded view renders the artifact as a top-level third column below.) */}
+          {!isExpanded && showArtifactPreview && (
+            <div className="relative z-10 shrink-0 h-full w-full">
               <ArtifactPreview
                 onClose={handleCloseArtifactPreview}
-                onDownload={() => {}}
-                isFullExpanded={artifactFullExpanded}
-                onToggleExpand={isExpanded ? () => { setArtifactFullExpanded(prev => !prev); playExpandCue(); } : undefined}
-                bare={!isExpanded}
+                bare
               />
             </div>
           )}
@@ -2714,15 +2727,96 @@ The content has been updated across all channels to reflect your changes.`;
           </ChatCardBeam>
           </div>
           </div>
+          {/* Artifact — EXPANDED view: opens as a top-level third column,
+              so the layout reads LHS | chat | artifact (Claude-style).
+              Drag the left handle to resize; releases snap to 42 / 50 / 60%. */}
+          {isExpanded && showArtifactPreview && (
+            <div
+              className={cn(
+                // Not shrink-0: when the LHS expands and space tightens, the artifact
+                // shrinks (down to its min) so the chat keeps its minimum width.
+                "relative z-10 h-full min-w-[360px] border-l border-[var(--color-line)] bg-card",
+                artifactClosing
+                  ? "opacity-0 transition-all duration-300 ease-in-out"
+                  : "animate-in slide-in-from-right-8 fade-in duration-300",
+                !artifactResizing && !artifactClosing && "transition-[width] duration-200 ease-out"
+              )}
+              style={{ width: artifactClosing ? 0 : `${artifactWidth}%` }}
+            >
+              {/* Drag handle straddling the divider */}
+              <div
+                onMouseDown={startArtifactResize}
+                className="group/resize absolute left-0 top-0 z-20 h-full w-[10px] -ml-[5px] flex items-center justify-center cursor-col-resize"
+                aria-label="Resize artifact"
+                role="separator"
+              >
+                <div className={cn(
+                  "h-[36px] w-[3px] rounded-full bg-[var(--color-line-strong)] transition-opacity",
+                  artifactResizing ? "opacity-100" : "opacity-0 group-hover/resize:opacity-100"
+                )} />
+              </div>
+              <ArtifactPreview onClose={handleCloseArtifactPreview} bare />
+            </div>
+          )}
+          </div>
         </div>
       </div>
 
-
+      {/* Transparent overlay during artifact resize — captures the pointer so
+          nothing underneath (charts, iframes) interferes with the drag. */}
+      {artifactResizing && <div className="fixed inset-0 z-[200] cursor-col-resize" />}
     </>
   );
 };
 
 export default ChatInterface;
+
+// Greeting shimmer plays its gradient sweep only ONCE per browser session.
+// After the first sweep (or on any later mount in the same session) it renders
+// as plain static text so it doesn't re-shimmer every time you hit the empty state.
+const GREETING_SHIMMER_KEY = 'greeting-shimmer-played';
+
+function GreetingShimmer({ text }: { text: string }) {
+  const [play, setPlay] = useState(() => {
+    try { return sessionStorage.getItem(GREETING_SHIMMER_KEY) !== '1'; } catch { return true; }
+  });
+
+  useEffect(() => {
+    if (!play) return;
+    // Let one sweep run (~2s), then lock it static for the rest of the session.
+    const t = setTimeout(() => {
+      try { sessionStorage.setItem(GREETING_SHIMMER_KEY, '1'); } catch { /* ignore */ }
+      setPlay(false);
+    }, 2600);
+    return () => clearTimeout(t);
+  }, [play]);
+
+  const cls = 'font-semibold text-[24px] leading-[30px] text-center tracking-[0.42px] whitespace-nowrap';
+  const fontStyle: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
+
+  if (!play) {
+    return <p className={cls} style={{ ...fontStyle, color: 'var(--color-slate)' }}>{text}</p>;
+  }
+
+  return (
+    <GradientShimmer
+      as="p"
+      className={cls}
+      style={fontStyle}
+      baseColor="var(--color-slate)"
+      gradient={[
+        { position: 0.2, color: 'var(--color-royal)' },  /* shimmer-blue */
+        { position: 0.4, color: 'var(--color-pink)' },  /* shimmer-pink */
+        { position: 0.6, color: 'var(--color-orange)' },  /* shimmer-orange */
+        { position: 0.8, color: 'var(--color-steel)' },  /* shimmer-teal */
+      ]}
+      duration={2}
+      pauseBetween={99999}
+    >
+      {text}
+    </GradientShimmer>
+  );
+}
 
 type ChatCardBeamProps = {
   enabled: boolean;
@@ -2753,7 +2847,7 @@ function ChatCardBeam({ enabled, active, children }: ChatCardBeamProps) {
         theme="light"
         colorVariant="colorful"
         staticColors={true}
-        borderRadius={16}
+        borderRadius={0}
         strength={0.72}
         brightness={1.55}
         saturation={1.85}

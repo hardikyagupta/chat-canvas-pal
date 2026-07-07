@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Minimize2, X, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Check } from 'lucide-react';
+import { Minimize2, X, PanelLeftClose, PanelLeftOpen, ChevronDown, Check } from 'lucide-react';
 import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
 
@@ -34,6 +34,7 @@ interface RhsHeaderProps {
   onDeleteChat?: () => void;
   onMinimize?: () => void;
   onClose?: () => void;
+  hideClose?: boolean; // hide the X (e.g. while the artifact panel — which has its own close — is open)
 }
 
 const RhsHeader: React.FC<RhsHeaderProps> = ({
@@ -47,6 +48,7 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
   onDeleteChat,
   onMinimize,
   onClose,
+  hideClose,
 }) => {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
@@ -76,7 +78,7 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
   const cancelRename = () => setIsRenaming(false);
 
   return (
-    <div className="atmo-glass-header flex items-start pl-[16px] w-full shrink-0 overflow-visible">
+    <div className="atmo-glass-header flex items-start pl-[16px] w-full shrink-0 overflow-visible bg-[var(--color-surface-0)]">
       <div className="flex flex-1 min-w-0 items-center justify-end h-[56px] pr-[24px] self-stretch">
         <div className="flex gap-[8px] items-center w-full">
           {/* Left: sidebar toggle (when collapsed) + chat-name context */}
@@ -129,12 +131,15 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-[2px] min-w-0">
-                  <p
-                    className="font-medium text-[13px] text-[var(--color-charcoal)] whitespace-nowrap overflow-hidden text-ellipsis"
+                  <button
+                    type="button"
+                    onClick={startRename}
+                    className="font-medium text-[13px] text-[var(--color-charcoal)] whitespace-nowrap overflow-hidden text-ellipsis rounded-[6px] px-[6px] py-[3px] max-w-full hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
                     style={{ fontFamily: 'Manrope, sans-serif' }}
+                    aria-label="Rename chat"
                   >
                     {displayName}
-                  </p>
+                  </button>
                   <ChatActionsMenu
                     align="start"
                     side="bottom"
@@ -145,10 +150,10 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                     trigger={
                       <button
                         type="button"
-                        className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                        className="group relative flex items-center justify-center p-[6px] rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
                         aria-label="Chat options"
                       >
-                        <MoreHorizontal className="size-[16px] text-[var(--color-slate)]" />
+                        <ChevronDown className="size-[16px] text-[var(--color-slate)]" />
                         <HeaderTooltip label="Chat options" align="left" />
                       </button>
                     }
@@ -169,15 +174,17 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
               <Minimize2 className="size-[16px] text-[var(--color-slate)]" />
               <HeaderTooltip label="Minimize" align="center" />
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
-              aria-label="Close"
-            >
-              <X className="size-[16px] text-[var(--color-slate)]" />
-              <HeaderTooltip label="Close" align="right" />
-            </button>
+            {!hideClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+                aria-label="Close"
+              >
+                <X className="size-[16px] text-[var(--color-slate)]" />
+                <HeaderTooltip label="Close" align="right" />
+              </button>
+            )}
           </div>
         </div>
       </div>

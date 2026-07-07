@@ -1,5 +1,6 @@
-import React from 'react';
-import { PanelRightClose, Download, ArrowLeftToLine, ArrowRightToLine, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { Copy, Check, ChevronDown, X } from 'lucide-react';
+import { ActionMenu, ActionMenuTrigger, ActionMenuContent, ActionMenuItem } from '@/components/ui/action-menu';
 import {
   PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -19,11 +20,11 @@ const chartTooltip = { fontSize: 12, borderRadius: 8, fontFamily: MANROPE };
 interface ArtifactPreviewProps {
   fileName?: string;
   title?: string;
-  onClose?: () => void;        // collapse/close the artifact panel
-  onDownload?: () => void;
-  isFullExpanded?: boolean;    // artifact occupies full width (chat hidden)
-  onToggleExpand?: () => void; // expand to full / restore split (omit to hide the toggle)
-  bare?: boolean;              // drop the outer card border/radius (full-bleed, e.g. widget view)
+  onClose?: () => void;              // close the artifact panel
+  onCopy?: () => void;               // copy the artifact contents
+  onDownloadMarkdown?: () => void;   // Copy ▾ → Download as Markdown
+  onDownloadPdf?: () => void;        // Copy ▾ → Download as PDF
+  bare?: boolean;                    // drop the outer card border/radius (full-bleed, e.g. widget view)
 }
 
 // ---- KPI cards ----
@@ -104,81 +105,82 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   fileName = 'Ui launch usage readout combined · PDF',
   title = 'Highest Engagement Last Quarter',
   onClose,
-  onDownload,
-  isFullExpanded = false,
-  onToggleExpand,
+  onCopy,
+  onDownloadMarkdown,
+  onDownloadPdf,
   bare = false,
 }) => {
+  // "Copy" flips to a "Copied" checkmark briefly after a click.
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    onCopy?.();
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  };
   return (
     <div className={`flex flex-col h-full w-full bg-card overflow-hidden${bare ? '' : ' border border-[var(--color-line-input)] rounded-[12px]'}`}>
-      {/* top-nav-artifact */}
+      {/* top-nav-artifact — Claude-style: title on the left; Copy / Publish / Close on the right */}
       <TooltipProvider delayDuration={200}>
-        <div className="flex gap-[8px] items-center px-[8px] py-[4px] w-full shrink-0 border-b border-[var(--color-line-input)]">
-          {/* Left cluster: 1) expand arrow  2) collapse/close  then label */}
-          <div className="flex min-w-0 gap-[4px] items-center">
-            {onToggleExpand && (
-            <UITooltip>
-              <TooltipTrigger asChild>
+        <div className="flex gap-[8px] items-center px-[16px] py-[10px] w-full shrink-0 border-b border-[var(--color-line-input)]">
+          <p className="flex-1 min-w-0 truncate text-[14px] font-medium text-foreground">
+            {fileName}
+          </p>
+          {/* Copy — split button: "Copy" copies; the chevron opens the download menu */}
+          <div className="flex items-center rounded-[8px] border border-[var(--color-line-input)] overflow-hidden shrink-0">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="flex items-center gap-[6px] pl-[10px] pr-[8px] py-[5px] text-[13px] font-medium text-foreground hover:bg-[var(--color-surface-1)] transition-colors"
+            >
+              {copied ? (
+                <>
+                  <Check className="size-[14px] text-success" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="size-[14px] text-[var(--color-slate)]" />
+                  Copy
+                </>
+              )}
+            </button>
+            <ActionMenu>
+              <ActionMenuTrigger asChild>
                 <button
                   type="button"
-                  onClick={onToggleExpand}
-                  className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-                  aria-label={isFullExpanded ? 'Restore split view' : 'Expand artifact'}
+                  aria-label="Download options"
+                  className="flex items-center justify-center self-stretch px-[6px] border-l border-[var(--color-line-input)] hover:bg-[var(--color-surface-1)] data-[state=open]:bg-[var(--color-surface-1)] transition-colors"
                 >
-                  {isFullExpanded
-                    ? <ArrowRightToLine className="size-[16px] text-[var(--color-slate)]" />
-                    : <ArrowLeftToLine className="size-[16px] text-[var(--color-slate)]" />}
+                  <ChevronDown className="size-[14px] text-[var(--color-slate)]" />
                 </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
-                <p>{isFullExpanded ? 'Restore split view' : 'Expand artifact'}</p>
-              </TooltipContent>
-            </UITooltip>
-            )}
-            <UITooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-                  aria-label="Close artifact"
-                >
-                  {bare
-                    ? <ArrowLeft className="size-[16px] text-[var(--color-slate)]" />
-                    : <PanelRightClose className="size-[16px] text-[var(--color-slate)]" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
-                <p>Close artifact</p>
-              </TooltipContent>
-            </UITooltip>
-            <p className="min-w-0 truncate text-[14px] font-medium text-foreground">
-              {fileName}
-            </p>
+              </ActionMenuTrigger>
+              <ActionMenuContent align="end" side="bottom">
+                <ActionMenuItem onSelect={() => onDownloadMarkdown?.()}>Download as Markdown</ActionMenuItem>
+                <ActionMenuItem onSelect={() => onDownloadPdf?.()}>Download as PDF</ActionMenuItem>
+              </ActionMenuContent>
+            </ActionMenu>
           </div>
-          {/* Spacer */}
-          <div className="flex-1" />
-          {/* Right: download */}
+          {/* Close */}
           <UITooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
-                onClick={onDownload}
-                className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-                aria-label="Download artifact"
+                onClick={onClose}
+                className="flex items-center justify-center p-[6px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
+                aria-label="Close artifact"
               >
-                <Download className="size-[16px] text-[var(--color-slate)]" />
+                <X className="size-[18px] text-[var(--color-slate)]" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
-              <p>Download document</p>
+              <p>Close</p>
             </TooltipContent>
           </UITooltip>
         </div>
       </TooltipProvider>
 
       {/* content-area (scrollable) */}
-      <div className="flex flex-col gap-[16px] items-start px-[16px] py-[16px] w-full flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+      <div className="flex flex-col gap-[16px] items-start px-[16px] py-[16px] w-full flex-1 overflow-y-auto hover-scroll">
         <p className="text-[20px] font-semibold leading-[28px] text-[var(--color-ink)] w-full">
           {title}
         </p>

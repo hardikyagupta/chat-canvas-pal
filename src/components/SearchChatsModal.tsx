@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, SquarePen } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LhsChatItem } from './LhsSidebar';
 
@@ -87,7 +87,6 @@ export const SearchChatsModal: React.FC<SearchChatsModalProps> = ({
   onClose,
   chats,
   onSelectChat,
-  onNewChat,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -132,11 +131,8 @@ export const SearchChatsModal: React.FC<SearchChatsModalProps> = ({
     older: 'Older',
   };
 
-  // Calculate total items (excluding "New chat" when searching)
-  const shouldShowNewChat = !searchQuery && onNewChat;
-  const totalItems =
-    (shouldShowNewChat ? 1 : 0) +
-    groupOrder.reduce((sum, group) => sum + (groupedChats[group]?.length || 0), 0);
+  // Search modal shows chat history only — no "New chat" action.
+  const totalItems = groupOrder.reduce((sum, group) => sum + (groupedChats[group]?.length || 0), 0);
 
   useEffect(() => {
     if (isOpen) {
@@ -178,16 +174,6 @@ export const SearchChatsModal: React.FC<SearchChatsModalProps> = ({
 
   const handleSelection = (index: number) => {
     let currentIndex = index;
-
-    if (onNewChat && currentIndex === 0) {
-      onNewChat();
-      onClose();
-      return;
-    }
-
-    if (onNewChat) {
-      currentIndex--;
-    }
 
     for (const group of groupOrder) {
       const groupChats = groupedChats[group] || [];
@@ -307,38 +293,12 @@ export const SearchChatsModal: React.FC<SearchChatsModalProps> = ({
                 </div>
               ) : totalItems > 0 ? (
                 <div className="flex flex-col py-[8px]">
-                  {/* New Chat Action - Only show when not searching */}
-                  {shouldShowNewChat && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onNewChat();
-                        onClose();
-                      }}
-                      onMouseEnter={() => setSelectedIndex(0)}
-                      className={cn(
-                        'flex items-center gap-[12px] w-full px-[16px] py-[10px] text-left transition-colors',
-                        selectedIndex === 0
-                          ? 'bg-[var(--color-surface-1)]'
-                          : 'hover:bg-[var(--color-surface-0)]'
-                      )}
-                    >
-                      <SquarePen className="size-[16px] text-[var(--color-grey)] shrink-0" />
-                      <p
-                        className="text-[14px] text-foreground"
-                        style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
-                      >
-                        New chat
-                      </p>
-                    </button>
-                  )}
-
                   {/* Grouped Chat Results */}
                   {groupOrder.map((group) => {
                     const groupChats = groupedChats[group];
                     if (!groupChats || groupChats.length === 0) return null;
 
-                    let itemIndex = shouldShowNewChat ? 1 : 0;
+                    let itemIndex = 0;
                     for (const g of groupOrder) {
                       if (g === group) break;
                       itemIndex += groupedChats[g]?.length || 0;
