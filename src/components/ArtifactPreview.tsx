@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelRightClose, Download, ArrowLeftToLine, ArrowRightToLine, ArrowLeft } from 'lucide-react';
+import { Copy, ChevronDown, X } from 'lucide-react';
 import {
   PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -19,10 +19,9 @@ const chartTooltip = { fontSize: 12, borderRadius: 8, fontFamily: MANROPE };
 interface ArtifactPreviewProps {
   fileName?: string;
   title?: string;
-  onClose?: () => void;        // collapse/close the artifact panel
-  onDownload?: () => void;
-  isFullExpanded?: boolean;    // artifact occupies full width (chat hidden)
-  onToggleExpand?: () => void; // expand to full / restore split (omit to hide the toggle)
+  onClose?: () => void;        // close the artifact panel
+  onCopy?: () => void;         // copy the artifact contents
+  onPublish?: () => void;      // publish the artifact
   bare?: boolean;              // drop the outer card border/radius (full-bleed, e.g. widget view)
 }
 
@@ -104,74 +103,50 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   fileName = 'Ui launch usage readout combined · PDF',
   title = 'Highest Engagement Last Quarter',
   onClose,
-  onDownload,
-  isFullExpanded = false,
-  onToggleExpand,
+  onCopy,
+  onPublish,
   bare = false,
 }) => {
   return (
     <div className={`flex flex-col h-full w-full bg-card overflow-hidden${bare ? '' : ' border border-[var(--color-line-input)] rounded-[12px]'}`}>
-      {/* top-nav-artifact */}
+      {/* top-nav-artifact — Claude-style: title on the left; Copy / Publish / Close on the right */}
       <TooltipProvider delayDuration={200}>
-        <div className="flex gap-[8px] items-center px-[8px] py-[4px] w-full shrink-0 border-b border-[var(--color-line-input)]">
-          {/* Left cluster: 1) expand arrow  2) collapse/close  then label */}
-          <div className="flex min-w-0 gap-[4px] items-center">
-            {onToggleExpand && (
-            <UITooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={onToggleExpand}
-                  className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-                  aria-label={isFullExpanded ? 'Restore split view' : 'Expand artifact'}
-                >
-                  {isFullExpanded
-                    ? <ArrowRightToLine className="size-[16px] text-[var(--color-slate)]" />
-                    : <ArrowLeftToLine className="size-[16px] text-[var(--color-slate)]" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
-                <p>{isFullExpanded ? 'Restore split view' : 'Expand artifact'}</p>
-              </TooltipContent>
-            </UITooltip>
-            )}
-            <UITooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-                  aria-label="Close artifact"
-                >
-                  {bare
-                    ? <ArrowLeft className="size-[16px] text-[var(--color-slate)]" />
-                    : <PanelRightClose className="size-[16px] text-[var(--color-slate)]" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
-                <p>Close artifact</p>
-              </TooltipContent>
-            </UITooltip>
-            <p className="min-w-0 truncate text-[14px] font-medium text-foreground">
-              {fileName}
-            </p>
-          </div>
-          {/* Spacer */}
-          <div className="flex-1" />
-          {/* Right: download */}
+        <div className="flex gap-[8px] items-center px-[16px] py-[10px] w-full shrink-0 border-b border-[var(--color-line-input)]">
+          <p className="flex-1 min-w-0 truncate text-[14px] font-medium text-foreground">
+            {fileName}
+          </p>
+          {/* Copy (split-style with dropdown chevron) */}
+          <button
+            type="button"
+            onClick={onCopy}
+            className="flex items-center gap-[6px] px-[10px] py-[5px] rounded-[8px] border border-[var(--color-line-input)] text-[13px] font-medium text-foreground hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
+          >
+            <Copy className="size-[14px] text-[var(--color-slate)]" />
+            Copy
+            <ChevronDown className="size-[14px] text-[var(--color-slate)]" />
+          </button>
+          {/* Publish */}
+          <button
+            type="button"
+            onClick={onPublish}
+            className="flex items-center px-[14px] py-[6px] rounded-[8px] bg-foreground text-background text-[13px] font-medium hover:opacity-90 transition-opacity shrink-0"
+          >
+            Publish
+          </button>
+          {/* Close */}
           <UITooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
-                onClick={onDownload}
-                className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-                aria-label="Download artifact"
+                onClick={onClose}
+                className="flex items-center justify-center p-[6px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
+                aria-label="Close artifact"
               >
-                <Download className="size-[16px] text-[var(--color-slate)]" />
+                <X className="size-[18px] text-[var(--color-slate)]" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
-              <p>Download document</p>
+              <p>Close</p>
             </TooltipContent>
           </UITooltip>
         </div>

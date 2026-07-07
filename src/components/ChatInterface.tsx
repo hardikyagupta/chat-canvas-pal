@@ -2195,11 +2195,7 @@ The content has been updated across all channels to reflect your changes.`;
               border, or rounding — it merges with the bordered LHS into one dashboard. */}
           <div className="flex flex-col flex-1 overflow-hidden min-h-0">
           <ChatCardBeam enabled={isExpanded} active={false}>
-          <div className={cn(
-            "relative flex flex-1 overflow-hidden min-h-0 min-w-0 bg-[var(--color-surface-0)]",
-            isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "gap-[12px] pl-[12px]",
-            isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "px-[12px]"
-          )}>
+          <div className="relative flex flex-1 overflow-hidden min-h-0 min-w-0 bg-[var(--color-surface-0)]">
           {/* Chats / Bookmarks full page — overlays the conversation when active */}
           {isExpanded && activePage !== 'home' && (
             <div className="absolute inset-0 z-20 overflow-hidden bg-card">
@@ -2213,14 +2209,12 @@ The content has been updated across all channels to reflect your changes.`;
               />
             </div>
           )}
-          {/* Conversation column — 60% when artifact open, hidden when full-expanded, expands back while closing */}
+          {/* Conversation column — fills the chat area. In expanded view the artifact
+              is now its own top-level third column (not a nested split). Widget view
+              still hides the chat when the artifact takes over full-screen. */}
           <div
             className={cn(
-              "relative z-10 flex flex-col overflow-hidden min-w-0 min-h-0 transition-[width] duration-300 ease-in-out",
-              isExpanded && showArtifactPreview && !artifactClosing && artifactFullExpanded && "w-0 opacity-0 pointer-events-none",
-              isExpanded && showArtifactPreview && !artifactClosing && !artifactFullExpanded && "w-[60%]",
-              !(isExpanded && showArtifactPreview && !artifactClosing) && "w-full flex-1",
-              // Widget view: the artifact takes over full-screen, so hide (not unmount) the chat
+              "relative z-10 flex flex-col overflow-hidden min-w-0 min-h-0 w-full flex-1",
               !isExpanded && showArtifactPreview && "hidden"
             )}
           >
@@ -2664,27 +2658,13 @@ The content has been updated across all channels to reflect your changes.`;
               </div>
             )}
           </div>
-          {/* Artifact preview panel.
-              Expanded view: 40% split (or full width when expanded), slides out on close.
-              Widget (collapse) view: full-bleed take-over below the Co-marketer nav,
-              with the artifact's own top-nav acting as the close sub-nav. */}
-          {showArtifactPreview && (
-            <div className={cn(
-              "relative z-10 shrink-0 h-full transition-all duration-300 ease-in-out will-change-[width,transform,opacity]",
-              !isExpanded
-                ? "w-full"
-                : artifactClosing
-                  ? "w-0 opacity-0 translate-x-6 pr-0"
-                  : artifactFullExpanded
-                    ? "w-full py-[12px]"
-                    : "w-[40%] pr-[12px] py-[12px]"
-            )}>
+          {/* Artifact — WIDGET view only: full-bleed take-over of the floating window.
+              (Expanded view renders the artifact as a top-level third column below.) */}
+          {!isExpanded && showArtifactPreview && (
+            <div className="relative z-10 shrink-0 h-full w-full">
               <ArtifactPreview
                 onClose={handleCloseArtifactPreview}
-                onDownload={() => {}}
-                isFullExpanded={artifactFullExpanded}
-                onToggleExpand={isExpanded ? () => { setArtifactFullExpanded(prev => !prev); playExpandCue(); } : undefined}
-                bare={!isExpanded}
+                bare
               />
             </div>
           )}
@@ -2692,6 +2672,20 @@ The content has been updated across all channels to reflect your changes.`;
           </ChatCardBeam>
           </div>
           </div>
+          {/* Artifact — EXPANDED view: opens as a top-level third column,
+              so the layout reads LHS | chat | artifact (Claude-style). */}
+          {isExpanded && showArtifactPreview && (
+            <div
+              className={cn(
+                "relative z-10 shrink-0 h-full border-l border-[var(--color-line)] bg-card overflow-hidden",
+                artifactClosing
+                  ? "w-0 opacity-0 transition-all duration-300 ease-in-out"
+                  : "w-[42%] animate-in slide-in-from-right-8 fade-in duration-300"
+              )}
+            >
+              <ArtifactPreview onClose={handleCloseArtifactPreview} bare />
+            </div>
+          )}
         </div>
       </div>
 

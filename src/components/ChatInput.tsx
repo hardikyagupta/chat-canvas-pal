@@ -460,7 +460,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder="How can I help you today?"
                 disabled={isQuestionnaireActive || isLoading}
-                className="chat-input-scroll block w-full min-w-0 resize-none bg-transparent border-0 p-0 text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed"
+                className="chat-input-scroll block w-full min-w-0 resize-none bg-transparent border-0 p-0 pl-[6px] text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed"
                 style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500, maxHeight: "88px" }}
                 autoComplete="off"
               />
@@ -484,7 +484,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                       aria-label="Add files and more"
                       disabled={isQuestionnaireActive || isLoading}
                       className={cn(
-                        "flex items-center justify-center w-[32px] h-[32px] rounded-full shrink-0 transition-colors",
+                        "flex items-center justify-center w-[32px] h-[32px] rounded-[8px] shrink-0 transition-colors",
                         (isQuestionnaireActive || isLoading)
                           ? "opacity-50 cursor-not-allowed"
                           : "hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)]",
