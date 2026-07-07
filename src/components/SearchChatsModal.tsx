@@ -35,8 +35,8 @@ const getTimeGroup = (timeStr: string): TimeGroup => {
 };
 
 const CircularLoader: React.FC = () => (
-  <div className="flex flex-col items-center justify-center py-[60px] px-[16px]">
-    <div className="relative w-[40px] h-[40px] mb-[16px]">
+  <div className="flex flex-col items-center justify-center py-[40px] px-[16px] gap-[12px]">
+    <div className="relative w-[28px] h-[28px]">
       <svg
         className="w-full h-full animate-spin"
         viewBox="0 0 40 40"
@@ -65,11 +65,20 @@ const CircularLoader: React.FC = () => (
       </svg>
     </div>
     <p
-      className="text-[14px] text-[var(--color-grey)]"
+      className="text-[13px] text-[var(--color-grey)]"
       style={{ fontFamily: 'Manrope, sans-serif' }}
     >
       Loading chats
     </p>
+  </div>
+);
+
+const SkeletonChatItem: React.FC = () => (
+  <div className="flex items-center justify-between w-full px-[16px] py-[10px] gap-[12px]">
+    <div className="flex-1 min-w-0">
+      <div className="h-[14px] bg-[var(--color-surface-1)] rounded-[4px] animate-pulse" />
+    </div>
+    <div className="h-[12px] w-[40px] bg-[var(--color-surface-1)] rounded-[4px] animate-pulse shrink-0" />
   </div>
 );
 
@@ -284,7 +293,14 @@ export const SearchChatsModal: React.FC<SearchChatsModalProps> = ({
               }}
             >
               {isLoading && searchQuery ? (
-                <CircularLoader />
+                <div className="flex flex-col py-[8px]">
+                  <CircularLoader />
+                  <div className="flex flex-col">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <SkeletonChatItem key={`skeleton-${i}`} />
+                    ))}
+                  </div>
+                </div>
               ) : totalItems > 0 ? (
                 <div className="flex flex-col py-[8px]">
                   {/* New Chat Action - Only show when not searching */}
