@@ -246,17 +246,18 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
         )}
       </div>
 
-      {/* Menu actions — icons centered in 40×40 slots, aligned with the logo */}
-      <div className="flex flex-col gap-[4px] items-start w-full px-[12px] pt-[20px] shrink-0">
+      {/* Menu actions — icons centered in 40-wide slots (aligned with the logo),
+          32px-tall rows. */}
+      <div className="flex flex-col gap-[4px] items-start w-full px-[12px] pt-[8px] shrink-0">
         {menuActions.map(({ key, label, icon: Icon, onClick, isNewChat }) => (
           <button
             key={key}
             type="button"
             onClick={onClick}
             aria-label={label}
-            className="group relative flex h-[40px] items-center w-full rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+            className="group relative flex h-[32px] items-center w-full rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
           >
-            <span className={ICON_SLOT}>
+            <span className="flex items-center justify-center w-[40px] h-[32px] shrink-0">
               {isNewChat ? (
                 <span className="flex items-center justify-center rounded-full bg-[var(--color-royal-pale)] p-[5px]">
                   <Plus className="size-[12px] text-[var(--color-royal)]" strokeWidth={2.5} />

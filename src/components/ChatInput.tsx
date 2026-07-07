@@ -316,10 +316,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
     // it switches to the disabled/grey state with the Figma square icon.
     const isLoading = !!isMockAgentChatActive || shimmer;
     const isActive = !isLoading;
-    // Expanded = a chip is selected OR the text has wrapped past one line. In this
-    // state the textarea spans the full width (text reaches the right edge, like
-    // ChatGPT) and the chip + send button drop to a row below.
-    const expanded = !!selectedContextChip || isMultiline || attachments.length > 0;
+    // Input always renders in its expanded shape (textarea full width, actions on
+    // the row below) — no minimized single-line pill, and it doesn't depend on a
+    // context chip being active.
+    const expanded = true;
     return (
       <div className="relative w-full">
         {/* Outer container — height grows smoothly when chip appears */}
@@ -458,7 +458,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask Co-marketer..."
+                placeholder="How can I help you today?"
                 disabled={isQuestionnaireActive || isLoading}
                 className="chat-input-scroll block w-full min-w-0 resize-none bg-transparent border-0 p-0 text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed"
                 style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500, maxHeight: "88px" }}

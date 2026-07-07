@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Minimize2, X, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Check } from 'lucide-react';
+import { Minimize2, X, PanelLeftClose, PanelLeftOpen, ChevronDown, Check } from 'lucide-react';
 import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
 
@@ -145,10 +145,10 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                     trigger={
                       <button
                         type="button"
-                        className="group relative flex items-center justify-center p-[8px] rounded-[8.889px] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                        className="group relative flex items-center justify-center p-[6px] rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
                         aria-label="Chat options"
                       >
-                        <MoreHorizontal className="size-[16px] text-[var(--color-slate)]" />
+                        <ChevronDown className="size-[16px] text-[var(--color-slate)]" />
                         <HeaderTooltip label="Chat options" align="left" />
                       </button>
                     }
