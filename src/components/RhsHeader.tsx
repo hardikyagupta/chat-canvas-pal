@@ -121,7 +121,7 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                         <X className="size-[16px]" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom">
+                    <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
                       Cancel
                     </TooltipContent>
                   </Tooltip>
@@ -136,7 +136,7 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                         <Check className="size-[16px]" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom">
+                    <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
                       Save
                     </TooltipContent>
                   </Tooltip>
