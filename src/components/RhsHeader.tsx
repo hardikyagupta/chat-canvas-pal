@@ -2,23 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Minimize2, X, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Check } from 'lucide-react';
 import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
-interface RhsHeaderProps {
-  chatName?: string | null; // hidden when null/empty (no active chat)
-  showSidebarToggle?: boolean; // show the expand/collapse panel icon (collapsed state)
-  sidebarCollapsed?: boolean; // current sidebar state, drives the toggle tooltip text
-  onToggleSidebar?: () => void;
-  isBookmarked?: boolean;
-  onToggleBookmark?: () => void;
-  onRenameChat?: (name: string) => void;
-  onDeleteChat?: () => void;
-  onMinimize?: () => void;
-  onClose?: () => void;
-}
-
-// Small dark tooltip shown below a header icon on hover.
-// align: where the tooltip anchors relative to the button (avoids clipping at window edges).
+// Dark tooltip matching app-wide style (dark background, light text)
 const HeaderTooltip: React.FC<{ label: string; align?: 'left' | 'center' | 'right' }> = ({
   label,
   align = 'center',
@@ -37,6 +22,19 @@ const HeaderTooltip: React.FC<{ label: string; align?: 'left' | 'center' | 'righ
     {label}
   </span>
 );
+
+interface RhsHeaderProps {
+  chatName?: string | null; // hidden when null/empty (no active chat)
+  showSidebarToggle?: boolean; // show the expand/collapse panel icon (collapsed state)
+  sidebarCollapsed?: boolean; // current sidebar state, drives the toggle tooltip text
+  onToggleSidebar?: () => void;
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
+  onRenameChat?: (name: string) => void;
+  onDeleteChat?: () => void;
+  onMinimize?: () => void;
+  onClose?: () => void;
+}
 
 const RhsHeader: React.FC<RhsHeaderProps> = ({
   chatName,
@@ -110,36 +108,24 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                     className="flex-1 min-w-0 bg-transparent border-0 p-0 font-medium text-[13px] text-[var(--color-charcoal)] focus:outline-none"
                     style={{ fontFamily: 'Manrope, sans-serif' }}
                   />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={cancelRename}
-                        aria-label="Cancel"
-                        className="flex items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
-                      >
-                        <X className="size-[16px]" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
-                      Cancel
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={commitRename}
-                        aria-label="Save"
-                        className="flex items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
-                      >
-                        <Check className="size-[16px]" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
-                      Save
-                    </TooltipContent>
-                  </Tooltip>
+                  <button
+                    type="button"
+                    onClick={cancelRename}
+                    aria-label="Cancel"
+                    className="group relative flex items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
+                  >
+                    <X className="size-[16px]" />
+                    <HeaderTooltip label="Cancel" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={commitRename}
+                    aria-label="Save"
+                    className="group relative flex items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
+                  >
+                    <Check className="size-[16px]" />
+                    <HeaderTooltip label="Save" />
+                  </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-[2px] min-w-0">
