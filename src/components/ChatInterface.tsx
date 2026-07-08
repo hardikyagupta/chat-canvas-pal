@@ -104,6 +104,7 @@ interface ChatInterfaceProps {
   setEnabledAgents: React.Dispatch<React.SetStateAction<Set<string>>>;
   onCloseInterface?: () => void; // Handler to close the entire chat interface
   initialExpanded?: boolean; // Start expanded (full-screen) vs. docked widget. Defaults to true.
+  docked?: boolean; // When true (and not dragged), the widget fills its parent height instead of a fixed 776px.
 }
 
 // Rotating example topics shown in the empty-state greeting slot animation
@@ -210,7 +211,7 @@ const FOLLOWUPS: { label: string; q: string; a: string; statCards?: StatCard[]; 
   },
 ];
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
@@ -232,6 +233,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [feedbackModal, setFeedbackModal] = useState<FeedbackSentiment | null>(null);
   const [showFeedbackToast, setShowFeedbackToast] = useState(false);
   const feedbackToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Feedback nudge/toast occupies the band just above the input; while it's up we
+  // hide the scroll-to-latest button so the two don't overlap (until dismissed).
+  const feedbackNudgeVisible = showFeedbackToast || (showFeedbackPrompt && !feedbackModal);
 
   const handleFeedbackSubmit = () => {
     setFeedbackModal(null);
@@ -492,6 +496,52 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [isDragging, setIsDragging] = useState(false);
   const chatWindowRef = useRef<HTMLDivElement>(null); // Ref for the main draggable window
   const dragStartRef = useRef({ initialMouseX: 0, initialMouseY: 0, initialWindowX: 0, initialWindowY: 0 });
+
+  // FLIP animation for expand/collapse: capture the panel's rect just before the
+  // layout change, then invert + play so it smoothly morphs between the docked
+  // widget and full-screen (instead of an instant jump).
+  const flipFirstRect = useRef<DOMRect | null>(null);
+  const flipAnimRef = useRef<Animation | null>(null);
+  const requestExpand = useCallback((next: boolean) => {
+    const el = chatWindowRef.current;
+    if (el) flipFirstRect.current = el.getBoundingClientRect();
+    setIsExpanded(next);
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = chatWindowRef.current;
+    const first = flipFirstRect.current;
+    flipFirstRect.current = null;
+    if (!el || !first || typeof el.animate !== 'function') return;
+
+    const last = el.getBoundingClientRect();
+    const dx = first.left - last.left;
+    const dy = first.top - last.top;
+    const sx = last.width ? first.width / last.width : 1;
+    const sy = last.height ? first.height / last.height : 1;
+    // Nothing meaningful to animate.
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(sx - 1) < 0.01 && Math.abs(sy - 1) < 0.01) return;
+
+    flipAnimRef.current?.cancel();
+    const anim = el.animate(
+      [
+        { transformOrigin: 'top left', transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
+        { transformOrigin: 'top left', transform: 'translate(0px, 0px) scale(1, 1)' },
+      ],
+      { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'both' }
+    );
+    flipAnimRef.current = anim;
+    const clear = () => {
+      el.style.transform = '';
+      el.style.willChange = '';
+      el.style.zIndex = '';
+    };
+    // Keep the morphing panel above page content (e.g. the table's sticky cells) while it animates.
+    el.style.willChange = 'transform';
+    el.style.zIndex = '50';
+    anim.onfinish = clear;
+    anim.oncancel = clear;
+  }, [isExpanded]);
 
   useEffect(() => {
     // Reset position if window is expanded
@@ -1836,7 +1886,7 @@ The content has been updated across all channels to reflect your changes.`;
           with the menu icon + Co-marketer title (parent is items-start). */}
       <div className="flex flex-1 py-[16px] items-center justify-end pr-[24px] gap-[4px]">
         <button
-          onClick={() => setIsExpanded(true)}
+          onClick={() => requestExpand(true)}
           className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors"
           aria-label="Expand"
         >
@@ -1908,7 +1958,7 @@ The content has been updated across all channels to reflect your changes.`;
         <Button variant="ghost" size="icon" className="p-1.5 hover:bg-muted rounded-md" title="Toggle theme">
           <ThemeToggle />
         </Button>
-        <Button variant="ghost" size="icon" className="p-1.5 hover:bg-muted rounded-md" onClick={() => setIsExpanded(false)} title="Minimize">
+        <Button variant="ghost" size="icon" className="p-1.5 hover:bg-muted rounded-md" onClick={() => requestExpand(false)} title="Minimize">
           <Minimize2 className="w-5 h-5 text-muted-foreground" />
         </Button>
         <Button variant="ghost" size="icon" className="p-1.5 hover:bg-muted rounded-md" onClick={onCloseInterface} title="Close">
@@ -2164,7 +2214,7 @@ The content has been updated across all channels to reflect your changes.`;
       />
       
       {/* Overlay for expanded view background, click to minimize */}
-      {isExpanded && <div className={cn("fixed inset-0 z-40", atmoActive ? "bg-transparent" : "bg-black/10 backdrop-blur-sm")} onClick={() => setIsExpanded(false)}></div>}
+      {isExpanded && <div className={cn("fixed inset-0 z-40 animate-in fade-in duration-300", atmoActive ? "bg-transparent" : "bg-black/10 backdrop-blur-sm")} onClick={() => requestExpand(false)}></div>}
 
       {/* 
         Main container: Switches between expanded and widget styles.
@@ -2179,7 +2229,11 @@ The content has been updated across all channels to reflect your changes.`;
             // through the frosted nav surfaces (homepage reflect).
             ? cn("fixed z-50 inset-0 flex flex-col overflow-hidden", atmoActive ? "bg-transparent" : "bg-background")
             // For widget view, if position is null, it uses these classes. If position is set, inline style takes over for pos.
-            : "w-[470px] h-[776px] bg-background border border-border shadow-lg rounded-xl flex flex-col overflow-hidden relative",
+            : cn(
+                "w-[470px] bg-background border border-border shadow-lg rounded-xl flex flex-col overflow-hidden relative",
+                // Docked (and not dragged) → fill the parent column height and stay within the viewport.
+                docked && !position ? "h-full max-h-full" : "h-[776px]"
+              ),
             !isExpanded && position && "fixed z-50" // Ensure it's fixed and on top when dragged
         )}
         style={!isExpanded && position ? {
@@ -2266,7 +2320,7 @@ The content has been updated across all channels to reflect your changes.`;
               isBookmarked={isChatBookmarked}
               onToggleBookmark={() => setIsChatBookmarked(prev => !prev)}
               onDeleteChat={handleNewChat}
-              onMinimize={() => setIsExpanded(false)}
+              onMinimize={() => requestExpand(false)}
               onClose={onCloseInterface}
               hideClose={showArtifactPreview}
             />
@@ -2625,7 +2679,7 @@ The content has been updated across all channels to reflect your changes.`;
               )}>
                 {/* Feedback popover / success toast — pinned to the chat's right edge,
                     on the line just above the input field (not over its face). */}
-                {(showFeedbackToast || (showFeedbackPrompt && !feedbackModal)) && (
+                {feedbackNudgeVisible && (
                   <div className="absolute right-[24px] bottom-full mb-[28px] z-40 flex justify-end max-w-[calc(100%-48px)]">
                     {showFeedbackToast ? (
                       <div className="feedback-nudge-in inline-flex items-center gap-[8px] rounded-full border border-[var(--color-line)] bg-card px-[14px] py-[8px] shadow-[0px_8px_20px_-6px_oklch(0.21_0.034_263.436_/_0.22)]">
@@ -2685,7 +2739,7 @@ The content has been updated across all channels to reflect your changes.`;
 
                     {/* Scroll-to-latest — centered, floating 16px above the input
                         (Claude-style). Anchored to the input so the gap is exact. */}
-                    {showScrollButton && !isGeneratingOutput && (
+                    {showScrollButton && !isGeneratingOutput && !feedbackNudgeVisible && (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
