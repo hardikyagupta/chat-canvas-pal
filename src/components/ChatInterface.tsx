@@ -220,6 +220,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [inputShimmer, setInputShimmer] = useState(false);
   const inputShimmerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  // True once the chat has actually been scrolled down — used to reveal the top
+  // fade only while scrolling (not on the resting first message).
+  const [isChatScrolled, setIsChatScrolled] = useState(false);
   const [mockChatCompleted, setMockChatCompleted] = useState(false); // New state
   // Shows the suggested follow-up chips after the first output completes (until thread 2 starts)
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -677,6 +680,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       const { scrollTop, scrollHeight, clientHeight } = chatContainer;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
       setShowScrollButton(!isNearBottom);
+      // Reveal the top fade only once content has scrolled up under the header.
+      setIsChatScrolled(scrollTop > 4);
     };
 
     chatContainer.addEventListener('scroll', handleScroll);
@@ -701,29 +706,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       }
     };
 
-    // Use MutationObserver to detect when content changes (including typing animation)
+    // Use MutationObserver to detect when content changes (including typing animation).
+    // Observe the scroll container's whole subtree — the messages list class isn't
+    // stable, so keying off a specific selector silently no-ops.
     const observer = new MutationObserver(() => {
       checkScrollButton();
     });
+    observer.observe(chatContainer, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: false,
+    });
 
-    // Observe the messages container for any changes
-    const messagesContainer = chatContainer.querySelector('.space-y-4');
-    if (messagesContainer) {
-      observer.observe(messagesContainer, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-        attributes: false
-      });
-    }
-
-    // Also check on initial messages load
+    // Also re-check on messages load and whenever generation starts/ends, so the
+    // button appears once the output finishes and the view is scrolled up.
     checkScrollButton();
 
     return () => {
       observer.disconnect();
     };
-  }, [messages]);
+  }, [messages, isGeneratingOutput]);
 
   // Stop the input shimmer (output generation ended / was stopped).
   const clearInputShimmer = () => {
@@ -1784,10 +1787,11 @@ The content has been updated across all channels to reflect your changes.`;
       {/* Left: menu + icon + title */}
       <div className="flex flex-col items-start justify-center pl-[16px] py-[16px] shrink-0 w-[287px]">
         <div className="flex gap-[8px] items-center w-full">
-          {/* Menu icon — minimized mode only */}
+          {/* Menu icon — minimized mode only. Always opens the LHS drawer,
+              including while a Chats/Bookmarks page is open. */}
           <button
             type="button"
-            className="flex items-center justify-center p-[4px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
+            className="flex items-center justify-center size-[32px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
             aria-label="Menu"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => setShowMinOverlay(true)}
@@ -1815,8 +1819,10 @@ The content has been updated across all channels to reflect your changes.`;
         </div>
       </div>
 
-      {/* Right: expand + close buttons */}
-      <div className="flex flex-1 h-[56px] items-center justify-end pr-[24px] gap-[4px]">
+      {/* Right: expand + close buttons.
+          py-[16px] matches the left group's vertical padding so the icons line up
+          with the menu icon + Co-marketer title (parent is items-start). */}
+      <div className="flex flex-1 py-[16px] items-center justify-end pr-[24px] gap-[4px]">
         <button
           onClick={() => setIsExpanded(true)}
           className="flex items-center justify-center p-[8px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors"
@@ -2180,6 +2186,8 @@ The content has been updated across all channels to reflect your changes.`;
             activeChatId={null}
             onClose={() => setShowMinOverlay(false)}
             onNewChat={handleNewChat}
+            onOpenChats={() => setActivePage('chats')}
+            onOpenBookmarks={() => setActivePage('bookmarks')}
           />
         )}
 
@@ -2231,11 +2239,15 @@ The content has been updated across all channels to reflect your changes.`;
           {/* Right column: header + chat (expanded) / chat only (widget) */}
           <div className={cn(
             "flex flex-col flex-1 min-h-0",
-            isExpanded && showArtifactPreview ? "min-w-[460px]" : "min-w-0"
+            // When the artifact is fully expanded, hide the entire chat column
+            // (header + conversation) so the artifact reaches the LHS nav.
+            isExpanded && showArtifactPreview && artifactFullExpanded
+              ? "hidden"
+              : isExpanded && showArtifactPreview ? "min-w-[460px]" : "min-w-0"
           )}>
           {isExpanded && (
             <RhsHeader
-              chatName={chatName}
+              chatName={activePage === 'home' ? chatName : null}
               showSidebarToggle={false}
               sidebarCollapsed={lhsCollapsed}
               onToggleSidebar={() => setLhsCollapsed(prev => !prev)}
@@ -2254,8 +2266,9 @@ The content has been updated across all channels to reflect your changes.`;
           <div className="flex flex-col flex-1 overflow-hidden min-h-0">
           <ChatCardBeam enabled={isExpanded} active={false}>
           <div className="relative flex flex-1 overflow-hidden min-h-0 min-w-0 bg-[var(--color-surface-0)]">
-          {/* Chats / Bookmarks full page — overlays the conversation when active */}
-          {isExpanded && activePage !== 'home' && (
+          {/* Chats / Bookmarks full page — overlays the conversation when active.
+              Renders in both expanded and minimized (mobile) views. */}
+          {activePage !== 'home' && (
             <div className="absolute inset-0 z-20 overflow-hidden bg-[var(--color-surface-0)]">
               <ChatListPage
                 title={activePage === 'chats' ? 'Chats' : 'Bookmarks'}
@@ -2273,7 +2286,9 @@ The content has been updated across all channels to reflect your changes.`;
           <div
             className={cn(
               "relative z-10 flex flex-col overflow-hidden min-w-0 min-h-0 w-full flex-1",
-              !isExpanded && showArtifactPreview && "hidden"
+              !isExpanded && showArtifactPreview && "hidden",
+              // Full-screen artifact hides the chat in expanded view too.
+              isExpanded && showArtifactPreview && artifactFullExpanded && "hidden"
             )}
           >
             {/* Scrollable chat messages area */}
@@ -2286,14 +2301,20 @@ The content has been updated across all channels to reflect your changes.`;
             >
               {/* Top fade edge — pins just under the navbar so messages fade out
                   as they scroll up, for a smooth scroll-under-header effect.
-                  Only while a chat exists (expanded view). */}
+                  Only reveals once the chat is actually scrolled, so the resting
+                  first message keeps its padding and isn't faded from the start. */}
               {isExpanded && messages.length > 0 && (
-                <div className="sticky top-0 z-10 h-[32px] -mb-[32px] w-full pointer-events-none bg-gradient-to-b from-[var(--color-surface-0)] to-transparent" />
+                <div
+                  className={cn(
+                    "sticky top-0 z-10 h-[32px] -mb-[32px] w-full pointer-events-none bg-gradient-to-b from-[var(--color-surface-0)] to-transparent transition-opacity duration-200",
+                    isChatScrolled ? "opacity-100" : "opacity-0"
+                  )}
+                />
               )}
               {/* Centered container for chat content - 768px width as per Figma */}
               <div className={cn(
                 "flex flex-col items-center w-full min-h-full",
-                isExpanded && messages.length > 0 ? "pt-2" : "",
+                isExpanded && messages.length > 0 ? "pt-[20px]" : "",
                 messages.length === 0 ? "justify-center" : ""
               )}>
                 <div className={cn(
@@ -2398,7 +2419,14 @@ The content has been updated across all channels to reflect your changes.`;
                 )}
 
                 {messages.map((message, index) => (
-                  <div key={index} id={`msg-${index}`} className="w-full scroll-mt-2">
+                  <div
+                    key={index}
+                    id={`msg-${index}`}
+                    // scroll-margin keeps the message clear of the top edge when we
+                    // scrollIntoView({block:'start'}) on send. Expanded must also clear
+                    // the 32px sticky top-fade; widget just needs breathing room.
+                    className={cn("w-full", isExpanded ? "scroll-mt-[44px]" : "scroll-mt-[16px]")}
+                  >
                   {message.type === 'system' ? (
                     <SystemMessage
                       type={message.systemType || 'join'}
@@ -2409,6 +2437,7 @@ The content has been updated across all channels to reflect your changes.`;
                   ) : (
                     <ChatMessage
                       messageId={`msg-${index}`}
+                      isExpanded={isExpanded}
                       isAI={message.isAI ?? false}
                       content={message.content}
                       agentName={message.agentName}
@@ -2557,31 +2586,6 @@ The content has been updated across all channels to reflect your changes.`;
               </div>
             </div>
 
-            {/* Floating Scroll to Bottom Button - Positioned relative to parent chat container */}
-            {showScrollButton && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={scrollToBottom}
-                      size="icon"
-                      className={cn(
-                        "absolute right-6 h-10 w-10 rounded-full shadow-lg z-50 bg-card border-[1.5px] hover:bg-surface-0",
-                        isExpanded ? "bottom-[112px]" : "bottom-[150px]"
-                      )}
-                      style={{ borderColor: 'var(--color-line-input)' }}
-                      aria-label="Scroll to latest"
-                    >
-                      <ArrowDown className="h-4 w-4 text-slate" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="left">
-                    <p>Scroll to latest</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-
             {/* Vertical line-nav for jumping between conversation turns. Shown in
                 expanded view while L1 is collapsed, and hidden while the artifact
                 preview is open (no room beside the split-view). */}
@@ -2657,6 +2661,29 @@ The content has been updated across all channels to reflect your changes.`;
                       </div>
                     )}
 
+                    {/* Scroll-to-latest — centered, floating 16px above the input
+                        (Claude-style). Anchored to the input so the gap is exact. */}
+                    {showScrollButton && !isGeneratingOutput && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={scrollToBottom}
+                              size="icon"
+                              className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[16px] h-9 w-9 rounded-full shadow-lg z-30 bg-card border-[1.5px] hover:bg-surface-0"
+                              style={{ borderColor: 'var(--color-line-input)' }}
+                              aria-label="Scroll to latest"
+                            >
+                              <ArrowDown className="h-4 w-4 text-slate" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
+                            <p>Scroll to latest</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+
                     <ChatInput
                       onSend={handleSendMessage}
                       isMockAgentChatActive={isMockAgentChatActive}
@@ -2691,7 +2718,7 @@ The content has been updated across all channels to reflect your changes.`;
                     {/* Footer text below input — widget view only (expanded uses card footer) */}
                     {!isExpanded && (
                       <div className="flex flex-col items-center gap-1 mt-2">
-                        <p className="text-sm text-foreground-muted text-center">
+                        <p className="text-[12px] text-foreground-muted text-center">
                           Co-marketer can make mistakes. Please double check responses
                         </p>
                       </div>
@@ -2735,27 +2762,40 @@ The content has been updated across all channels to reflect your changes.`;
               className={cn(
                 // Not shrink-0: when the LHS expands and space tightens, the artifact
                 // shrinks (down to its min) so the chat keeps its minimum width.
-                "relative z-10 h-full min-w-[360px] border-l border-[var(--color-line)] bg-card",
+                // ml-auto pins the panel to the right edge: once the chat column is
+                // hidden, the artifact stays right-anchored and its width grows toward
+                // the LEFT (no snap-to-left flicker, no rightward growth).
+                "relative z-10 ml-auto h-full border-l border-[var(--color-line)] bg-card",
+                artifactFullExpanded ? "min-w-0" : "min-w-[360px]",
                 artifactClosing
                   ? "opacity-0 transition-all duration-300 ease-in-out"
                   : "animate-in slide-in-from-right-8 fade-in duration-300",
-                !artifactResizing && !artifactClosing && "transition-[width] duration-200 ease-out"
+                // Smoothly grow/shrink the panel width when toggling expand (leftward)
+                // or when the LHS reflows — but not mid-drag, where width tracks the cursor.
+                !artifactResizing && !artifactClosing && "transition-[width] duration-300 ease-in-out"
               )}
-              style={{ width: artifactClosing ? 0 : `${artifactWidth}%` }}
+              style={{ width: artifactClosing ? 0 : artifactFullExpanded ? '100%' : `${artifactWidth}%` }}
             >
-              {/* Drag handle straddling the divider */}
-              <div
-                onMouseDown={startArtifactResize}
-                className="group/resize absolute left-0 top-0 z-20 h-full w-[10px] -ml-[5px] flex items-center justify-center cursor-col-resize"
-                aria-label="Resize artifact"
-                role="separator"
-              >
-                <div className={cn(
-                  "h-[36px] w-[3px] rounded-full bg-[var(--color-line-strong)] transition-opacity",
-                  artifactResizing ? "opacity-100" : "opacity-0 group-hover/resize:opacity-100"
-                )} />
-              </div>
-              <ArtifactPreview onClose={handleCloseArtifactPreview} bare />
+              {/* Drag handle straddling the divider — hidden while full screen */}
+              {!artifactFullExpanded && (
+                <div
+                  onMouseDown={startArtifactResize}
+                  className="group/resize absolute left-0 top-0 z-20 h-full w-[10px] -ml-[5px] flex items-center justify-center cursor-col-resize"
+                  aria-label="Resize artifact"
+                  role="separator"
+                >
+                  <div className={cn(
+                    "h-[36px] w-[3px] rounded-full bg-[var(--color-line-strong)] transition-opacity",
+                    artifactResizing ? "opacity-100" : "opacity-0 group-hover/resize:opacity-100"
+                  )} />
+                </div>
+              )}
+              <ArtifactPreview
+                onClose={handleCloseArtifactPreview}
+                onToggleExpand={() => setArtifactFullExpanded((v) => !v)}
+                isExpanded={artifactFullExpanded}
+                bare
+              />
             </div>
           )}
           </div>

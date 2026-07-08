@@ -457,6 +457,8 @@ interface ChatMessageProps {
   // Feedback actions — open the matching feedback modal
   onThumbsUp?: () => void;
   onThumbsDown?: () => void;
+  // Layout: widget (minimized) view is narrow, so the user bubble gets more width.
+  isExpanded?: boolean;
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -470,6 +472,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   animationSpeed = 50, // Base speed for token streaming (not used for regular tokens)
   onAnimationComplete,
   messageId,
+  isExpanded = true,
   isLastMessage,
   showExecuteFlowCTA,
   onExecuteFlow,
@@ -1171,7 +1174,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   if (!isAI) {
     return (
       <div className="flex justify-end w-full py-2">
-        <div className="bg-card border border-[var(--color-line)] rounded-[12px] p-[12px] w-fit max-w-[60%]">
+        <div className={`bg-card border border-[var(--color-line)] rounded-[12px] p-[12px] w-fit ${isExpanded ? 'max-w-[60%]' : 'max-w-[85%]'}`}>
           <p className="text-[var(--color-ink)] text-sm font-medium leading-[24px] font-['Manrope']">
             {displayedText}
           </p>

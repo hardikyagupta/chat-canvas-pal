@@ -25,6 +25,8 @@ interface ChatActionsMenuProps {
   onOpenChange?: (open: boolean) => void;
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'right' | 'bottom' | 'left';
+  /** Non-modal avoids Radix's body scroll-lock (prevents a layout jump on open). */
+  modal?: boolean;
 }
 
 // Shared "chat actions" menu — Rename / Bookmark / Delete. Used by both the LHS
@@ -40,8 +42,9 @@ const ChatActionsMenu: React.FC<ChatActionsMenuProps> = ({
   onOpenChange,
   align = 'start',
   side = 'bottom',
+  modal = true,
 }) => (
-  <ActionMenu open={open} onOpenChange={onOpenChange}>
+  <ActionMenu open={open} onOpenChange={onOpenChange} modal={modal}>
     <ActionMenuTrigger asChild>{trigger}</ActionMenuTrigger>
     <ActionMenuContent align={align} side={side}>
       <ActionMenuItem icon={PencilIcon} onSelect={() => onRename?.()}>

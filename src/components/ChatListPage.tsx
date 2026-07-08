@@ -94,12 +94,15 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
     // Header sticks; only the list below scrolls. Background matches the top
     // navbar (surface-0) so the page reads as one continuous surface.
     <div className={cn('flex flex-col h-full w-full overflow-hidden bg-[var(--color-surface-0)]', className)}>
-      <div className="mx-auto flex flex-col min-h-0 w-full max-w-[820px] flex-1 px-[24px] sm:px-[40px] lg:px-[56px]">
+      <div className="mx-auto flex flex-col min-h-0 w-full max-w-[820px] flex-1 px-[20px]">
         {/* Sticky header — title + New chat, then search. */}
-        <div className="flex flex-col gap-[16px] pt-[32px] pb-[12px] w-full shrink-0">
-          <div className="flex items-center justify-between gap-[12px]">
+        <div className="flex flex-col gap-[16px] pt-[20px] pb-[12px] w-full shrink-0">
+          {/* Fixed height so the row is the same whether or not the New chat
+              button is present — keeps the search bar / list from shifting
+              vertically when switching between Chats and Bookmarks. */}
+          <div className="flex items-center justify-between gap-[12px] h-[34px]">
             <h1
-              className="text-[24px] leading-[32px] font-semibold text-[var(--color-ink)]"
+              className="text-[16px] leading-[24px] font-semibold text-[var(--color-ink)]"
               style={MANROPE}
             >
               {title}
@@ -235,6 +238,7 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
                           onOpenChange={(o) => setMenuOpenId(o ? chat.id : null)}
                           align="end"
                           side="bottom"
+                          modal={false}
                           isBookmarked={bookmarkedIds.has(chat.id)}
                           onRename={() => startRename(chat.id, title)}
                           onBookmark={() => toggleBookmark(chat.id)}

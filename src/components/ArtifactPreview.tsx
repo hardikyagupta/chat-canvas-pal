@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, ChevronDown, X } from 'lucide-react';
+import { Copy, Check, ChevronDown, PanelRightClose, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { ActionMenu, ActionMenuTrigger, ActionMenuContent, ActionMenuItem } from '@/components/ui/action-menu';
 import {
   PieChart, Pie, Cell,
@@ -20,10 +20,12 @@ const chartTooltip = { fontSize: 12, borderRadius: 8, fontFamily: MANROPE };
 interface ArtifactPreviewProps {
   fileName?: string;
   title?: string;
-  onClose?: () => void;              // close the artifact panel
+  onClose?: () => void;              // collapse the artifact panel
   onCopy?: () => void;               // copy the artifact contents
   onDownloadMarkdown?: () => void;   // Copy ▾ → Download as Markdown
   onDownloadPdf?: () => void;        // Copy ▾ → Download as PDF
+  onToggleExpand?: () => void;       // widen the artifact leftward up to the LHS nav (hiding the chat)
+  isExpanded?: boolean;              // whether the artifact currently fills the chat+artifact region
   bare?: boolean;                    // drop the outer card border/radius (full-bleed, e.g. widget view)
 }
 
@@ -108,6 +110,8 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   onCopy,
   onDownloadMarkdown,
   onDownloadPdf,
+  onToggleExpand,
+  isExpanded = false,
   bare = false,
 }) => {
   // "Copy" flips to a "Copied" checkmark briefly after a click.
@@ -122,9 +126,32 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
       {/* top-nav-artifact — Claude-style: title on the left; Copy / Publish / Close on the right */}
       <TooltipProvider delayDuration={200}>
         <div className="flex gap-[8px] items-center px-[16px] py-[10px] w-full shrink-0 border-b border-[var(--color-line-input)]">
-          <p className="flex-1 min-w-0 truncate text-[14px] font-medium text-foreground">
-            {fileName}
-          </p>
+          <div className="flex flex-1 min-w-0 items-center gap-[6px]">
+            {/* Expand toggle — widens the artifact leftward up to the LHS nav (hiding the chat).
+                Sits to the LEFT of the label; the chevrons point the way the panel grows. */}
+            {onToggleExpand && (
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={onToggleExpand}
+                    className="flex items-center justify-center p-[6px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
+                    aria-label={isExpanded ? 'Collapse artifact to split view' : 'Expand artifact'}
+                  >
+                    {isExpanded
+                      ? <ChevronsRight className="size-[16px] text-[var(--color-slate)]" />
+                      : <ChevronsLeft className="size-[16px] text-[var(--color-slate)]" />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
+                  <p>{isExpanded ? 'Collapse to split view' : 'Expand artifact'}</p>
+                </TooltipContent>
+              </UITooltip>
+            )}
+            <p className="min-w-0 truncate text-[14px] font-medium text-foreground">
+              {fileName}
+            </p>
+          </div>
           {/* Copy — split button: "Copy" copies; the chevron opens the download menu */}
           <div className="flex items-center rounded-[8px] border border-[var(--color-line-input)] overflow-hidden shrink-0">
             <button
@@ -160,20 +187,20 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
               </ActionMenuContent>
             </ActionMenu>
           </div>
-          {/* Close */}
+          {/* Collapse the artifact panel */}
           <UITooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
                 onClick={onClose}
                 className="flex items-center justify-center p-[6px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-                aria-label="Close artifact"
+                aria-label="Collapse artifact"
               >
-                <X className="size-[18px] text-[var(--color-slate)]" />
+                <PanelRightClose className="size-[18px] text-[var(--color-slate)]" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
-              <p>Close</p>
+              <p>Collapse artifact</p>
             </TooltipContent>
           </UITooltip>
         </div>
