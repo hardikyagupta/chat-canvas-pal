@@ -1,0 +1,69 @@
+import { useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { tabs } from "./campaigns.data";
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * Status filter tabs. Active tab is charcoal + bold with an underline bar.
+ * In `compact` mode (chat panel open) the strip becomes horizontally
+ * scrollable with ‹ › arrows so it fits the reduced width.
+ */
+export default function TabBar({ compact = false }: { compact?: boolean }) {
+  const [active, setActive] = useState(0);
+  const scroller = useRef<HTMLDivElement>(null);
+
+  const scroll = (dir: -1 | 1) =>
+    scroller.current?.scrollBy({ left: dir * 160, behavior: "smooth" });
+
+  return (
+    <div className="flex min-w-0 items-center">
+      {compact && (
+        <button
+          aria-label="Scroll tabs left"
+          onClick={() => scroll(-1)}
+          className="mr-1 grid h-6 w-5 shrink-0 place-items-center text-[#6F6F8D] hover:text-[#17173A]"
+        >
+          <ChevronLeft className="h-4 w-4" strokeWidth={2} />
+        </button>
+      )}
+
+      <div
+        ref={scroller}
+        className={`flex items-center gap-8 ${
+          compact ? "scroll-slim overflow-x-auto" : ""
+        }`}
+      >
+        {tabs.map((tab, i) => {
+          const isActive = i === active;
+          return (
+            <button
+              key={tab.label}
+              onClick={() => setActive(i)}
+              className="relative shrink-0 whitespace-nowrap pb-2.5 pt-0.5 font-manrope text-sm tracking-[0.29px] transition-colors"
+            >
+              <span
+                className={isActive ? "font-bold text-[#17173A]" : "font-medium text-[#6F6F8D]"}
+              >
+                {tab.label} ({pad(tab.count)})
+              </span>
+              {isActive && (
+                <span className="absolute inset-x-0 bottom-0 h-[3px] rounded-[1.5px] bg-[#17173A]" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {compact && (
+        <button
+          aria-label="Scroll tabs right"
+          onClick={() => scroll(1)}
+          className="ml-1 grid h-6 w-5 shrink-0 place-items-center text-[#6F6F8D] hover:text-[#17173A]"
+        >
+          <ChevronRight className="h-4 w-4" strokeWidth={2} />
+        </button>
+      )}
+    </div>
+  );
+}

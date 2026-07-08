@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="icon/Pinned" clip-path="url(#clip0_0_428)">
+<path id="Vector" d="M5.03095 10.9844L0.916667 15.0987M7.78624 1.76835C6.49366 3.06092 6.30509 5.6735 6.17024 6.61635L2.70052 6.85292C3.09792 8.41199 3.90805 9.83518 5.04573 10.9729C6.18341 12.1105 7.6066 12.9207 9.16566 13.3181L9.40224 9.8495C10.3451 9.71464 12.9577 9.52607 14.2514 8.2335C17.1394 5.34435 10.6742 -1.12079 7.78624 1.76835Z" stroke="var(--stroke-0, white)" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<clipPath id="clip0_0_428">
+<rect width="16" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>

@@ -103,6 +103,7 @@ interface ChatInterfaceProps {
   enabledAgents: Set<string>;
   setEnabledAgents: React.Dispatch<React.SetStateAction<Set<string>>>;
   onCloseInterface?: () => void; // Handler to close the entire chat interface
+  initialExpanded?: boolean; // Start expanded (full-screen) vs. docked widget. Defaults to true.
 }
 
 // Rotating example topics shown in the empty-state greeting slot animation
@@ -209,7 +210,7 @@ const FOLLOWUPS: { label: string; q: string; a: string; statCards?: StatCard[]; 
   },
 ];
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
@@ -406,7 +407,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const addNextMockMessageRef = useRef<(index: number) => void>(() => {}); // Default no-op function
 
   // State to manage the expanded (full-screen like) view vs. widget view
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(initialExpanded);
   // State to manage which sidebar (bookmarks/history or agents) is active in expanded view
   const [activeSidebar, setActiveSidebar] = useState<'bookmarks' | 'agents' | null>('bookmarks');
   // Collapsed (icon-rail) state for the LHS sidebar in expanded view.

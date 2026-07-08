@@ -6,6 +6,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const MANROPE = 'Manrope, sans-serif';
 const chartTick = { fontSize: 11, fill: 'var(--color-grey)', fontFamily: MANROPE };
+
+// Left-aligned Y-axis tick so labels line up with the card's title/subtitle edge
+const yAxisTick = (formatter: (v: number) => string) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ({ y, payload }: any) => (
+    <text
+      x={0}
+      y={y}
+      dy={3}
+      textAnchor="start"
+      fontSize={11}
+      fill="var(--color-grey)"
+      fontFamily={MANROPE}
+    >
+      {formatter(payload.value)}
+    </text>
+  );
 const chartLegend = { fontSize: 11, fontFamily: MANROPE };
 const chartTooltip = { fontSize: 12, borderRadius: 8, fontFamily: MANROPE };
 
@@ -66,10 +83,10 @@ export const PublishedVsDeliveredChart: React.FC = () => (
     <p className="text-[10px] text-[var(--color-grey)]">Volume comparison across channels</p>
     <div className="w-full h-[220px] mt-[8px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={publishedVsDelivered} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+        <BarChart data={publishedVsDelivered} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-surface-2)" vertical={false} />
           <XAxis dataKey="channel" tick={chartTick} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={formatThousands} tick={chartTick} axisLine={false} tickLine={false} />
+          <YAxis width={38} tickFormatter={formatThousands} tick={yAxisTick(formatThousands)} axisLine={false} tickLine={false} />
           <Tooltip contentStyle={chartTooltip} formatter={(value: number) => value.toLocaleString()} />
           <Legend wrapperStyle={chartLegend} />
           <Bar dataKey="Published" fill="var(--color-royal)" radius={[3, 3, 0, 0]} />
@@ -86,10 +103,10 @@ export const RatesChart: React.FC = () => (
     <p className="text-[10px] text-[var(--color-grey)]">Engagement efficiency across channels</p>
     <div className="w-full h-[220px] mt-[8px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={ratesByChannel} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+        <BarChart data={ratesByChannel} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-surface-2)" vertical={false} />
           <XAxis dataKey="channel" tick={chartTick} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={(v: number) => `${v}%`} tick={chartTick} axisLine={false} tickLine={false} />
+          <YAxis width={38} tickFormatter={(v: number) => `${v}%`} tick={yAxisTick((v) => `${v}%`)} axisLine={false} tickLine={false} />
           <Tooltip contentStyle={chartTooltip} formatter={(value: number) => `${value}%`} />
           <Legend wrapperStyle={chartLegend} />
           <Bar dataKey="Click rate %" fill="var(--color-royal)" radius={[3, 3, 0, 0]} />
