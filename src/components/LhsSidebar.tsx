@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, ChevronDown, MoreHorizontal, X, Check, Search, PanelLeftClose, ArrowRightToLine } from 'lucide-react';
+import { Plus, MoreHorizontal, Search, PanelLeftClose, ArrowRightToLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import ChatActionsMenu from './ChatActionsMenu';
@@ -93,7 +93,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   onOpenBookmarks,
   onToggleCollapse,
 }) => {
-  const [chatsOpen, setChatsOpen] = useState(true);
+  const [chatsOpen] = useState(true);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -180,7 +180,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
       className={cn(
         'group/lhs atmo-glass relative z-30 flex flex-col items-start h-full bg-sidebar-background flex-shrink-0 border-r border-[var(--color-line)]',
         // overflow-visible when collapsed lets the rail tooltips escape the 64px width
-        collapsed ? 'overflow-visible cursor-pointer' : 'overflow-hidden'
+        collapsed ? 'overflow-visible cursor-col-resize' : 'overflow-hidden'
       )}
       style={{ width: collapsed ? 64 : 288, transition: 'width 300ms cubic-bezier(0.22, 1, 0.36, 1)' }}
     >
@@ -194,7 +194,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
           aria-label={collapsed ? 'Expand sidebar' : 'Co-marketer'}
           className={cn(
             'group relative flex items-center justify-center w-[40px] h-[40px] shrink-0 rounded-[8px]',
-            collapsed ? 'cursor-pointer' : 'cursor-default'
+            'cursor-default'
           )}
         >
           {/* Hover highlight is a centered 32×32 box (smaller than the 40px hit area). */}
@@ -282,7 +282,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
               'group relative flex h-[32px] items-center w-full rounded-[8px] transition-colors',
               // Expanded: full-width row highlight. Collapsed: the highlight lives on
               // the inner 32×32 box instead (see icon slot), so the button itself has none.
-              collapsed ? '' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
+              collapsed ? 'cursor-default' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
             )}
           >
             <span
@@ -319,25 +319,15 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
           collapsed ? 'opacity-0 pointer-events-none' : 'opacity-100 delay-100'
         )}
       >
-        {/* Section header with expand/collapse chevron */}
-        <button
-          type="button"
-          onClick={() => setChatsOpen((v) => !v)}
-          className="flex gap-[8px] items-center pl-[24px] py-[8px] w-full shrink-0 mt-[8px]"
-        >
+        {/* Section header */}
+        <div className="flex gap-[8px] items-center pl-[24px] py-[8px] w-full shrink-0 mt-[8px]">
           <span
             className="text-[12px] leading-[16px] text-[var(--color-grey)] tracking-[0.035px] whitespace-nowrap"
             style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
           >
-            Recent
+            Recents
           </span>
-          <ChevronDown
-            className={cn(
-              'size-[14px] text-[var(--color-grey)] shrink-0 transition-transform duration-200',
-              !chatsOpen && '-rotate-90'
-            )}
-          />
-        </button>
+        </div>
 
         {/* Scrollable chat list */}
         {chatsOpen && (
@@ -353,54 +343,25 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
                   <div
                     key={chat.id}
                     className={cn(
-                      'group relative flex gap-[8px] h-[34px] items-center pl-[12px] pr-[8px] w-full rounded-[10px] overflow-hidden transition-colors',
-                      (isActive || isRenaming) ? 'bg-[oklch(0_0_0_/_0.12)]' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
+                      'group relative flex gap-[8px] h-[34px] items-center pr-[8px] w-full rounded-[10px] overflow-hidden transition-colors',
+                      isRenaming
+                        ? 'pl-[12px] bg-[var(--color-surface-0)] ring-2 ring-inset ring-[var(--color-royal)]'
+                        : cn('pl-[12px]', isActive ? 'bg-[oklch(0_0_0_/_0.12)]' : 'hover:bg-[oklch(0_0_0_/_0.06)]')
                     )}
                   >
                     {isRenaming ? (
-                      <>
-                        <input
-                          ref={renameInputRef}
-                          value={renameValue}
-                          onChange={(e) => setRenameValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') commitRename();
-                            else if (e.key === 'Escape') cancelRename();
-                          }}
-                          className="flex-1 min-w-0 bg-transparent border-0 p-0 text-[13px] text-[var(--color-charcoal)] focus:outline-none"
-                          style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
-                        />
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={cancelRename}
-                              aria-label="Cancel"
-                              className="flex items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
-                            >
-                              <X className="size-[16px]" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
-                            Cancel
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={commitRename}
-                              aria-label="Save"
-                              className="flex items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
-                            >
-                              <Check className="size-[16px]" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
-                            Save
-                          </TooltipContent>
-                        </Tooltip>
-                      </>
+                      <input
+                        ref={renameInputRef}
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitRename();
+                          else if (e.key === 'Escape') cancelRename();
+                        }}
+                        onBlur={commitRename}
+                        className="flex-1 min-w-0 bg-transparent border-0 p-0 text-[13px] text-[var(--color-charcoal)] focus:outline-none"
+                        style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+                      />
                     ) : (
                       <>
                         <button
@@ -469,6 +430,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
         }}
         onNewChat={onNewChat}
       />
+
     </div>
   );
 };

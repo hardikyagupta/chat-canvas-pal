@@ -55,7 +55,7 @@ const ChatActionsMenu: React.FC<ChatActionsMenuProps> = ({
         iconProps={{ fill: isBookmarked ? 'currentColor' : 'none' }}
         onSelect={() => onBookmark?.()}
       >
-        {isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+        {isBookmarked ? 'Bookmarked' : 'Bookmark'}
       </ActionMenuItem>
       <ActionMenuItem icon={Trash2} variant="danger" onSelect={() => onDelete?.()}>
         Delete
