@@ -448,7 +448,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
               when `expanded`, the textarea takes the full width (basis-full) so it
               wraps everything else (chip, send) to a row below — text reaches the
               right edge and the send button sits bottom-right (ChatGPT-style). */}
-          <div className={cn("relative z-10 flex flex-wrap items-center gap-x-[8px]", expanded ? "gap-y-[26px]" : "gap-y-[10px]")}>
+          <div className={cn("relative z-10 flex flex-wrap items-center gap-x-[8px]", expanded ? "gap-y-[18px]" : "gap-y-[10px]")}>
             {/* Auto-growing textarea — grows from 1 to 4 lines, then scrolls.
                 Sits on top (row 1) when expanded; otherwise shares the row. */}
             <div className={cn("relative min-w-0", expanded ? "order-1 basis-full w-full" : "order-2 flex-1")}>
