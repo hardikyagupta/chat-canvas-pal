@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Bookmark, ChevronDown, MoreHorizontal, X, Check, Search, PanelLeftClose, ArrowRightToLine } from 'lucide-react';
+import { Plus, ChevronDown, MoreHorizontal, X, Check, Search, PanelLeftClose, ArrowRightToLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import ChatActionsMenu from './ChatActionsMenu';
@@ -11,6 +11,14 @@ import SearchChatsModal from './SearchChatsModal';
 const ChatsIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 256 256" fill="currentColor" className={className} aria-hidden="true">
     <path d="M232.07,186.76a80,80,0,0,0-62.5-114.17A80,80,0,1,0,23.93,138.76l-7.27,24.71a16,16,0,0,0,19.87,19.87l24.71-7.27a80.39,80.39,0,0,0,25.18,7.35,80,80,0,0,0,108.34,40.65l24.71,7.27a16,16,0,0,0,19.87-19.86ZM62,159.5a8.28,8.28,0,0,0-2.26.32L32,168l8.17-27.76a8,8,0,0,0-.63-6,64,64,0,1,1,26.26,26.26A8,8,0,0,0,62,159.5Zm153.79,28.73L224,216l-27.76-8.17a8,8,0,0,0-6,.63,64.05,64.05,0,0,1-85.87-24.88A79.93,79.93,0,0,0,174.7,89.71a64,64,0,0,1,41.75,92.48A8,8,0,0,0,215.82,188.23Z" />
+  </svg>
+);
+
+// Bookmark menu icon (Phosphor "bookmark-simple" glyph) — matches the ChatsIcon
+// family/weight so the two menu icons read as one set. Uses currentColor.
+const BookmarkIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 256 256" fill="currentColor" className={className} aria-hidden="true">
+    <path d="M184,32H72A16,16,0,0,0,56,48V224a8,8,0,0,0,12.24,6.78L128,193.43l59.77,37.35A8,8,0,0,0,200,224V48A16,16,0,0,0,184,32Zm0,177.57-51.77-32.35a8,8,0,0,0-8.48,0L72,209.57V48H184Z" />
   </svg>
 );
 
@@ -150,7 +158,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
     // Search now lives in the header (next to the collapse toggle), not here.
     { key: 'new-chat', label: 'New chat', icon: Plus, onClick: onNewChat, isNewChat: true },
     { key: 'chats', label: 'Chats', icon: ChatsIcon, onClick: onOpenChats },
-    { key: 'bookmarks', label: 'Bookmarks', icon: Bookmark, onClick: onOpenBookmarks },
+    { key: 'bookmarks', label: 'Bookmarks', icon: BookmarkIcon, onClick: onOpenBookmarks },
   ];
 
   // Labels self-clip via max-width (so the root can be overflow-visible for tooltips)
