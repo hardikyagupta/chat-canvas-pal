@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, MoreHorizontal, X, Check } from 'lucide-react';
+import { Search, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LhsChatItem } from './LhsSidebar';
 import ChatActionsMenu from './ChatActionsMenu';
@@ -96,13 +96,13 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
     <div className={cn('flex flex-col h-full w-full overflow-hidden bg-[var(--color-surface-0)]', className)}>
       <div className="mx-auto flex flex-col min-h-0 w-full max-w-[820px] flex-1 px-[20px]">
         {/* Sticky header — title + New chat, then search. */}
-        <div className="flex flex-col gap-[16px] pt-[20px] pb-[12px] w-full shrink-0">
+        <div className="flex flex-col gap-[16px] pt-[8px] pb-[12px] w-full shrink-0">
           {/* Fixed height so the row is the same whether or not the New chat
               button is present — keeps the search bar / list from shifting
               vertically when switching between Chats and Bookmarks. */}
           <div className="flex items-center justify-between gap-[12px] h-[34px]">
             <h1
-              className="text-[16px] leading-[24px] font-semibold text-[var(--color-ink)]"
+              className="text-[24px] leading-[32px] font-semibold text-[var(--color-ink)]"
               style={MANROPE}
             >
               {title}
@@ -127,7 +127,7 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
           </div>
 
           {/* Search — blue active line on focus, 36px tall. */}
-          <div className="flex items-center gap-[8px] h-[36px] px-[14px] w-full rounded-[10px] border border-[var(--color-line-input)] bg-[var(--color-surface-0)] focus-within:border-[var(--color-royal)] transition-colors">
+          <div className="flex items-center gap-[8px] h-[36px] px-[14px] w-full rounded-[10px] border border-[var(--color-line-input)] bg-white focus-within:border-[var(--color-royal)] transition-colors">
             <Search className="size-[16px] text-[var(--color-grey-soft)] shrink-0" />
             <input
               type="text"
@@ -167,7 +167,9 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
                     key={chat.id}
                     className={cn(
                       'group relative flex gap-[8px] items-center h-[48px] px-[12px] w-full rounded-[8px] transition-colors',
-                      (isActive || isRenaming) ? 'bg-[oklch(0_0_0_/_0.06)]' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
+                      isRenaming
+                        ? 'bg-[var(--color-surface-0)] ring-2 ring-inset ring-[var(--color-royal)]'
+                        : isActive ? 'bg-[oklch(0_0_0_/_0.06)]' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
                     )}
                   >
                     {/* Straight, full-width divider drawn as a separate line so the
@@ -183,35 +185,18 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
                       />
                     )}
                     {isRenaming ? (
-                      <>
-                        <input
-                          ref={renameInputRef}
-                          value={renameValue}
-                          onChange={(e) => setRenameValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') commitRename();
-                            else if (e.key === 'Escape') cancelRename();
-                          }}
-                          className="flex-1 min-w-0 bg-transparent border-0 p-0 text-[14px] text-[var(--color-ink)] focus:outline-none"
-                          style={{ ...MANROPE, fontWeight: 500 }}
-                        />
-                        <button
-                          type="button"
-                          onClick={cancelRename}
-                          aria-label="Cancel"
-                          className="flex items-center justify-center size-[26px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
-                        >
-                          <X className="size-[16px]" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={commitRename}
-                          aria-label="Save"
-                          className="flex items-center justify-center size-[26px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
-                        >
-                          <Check className="size-[16px]" />
-                        </button>
-                      </>
+                      <input
+                        ref={renameInputRef}
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitRename();
+                          else if (e.key === 'Escape') cancelRename();
+                        }}
+                        onBlur={commitRename}
+                        className="flex-1 min-w-0 bg-transparent border-0 p-0 text-[14px] text-[var(--color-ink)] focus:outline-none"
+                        style={{ ...MANROPE, fontWeight: 500 }}
+                      />
                     ) : (
                       <>
                         <button

@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface LineNavItem {
-  id: string;     // DOM id of the message anchor to scroll to
-  label: string;  // short title shown on hover / when active
+  id: string;       // DOM id of the message anchor to scroll to
+  label: string;    // short title (kept for a11y / tooltip title)
+  userText?: string; // full user prompt for this turn (shown in the hover popover)
+  aiText?: string;   // the AI reply for this turn (clamped to two lines in the popover)
 }
 
 interface LineNavProps {
@@ -14,9 +16,9 @@ interface LineNavProps {
 
 /**
  * Vertical "line marker" navigation (à la chanhdai.com/components/line-nav).
- * Labels sit on the LEFT, the line markers on the RIGHT. Markers expand on
- * hover and for the active item; hovering the rail reveals every label so the
- * user can jump up/down between conversation turns.
+ * At rest it is JUST a stack of tight line markers — no text. Hovering a line
+ * widens it and pops a compact preview to the left: the user prompt on one
+ * line, and the AI reply clamped to two lines. Click to jump to that turn.
  */
 const LineNav: React.FC<LineNavProps> = ({ items, containerRef }) => {
   const [activeId, setActiveId] = useState<string | null>(items[0]?.id ?? null);
@@ -57,7 +59,7 @@ const LineNav: React.FC<LineNavProps> = ({ items, containerRef }) => {
   return (
     <nav
       aria-label="Conversation navigation"
-      className="absolute right-[10px] top-1/2 z-20 flex -translate-y-1/2 flex-col items-end gap-[3px]"
+      className="absolute right-[10px] top-1/2 z-20 flex -translate-y-1/2 flex-col items-end gap-[2px]"
       style={{ fontFamily: 'Manrope, sans-serif' }}
     >
       {items.map((it) => {
@@ -68,27 +70,47 @@ const LineNav: React.FC<LineNavProps> = ({ items, containerRef }) => {
             type="button"
             onClick={() => handleClick(it.id)}
             aria-current={active ? 'true' : undefined}
+            title={it.label}
             // group/navitem scopes hover to THIS row only — never the whole rail.
-            className="group/navitem flex items-center justify-end gap-[10px] py-[4px]"
+            className="group/navitem relative flex items-center justify-end py-[3px]"
           >
-            <span
-              className={cn(
-                'max-w-[180px] truncate text-right text-[13px] leading-[18px] transition-colors duration-150',
-                active
-                  ? 'font-medium text-[var(--color-ink)]'
-                  : 'text-[var(--color-grey-soft)] group-hover/navitem:text-[var(--color-ink)]',
-              )}
-            >
-              {it.label}
-            </span>
+            {/* Line marker — the only thing visible at rest. */}
             <span
               className={cn(
                 'h-[2px] shrink-0 rounded-full transition-all duration-150',
                 active
                   ? 'w-[28px] bg-[var(--color-ink)]'
-                  : 'w-[16px] bg-[var(--color-line-strong)] group-hover/navitem:w-[24px] group-hover/navitem:bg-[var(--color-ink)]',
+                  : 'w-[16px] bg-[var(--color-line-strong)] group-hover/navitem:w-[30px] group-hover/navitem:bg-[var(--color-ink)]',
               )}
             />
+
+            {/* Hover preview — user prompt (1 line) + AI reply (clamped to 2). */}
+            <span
+              role="tooltip"
+              className={cn(
+                'pointer-events-none absolute right-[calc(100%+12px)] top-1/2 w-[240px] -translate-y-1/2 rounded-[10px] border border-[var(--color-line)] bg-white px-[12px] py-[10px] text-left opacity-0 shadow-lg transition-opacity duration-150',
+                'group-hover/navitem:opacity-100',
+              )}
+            >
+              {it.userText && (
+                <span className="block truncate text-[12px] font-medium leading-[16px] text-[var(--color-ink)]">
+                  {it.userText}
+                </span>
+              )}
+              {it.aiText && (
+                <span
+                  className="mt-[4px] block text-left text-[12px] leading-[16px] text-[var(--color-grey-soft)]"
+                  style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {it.aiText} …
+                </span>
+              )}
+            </span>
           </button>
         );
       })}

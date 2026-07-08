@@ -1426,7 +1426,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   </div>
                 )}
                 {/* Doc-like artifact card — revealed only after the text finishes streaming */}
-                {artifact && isAnimationDone && (
+                {/* COMMENTED OUT (kept for later): in-chat artifact card is hidden. */}
+                {false && artifact && isAnimationDone && (
                   <div className="py-2 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-1">
                     <DocArtifactCard
                       artifact={artifact}

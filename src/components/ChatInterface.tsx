@@ -657,13 +657,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
 
   // One line-nav entry per user turn, anchored to its message div (msg-<index>).
   const navItems: LineNavItem[] = useMemo(() => {
+    const stripHtml = (s: string) =>
+      s.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
     return messages
       .map((m, index) => ({ m, index }))
       .filter(({ m }) => m.type === 'chat' && !m.isAI)
-      .map(({ m, index }) => ({
-        id: `msg-${index}`,
-        label: m.navLabel || (m.content.length > 28 ? `${m.content.slice(0, 28)}…` : m.content),
-      }));
+      .map(({ m, index }) => {
+        // The AI reply for this turn is the next chat message that carries text.
+        const reply = messages
+          .slice(index + 1)
+          .find(n => n.type === 'chat' && n.isAI && !!stripHtml(n.content));
+        return {
+          id: `msg-${index}`,
+          label: m.navLabel || (m.content.length > 28 ? `${m.content.slice(0, 28)}…` : m.content),
+          userText: stripHtml(m.content) || m.navLabel || '',
+          aiText: reply ? stripHtml(reply.content) : '',
+        };
+      });
   }, [messages]);
 
   const scrollToBottom = () => {
@@ -2340,17 +2351,27 @@ The content has been updated across all channels to reflect your changes.`;
                           onInputValueChange={setLiveInputValue}
                         />
                         {matchedTypedTrigger && (
-                          <div className="w-full flex flex-col gap-[8px]">
+                          <div key={matchedTypedTrigger.trigger} className="w-full flex flex-col">
                             {matchedTypedTrigger.suggestions.map((suggestion, index) => {
                               const prefix = suggestion.slice(0, matchedTypedTrigger.trigger.length);
                               const rest = suggestion.slice(matchedTypedTrigger.trigger.length);
+                              const isLast = index === matchedTypedTrigger.suggestions.length - 1;
                               return (
                                 <button
                                   key={`typed-${index}`}
                                   type="button"
-                                  className="w-full text-left p-[12px] rounded-[8px] cursor-pointer bg-card border border-[var(--color-line)] hover:bg-[var(--color-surface-0)] transition-colors"
+                                  className="suggest-drop-in group relative w-full text-left px-[12px] py-[12px] rounded-[8px] cursor-pointer hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+                                  style={{ animationDelay: `${index * 45}ms` }}
                                   onClick={() => handleSendMessage(suggestion)}
                                 >
+                                  {/* Full-width divider between rows; hidden on hover so the
+                                      hover box reads cleanly (matches the chats list style). */}
+                                  {!isLast && (
+                                    <span
+                                      aria-hidden
+                                      className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-[var(--color-line)] group-hover:hidden"
+                                    />
+                                  )}
                                   <p
                                     className="text-[14px] leading-[20px]"
                                     style={{ fontFamily: "Manrope, sans-serif" }}
@@ -2742,7 +2763,8 @@ The content has been updated across all channels to reflect your changes.`;
           </div>
           {/* Artifact — WIDGET view only: full-bleed take-over of the floating window.
               (Expanded view renders the artifact as a top-level third column below.) */}
-          {!isExpanded && showArtifactPreview && (
+          {/* COMMENTED OUT (kept for later): widget-view artifact take-over. */}
+          {false && !isExpanded && showArtifactPreview && (
             <div className="relative z-10 shrink-0 h-full w-full">
               <ArtifactPreview
                 onClose={handleCloseArtifactPreview}
@@ -2757,7 +2779,8 @@ The content has been updated across all channels to reflect your changes.`;
           {/* Artifact — EXPANDED view: opens as a top-level third column,
               so the layout reads LHS | chat | artifact (Claude-style).
               Drag the left handle to resize; releases snap to 42 / 50 / 60%. */}
-          {isExpanded && showArtifactPreview && (
+          {/* COMMENTED OUT (kept for later): expanded-view artifact third column. */}
+          {false && isExpanded && showArtifactPreview && (
             <div
               className={cn(
                 // Not shrink-0: when the LHS expands and space tightens, the artifact

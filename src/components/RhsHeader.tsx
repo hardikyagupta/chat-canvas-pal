@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Minimize2, X, PanelLeftClose, PanelLeftOpen, ChevronDown, Check } from 'lucide-react';
+import { Minimize2, X, PanelLeftClose, PanelLeftOpen, ChevronDown } from 'lucide-react';
 import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
 
@@ -98,7 +98,7 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
             )}
             {displayName ? (
               isRenaming ? (
-                <div className="flex items-center gap-[4px] min-w-0 bg-[oklch(0_0_0_/_0.06)] rounded-[8px] pl-[10px] pr-[4px] py-[3px]">
+                <div className="flex items-center min-w-0 bg-[var(--color-surface-0)] rounded-[8px] px-[10px] py-[3px] ring-2 ring-[var(--color-royal)]">
                   <input
                     ref={renameInputRef}
                     value={renameValue}
@@ -107,27 +107,10 @@ const RhsHeader: React.FC<RhsHeaderProps> = ({
                       if (e.key === 'Enter') commitRename();
                       else if (e.key === 'Escape') cancelRename();
                     }}
+                    onBlur={commitRename}
                     className="flex-1 min-w-0 bg-transparent border-0 p-0 font-medium text-[13px] text-[var(--color-charcoal)] focus:outline-none"
                     style={{ fontFamily: 'Manrope, sans-serif' }}
                   />
-                  <button
-                    type="button"
-                    onClick={cancelRename}
-                    aria-label="Cancel"
-                    className="group relative flex items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
-                  >
-                    <X className="size-[16px]" />
-                    <HeaderTooltip label="Cancel" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={commitRename}
-                    aria-label="Save"
-                    className="group relative flex items-center justify-center size-[24px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] shrink-0"
-                  >
-                    <Check className="size-[16px]" />
-                    <HeaderTooltip label="Save" />
-                  </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-[2px] min-w-0">

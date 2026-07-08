@@ -458,7 +458,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={placeholder}
+                placeholder={isLoading ? "Generating response…" : placeholder}
                 disabled={isQuestionnaireActive || isLoading}
                 className="chat-input-scroll block w-full min-w-0 resize-none bg-transparent border-0 p-0 pl-[8px] pt-[8px] text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed"
                 style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500, maxHeight: "88px" }}

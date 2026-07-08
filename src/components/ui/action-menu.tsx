@@ -36,9 +36,14 @@ export const ActionMenuContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        'z-50 min-w-[184px] p-[6px] flex flex-col gap-[2px] rounded-[12px] border border-border bg-popover',
+        'z-50 min-w-0 w-max p-[6px] flex flex-col gap-[2px] rounded-[12px] border border-border bg-popover',
         'shadow-[0px_8px_20px_0px_oklch(0_0_0_/_0.12)]',
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2',
+        // Open animation only. No exit animation on purpose: an exit animation
+        // keeps the content mounted after close, and if the trigger has by then
+        // hidden itself (e.g. the hover-only three-dot button), Radix loses its
+        // anchor and flashes a ghost menu at the top-left corner. Unmounting
+        // immediately on close avoids that.
+        'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2',
         className
       )}
       style={{ fontFamily: 'Manrope, sans-serif' }}

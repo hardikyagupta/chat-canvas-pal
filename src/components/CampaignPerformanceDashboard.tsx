@@ -61,7 +61,7 @@ export const MetricCards: React.FC = () => (
 );
 
 export const PublishedVsDeliveredChart: React.FC = () => (
-  <div className="w-full border border-[var(--color-line)] bg-card rounded-[8px] p-[12px] flex flex-col gap-[4px] font-['Manrope']">
+  <div className="w-full flex flex-col gap-[4px] font-['Manrope']">
     <p className="text-[12px] font-semibold text-[var(--color-ink)]">Published vs Delivered by Channel</p>
     <p className="text-[10px] text-[var(--color-grey)]">Volume comparison across channels</p>
     <div className="w-full h-[220px] mt-[8px]">
@@ -81,7 +81,7 @@ export const PublishedVsDeliveredChart: React.FC = () => (
 );
 
 export const RatesChart: React.FC = () => (
-  <div className="w-full border border-[var(--color-line)] bg-card rounded-[8px] p-[12px] flex flex-col gap-[4px] font-['Manrope']">
+  <div className="w-full flex flex-col gap-[4px] font-['Manrope']">
     <p className="text-[12px] font-semibold text-[var(--color-ink)]">Click Rate & Conversion Rate by Channel</p>
     <p className="text-[10px] text-[var(--color-grey)]">Engagement efficiency across channels</p>
     <div className="w-full h-[220px] mt-[8px]">
@@ -117,7 +117,7 @@ export const MetricCardsSkeleton: React.FC = () => (
 );
 
 export const ChartSkeleton: React.FC = () => (
-  <div className="w-full border border-[var(--color-line)] bg-card rounded-[8px] p-[12px] flex flex-col gap-[8px]">
+  <div className="w-full flex flex-col gap-[8px]">
     <Skeleton className="h-[12px] w-[45%]" />
     <Skeleton className="h-[8px] w-[30%]" />
     <Skeleton className="h-[220px] w-full mt-[8px]" />
