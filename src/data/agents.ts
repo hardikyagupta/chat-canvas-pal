@@ -1,4 +1,4 @@
-import { Bot, FileText, Search, Share, LightbulbIcon, Calendar } from "lucide-react";
+import { Bot, FileText, Search, Share, LightbulbIcon, Calendar, Workflow } from "lucide-react";
 import React from 'react';
 
 // Define a list of pastel background color classes
@@ -68,5 +68,13 @@ export const marketingAgents: MarketingAgent[] = [
     icon: LightbulbIcon, // Lucide icon as fallback
     initials: "IA",
     colorClass: pastelColorClasses[4],
+  },
+  {
+    id: "journey-agent",
+    name: "Journey agent",
+    description: "Designs multi-step, multi-channel customer journeys",
+    icon: Workflow, // Lucide icon (no dedicated SVG avatar yet)
+    initials: "JA",
+    colorClass: pastelColorClasses[5],
   }
-]; 
+];

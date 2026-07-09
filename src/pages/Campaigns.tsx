@@ -138,6 +138,7 @@ export default function Campaigns() {
                 key={chatSession}
                 initialExpanded={false}
                 docked
+                conversationVariant="campaigns"
                 onBotIconClick={() => setIsAgentsOverlayOpen(true)}
                 enabledAgents={enabledAgents}
                 setEnabledAgents={setEnabledAgents}

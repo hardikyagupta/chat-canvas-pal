@@ -316,10 +316,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
     // it switches to the disabled/grey state with the Figma square icon.
     const isLoading = !!isMockAgentChatActive || shimmer;
     const isActive = !isLoading;
-    // Input always renders in its expanded shape (textarea full width, actions on
-    // the row below) — no minimized single-line pill, and it doesn't depend on a
-    // context chip being active.
-    const expanded = true;
+    // Compact single-row layout (original): textarea + actions share one 56px
+    // row. It grows to fit only when the textarea wraps to multiple lines.
+    const expanded = isMultiline || !!selectedContextChip;
     return (
       <div className="relative w-full">
         {/* Outer container — height grows smoothly when chip appears */}
