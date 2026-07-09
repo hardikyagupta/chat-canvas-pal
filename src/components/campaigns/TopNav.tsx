@@ -1,9 +1,25 @@
+import { useEffect, useRef, useState } from "react";
 import { Search, Plus, Bell } from "lucide-react";
 import sparkle from "/campaign-assets/ic-sparkle.svg";
 import trending from "/campaign-assets/ic-trending.svg";
+import CoMarketerNudge from "./CoMarketerNudge";
 
 /** Top application bar — 56px, white, rounded, soft card shadow. */
 export default function TopNav({ onOpenChat }: { onOpenChat?: () => void }) {
+  // Discovery nudge shown under the Ask co-marketer button on first load.
+  const [showNudge, setShowNudge] = useState(true);
+  const nudgeWrapRef = useRef<HTMLDivElement>(null);
+
+  // Dismiss the nudge when clicking anywhere outside it (and its button).
+  useEffect(() => {
+    if (!showNudge) return;
+    const onDocDown = (e: MouseEvent) => {
+      if (!nudgeWrapRef.current?.contains(e.target as Node)) setShowNudge(false);
+    };
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, [showNudge]);
+
   return (
     <header className="flex h-14 items-center rounded-lg bg-white pl-4 pr-4 shadow-[0px_5px_10px_0px_rgba(23,23,58,0.05)]">
       {/* Left: workspace pill + search */}
@@ -25,16 +41,43 @@ export default function TopNav({ onOpenChat }: { onOpenChat?: () => void }) {
 
       {/* Right cluster */}
       <div className="ml-auto flex items-center gap-4">
-        {/* Ask co-marketer */}
-        <button
-          onClick={onOpenChat}
-          className="flex items-center gap-1.5 rounded border border-[#FFB68C] bg-white px-2 py-1.5 transition-shadow hover:shadow-sm"
-        >
-          <img src={sparkle} alt="" className="h-4 w-4" />
-          <span className="font-manrope text-xs font-semibold tracking-[0.42px] text-ash">
-            Ask co-marketer
-          </span>
-        </button>
+        {/* Ask co-marketer — rotating conic-gradient border ring (same shimmer
+            used on the chat input field). h-8 matches the Create/Plus button.
+            While the discovery nudge is up, a pulsing halo highlights the button
+            and the nudge card drops beneath it. */}
+        <div ref={nudgeWrapRef} className="relative">
+          {/* Small royal-blue pulsing dot centered on the lower edge of the
+              button — a ping ring behind a solid dot. */}
+          {showNudge && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -bottom-1 left-1/2 z-[2] grid h-2.5 w-2.5 -translate-x-1/2 place-items-center"
+            >
+              <span className="absolute inset-0 animate-ping rounded-full bg-[#2F68E5]/50" />
+              <span className="relative h-2 w-2 rounded-full bg-[#2F68E5]" />
+            </span>
+          )}
+          <button
+            onClick={() => {
+              setShowNudge(false);
+              onOpenChat?.();
+            }}
+            className="relative z-[1] flex h-8 items-center gap-1.5 overflow-hidden rounded bg-white px-2.5 transition-shadow hover:shadow-sm"
+          >
+            <span aria-hidden="true" className="snake-border" />
+            <img src={sparkle} alt="" className="relative z-[1] h-4 w-4" />
+            <span className="relative z-[1] font-manrope text-xs font-semibold tracking-[0.42px] text-ash">
+              Ask co-marketer
+            </span>
+          </button>
+
+          {/* Discovery nudge — drops below the button, right-aligned. */}
+          {showNudge && (
+            <div className="absolute right-0 top-[calc(100%+12px)] z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+              <CoMarketerNudge />
+            </div>
+          )}
+        </div>
 
         {/* Create */}
         <button

@@ -381,6 +381,53 @@
   inherits: false;
 }
 
+/* Snake-border CTA (Ask co-marketer button).
+   Matches the Figma "Snake Border CTA": ONE stroke. A single ring element holds
+   both a solid grey base (bottom background layer) and a bright blue snake
+   segment (top conic layer) that travels clockwise. Where the conic is
+   transparent the grey base shows through, so the grey ring is continuous and
+   the snake rides on top of it — no second concentric border, no gaps.
+   The button itself must NOT set a CSS border (that would sit outside this
+   overlay's padding box and create a second ring). */
+@property --snake-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.snake-border {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    conic-gradient(
+      from var(--snake-angle),
+      transparent 0deg,
+      transparent 255deg,
+      rgba(61, 158, 255, 0) 280deg,
+      #3d9eff 330deg,
+      #7cc0ff 350deg,
+      rgba(61, 158, 255, 0) 360deg
+    ),
+    #dee5f0;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: snakeSpin 3s linear infinite;
+}
+
+@keyframes snakeSpin {
+  to { --snake-angle: 360deg; }
+}
+
 .input-border-shimmer {
   position: absolute;
   inset: 0;
@@ -479,7 +526,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .input-border-shimmer,
-  .input-inner-shimmer {
+  .input-inner-shimmer,
+  .snake-border {
     animation: none;
   }
 }

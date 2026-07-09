@@ -9,6 +9,8 @@ import SystemMessage from './SystemMessage';
 import ChatInput from './ChatInput';
 import ChatMessage from './ChatMessage';
 import { MarketingAgent, marketingAgents } from '@/data/agents';
+import { CONVERSATIONS, ConversationVariant, CAMPAIGNS_FLOW, AgentArtifactCardData } from '@/data/conversations';
+import AgentSwitchDivider from './AgentSwitchDivider';
 import AvatarStack from './AvatarStack';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '../../components/theme-provider';
@@ -95,6 +97,12 @@ interface ChatMessageData {
   // Lightweight per-message graphics for follow-up answers (visual parity)
   statCards?: { label: string; value: string; sub?: string }[];
   miniChart?: 'delivery' | 'rates';
+  // Centered "Switched to <agent>" divider (campaigns agent-relay flow).
+  // The divider reuses avatarSrc/avatarIcon/avatarBgClass for the agent chip.
+  isAgentSwitch?: boolean;
+  switchAgentLabel?: string;
+  // Agent-handed artifact card (segment / journey), revealed after the answer streams.
+  agentArtifactCard?: AgentArtifactCardData;
 }
 
 // Props for the main ChatInterface component
@@ -105,6 +113,7 @@ interface ChatInterfaceProps {
   onCloseInterface?: () => void; // Handler to close the entire chat interface
   initialExpanded?: boolean; // Start expanded (full-screen) vs. docked widget. Defaults to true.
   docked?: boolean; // When true (and not dragged), the widget fills its parent height instead of a fixed 776px.
+  conversationVariant?: ConversationVariant; // Which scripted storyline to play. Defaults to 'default' (home page); '/campaigns' passes 'campaigns'.
 }
 
 // Rotating example topics shown in the empty-state greeting slot animation
@@ -127,93 +136,12 @@ const getGreeting = () => {
   return 'Good evening';
 };
 
-// --- Performance "story" -------------------------------------------------
-// Whatever the user types, the conversation is anchored to a single coherent
-// narrative so the input prompt and the charted output read as one story that
-// ties directly to the info tiles and charts in the performance dashboard.
-const STORY_PROMPT =
-  "We just wrapped our mid-June push — 50 campaigns across 6 channels between June 8 and 19. Everyone keeps telling me it “did well,” but I need the real story: how many messages actually reached people, where we’re losing the audience, and which channels turned attention into revenue. Walk me through it.";
-
-// The intro line (before the first \n\n) renders above the metric tiles; each
-// <strong> line is a standalone section header (never inline) so the block
-// splitter renders clean paragraphs. Numbers live in the tiles/charts.
-const STORY_OUTPUT =
-  "Here’s the full story of your June 8–19 push — 50 campaigns across 6 channels, with one clear plot line: we earned plenty of attention, but most of it slips away before it becomes revenue.\n\n" +
-  "<strong>The headline</strong>\n\nWe published 1.12M messages and delivered 589K of them — about a 52.5% delivery rate. Those reached audiences produced 5,016 clicks, 590 conversions, and ₹24.3L in revenue. A strong top of funnel, but a thin bottom.\n\n" +
-  "<strong>Chapter 1 — Where the audience leaks</strong>\n\nDelivery is the first crack. WhatsApp carried the volume at 510K published but only 195K landed — we lost more than 60% before a single customer saw the message, and RCS and BPN tell the same story. The bright spots are Email, which delivered all 52K it sent, and APN at 47K of 57K. The first chart below makes the gap clear.\n\n" +
-  "<strong>Chapter 2 — Where attention stalls</strong>\n\nAmong the messages that did land, WhatsApp leads on engagement at a 1.41% click rate, with SMS close behind. But conversion collapses across the board — Email clicks at 0.97% yet converts just 0.02%, and BPN converts almost no one. People are clicking; the journey after the click isn’t closing.\n\n" +
-  "<strong>How the story ends</strong>\n\nJune wasn’t an attention problem — it was a delivery and conversion problem. Recover WhatsApp, RCS and BPN delivery and we widen reach without spending more; tighten the post-click experience on Email and we convert traffic we already have. Two levers, both ready for the next chapter.";
-
-// Short nav label for the opening story turn (shown in the vertical line-nav).
-const STORY_NAV_LABEL = "June 8–19 recap";
-
-// Suggested follow-up prompts shown under the first output. Tapping any one
-// starts thread 2 (the follow-up drill-down). Mix of short and longer phrasings.
-const SUGGESTED_PROMPTS = [
-  "Why is WhatsApp delivery only ~38%?",
-  "What's the single biggest fix before the next send?",
-  "If we recover WhatsApp delivery, what's the realistic upside?",
-  "Draft the next-cycle plan I can share with the team",
-];
-
-// --- Follow-up "chapter 2" thread ---------------------------------------
-// After the story, the user's next message auto-plays this scripted batch of
-// follow-up Q&A that drills deeper into the same June campaign data. Each
-// question becomes a navigable turn in the line-nav. FOLLOWUPS[0] is shown as
-// the user's own bubble; the rest are generated as the conversation unfolds.
-type StatCard = { label: string; value: string; sub?: string };
-const FOLLOWUPS: { label: string; q: string; a: string; statCards?: StatCard[]; miniChart?: 'delivery' | 'rates' }[] = [
-  {
-    label: "WhatsApp delivery",
-    q: "WhatsApp delivery looks brutal — only 195K of 510K landed. Why is it leaking that badly?",
-    a:
-      "<strong>Why WhatsApp delivery is only ~38%</strong>\n\nIt isn’t one failure — three issues stack up:\n• Stale opt-ins — much of the 510K hadn’t been messaged in 90+ days, so Meta drops them as inactive.\n• Template quality — two high-volume templates fell to a “Medium” rating after blocks, which throttles delivery.\n• Marketing caps — we hit the per-user limit for part of the list, so those sends were never attempted.\n\nIt never shows as a hard failure; it just surfaces as the gap between published and delivered, shown below.",
-    statCards: [
-      { label: "WhatsApp published", value: "510K", sub: "most of any channel" },
-      { label: "Delivered", value: "195K", sub: "~38% delivery rate" },
-      { label: "Lost in delivery", value: "315K", sub: "never reached" },
-    ],
-    miniChart: 'delivery',
-  },
-  {
-    label: "Biggest fix",
-    q: "If we could fix only one thing before the next send, what’s the single biggest lever?",
-    a:
-      "<strong>Fix delivery before anything else</strong>\n\nEngagement isn’t the problem — among messages that land, WhatsApp clicks at 1.41%, the best of any channel. The issue is that 60%+ never arrive.\n\nThe highest-ROI move is a list-hygiene and template pass on WhatsApp: suppress inactive numbers, replace the Medium-rated templates with fresh ones, and stagger sends under the marketing cap. It recovers reach we already paid to publish — at no extra cost.",
-    statCards: [
-      { label: "WhatsApp click rate", value: "1.41%", sub: "best of all channels" },
-      { label: "Delivery gap", value: "62%", sub: "the real bottleneck" },
-      { label: "Added spend to fix", value: "₹0", sub: "hygiene, not budget" },
-    ],
-  },
-  {
-    label: "Quantify upside",
-    q: "Quantify it for me — if we recover WhatsApp delivery, what’s the upside?",
-    a:
-      "<strong>The upside, in round numbers</strong>\n\nWhatsApp delivers 195K today (~38%). Email proves a clean list can reach ~100% and APN already runs ~82%, so a realistic post-cleanup target is 70% delivery.\n\nThat lifts delivered volume to roughly 357K — about 162K more customers reached. At WhatsApp’s current click and conversion rates that’s ~2,280 more clicks and ~400 more conversions: a ~68% lift, with no added send cost.",
-    statCards: [
-      { label: "Delivered (target)", value: "~357K", sub: "from 195K" },
-      { label: "Extra reach", value: "+162K", sub: "more customers" },
-      { label: "Extra clicks", value: "~2,280", sub: "at 1.41% CTR" },
-      { label: "Extra conversions", value: "~400", sub: "+68% on WhatsApp" },
-    ],
-  },
-  {
-    label: "Next-cycle plan",
-    q: "Good. Draft the plan for the next cycle so I can share it with the team.",
-    a:
-      "<strong>Next-cycle plan — June recovery</strong>\n\nWhatsApp is the priority: scrub inactive numbers, swap the Medium-rated templates for High-rated ones, and stagger sends to target 70% delivery. For Email, delivery is already ~100% — the leak is post-click, so A/B test landing pages and tighten the offer-to-page match. RCS and BPN get the same hygiene playbook, since both lose ~60% in delivery.\n\nThe goal: recover ~162K in WhatsApp reach and lift conversions without increasing spend. I’ll prep the send calendar once you approve.",
-    statCards: [
-      { label: "Delivery target", value: "70%", sub: "from ~38%" },
-      { label: "Reach recovered", value: "+162K", sub: "no extra send" },
-      { label: "Added spend", value: "₹0", sub: "hygiene-driven" },
-    ],
-  },
-];
-
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default' }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
+  // The scripted storyline this interface plays. Home (`/`) uses 'default';
+  // the /campaigns docked chat passes 'campaigns'. See src/data/conversations.ts.
+  const script = CONVERSATIONS[conversationVariant];
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -228,6 +156,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [mockChatCompleted, setMockChatCompleted] = useState(false); // New state
   // Shows the suggested follow-up chips after the first output completes (until thread 2 starts)
   const [showSuggestions, setShowSuggestions] = useState(false);
+  // Contextual suggested prompts driven by the campaigns agent-relay flow. When
+  // set, these override the static script.suggestedPrompts under the last answer.
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[] | null>(null);
+  // Which turn of the campaigns flow (Insights → Segment → Journey) is next.
+  const campaignsTurnRef = useRef(0);
   // End-of-conversation feedback: floating prompt → modal (up/down) → success toast
   const [showFeedbackPrompt, setShowFeedbackPrompt] = useState(false);
   const [feedbackModal, setFeedbackModal] = useState<FeedbackSentiment | null>(null);
@@ -815,6 +748,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     setActivePage('home');
     setMessages([]);
     setShowSuggestions(false);
+    setDynamicSuggestions(null);
+    campaignsTurnRef.current = 0;
     setIsChatBookmarked(false);
     resetFeedback();
     setMockChatCompleted(false);
@@ -857,6 +792,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       hasRunStoryRef.current = false;
       hasRunFollowupsRef.current = false;
       setShowSuggestions(false);
+      setDynamicSuggestions(null);
+      campaignsTurnRef.current = 0;
       resetFeedback();
       setIsGeneratingOutput(false);
       setMockChatCompleted(false);
@@ -998,7 +935,135 @@ The content has been updated across all channels to reflect your changes.`;
     setMessages(prev => [...prev, executionMessage]);
   };
 
+  // --- Campaigns agent-relay flow --------------------------------------------
+  // A scripted three-turn hand-off (Insights → Segment → Journey). Every send
+  // advances one turn: it drops a centered "Switched to <agent>" divider, plays
+  // the agent's thinking, streams the answer (+ dashboard or artifact card), and
+  // surfaces the single prompt that leads into the next agent. See CAMPAIGNS_FLOW.
+  const handleCampaignsSend = (message: string) => {
+    const turnIndex = campaignsTurnRef.current;
+    const turn = CAMPAIGNS_FLOW[turnIndex];
+
+    // The turns are scripted, so we substitute the canonical prompt/label.
+    const userMessage: ChatMessageData = {
+      type: 'chat',
+      isAI: false,
+      content: turn ? turn.userPrompt : message,
+      navLabel: turn?.navLabel,
+      onAnimationComplete: () => {},
+    };
+    const sentMsgIndex = messages.length;
+    setMessages(prev => [...prev, userMessage]);
+    setShowSuggestions(false);
+    setDynamicSuggestions(null);
+    resetFeedback();
+    setMockChatCompleted(false);
+    setIsGeneratingOutput(true);
+
+    // Pin the just-sent message near the top so the response reveals below it.
+    setTimeout(() => {
+      document.getElementById(`msg-${sentMsgIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+
+    setInputShimmer(true);
+    if (inputShimmerTimerRef.current) clearTimeout(inputShimmerTimerRef.current);
+    inputShimmerTimerRef.current = setTimeout(() => setInputShimmer(false), 30000);
+
+    // Past the scripted turns — a gentle acknowledgement, no further hand-offs.
+    if (!turn) {
+      setIsGeneratingOutput(false);
+      clearInputShimmer();
+      const coMarketer = marketingAgents.find(a => a.id === 'co-marketer');
+      setTimeout(() => {
+        setMessages(prev => [...prev, {
+          type: 'chat', isAI: true, agentName: coMarketer?.name,
+          avatarSrc: coMarketer?.avatarSrc, avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass,
+          content: "Your insights, segment, and journey are all set. Tap any card above to review, or ask me for anything else.",
+          hidePerformanceDashboard: true,
+          onAnimationComplete: () => {},
+        }]);
+      }, 400);
+      return;
+    }
+
+    campaignsTurnRef.current = turnIndex + 1;
+    const agent = marketingAgents.find(a => a.id === turn.switchAgentId);
+
+    // This turn's sequence: switch divider → thinking → the agent's answer.
+    const sequence: ChatMessageData[] = [
+      {
+        type: 'chat', isAI: true, content: '',
+        isAgentSwitch: true,
+        switchAgentLabel: turn.switchAgentLabel,
+        avatarSrc: agent?.avatarSrc, avatarIcon: agent?.icon, avatarBgClass: agent?.colorClass,
+      },
+      {
+        type: 'chat', isAI: true, content: '',
+        isThinkingState: true, thinkingDuration: 3, reasoningSteps: turn.reasoningSteps,
+      },
+      {
+        type: 'chat', isAI: true,
+        agentName: turn.switchAgentLabel,
+        avatarSrc: agent?.avatarSrc, avatarIcon: agent?.icon, avatarBgClass: agent?.colorClass,
+        content: turn.output,
+        hidePerformanceDashboard: !turn.showDashboard,
+        agentArtifactCard: turn.artifactCard,
+      },
+    ];
+
+    setIsMockAgentChatActive(true);
+    isMockAgentChatActiveRef.current = true;
+    isStoryFlowActiveRef.current = true;
+
+    const step = (index: number) => {
+      if (!isMockAgentChatActiveRef.current) {
+        if (mockMessageTimeoutRef.current) { clearTimeout(mockMessageTimeoutRef.current); mockMessageTimeoutRef.current = null; }
+        return;
+      }
+      if (index >= sequence.length) {
+        setIsMockAgentChatActive(false);
+        isStoryFlowActiveRef.current = false;
+        setIsGeneratingOutput(false);
+        clearInputShimmer();
+        setMockChatCompleted(true);
+        if (turn.nextSuggestion) {
+          setDynamicSuggestions([turn.nextSuggestion]);
+          setShowSuggestions(true);
+        } else {
+          setShowFeedbackPrompt(true);
+        }
+        playResponseCue();
+        if (mockMessageTimeoutRef.current) { clearTimeout(mockMessageTimeoutRef.current); mockMessageTimeoutRef.current = null; }
+        return;
+      }
+      const def = sequence[index];
+      // Dividers aren't ChatMessages and never fire onAnimationComplete — advance on a timer.
+      if (def.isAgentSwitch) {
+        setMessages(prev => [...prev, def]);
+        if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+        mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 700);
+        return;
+      }
+      setMessages(prev => [...prev, {
+        ...def,
+        onAnimationComplete: () => {
+          if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+          mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 450);
+        },
+      }]);
+    };
+
+    if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+    mockMessageTimeoutRef.current = setTimeout(() => step(0), 500);
+  };
+
   const handleSendMessage = (message: string) => {
+    // The /campaigns docked chat plays a bespoke agent-relay flow.
+    if (conversationVariant === 'campaigns') {
+      handleCampaignsSend(message);
+      return;
+    }
+
     const userMessagesCount = messages.filter(m => !m.isAI && m.type === 'chat').length + 1;
     const lowerCaseMessage = message.toLowerCase().trim();
 
@@ -1028,10 +1093,10 @@ The content has been updated across all channels to reflect your changes.`;
       type: 'chat',
       content: !isStoryTrigger
         ? message
-        : storyPhase === 'followups' ? FOLLOWUPS[0].q : STORY_PROMPT,
+        : storyPhase === 'followups' ? script.followups[0].q : script.storyPrompt,
       navLabel: !isStoryTrigger
         ? undefined
-        : storyPhase === 'followups' ? FOLLOWUPS[0].label : STORY_NAV_LABEL,
+        : storyPhase === 'followups' ? script.followups[0].label : script.storyNavLabel,
       isAI: false,
       onAnimationComplete: () => {}
     };
@@ -1078,26 +1143,17 @@ The content has been updated across all channels to reflect your changes.`;
           content: '',
           isThinkingState: true,
           thinkingDuration: 3,
-          reasoningSteps: [
-            "Pulling 50 campaigns across 6 channels (Jun 8–19)",
-            "Reconciling published vs delivered volumes",
-            "Tracing where the audience drops off",
-            "Linking engagement to revenue by channel"
-          ]
+          reasoningSteps: script.storyReasoningSteps,
         },
         {
           agentId: coMarketer?.id,
           type: 'chat',
           isAI: true,
           agentName: coMarketer?.name,
-          content: STORY_OUTPUT,
+          content: script.storyOutput,
           avatarIcon: coMarketer?.icon,
           avatarBgClass: coMarketer?.colorClass,
-          artifact: {
-            intro: "I've created the Highest Engagement Last Quarter summary in an artifact with all the information you provided, formatted and ready to use",
-            title: "Highest Engagement Last Quarter",
-            subtitle: "WhatsApp Document",
-          },
+          artifact: script.storyArtifact,
         }
       ];
 
@@ -1111,20 +1167,15 @@ The content has been updated across all channels to reflect your changes.`;
           content: '',
           isThinkingState: true,
           thinkingDuration: 2,
-          reasoningSteps: [
-            "Re-checking WhatsApp published vs delivered",
-            "Diagnosing the delivery gap",
-            "Pulling template quality + opt-in status",
-            "Estimating recoverable reach"
-          ]
+          reasoningSteps: script.followupReasoningSteps,
         },
         {
           agentId: coMarketer?.id, type: 'chat', isAI: true, agentName: coMarketer?.name,
-          content: FOLLOWUPS[0].a, avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass,
+          content: script.followups[0].a, avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass,
           hidePerformanceDashboard: true,
-          statCards: FOLLOWUPS[0].statCards, miniChart: FOLLOWUPS[0].miniChart,
+          statCards: script.followups[0].statCards, miniChart: script.followups[0].miniChart,
         },
-        ...FOLLOWUPS.slice(1).flatMap((f) => ([
+        ...script.followups.slice(1).flatMap((f) => ([
           { type: 'chat' as const, isAI: false, content: f.q, navLabel: f.label },
           {
             agentId: coMarketer?.id, type: 'chat' as const, isAI: true, agentName: coMarketer?.name,
@@ -2503,7 +2554,14 @@ The content has been updated across all channels to reflect your changes.`;
                     // the 32px sticky top-fade; widget just needs breathing room.
                     className={cn("w-full", isExpanded ? "scroll-mt-[44px]" : "scroll-mt-[16px]")}
                   >
-                  {message.type === 'system' ? (
+                  {message.isAgentSwitch ? (
+                    <AgentSwitchDivider
+                      agentLabel={message.switchAgentLabel || ''}
+                      avatarSrc={message.avatarSrc}
+                      icon={message.avatarIcon}
+                      colorClass={message.avatarBgClass}
+                    />
+                  ) : message.type === 'system' ? (
                     <SystemMessage
                       type={message.systemType || 'join'}
                       agentName={message.agentName || ''}
@@ -2549,6 +2607,7 @@ The content has been updated across all channels to reflect your changes.`;
                       }
                       statCards={message.statCards}
                       miniChart={message.miniChart}
+                      agentArtifactCard={message.agentArtifactCard}
                       onThumbsUp={() => setFeedbackModal('up')}
                       onThumbsDown={() => setFeedbackModal('down')}
                       onContinueSegment={() => {
@@ -2643,7 +2702,7 @@ The content has been updated across all channels to reflect your changes.`;
                 {/* Suggested follow-up prompts after the first output — tapping any starts thread 2 */}
                 {showSuggestions && !isGeneratingOutput && messages.length > 0 && (
                   <div className="w-full flex flex-col items-start gap-[8px] py-2 animate-in fade-in slide-in-from-bottom-1 duration-300">
-                    {SUGGESTED_PROMPTS.map((p) => (
+                    {(dynamicSuggestions ?? script.suggestedPrompts).map((p) => (
                       <button
                         key={p}
                         type="button"
@@ -2663,9 +2722,10 @@ The content has been updated across all channels to reflect your changes.`;
             </div>
 
             {/* Vertical line-nav for jumping between conversation turns. Shown in
-                expanded view while L1 is collapsed, and hidden while the artifact
-                preview is open (no room beside the split-view). */}
-            {isExpanded && lhsCollapsed && !showArtifactPreview && navItems.length > 0 && (
+                expanded view regardless of whether L1 is collapsed or expanded,
+                and hidden only while the artifact preview is open (no room beside
+                the split-view). */}
+            {isExpanded && !showArtifactPreview && navItems.length > 0 && (
               <LineNav items={navItems} containerRef={chatContainerRef} />
             )}
 
