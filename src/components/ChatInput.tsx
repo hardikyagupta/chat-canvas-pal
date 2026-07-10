@@ -80,6 +80,15 @@ interface ChatInputProps {
   onInputValueChange?: (value: string) => void;
   /** Textarea placeholder. Defaults to the empty-state greeting prompt. */
   placeholder?: string;
+  /**
+   * Which shape the field takes at rest — this is the one universal input used
+   * across the app (homepage + docked co-marketer), driven by this variant:
+   *  - 'expanded' (default): the roomy homepage composer — textarea on its own
+   *    full-width row with the actions on the row below (16px radius).
+   *  - 'linear': the compact single-row pill (48px radius) that only grows to
+   *    the expanded shape once the text wraps to multiple lines or a chip is set.
+   */
+  layout?: 'expanded' | 'linear';
 }
 
 // Temporary feature flag to disable @-agent mention dropdown
@@ -95,6 +104,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   shimmer = false,
   onInputValueChange,
   placeholder = "How can I help you today?",
+  layout = 'expanded',
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [showMentionList, setShowMentionList] = useState(false);
@@ -162,21 +172,58 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const measurementRef = useRef<HTMLSpanElement>(null);
+  // Measured height of a single empty line (content + padding). The textarea's
+  // padding makes this ~30px, not the bare 22px line-height, so we can't compare
+  // against a hard-coded constant — we capture the real resting height once and
+  // treat "multiline" as growth clearly beyond it. (A too-low constant made the
+  // field read as multiline at rest, forcing the tall expanded layout.)
+  const singleLineHeightRef = useRef<number | null>(null);
 
   // Auto-grow the textarea: reset to content height, capped at 4 lines (88px),
-  // then scroll. Runs on every value change (typing, paste, clear-after-send).
-  useEffect(() => {
+  // then scroll. Reads `el.value` (always live) rather than state so it's safe to
+  // call from a ResizeObserver too. Recaptures the single-line baseline whenever
+  // the field is empty, so a stale measurement can't leave a wrong baseline.
+  const resizeTextarea = () => {
     const el = inputRef.current;
     if (!el) return;
     const MAX_H = 88; // 4 lines × 22px line-height
     el.style.height = 'auto';
-    const next = Math.min(el.scrollHeight, MAX_H);
+    const full = el.scrollHeight;
+    if (!el.value) singleLineHeightRef.current = full;
+    const next = Math.min(full, MAX_H);
     el.style.height = `${next}px`;
-    const scrollable = el.scrollHeight > MAX_H;
+    const scrollable = full > MAX_H;
     el.style.overflowY = scrollable ? 'auto' : 'hidden';
-    setIsMultiline(next > 23);
+    // Multiline once the content grows more than half a line past the baseline
+    // (i.e. it has actually wrapped), so a single resting line stays compact.
+    const baseline = singleLineHeightRef.current ?? 30;
+    setIsMultiline(full > baseline + 11);
     setIsScrollable(scrollable);
-  }, [inputValue]);
+  };
+
+  // Recompute on every value change (typing, paste, clear-after-send).
+  useEffect(() => {
+    resizeTextarea();
+  }, [inputValue]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Recompute when the field's width changes — critical in the docked chat, whose
+  // slide-in animation grows the panel from 0 → full width. Without this the
+  // height measured mid-animation would stick (leaving a too-tall empty field).
+  // Guarded on width so our own height writes don't loop the observer.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let lastWidth = el.clientWidth;
+    const ro = new ResizeObserver(() => {
+      const w = el.clientWidth;
+      if (Math.abs(w - lastWidth) > 0.5) {
+        lastWidth = w;
+        resizeTextarea();
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     onInputValueChange?.(inputValue);
@@ -316,9 +363,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
     // it switches to the disabled/grey state with the Figma square icon.
     const isLoading = !!isMockAgentChatActive || shimmer;
     const isActive = !isLoading;
-    // Compact single-row layout (original): textarea + actions share one 56px
-    // row. It grows to fit only when the textarea wraps to multiple lines.
-    const expanded = isMultiline || !!selectedContextChip;
+    // Resting shape is the roomy homepage composer by default ('expanded'):
+    // textarea on its own row with the actions below. The 'linear' variant starts
+    // as a compact single-row pill and only expands once the text wraps to
+    // multiple lines or a context chip is selected.
+    const expanded = layout === 'expanded' || isMultiline || !!selectedContextChip;
     return (
       <div className="relative w-full">
         {/* Outer container — height grows smoothly when chip appears */}

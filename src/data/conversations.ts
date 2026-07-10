@@ -64,7 +64,7 @@ export interface CampaignsTurn {
 export const CAMPAIGNS_FLOW: CampaignsTurn[] = [
   // Turn 1 — Insights agent: what's happening + what to do next.
   {
-    userPrompt: "Show me what is happening with my recent campaigns and what I should do next.",
+    userPrompt: "We've been pushing hard across channels lately, but I honestly can't tell if it's paying off. Take a look at how things are going and tell me what I should be doing about it.",
     navLabel: "Recent campaigns",
     switchAgentId: "insight-agent",
     switchAgentLabel: "Insights agent",
