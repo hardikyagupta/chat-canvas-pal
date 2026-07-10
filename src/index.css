@@ -407,10 +407,10 @@
       from var(--snake-angle),
       transparent 0deg,
       transparent 255deg,
-      rgba(61, 158, 255, 0) 280deg,
-      #3d9eff 330deg,
-      #7cc0ff 350deg,
-      rgba(61, 158, 255, 0) 360deg
+      rgba(47, 104, 229, 0) 280deg,
+      #2F68E5 330deg,
+      #6f9bf0 350deg,
+      rgba(47, 104, 229, 0) 360deg
     ),
     #dee5f0;
   -webkit-mask:

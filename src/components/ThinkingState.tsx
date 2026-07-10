@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Brain } from 'lucide-react';
+import { Brain, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ThinkingStateProps {
   onComplete?: () => void;
@@ -10,7 +10,7 @@ interface ThinkingStateProps {
 export const ThinkingState: React.FC<ThinkingStateProps> = ({
   onComplete,
   thinkingDuration = 3,
-  reasoningSteps
+  reasoningSteps,
 }) => {
   const [isThinking, setIsThinking] = useState(true);
   const [showText, setShowText] = useState(false);
@@ -23,7 +23,7 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
     "Identifying high-value customer archetypes based on purchase history and engagement patterns",
     "Evaluating CLV and profitability metrics for each segment",
     "Cross-referencing behavioral data with product category preferences",
-    "Calculating optimal discount structures for maximum profitability"
+    "Calculating optimal discount structures for maximum profitability",
   ];
 
   const thinkingRationale = reasoningSteps || defaultReasoningSteps;
@@ -103,10 +103,10 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
         
         {/* Completed Phase (Collapsible Summary) */}
         {!isThinking && (
-          <div className="w-full min-w-[300px]">
+          <div>
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
+              className="flex w-fit items-center gap-2 text-left hover:opacity-80 transition-opacity"
               aria-expanded={isExpanded}
               aria-label={isExpanded ? "Collapse thinking details" : "Expand thinking details"}
             >
@@ -115,12 +115,12 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
                 Thought for {thinkingDuration.toFixed(0)} second{thinkingDuration !== 1 ? 's' : ''}
               </span>
               {isExpanded ? (
-                <ChevronUp className="w-4 h-4 text-[var(--color-grey)] transition-transform duration-200 ml-auto" />
+                <ChevronUp className="w-4 h-4 text-[var(--color-grey)] transition-transform duration-200" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-[var(--color-grey)] transition-transform duration-200 ml-auto" />
+                <ChevronDown className="w-4 h-4 text-[var(--color-grey)] transition-transform duration-200" />
               )}
             </button>
-            
+
             {/* Expanded Content */}
             {isExpanded && (
               <div className="mt-3 animate-in slide-in-from-top-2 duration-200">

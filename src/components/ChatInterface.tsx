@@ -11,6 +11,7 @@ import ChatMessage from './ChatMessage';
 import { MarketingAgent, marketingAgents } from '@/data/agents';
 import { CONVERSATIONS, ConversationVariant, CAMPAIGNS_FLOW, AgentArtifactCardData } from '@/data/conversations';
 import AgentSwitchDivider from './AgentSwitchDivider';
+import AgentThreadHeader from './AgentThreadHeader';
 import AvatarStack from './AvatarStack';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '../../components/theme-provider';
@@ -995,11 +996,12 @@ The content has been updated across all channels to reflect your changes.`;
         type: 'chat', isAI: true, content: '',
         isAgentSwitch: true,
         switchAgentLabel: turn.switchAgentLabel,
+        reasoningSteps: turn.reasoningSteps,
         avatarSrc: agent?.avatarSrc, avatarIcon: agent?.icon, avatarBgClass: agent?.colorClass,
       },
       {
         type: 'chat', isAI: true, content: '',
-        isThinkingState: true, thinkingDuration: 3, reasoningSteps: turn.reasoningSteps,
+        isThinkingState: true, thinkingDuration: 4, reasoningSteps: turn.reasoningSteps,
       },
       {
         type: 'chat', isAI: true,
@@ -1041,14 +1043,16 @@ The content has been updated across all channels to reflect your changes.`;
       if (def.isAgentSwitch) {
         setMessages(prev => [...prev, def]);
         if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
-        mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 700);
+        // Let the two-beat divider (Calling in agents… → Switched to <agent>)
+        // and the staged thread-header reveal play out before the thinking dots.
+        mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 2600);
         return;
       }
       setMessages(prev => [...prev, {
         ...def,
         onAnimationComplete: () => {
           if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
-          mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 450);
+          mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 650);
         },
       }]);
     };
@@ -2555,12 +2559,24 @@ The content has been updated across all channels to reflect your changes.`;
                     className={cn("w-full", isExpanded ? "scroll-mt-[44px]" : "scroll-mt-[16px]")}
                   >
                   {message.isAgentSwitch ? (
-                    <AgentSwitchDivider
-                      agentLabel={message.switchAgentLabel || ''}
-                      avatarSrc={message.avatarSrc}
-                      icon={message.avatarIcon}
-                      colorClass={message.avatarBgClass}
-                    />
+                    // Per Figma (node 16530:16033): the wavy "Switched to <agent>"
+                    // divider, then the avatar + name + saying header below it,
+                    // stacked with a 16px gap, introducing this agent's thread.
+                    <div className="flex w-full flex-col gap-[16px] mb-[8px] animate-in fade-in duration-500">
+                      <AgentSwitchDivider
+                        agentLabel={message.switchAgentLabel || ''}
+                        avatarSrc={message.avatarSrc}
+                        icon={message.avatarIcon}
+                        colorClass={message.avatarBgClass}
+                      />
+                      <AgentThreadHeader
+                        name={message.switchAgentLabel || ''}
+                        avatarSrc={message.avatarSrc}
+                        // Hold the header until the "Calling in agents… → Switched to"
+                        // beat above has settled, so the hand-off reads as a sequence.
+                        revealDelay={1700}
+                      />
+                    </div>
                   ) : message.type === 'system' ? (
                     <SystemMessage
                       type={message.systemType || 'join'}

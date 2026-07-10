@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, Plus, Bell } from "lucide-react";
-import sparkle from "/campaign-assets/ic-sparkle.svg";
+import sparkle from "/campaign-assets/ic-sparkle.gif";
 import trending from "/campaign-assets/ic-trending.svg";
 import CoMarketerNudge from "./CoMarketerNudge";
 
@@ -62,10 +62,10 @@ export default function TopNav({ onOpenChat }: { onOpenChat?: () => void }) {
               setShowNudge(false);
               onOpenChat?.();
             }}
-            className="relative z-[1] flex h-8 items-center gap-1.5 overflow-hidden rounded bg-white px-2.5 transition-shadow hover:shadow-sm"
+            className="relative z-[1] flex h-8 items-center gap-1.5 overflow-hidden rounded-lg bg-white px-2.5 transition-shadow hover:shadow-sm"
           >
             <span aria-hidden="true" className="snake-border" />
-            <img src={sparkle} alt="" className="relative z-[1] h-4 w-4" />
+            <img src={sparkle} alt="" className="relative z-[1] h-5 w-5" />
             <span className="relative z-[1] font-manrope text-xs font-semibold tracking-[0.42px] text-ash">
               Ask co-marketer
             </span>
