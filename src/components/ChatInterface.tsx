@@ -11,6 +11,7 @@ import ChatMessage from './ChatMessage';
 import { MarketingAgent, marketingAgents } from '@/data/agents';
 import { CONVERSATIONS, ConversationVariant, CAMPAIGNS_FLOW, AgentArtifactCardData } from '@/data/conversations';
 import AgentSwitchDivider from './AgentSwitchDivider';
+import AgentDeliberation from './AgentDeliberation';
 import AgentThreadHeader from './AgentThreadHeader';
 import AvatarStack from './AvatarStack';
 import { cn } from '@/lib/utils';
@@ -102,6 +103,15 @@ interface ChatMessageData {
   // The divider reuses avatarSrc/avatarIcon/avatarBgClass for the agent chip.
   isAgentSwitch?: boolean;
   switchAgentLabel?: string;
+  // Previous agent in the relay — the 3D orb morphs from their color (baton pass).
+  switchFromLabel?: string;
+  // Set once this switch's answer finishes streaming: the header swaps the live
+  // orb for the agent's SVG avatar and the divider waves freeze.
+  switchSettled?: boolean;
+  // Turn opens with the agent-deliberation huddle (all candidates orbit the AI
+  // orb, one gets picked) instead of the switch divider.
+  isAgentDeliberation?: boolean;
+  deliberationCandidates?: string[];
   // Agent-handed artifact card (segment / journey), revealed after the answer streams.
   agentArtifactCard?: AgentArtifactCardData;
 }
@@ -989,13 +999,21 @@ The content has been updated across all channels to reflect your changes.`;
 
     campaignsTurnRef.current = turnIndex + 1;
     const agent = marketingAgents.find(a => a.id === turn.switchAgentId);
+    // Turn 0 has no previous agent — the orb morphs from the neutral default
+    // theme, reading as "handed off from the system".
+    const prevLabel = turnIndex > 0 ? CAMPAIGNS_FLOW[turnIndex - 1].switchAgentLabel : undefined;
 
     // This turn's sequence: switch divider → thinking → the agent's answer.
     const sequence: ChatMessageData[] = [
       {
         type: 'chat', isAI: true, content: '',
         isAgentSwitch: true,
+        isAgentDeliberation: !!turn.deliberation,
+        deliberationCandidates: turn.deliberation?.candidates,
         switchAgentLabel: turn.switchAgentLabel,
+        // The deliberation's big orb already morphed through the candidates'
+        // colors, so the thread header orb mounts directly in the winner's.
+        switchFromLabel: turn.deliberation ? undefined : prevLabel,
         reasoningSteps: turn.reasoningSteps,
         avatarSrc: agent?.avatarSrc, avatarIcon: agent?.icon, avatarBgClass: agent?.colorClass,
       },
@@ -1023,6 +1041,11 @@ The content has been updated across all channels to reflect your changes.`;
         return;
       }
       if (index >= sequence.length) {
+        // The answer has fully streamed — settle every switch marker so the
+        // orb hands over to the agent's SVG avatar and the divider waves stop.
+        setMessages(prev => prev.map(m =>
+          m.isAgentSwitch && !m.switchSettled ? { ...m, switchSettled: true } : m
+        ));
         setIsMockAgentChatActive(false);
         isStoryFlowActiveRef.current = false;
         setIsGeneratingOutput(false);
@@ -1045,7 +1068,13 @@ The content has been updated across all channels to reflect your changes.`;
         if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
         // Let the two-beat divider (Calling in agents… → Switched to <agent>)
         // and the staged thread-header reveal play out before the thinking dots.
-        mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 2600);
+        // The deliberation (orb morphing through candidates → divider flip →
+        // orb collapse → header reveal) needs a longer runway before the
+        // thinking loader comes in.
+        mockMessageTimeoutRef.current = setTimeout(
+          () => step(index + 1),
+          def.isAgentDeliberation ? 7400 : 2600
+        );
         return;
       }
       setMessages(prev => [...prev, {
@@ -2563,18 +2592,38 @@ The content has been updated across all channels to reflect your changes.`;
                     // divider, then the avatar + name + saying header below it,
                     // stacked with a 16px gap, introducing this agent's thread.
                     <div className="flex w-full flex-col gap-[16px] mb-[8px] animate-in fade-in duration-500">
-                      <AgentSwitchDivider
-                        agentLabel={message.switchAgentLabel || ''}
-                        avatarSrc={message.avatarSrc}
-                        icon={message.avatarIcon}
-                        colorClass={message.avatarBgClass}
-                      />
+                      {message.isAgentDeliberation ? (
+                        // Turn 4: the deliberation reel — candidate agents roll
+                        // through a slot until one is picked, then this becomes
+                        // the standard switch divider.
+                        <AgentDeliberation
+                          candidates={message.deliberationCandidates ?? []}
+                          chosenLabel={message.switchAgentLabel || ''}
+                          settled={!!message.switchSettled}
+                        />
+                      ) : (
+                        <AgentSwitchDivider
+                          agentLabel={message.switchAgentLabel || ''}
+                          avatarSrc={message.avatarSrc}
+                          icon={message.avatarIcon}
+                          colorClass={message.avatarBgClass}
+                          settled={!!message.switchSettled}
+                        />
+                      )}
                       <AgentThreadHeader
                         name={message.switchAgentLabel || ''}
                         avatarSrc={message.avatarSrc}
-                        // Hold the header until the "Calling in agents… → Switched to"
-                        // beat above has settled, so the hand-off reads as a sequence.
-                        revealDelay={1700}
+                        fromName={message.switchFromLabel}
+                        settled={!!message.switchSettled}
+                        // Only the most recent hand-off keeps the live WebGL orb —
+                        // older headers fall back to the static SVG so a single
+                        // WebGL context exists at a time.
+                        live={index === messages.reduce((acc, m, i) => (m.isAgentSwitch ? i : acc), -1)}
+                        // Hold the header until the beat above has settled — the
+                        // divider's "Calling in agents… → Switched to", or the
+                        // deliberation's decide + orb collapse (~6150ms) — so
+                        // the hand-off reads as a sequence.
+                        revealDelay={message.isAgentDeliberation ? 6300 : 1700}
                       />
                     </div>
                   ) : message.type === 'system' ? (

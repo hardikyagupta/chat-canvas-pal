@@ -1,5 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import AgentAvatar from './AgentAvatar';
+import AgentOrb3D from './orb/AgentOrb3D';
+import type { OrbState } from './orb/AgentOrb3DCanvas';
+import { getOrbTheme } from './orb/agentOrbTheme';
 
 /**
  * AgentThreadHeader — introduces an agent's turn, per the Figma design.
@@ -45,6 +48,23 @@ interface AgentThreadHeaderProps {
    * as a sequence rather than everything landing at once.
    */
   revealDelay?: number;
+  /**
+   * Previous agent in the relay — the 3D orb mounts in their colors and
+   * liquid-morphs to this agent's (the "baton pass").
+   */
+  fromName?: string;
+  /**
+   * Whether this header gets the live WebGL orb. Only the most recent switch
+   * marker should be live so a single WebGL context exists; older headers
+   * render the static SVG orb.
+   */
+  live?: boolean;
+  /**
+   * True once this agent's answer has fully streamed: the fluid orb hands
+   * over to the agent's own SVG avatar with a reveal animation. The orb is a
+   * transient "working" visual; the SVG is the settled identity.
+   */
+  settled?: boolean;
 }
 
 const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
@@ -54,15 +74,31 @@ const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
   size = 40,
   className,
   revealDelay = 0,
+  fromName,
+  live = true,
+  settled = false,
 }) => {
   const resolvedSaying = saying ?? AGENT_SAYINGS[name.trim().toLowerCase()];
   const [revealed, setRevealed] = useState(revealDelay <= 0);
+  const [orbState, setOrbState] = useState<OrbState>('entering');
+  // Headers that mount already settled (older turns, re-renders) show the SVG
+  // statically; the reveal animation only plays on a live orb → SVG handover.
+  const mountedSettledRef = useRef(settled);
+  const orbTheme = getOrbTheme(name);
 
   useEffect(() => {
     if (revealDelay <= 0) return;
     const t = setTimeout(() => setRevealed(true), revealDelay);
     return () => clearTimeout(t);
   }, [revealDelay]);
+
+  // Orb state sequence, from reveal: enter (color baton pass runs during this
+  // beat) → ripple until the answer settles and the SVG takes over.
+  useEffect(() => {
+    if (!revealed) return;
+    const toThinking = setTimeout(() => setOrbState('thinking'), 900);
+    return () => clearTimeout(toThinking);
+  }, [revealed]);
 
   // Reserve the header's vertical space while it's held back so the thread
   // below doesn't jump when it appears.
@@ -77,8 +113,8 @@ const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
 
       {/* Orb motion is split across nested elements so transforms/filters don't
           collide: outer = entrance (scale+rotate+fade), glow = pulsing halo,
-          middle = breathe (scale), img = spin (rotate). The per-agent
-          hue-rotate stays on the img (inside AgentAvatar). */}
+          middle = breathe (scale). Inside sits the live WebGL fluid orb
+          (AgentOrb3D) — or the spinning SVG when falling back. */}
       <span
         className="relative inline-flex shrink-0 items-center justify-center"
         style={{ animation: 'agentOrbEnter 560ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
@@ -88,19 +124,42 @@ const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 rounded-full"
           style={{
-            background:
-              'radial-gradient(circle, color-mix(in srgb, var(--color-primary, #6366f1) 55%, transparent) 0%, transparent 70%)',
+            background: `radial-gradient(circle, color-mix(in srgb, ${orbTheme.glow} 65%, transparent) 0%, transparent 70%)`,
             filter: 'blur(6px)',
             animation: 'agentOrbGlow 3.6s ease-in-out infinite',
+            transition: 'background 900ms ease',
           }}
         />
         <span className="relative block" style={{ animation: 'agentOrbBreathe 5s ease-in-out infinite' }}>
-          <AgentAvatar
-            src={avatarSrc}
-            seed={name}
-            size={size}
-            style={{ animation: 'agentOrbSpin 14s linear infinite' }}
-          />
+          {settled ? (
+            // Answer done — the agent's own SVG takes over. When this header
+            // just watched its orb work, the SVG flips in with a reveal;
+            // headers that mount already settled show it statically.
+            <span
+              className="relative block"
+              style={
+                mountedSettledRef.current
+                  ? undefined
+                  : { animation: 'agentOrbReveal 700ms cubic-bezier(0.34, 1.56, 0.64, 1) both' }
+              }
+            >
+              <AgentAvatar
+                src={avatarSrc}
+                seed={name}
+                size={size}
+                style={{ animation: 'agentOrbSpin 14s linear infinite' }}
+              />
+            </span>
+          ) : (
+            <AgentOrb3D
+              name={name}
+              fromName={fromName}
+              state={orbState}
+              size={size}
+              live={live}
+              avatarSrc={avatarSrc}
+            />
+          )}
         </span>
       </span>
 
@@ -156,6 +215,11 @@ const AGENT_HEADER_KEYFRAMES = `
   @keyframes agentLabelEnter {
     from { opacity: 0; transform: translateX(-8px); }
     to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes agentOrbReveal {
+    0%   { opacity: 0; transform: scale(0.4) rotate(-90deg); }
+    55%  { opacity: 1; transform: scale(1.14) rotate(8deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg); }
   }
   @media (prefers-reduced-motion: reduce) {
     [style*="agentOrb"] { animation: none !important; }
