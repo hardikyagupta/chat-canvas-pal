@@ -59,6 +59,13 @@ export interface CampaignsTurn {
   artifactCard?: AgentArtifactCardData;
   /** Suggested prompt shown after this turn (seeds the next turn). Omit on the last turn. */
   nextSuggestion?: string;
+  /**
+   * When set, the turn opens with the agent-deliberation reel (candidate
+   * agents roll through a slot while the AI decides, then it settles into the
+   * standard switch divider) instead of the divider's "calling" beat. The
+   * candidate matching switchAgentLabel is the one the reel locks onto.
+   */
+  deliberation?: { candidates: string[] };
 }
 
 export const CAMPAIGNS_FLOW: CampaignsTurn[] = [
@@ -138,6 +145,30 @@ export const CAMPAIGNS_FLOW: CampaignsTurn[] = [
         "A 3-channel, conversion-capped journey that leads with Email and exits on purchase.",
       actionLabel: "Review journey",
     },
+    nextSuggestion: "Estimate the impact this journey could have on conversions.",
+  },
+  // Turn 4 — the co-marketer deliberates over all three specialists (the
+  // agent reel animation) and routes the question back to the Insights agent.
+  {
+    userPrompt: "Estimate the impact this journey could have on conversions.",
+    navLabel: "Impact estimate",
+    switchAgentId: "insight-agent",
+    switchAgentLabel: "Insights agent",
+    deliberation: {
+      candidates: ["Insights agent", "Segment agent", "Journey agent"],
+    },
+    reasoningSteps: [
+      "Loading the journey and its 12,133-user segment",
+      "Applying per-channel click and conversion benchmarks",
+      "Modeling step-by-step reach through the journey",
+      "Projecting the conversion lift vs. this cycle",
+    ],
+    output:
+      "I ran the Re-Engagement Journey against this segment's recent behavior — here's the realistic impact if it launches as designed.\n\n" +
+      "<strong>Projected reach</strong>\n\nOf the 12,133 users entering, roughly 11,400 should receive at least one message — the Email opener lands near-100%, and the WhatsApp and APN follow-ups recover most non-openers.\n\n" +
+      "<strong>Projected conversions</strong>\n\nAt this segment's blended click and conversion rates, expect ~700–850 first purchases over the journey window — a 55–70% lift over what these users would convert at on their own.\n\n" +
+      "<strong>What moves the number</strong>\n\nThe 48-hour WhatsApp nudge is the swing factor — it re-captures about a third of Email non-openers. If WhatsApp delivery slips below ~70%, the projection falls to roughly 600 conversions, so watch it in week one.\n\n" +
+      "<strong>My read</strong>\n\nThis journey should pay for itself within the first cycle. Launch it, and ask me to compare projection vs. actuals after the first week.",
   },
 ];
 
