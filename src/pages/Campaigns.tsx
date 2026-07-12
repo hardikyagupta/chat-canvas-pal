@@ -89,9 +89,11 @@ export default function Campaigns() {
           <div className="scroll-slim min-w-0 flex-1 overflow-y-auto px-2 pt-4">
             <PageHeader />
 
-            <div className="mt-5 flex items-end justify-between border-b border-[#DDE2EE]">
+            {/* gap keeps the scrollable tab strip clear of the toolbar when the
+                docked chat squeezes this column; the toolbar never shrinks. */}
+            <div className="mt-5 flex items-end justify-between gap-6 border-b border-[#DDE2EE]">
               <TabBar compact={chatOpen} />
-              <div className="pb-2">
+              <div className="shrink-0 pb-2">
                 <TableToolbar compact={chatOpen} />
               </div>
             </div>

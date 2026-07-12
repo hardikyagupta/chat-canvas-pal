@@ -102,7 +102,8 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
               vertically when switching between Chats and Bookmarks. */}
           <div className="flex items-center justify-between gap-[12px] h-[34px]">
             <h1
-              className="text-[24px] leading-[32px] font-semibold text-[var(--color-ink)]"
+              // 16px on mobile viewports, the original 24px from md up.
+              className="text-[16px] leading-[24px] md:text-[24px] md:leading-[32px] font-semibold text-[var(--color-ink)]"
               style={MANROPE}
             >
               {title}
