@@ -223,6 +223,23 @@
   @apply bg-border/70 rounded hover:bg-border;
 }
 
+/* Scroll containers whose scrollbar stays hidden until the container is
+   hovered (campaigns page column, tab strip, table). Keeps the layout stable —
+   the gutter is reserved, only the thumb fades in. */
+.scroll-slim {
+  scrollbar-width: thin;            /* Firefox */
+  scrollbar-color: transparent transparent;
+}
+.scroll-slim:hover {
+  scrollbar-color: oklch(var(--border) / 0.7) transparent;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+.scroll-slim:hover::-webkit-scrollbar-thumb {
+  @apply bg-border/70 rounded hover:bg-border;
+}
+
 /* Thinking text shimmer - gradient moves across the text */
 .thinking-shimmer-gradient {
   background: linear-gradient(
