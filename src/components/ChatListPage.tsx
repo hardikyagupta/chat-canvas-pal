@@ -99,7 +99,9 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
     <div className={cn('flex flex-col h-full w-full overflow-hidden bg-[var(--color-surface-0)]', className)}>
       <div className="mx-auto flex flex-col min-h-0 w-full max-w-[820px] flex-1 px-[20px]">
         {/* Sticky header — title + New chat, then search. */}
-        <div className="flex flex-col gap-[16px] pt-[8px] pb-[12px] w-full shrink-0">
+        {/* Minimized widget gets a touch more breathing room above the title
+            row; the expanded web view keeps the original 8px. */}
+        <div className={cn('flex flex-col gap-[16px] pb-[12px] w-full shrink-0', compact ? 'pt-[12px]' : 'pt-[8px]')}>
           {/* Fixed height so the row is the same whether or not the New chat
               button is present — keeps the search bar / list from shifting
               vertically when switching between Chats and Bookmarks. */}

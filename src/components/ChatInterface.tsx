@@ -196,6 +196,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     if (feedbackToastTimerRef.current) clearTimeout(feedbackToastTimerRef.current);
   };
   const [isGeneratingOutput, setIsGeneratingOutput] = useState(false); // Drives the persistent bottom-of-thread loader
+  // The deliberation turn moves the generating loader into the thread header's
+  // saying bubble, so the floating pill above the input stays hidden for it.
+  const [suppressGeneratingPill, setSuppressGeneratingPill] = useState(false);
   const [contentApproved, setContentApproved] = useState(false); // New state for content approval
   const [segmentsApproved, setSegmentsApproved] = useState(false); // New state for segments approval
   const [contentGenerated, setContentGenerated] = useState(false); // New state for content generation
@@ -970,6 +973,7 @@ The content has been updated across all channels to reflect your changes.`;
     resetFeedback();
     setMockChatCompleted(false);
     setIsGeneratingOutput(true);
+    setSuppressGeneratingPill(!!turn?.deliberation);
 
     // Pin the just-sent message near the top so the response reveals below it.
     setTimeout(() => {
@@ -2513,7 +2517,7 @@ The content has been updated across all channels to reflect your changes.`;
                                     />
                                   )}
                                   <p
-                                    className="text-[14px] leading-[20px]"
+                                    className="text-[13px] leading-[18px]"
                                     style={{ fontFamily: "Manrope, sans-serif" }}
                                   >
                                     <span className="text-[var(--color-grey)]">{prefix}</span>
@@ -2565,7 +2569,7 @@ The content has been updated across all channels to reflect your changes.`;
                                 onClick={() => handleSendMessage(suggestion)}
                               >
                                 <p
-                                  className="text-[14px] leading-[20px] text-[var(--color-slate)]"
+                                  className="text-[13px] leading-[18px] text-[var(--color-slate)]"
                                   style={{ fontFamily: "Manrope, sans-serif" }}
                                 >
                                   {suggestion}
@@ -2616,6 +2620,9 @@ The content has been updated across all channels to reflect your changes.`;
                         avatarSrc={message.avatarSrc}
                         fromName={message.switchFromLabel}
                         settled={!!message.switchSettled}
+                        // On the deliberation turn the saying bubble carries the
+                        // generating loader (the floating pill is suppressed).
+                        sayingLoader={!!message.isAgentDeliberation}
                         // Only the most recent hand-off keeps the live WebGL orb —
                         // older headers fall back to the static SVG so a single
                         // WebGL context exists at a time.
@@ -2776,7 +2783,7 @@ The content has been updated across all channels to reflect your changes.`;
                         className="group flex w-fit max-w-full items-start gap-[10px] text-left rounded-[10px] border border-[var(--color-line)] bg-card px-[12px] py-[8px] hover:bg-[var(--color-surface-0)] hover:border-[var(--color-line-strong)] transition-colors"
                       >
                         <CornerDownRight className="size-[16px] text-[var(--color-grey)] shrink-0 mt-[1px]" strokeWidth={1.75} />
-                        <span className="text-[14px] leading-[20px] text-[var(--color-slate)]" style={{ fontFamily: 'Manrope, sans-serif' }}>{p}</span>
+                        <span className="text-[13px] leading-[18px] text-[var(--color-slate)]" style={{ fontFamily: 'Manrope, sans-serif' }}>{p}</span>
                       </button>
                     ))}
                   </div>
@@ -2857,7 +2864,7 @@ The content has been updated across all channels to reflect your changes.`;
                     isExpanded ? "w-full max-w-[768px]" : "w-full"
                   )}>
                     {/* Floating "still loading" pill, centered just above the input (both views) */}
-                    {isGeneratingOutput && (
+                    {isGeneratingOutput && !suppressGeneratingPill && (
                       <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[10px] z-20">
                         <GeneratingLoader pill />
                       </div>
