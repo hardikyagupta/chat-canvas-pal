@@ -16,6 +16,8 @@ interface ChatListPageProps {
   onNewChat?: () => void;
   onSelectChat?: (id: string) => void;
   className?: string;
+  /** Minimized (docked widget) view — shrinks the page title; expanded web view keeps 24px. */
+  compact?: boolean;
 }
 
 /**
@@ -33,6 +35,7 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
   onNewChat,
   onSelectChat,
   className,
+  compact = false,
 }) => {
   const [query, setQuery] = useState('');
 
@@ -102,8 +105,12 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
               vertically when switching between Chats and Bookmarks. */}
           <div className="flex items-center justify-between gap-[12px] h-[34px]">
             <h1
-              // 16px on mobile viewports, the original 24px from md up.
-              className="text-[16px] leading-[24px] md:text-[24px] md:leading-[32px] font-semibold text-[var(--color-ink)]"
+              // Minimized widget gets a 16px title ("Chats" / "Bookmarks");
+              // the expanded web view keeps the original 24px.
+              className={cn(
+                'font-semibold text-[var(--color-ink)]',
+                compact ? 'text-[16px] leading-[24px]' : 'text-[24px] leading-[32px]'
+              )}
               style={MANROPE}
             >
               {title}

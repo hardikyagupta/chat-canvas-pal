@@ -22,7 +22,9 @@ export default function TabBar({ compact = false }: { compact?: boolean }) {
         <button
           aria-label="Scroll tabs left"
           onClick={() => scroll(-1)}
-          className="mr-1 grid h-6 w-5 shrink-0 place-items-center text-[#6F6F8D] hover:text-[#17173A]"
+          // mb-2 offsets the tabs' pb-2.5 underline padding so the chevron
+          // centers on the tab labels, not the full row height.
+          className="mr-1 mb-2 grid h-6 w-5 shrink-0 place-items-center text-[#6F6F8D] hover:text-[#17173A]"
         >
           <ChevronLeft className="h-4 w-4" strokeWidth={2} />
         </button>
@@ -59,7 +61,7 @@ export default function TabBar({ compact = false }: { compact?: boolean }) {
         <button
           aria-label="Scroll tabs right"
           onClick={() => scroll(1)}
-          className="ml-1 grid h-6 w-5 shrink-0 place-items-center text-[#6F6F8D] hover:text-[#17173A]"
+          className="ml-1 mb-2 grid h-6 w-5 shrink-0 place-items-center text-[#6F6F8D] hover:text-[#17173A]"
         >
           <ChevronRight className="h-4 w-4" strokeWidth={2} />
         </button>

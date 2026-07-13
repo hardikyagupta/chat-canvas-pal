@@ -2427,6 +2427,7 @@ The content has been updated across all channels to reflect your changes.`;
                 showNewChat={activePage === 'chats'}
                 onNewChat={handleNewChat}
                 onSelectChat={() => setActivePage('home')}
+                compact={!isExpanded}
               />
             </div>
           )}
