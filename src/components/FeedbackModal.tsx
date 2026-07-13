@@ -80,11 +80,14 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ sentiment, onClose, onSub
                 key={c}
                 type="button"
                 onClick={() => toggle(c)}
+                // Both states carry the same 1px border — dropping it on select
+                // used to shrink the chip, re-wrap the row, and resize/jerk the
+                // centered modal.
                 className={cn(
-                  'inline-flex items-center gap-[6px] rounded-full px-[12px] py-[6px] text-[14px] leading-[20px] transition-colors',
+                  'inline-flex items-center gap-[6px] rounded-full border px-[12px] py-[6px] text-[14px] leading-[20px] transition-colors',
                   sel
-                    ? 'bg-foreground text-background'
-                    : 'bg-card text-[var(--color-ink)] border border-[var(--color-line)] hover:bg-[var(--color-surface-0)]'
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'border-[var(--color-line)] bg-card text-[var(--color-ink)] hover:bg-[var(--color-surface-0)]'
                 )}
               >
                 {/* Always render a 14px icon (Plus ↔ Check) so the chip width never shifts */}
