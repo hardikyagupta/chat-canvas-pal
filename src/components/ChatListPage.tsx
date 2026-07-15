@@ -204,7 +204,7 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
                           else if (e.key === 'Escape') cancelRename();
                         }}
                         onBlur={commitRename}
-                        className="flex-1 min-w-0 bg-transparent border-0 p-0 text-[14px] text-[var(--color-ink)] focus:outline-none"
+                        className="flex-1 min-w-0 bg-transparent border-0 p-0 text-[13px] text-[var(--color-ink)] focus:outline-none"
                         style={{ ...MANROPE, fontWeight: 500 }}
                       />
                     ) : (
@@ -212,7 +212,7 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
                         <button
                           type="button"
                           onClick={() => onSelectChat?.(chat.id)}
-                          className="flex-1 min-w-0 text-left text-[14px] leading-[20px] text-[var(--color-ink)] whitespace-nowrap overflow-hidden text-ellipsis"
+                          className="flex-1 min-w-0 text-left text-[13px] leading-[18px] text-[var(--color-ink)] whitespace-nowrap overflow-hidden text-ellipsis"
                           style={{ ...MANROPE, fontWeight: isActive ? 500 : 400 }}
                         >
                           {title}
