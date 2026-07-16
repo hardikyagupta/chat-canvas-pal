@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, ChevronDown, ChevronUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ThinkingStateProps {
   onComplete?: () => void;
@@ -59,7 +60,12 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
   return (
     <div className="flex justify-start w-full py-2">
       {/* Thinking Content - Left Aligned */}
-      <div className="max-w-[75%] flex flex-col items-start">
+      <div
+        className={cn(
+          'flex flex-col items-start',
+          !isThinking && isExpanded ? 'w-full' : 'w-fit max-w-full',
+        )}
+      >
         {/* Thinking Phase (Active) */}
         {isThinking && (
           <div className="flex items-center gap-2">
@@ -103,7 +109,7 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
         
         {/* Completed Phase (Collapsible Summary) */}
         {!isThinking && (
-          <div>
+          <div className={cn(isExpanded ? 'w-full' : 'w-fit')}>
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="flex w-fit items-center gap-2 text-left hover:opacity-80 transition-opacity"
@@ -123,8 +129,8 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
 
             {/* Expanded Content */}
             {isExpanded && (
-              <div className="mt-3 animate-in slide-in-from-top-2 duration-200">
-                <p className="text-sm text-muted-foreground leading-relaxed">
+              <div className="mt-3 w-full animate-in slide-in-from-top-2 duration-200">
+                <p className="w-full text-sm text-muted-foreground leading-relaxed">
                   Let me think about this problem step by step. {thinkingRationale.join('. ')}.
                 </p>
               </div>
