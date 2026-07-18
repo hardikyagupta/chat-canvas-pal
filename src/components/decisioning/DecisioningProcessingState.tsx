@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Loader2, Waypoints } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
+import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
 import { Progress } from "@/components/ui/progress";
 import {
   DISPLAY_DURATION_MS,
@@ -64,9 +65,9 @@ export default function DecisioningProcessingState() {
       <div className="flex flex-col items-center rounded-lg border border-[#DDE2EE] bg-white p-10 text-center">
         {/* Pulsing engine mark */}
         <span className="relative grid h-14 w-14 place-items-center">
-          <span className="absolute inset-0 animate-pulse rounded-full bg-[#2F68E5]/15" />
-          <span className="relative grid h-11 w-11 place-items-center rounded-full bg-[#2F68E5]">
-            <Waypoints className="h-5 w-5 text-white" strokeWidth={1.8} />
+          <span className="absolute inset-0 animate-pulse rounded-full bg-[#FC5E02]/15" />
+          <span className="relative grid h-11 w-11 place-items-center rounded-full bg-[#FFF1E6]">
+            <img src={iconDecisioning} alt="" className="h-7 w-7" />
           </span>
         </span>
 
