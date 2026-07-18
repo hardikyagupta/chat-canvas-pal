@@ -1,0 +1,218 @@
+.objective-flow {
+  --of-brand: #2F68E5;
+  --of-brand-hover: #4F7EF0;
+  --of-brand-active: #1F51BE;
+  --of-brand-subtle: #EDF1FF;
+  --of-ink: #17173A;
+  --of-text: #17173A;
+  --of-muted: #6F6F8D;
+  --of-faint: #9494AE;
+  --of-line: #DDE2EE;
+  --of-soft: #FAFBFF;
+  --of-canvas: #F4F8FF;
+  min-height: 100vh;
+  background: var(--of-canvas);
+  color: var(--of-ink);
+  font-family: 'Manrope', sans-serif;
+}
+
+.objective-flow button { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+.objective-flow svg { width: 16px; height: 16px; }
+
+.objective-navbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  height: 60px;
+  padding: 0 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--of-line);
+  background: #fff;
+}
+
+.objective-title-lockup { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.objective-thumbnail { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 5px; background: var(--of-brand-subtle); color: var(--of-brand); }
+.objective-thumbnail svg { width: 22px; height: 22px; }
+.objective-title-lockup strong { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.objective-navbar-actions { display: flex; align-items: center; gap: 8px; }
+.objective-navbar-actions button { height: 34px; border-radius: 8px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .035em; }
+.objective-navbar-actions button:first-child { border: 1.5px solid var(--of-brand); background: #fff; color: var(--of-brand); }
+.objective-navbar-actions button:first-child:hover { background: var(--of-brand-subtle); }
+.objective-navbar-actions button:nth-child(2) { border-color: var(--of-brand); background: var(--of-brand); color: #fff; }
+.objective-navbar-actions button:nth-child(2):hover { background: var(--of-brand-hover); }
+.objective-navbar-actions button:nth-child(2):active { background: var(--of-brand-active); }
+.objective-navbar-actions button:last-child { width: 36px; min-width: 36px; padding: 0; border: 1.5px solid var(--of-line); background: #fff; color: var(--of-muted); }
+.objective-navbar-actions button:last-child:hover { border-color: #9898B0; background: #F6F8FF; color: var(--of-ink); }
+
+.objective-stepbar {
+  height: 48px;
+  padding: 0 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  border-bottom: 1px solid var(--of-line);
+  background: #fff;
+}
+
+.objective-steps { height: 100%; display: flex; align-items: center; }
+.objective-steps > button { position: relative; height: 100%; padding: 0; display: flex; align-items: center; gap: 7px; border: 0; background: none; color: var(--of-faint); font-size: 12px; font-weight: 650; }
+.objective-steps > button > span { width: 21px; height: 21px; display: grid; place-items: center; border: 1px solid var(--of-line); border-radius: 50%; background: #fff; }
+.objective-steps > button > span svg { width: 11px; height: 11px; }
+.objective-steps > button > i { width: 72px; height: 1px; margin: 0 18px; background: var(--of-line); }
+.objective-steps > button.active { color: var(--of-brand); }
+.objective-steps > button.complete { color: var(--of-muted); }
+.objective-steps > button.complete > i { background: var(--of-brand); }
+.objective-steps > button.active::after { content: ""; position: absolute; right: 108px; bottom: 0; left: 0; height: 2px; background: var(--of-brand); }
+.objective-steps > button:last-child.active::after { right: 0; }
+.objective-steps > button.active > span { border-color: var(--of-brand); background: var(--of-brand); color: #fff; }
+.objective-steps > button.complete > span { border-color: var(--of-brand); background: #fff; color: var(--of-brand); }
+.objective-save-state { display: flex; align-items: center; gap: 18px; color: var(--of-muted); font-size: 10px; white-space: nowrap; }
+.objective-save-state span { display: flex; align-items: center; gap: 5px; }
+.objective-save-state svg { width: 12px; height: 12px; }
+
+.objective-canvas { min-height: calc(100vh - 108px); padding: 40px 54px 56px; display: grid; grid-template-columns: minmax(560px, 1fr) 350px; align-items: start; gap: 40px; }
+.objective-work-column { min-width: 0; padding: 0; }
+
+.objective-form-card { position: relative; width: 100%; max-width: none; margin: 0; overflow: hidden; border: 1px solid #EBEBF5; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(23,23,58,.10); }
+.objective-form-section { min-height: 560px; padding: 46px 54px; }
+.objective-section-heading { margin-bottom: 27px; }
+.objective-section-heading h2 { margin: 0 0 4px; font-size: 15px; }
+.objective-section-heading p { margin: 0; color: var(--of-muted); font-size: 11px; }
+.objective-field { display: block; margin-bottom: 22px; }
+.objective-field > span { display: block; margin-bottom: 7px; color: var(--of-text); font-size: 11px; font-weight: 650; }
+.objective-field > span b { color: var(--of-ink); }
+.objective-field input, .objective-field select { width: 100%; height: 40px; border: 1px solid var(--of-line); border-radius: 8px; background: #fff; box-shadow: none; color: var(--of-ink); font-size: 13px; font-weight: 500; }
+.objective-field input:hover, .objective-field select:hover { border-color: #9898B0; background: #F6F8FF; }
+.objective-field input:focus, .objective-field select:focus { border: 1.5px solid var(--of-brand); outline: none; box-shadow: 0 0 0 4px rgba(47,104,229,.15); background: #fff; }
+.objective-field select { appearance: auto; padding: 0 11px; }
+.counted-input { position: relative; }
+.counted-input input { padding-right: 58px; }
+.counted-input > span { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--of-faint); font-size: 9px; }
+.objective-choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.objective-choice-row button { min-height: 37px; padding: 0 12px; display: flex; align-items: center; gap: 6px; border: 1px solid var(--of-line); border-radius: 8px; background: #fff; color: var(--of-text); font-size: 12px; font-weight: 600; }
+.objective-choice-row button:hover { border-color: #9898B0; background: #F6F8FF; }
+.objective-choice-row button.selected { border-color: var(--of-brand); background: var(--of-brand-subtle); color: var(--of-brand-active); }
+.objective-choice-row svg { width: 11px; }
+.objective-two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.objective-setting-row { min-height: 72px; padding: 13px 0; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 1px solid var(--of-line); }
+.objective-setting-row > div { min-width: 0; }
+.objective-setting-row strong { font-size: 12px; }
+.objective-setting-row p { margin: 4px 0 0; color: var(--of-muted); font-size: 10.5px; line-height: 1.45; }
+.objective-setting-row > button:not([role="switch"]) { height: 34px; padding: 0 10px; display: flex; align-items: center; gap: 9px; flex: 0 0 auto; border: 1px solid var(--of-line); border-radius: 8px; background: #fff; font-size: 10.5px; font-weight: 600; }
+.objective-setting-row [role="switch"][data-state="checked"] { background: var(--of-brand); }
+.objective-note { margin-top: 18px; padding: 13px; display: flex; align-items: flex-start; gap: 9px; border: 1px solid #AEBFFF; border-radius: 8px; background: var(--of-brand-subtle); color: var(--of-brand-active); }
+.objective-note svg { flex: 0 0 auto; width: 15px; margin-top: 1px; }
+.objective-note p { margin: 0; font-size: 10.5px; line-height: 1.5; }
+.objective-assets { border-top: 1px solid var(--of-line); }
+.objective-assets > button { width: 100%; min-height: 68px; padding: 10px 0; display: flex; align-items: center; gap: 11px; border: 0; border-bottom: 1px solid var(--of-line); background: #fff; text-align: left; }
+.objective-assets > button:hover { background: #F6F8FF; }
+.objective-assets > button > span { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 8px; background: var(--of-brand-subtle); color: var(--of-brand); }
+.objective-assets > button > div { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.objective-assets strong { font-size: 11.5px; }
+.objective-assets small { color: var(--of-muted); font-size: 9.5px; }
+.objective-assets em { width: 21px; height: 21px; display: grid; place-items: center; border: 1px solid var(--of-line); border-radius: 50%; background: #fff; color: #fff; }
+.objective-assets button.selected em { border-color: var(--of-brand); background: var(--of-brand); }
+.objective-assets em svg { width: 11px; }
+.objective-assets button > svg { margin: 0 8px; color: var(--of-muted); }
+.objective-library-button { margin-top: 15px; border: 1.5px solid var(--of-brand); border-radius: 8px; color: var(--of-brand); font-size: 10.5px; }
+.objective-library-button:hover { background: var(--of-brand-subtle); }
+
+.objective-validation-view { min-height: 560px; padding: 28px; }
+.objective-validation-banner { min-height: 88px; padding: 18px 20px; display: flex; align-items: center; gap: 14px; border: 1px solid #ABEFC6; border-radius: 8px; background: #ECFDF3; }
+.objective-validation-banner > span { width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 8px; background: #079455; color: #fff; }
+.objective-validation-banner > span svg { width: 20px; height: 20px; stroke-width: 3; }
+.objective-validation-banner strong { display: block; color: #067647; font-size: 15px; }
+.objective-validation-banner p { margin: 4px 0 0; color: #085D3A; font-size: 11.5px; }
+.objective-validation-metrics { margin: 18px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.objective-validation-metric { min-width: 0; min-height: 104px; padding: 17px; border: 1px solid #EBEBF5; border-radius: 8px; background: #fff; box-shadow: 0 1px 2px rgba(23,23,58,.08); }
+.objective-validation-metric span { display: block; min-height: 28px; color: var(--of-faint); font-size: 9px; font-weight: 700; letter-spacing: .07em; line-height: 1.4; text-transform: uppercase; }
+.objective-validation-metric strong { display: block; margin-top: 8px; color: var(--of-ink); font-size: 24px; line-height: 1; }
+.objective-validation-metric strong.positive { color: #079455 !important; }
+.objective-validation-table-wrap { overflow-x: auto; border: 1px solid #EBEBF5; border-radius: 8px; background: #fff; }
+.objective-validation-table { width: 100%; min-width: 760px; border-collapse: collapse; }
+.objective-validation-table th { height: 42px; padding: 0 14px; border-bottom: 1px solid #EBEBF5; background: #FAFBFF; color: var(--of-faint); font-size: 9px; font-weight: 700; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
+.objective-validation-table td { height: 55px; padding: 0 14px; border-bottom: 1px solid #EBEBF5; color: var(--of-muted); font-size: 10.5px; }
+.objective-validation-table tbody tr:last-child td { border-bottom: 0; }
+.objective-validation-table td:first-child, .objective-validation-table td:nth-child(2) { color: var(--of-ink); font-weight: 650; }
+.objective-validation-table td:nth-child(3) { color: #079455; font-weight: 700; }
+
+.objective-spinner { animation: objective-spin .75s linear infinite; }
+.objective-validating-overlay { position: absolute; z-index: 5; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(255,255,255,.82); backdrop-filter: blur(2px); }
+.objective-validating-card { width: min(360px, 100%); padding: 26px; display: flex; flex-direction: column; align-items: center; border: 1px solid var(--of-line); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px rgba(23,23,58,.14); text-align: center; }
+.objective-validating-card > svg { width: 28px; height: 28px; color: var(--of-brand); }
+.objective-validating-card strong { margin-top: 14px; font-size: 15px; }
+.objective-validating-card p { margin: 6px 0 17px; color: var(--of-muted); font-size: 11px; line-height: 1.5; }
+.objective-validating-card > div { width: 100%; height: 5px; overflow: hidden; border-radius: 999px; background: var(--of-brand-subtle); }
+.objective-validating-card > div span { display: block; width: 42%; height: 100%; border-radius: inherit; background: var(--of-brand); animation: objective-progress 1.1s ease-in-out infinite; }
+
+@keyframes objective-spin { to { transform: rotate(360deg); } }
+@keyframes objective-progress { 0% { transform: translateX(-110%); } 100% { transform: translateX(240%); } }
+
+.objective-summary { min-width: 0; width: 350px; padding: 0; border: 0; background: transparent; overflow: hidden; }
+.objective-summary-heading { padding: 0 0 15px; }
+.objective-summary-heading h2 { margin: 0 0 4px; font-size: 20px; }
+.objective-summary-heading p { margin: 0; color: var(--of-muted); font-size: 12px; line-height: 1.45; }
+.objective-summary-section { border-top: 0; }
+.objective-summary-section > button { width: 100%; min-height: 48px; padding: 0; display: flex; align-items: center; justify-content: space-between; border: 0; background: transparent; text-align: left; }
+.objective-summary-section > button:hover { color: var(--of-brand); }
+.objective-summary-section > button strong { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.objective-summary-section > button svg { width: 14px; color: var(--of-muted); }
+.objective-summary-body { min-width: 0; margin: 0 0 12px; padding: 20px; overflow: hidden; border: 1px solid var(--of-line); border-radius: 8px; background: #fff; box-shadow: 0 1px 2px rgba(23,23,58,.08); }
+.objective-summary-field + .objective-summary-field { margin-top: 13px; }
+.objective-summary-field span { display: block; margin-bottom: 3px; color: var(--of-muted); font-size: 9px; }
+.objective-summary-field strong { display: block; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; font-size: 11.5px; line-height: 1.4; }
+.objective-empty { margin: 0; color: var(--of-muted); font-size: 10px; }
+.objective-engine-list { margin: 0; padding: 0; list-style: none; }
+.objective-engine-list li { position: relative; padding-left: 17px; color: var(--of-text); font-size: 9.5px; line-height: 1.55; }
+.objective-engine-list li + li { margin-top: 6px; }
+.objective-engine-list li::before { content: "✓"; position: absolute; left: 0; color: var(--of-brand); font-weight: 800; }
+.objective-audience-estimate { margin-top: 18px; padding: 16px; border: 1px solid #AEBFFF; border-radius: 8px; background: var(--of-brand-subtle); color: var(--of-ink); }
+.objective-audience-estimate span { display: block; margin-bottom: 7px; color: var(--of-brand-active); font-size: 8px; font-weight: 700; letter-spacing: .08em; }
+.objective-audience-estimate strong { display: block; color: var(--of-ink); font-size: 13px; }
+.objective-audience-estimate small { display: block; margin-top: 5px; color: var(--of-muted); font-size: 9px; }
+
+@media (max-width: 980px) {
+  .objective-navbar, .objective-stepbar { padding-inline: 32px; }
+  .objective-save-state { display: none; }
+  .objective-canvas { padding: 32px; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; }
+  .objective-summary { width: 300px; }
+  .objective-form-section { padding: 38px 40px; }
+}
+
+@media (max-width: 1180px) {
+  .objective-save-state { display: none; }
+  .objective-steps > button > i { width: 42px; margin-inline: 12px; }
+  .objective-steps > button.active::after { right: 72px; }
+}
+
+@media (max-width: 760px) {
+  .objective-navbar { height: 58px; padding: 0 14px; }
+  .objective-title-lockup strong { max-width: 38vw; }
+  .objective-navbar-actions button:first-child { display: none; }
+  .objective-navbar-actions button { padding-inline: 10px; }
+  .objective-stepbar { height: 54px; padding: 0 14px; overflow-x: auto; }
+  .objective-steps { min-width: 620px; }
+  .objective-steps > button > i { width: 42px; margin-inline: 12px; }
+  .objective-steps > button.active::after { right: 66px; }
+  .objective-canvas { display: block; }
+  .objective-canvas { padding: 22px 16px 36px; }
+  .objective-work-column { padding: 0; }
+  .objective-form-section { min-height: 0; padding: 22px 18px; }
+  .objective-validation-view { min-height: 0; padding: 18px; }
+  .objective-validation-metrics { grid-template-columns: 1fr 1fr; }
+  .objective-two-fields { grid-template-columns: 1fr; gap: 0; }
+  .objective-summary { width: 100%; margin-top: 24px; padding: 0; border: 0; }
+}
+
+@media (max-width: 460px) {
+  .objective-title-lockup strong { max-width: 32vw; font-size: 12px; }
+  .objective-navbar-actions button:nth-child(2) svg:not(.objective-spinner) { display: none; }
+  .objective-navbar-actions button { font-size: 9px; }
+  .objective-choice-row { display: grid; grid-template-columns: 1fr 1fr; }
+  .objective-choice-row button { justify-content: center; padding: 0 8px; }
+  .objective-validation-banner { align-items: flex-start; padding: 15px; }
+  .objective-validation-metrics { grid-template-columns: 1fr; }
+}

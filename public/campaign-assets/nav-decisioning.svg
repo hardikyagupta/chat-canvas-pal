@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <!-- Base orb: @oreo-design/avatar — createAvatar({ shape: "flare", palette: "peach-cream", variantId: "a1f3" }), background rect removed for transparency. Sparkle overlay + twinkle animation added on top. -->
+  <style>
+    @keyframes decStarBreathe {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.14) rotate(-10deg); }
+    }
+    @keyframes decPlusTwinkle {
+      0%, 18% { transform: scale(0.4); opacity: 0.2; }
+      45% { transform: scale(1.25); opacity: 1; }
+      65% { transform: scale(1); opacity: 0.9; }
+      100% { transform: scale(0.4); opacity: 0.2; }
+    }
+    #dec-star { transform-origin: 9.46px 10.48px; animation: decStarBreathe 2.8s ease-in-out infinite; }
+    #dec-plus1 { transform-origin: 12.37px 5.75px; animation: decPlusTwinkle 2.8s ease-in-out infinite; }
+    #dec-plus2 { transform-origin: 14.55px 7.93px; animation: decPlusTwinkle 2.8s ease-in-out -1.2s infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      #dec-star, #dec-plus1, #dec-plus2 { animation: none; }
+    }
+  </style>
+  <defs>
+    <filter id="blur-1-oreo-arguya" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.1"/></filter>
+    <filter id="blur-3-oreo-arguya" x="-55%" y="-55%" width="210%" height="210%"><feGaussianBlur stdDeviation="3.2"/></filter>
+    <filter id="blur-5-oreo-arguya" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="5.1"/></filter>
+    <filter id="blur-8-oreo-arguya" x="-85%" y="-85%" width="270%" height="270%"><feGaussianBlur stdDeviation="8.4"/></filter>
+    <clipPath id="clip-oreo-arguya"><rect width="64" height="64" rx="32" fill="#ffffff"/></clipPath>
+    <radialGradient id="edge-oreo-arguya" gradientUnits="userSpaceOnUse" cx="32" cy="32" r="32">
+      <stop offset="98.4375%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="edge-mask-oreo-arguya" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="0" y="0" width="64" height="64" style="mask-type:alpha">
+      <rect width="64" height="64" fill="url(#edge-oreo-arguya)"/>
+    </mask>
+    <linearGradient id="cream-oreo-arguya" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff2ce"/><stop offset="100%" stop-color="#fffad4"/>
+    </linearGradient>
+    <linearGradient id="hot-oreo-arguya" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffc744"/><stop offset="100%" stop-color="#ff6044"/>
+    </linearGradient>
+  </defs>
+  <g mask="url(#edge-mask-oreo-arguya)">
+    <g clip-path="url(#clip-oreo-arguya)">
+      <g transform="translate(32.030 32.030) rotate(0.000)"><rect x="-32.030" y="-32.030" width="64.060" height="64.060" rx="16.270" fill="#cc4e00" opacity="1.000"/></g>
+      <g transform="translate(32 32) rotate(0)" opacity="0.42">
+        <rect x="-30.830" y="-30.830" width="61.660" height="61.660" rx="15.070" fill="none" stroke="#ffffff" stroke-width="1.400" opacity="0.38" filter="url(#blur-1-oreo-arguya)"/>
+        <rect x="-30.030" y="-30.030" width="60.060" height="60.060" rx="14.270" fill="none" stroke="#ffdfda" stroke-width="2.400" opacity="0.24" filter="url(#blur-3-oreo-arguya)"/>
+        <rect x="-28.030" y="-28.030" width="56.060" height="56.060" rx="12.270" fill="none" stroke="#ffbe74" stroke-width="4.000" opacity="0.18" filter="url(#blur-5-oreo-arguya)"/>
+      </g>
+      <g transform="translate(32.030 34.320) rotate(0.000)"><rect x="-35.085" y="-37.370" width="70.170" height="74.740" rx="16.270" fill="#ff9a44" opacity="1.000"/></g>
+      <g transform="translate(32 34.32) rotate(0)" opacity="0.36">
+        <rect x="-33.885" y="-36.170" width="67.770" height="72.340" rx="15.070" fill="none" stroke="#ffffff" stroke-width="1.400" opacity="0.38" filter="url(#blur-1-oreo-arguya)"/>
+        <rect x="-33.085" y="-35.370" width="66.170" height="70.740" rx="14.270" fill="none" stroke="#ffdfda" stroke-width="2.400" opacity="0.24" filter="url(#blur-3-oreo-arguya)"/>
+        <rect x="-31.085" y="-33.370" width="62.170" height="66.740" rx="12.270" fill="none" stroke="#ffbe74" stroke-width="4.000" opacity="0.18" filter="url(#blur-5-oreo-arguya)"/>
+      </g>
+      <g transform="translate(32.000 31.500) rotate(0.000)"><rect x="-35.000" y="-32.500" width="70.000" height="65.000" rx="120.000" fill="url(#cream-oreo-arguya)" opacity="0.920" filter="url(#blur-5-oreo-arguya)"/></g>
+      <g transform="translate(39.000 42.000) rotate(0.000)"><rect x="-22.000" y="-22.000" width="44.000" height="44.000" rx="120.000" fill="url(#hot-oreo-arguya)" opacity="0.840" filter="url(#blur-8-oreo-arguya)"/></g>
+    </g>
+  </g>
+  <g transform="scale(3.2)">
+    <g id="sparkle">
+      <path id="dec-star" d="M13.8243 10.4767C13.8253 10.625 13.7802 10.7699 13.6954 10.8915C13.6106 11.0131 13.4902 11.1055 13.3507 11.1558L11.0062 12.0222L10.1425 14.3686C10.0914 14.5075 9.99884 14.6274 9.87741 14.7121C9.75597 14.7968 9.61148 14.8422 9.46343 14.8422C9.31537 14.8422 9.17088 14.7968 9.04944 14.7121C8.92801 14.6274 8.83548 14.5075 8.78434 14.3686L7.91524 12.0222L5.56888 11.1586C5.42994 11.1074 5.31003 11.0149 5.22533 10.8934C5.14063 10.772 5.09521 10.6275 5.09521 10.4795C5.09521 10.3314 5.14063 10.1869 5.22533 10.0655C5.31003 9.94405 5.42994 9.85152 5.56888 9.80038L7.91524 8.93129L8.77888 6.58492C8.83002 6.44598 8.92256 6.32607 9.04399 6.24137C9.16542 6.15667 9.30992 6.11126 9.45797 6.11126C9.60603 6.11126 9.75052 6.15667 9.87195 6.24137C9.99339 6.32607 10.0859 6.44598 10.1371 6.58492L11.0062 8.93129L13.3525 9.79492C13.4921 9.84574 13.6124 9.93862 13.6969 10.0607C13.7814 10.1829 13.826 10.3282 13.8243 10.4767Z" fill="#291E30"/>
+      <path id="dec-plus1" d="M11.2789 6.1131H12.0062V6.84038C12.0062 6.93682 12.0445 7.02931 12.1127 7.09751C12.1809 7.1657 12.2733 7.20401 12.3698 7.20401C12.4662 7.20401 12.5587 7.1657 12.6269 7.09751C12.6951 7.02931 12.7334 6.93682 12.7334 6.84038V6.1131H13.4607C13.5571 6.1131 13.6496 6.07479 13.7178 6.0066C13.786 5.9384 13.8243 5.84591 13.8243 5.74947C13.8243 5.65303 13.786 5.56053 13.7178 5.49234C13.6496 5.42414 13.5571 5.38583 13.4607 5.38583H12.7334V4.65856C12.7334 4.56212 12.6951 4.46962 12.6269 4.40143C12.5587 4.33323 12.4662 4.29492 12.3698 4.29492C12.2733 4.29492 12.1809 4.33323 12.1127 4.40143C12.0445 4.46962 12.0062 4.56212 12.0062 4.65856V5.38583H11.2789C11.1824 5.38583 11.0899 5.42414 11.0218 5.49234C10.9536 5.56053 10.9152 5.65303 10.9152 5.74947C10.9152 5.84591 10.9536 5.9384 11.0218 6.0066C11.0899 6.07479 11.1824 6.1131 11.2789 6.1131Z" fill="#291E30"/>
+      <path id="dec-plus2" d="M15.2789 7.56765H14.9152V7.20401C14.9152 7.10757 14.8769 7.01508 14.8087 6.94688C14.7405 6.87869 14.6481 6.84038 14.5516 6.84038C14.4552 6.84038 14.3627 6.87869 14.2945 6.94688C14.2263 7.01508 14.188 7.10757 14.188 7.20401V7.56765H13.8243C13.7279 7.56765 13.6354 7.60596 13.5672 7.67416C13.499 7.74235 13.4607 7.83484 13.4607 7.93129C13.4607 8.02773 13.499 8.12022 13.5672 8.18842C13.6354 8.25661 13.7279 8.29492 13.8243 8.29492H14.188V8.65856C14.188 8.755 14.2263 8.84749 14.2945 8.91569C14.3627 8.98388 14.4552 9.02219 14.5516 9.02219C14.6481 9.02219 14.7405 8.98388 14.8087 8.91569C14.8769 8.84749 14.9152 8.755 14.9152 8.65856V8.29492H15.2789C15.3753 8.29492 15.4678 8.25661 15.536 8.18842C15.6042 8.12022 15.6425 8.02773 15.6425 7.93129C15.6425 7.83484 15.6042 7.74235 15.536 7.67416C15.4678 7.60596 15.3753 7.56765 15.2789 7.56765Z" fill="#291E30"/>
+    </g>
+  </g>
+</svg>

@@ -445,6 +445,23 @@
   to { --snake-angle: 360deg; }
 }
 
+/* Amber variant — the decisioning-engine icon on the dark L1 rail. Same
+   rotating snake, but in the icon's peach/orange palette over a faint warm
+   base ring instead of the light-blue-on-white treatment. */
+.snake-border--amber {
+  background:
+    conic-gradient(
+      from var(--snake-angle),
+      transparent 0deg,
+      transparent 255deg,
+      rgba(255, 154, 68, 0) 280deg,
+      #ff9a44 330deg,
+      #ffc744 350deg,
+      rgba(255, 154, 68, 0) 360deg
+    ),
+    rgba(255, 154, 68, 0.28);
+}
+
 .input-border-shimmer {
   position: absolute;
   inset: 0;
