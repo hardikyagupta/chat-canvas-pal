@@ -5,16 +5,35 @@ import trending from "/campaign-assets/ic-trending.svg";
 import CoMarketerNudge from "./CoMarketerNudge";
 
 /** Top application bar — 56px, white, rounded, soft card shadow. */
-export default function TopNav({ onOpenChat }: { onOpenChat?: () => void }) {
+export default function TopNav({
+  onOpenChat,
+  label = "Customer Engagement",
+  showAskCoMarketer = true,
+  showCoMarketerNudge = true,
+  onNudgeDismiss,
+}: {
+  onOpenChat?: () => void;
+  label?: string;
+  showAskCoMarketer?: boolean;
+  /** False keeps the button but skips its discovery nudge (and dot). */
+  showCoMarketerNudge?: boolean;
+  /** Fired once when the co-marketer discovery nudge closes (any path). */
+  onNudgeDismiss?: () => void;
+}) {
   // Discovery nudge shown under the Ask co-marketer button on first load.
-  const [showNudge, setShowNudge] = useState(true);
+  const [showNudge, setShowNudge] = useState(showCoMarketerNudge);
   const nudgeWrapRef = useRef<HTMLDivElement>(null);
+
+  const dismissNudge = () => {
+    setShowNudge(false);
+    onNudgeDismiss?.();
+  };
 
   // Dismiss the nudge when clicking anywhere outside it (and its button).
   useEffect(() => {
     if (!showNudge) return;
     const onDocDown = (e: MouseEvent) => {
-      if (!nudgeWrapRef.current?.contains(e.target as Node)) setShowNudge(false);
+      if (!nudgeWrapRef.current?.contains(e.target as Node)) dismissNudge();
     };
     document.addEventListener("mousedown", onDocDown);
     return () => document.removeEventListener("mousedown", onDocDown);
@@ -25,7 +44,7 @@ export default function TopNav({ onOpenChat }: { onOpenChat?: () => void }) {
       {/* Left: workspace pill + search */}
       <div className="flex items-center gap-4">
         <span className="rounded bg-[#E7EDFF] px-2 py-1 font-manrope text-xs font-semibold text-[#2F68E5]">
-          Customer Engagement
+          {label}
         </span>
 
         <button className="flex items-center gap-2 rounded py-1 opacity-80 transition-opacity hover:opacity-100">
@@ -45,39 +64,41 @@ export default function TopNav({ onOpenChat }: { onOpenChat?: () => void }) {
             used on the chat input field). h-8 matches the Create/Plus button.
             While the discovery nudge is up, a pulsing halo highlights the button
             and the nudge card drops beneath it. */}
-        <div ref={nudgeWrapRef} className="relative">
-          {/* Small royal-blue pulsing dot centered on the lower edge of the
-              button — a ping ring behind a solid dot. */}
-          {showNudge && (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute -bottom-1 left-1/2 z-[2] grid h-2.5 w-2.5 -translate-x-1/2 place-items-center"
+        {showAskCoMarketer && (
+          <div ref={nudgeWrapRef} className="relative">
+            {/* Small royal-blue pulsing dot centered on the lower edge of the
+                button — a ping ring behind a solid dot. */}
+            {showNudge && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -bottom-1 left-1/2 z-[2] grid h-2.5 w-2.5 -translate-x-1/2 place-items-center"
+              >
+                <span className="absolute inset-0 animate-ping rounded-full bg-[#2F68E5]/50" />
+                <span className="relative h-2 w-2 rounded-full bg-[#2F68E5]" />
+              </span>
+            )}
+            <button
+              onClick={() => {
+                if (showNudge) dismissNudge();
+                onOpenChat?.();
+              }}
+              className="relative z-[1] flex h-8 items-center gap-1.5 overflow-hidden rounded-lg bg-white px-2.5 transition-shadow hover:shadow-sm"
             >
-              <span className="absolute inset-0 animate-ping rounded-full bg-[#2F68E5]/50" />
-              <span className="relative h-2 w-2 rounded-full bg-[#2F68E5]" />
-            </span>
-          )}
-          <button
-            onClick={() => {
-              setShowNudge(false);
-              onOpenChat?.();
-            }}
-            className="relative z-[1] flex h-8 items-center gap-1.5 overflow-hidden rounded-lg bg-white px-2.5 transition-shadow hover:shadow-sm"
-          >
-            <span aria-hidden="true" className="snake-border" />
-            <img src={sparkle} alt="" className="relative z-[1] h-5 w-5" />
-            <span className="relative z-[1] font-manrope text-xs font-semibold tracking-[0.42px] text-ash">
-              Ask co-marketer
-            </span>
-          </button>
+              <span aria-hidden="true" className="snake-border" />
+              <img src={sparkle} alt="" className="relative z-[1] h-5 w-5" />
+              <span className="relative z-[1] font-manrope text-xs font-semibold tracking-[0.42px] text-ash">
+                Ask co-marketer
+              </span>
+            </button>
 
-          {/* Discovery nudge — drops below the button, right-aligned. */}
-          {showNudge && (
-            <div className="absolute right-0 top-[calc(100%+12px)] z-50 animate-in fade-in slide-in-from-top-2 duration-300">
-              <CoMarketerNudge />
-            </div>
-          )}
-        </div>
+            {/* Discovery nudge — drops below the button, right-aligned. */}
+            {showNudge && (
+              <div className="absolute right-0 top-[calc(100%+12px)] z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+                <CoMarketerNudge />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Create */}
         <button

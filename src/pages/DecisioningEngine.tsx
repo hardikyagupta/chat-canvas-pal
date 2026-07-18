@@ -2,46 +2,30 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import L1Nav from "@/components/campaigns/L1Nav";
 import TopNav from "@/components/campaigns/TopNav";
-import PageHeader from "@/components/campaigns/PageHeader";
-import TabBar from "@/components/campaigns/TabBar";
-import TableToolbar from "@/components/campaigns/TableToolbar";
-import CampaignTable from "@/components/campaigns/CampaignTable";
-import Pagination from "@/components/campaigns/Pagination";
 import ChatInterface from "@/components/ChatInterface";
-import DecisioningNudge from "@/components/campaigns/DecisioningNudge";
 import MarketingAgentsOverlay from "@/components/MarketingAgentsOverlay";
+import DecisioningEmptyState from "@/components/decisioning/DecisioningEmptyState";
+import DecisioningProcessingState from "@/components/decisioning/DecisioningProcessingState";
+import DecisioningReadyState from "@/components/decisioning/DecisioningReadyState";
+import { useDecisioningSetup } from "@/contexts/DecisioningSetupContext";
 import { marketingAgents } from "@/data/agents";
 
-/**
- * Campaigns (New Engage) listing page.
- * Tapping "Ask co-marketer" docks the existing floating co-marketer chat
- * (<ChatInterface/>) as a third column on the right; the table then scrolls
- * horizontally (Campaign Info stays pinned) and the tab strip goes compact.
- */
-export default function Campaigns() {
+export default function DecisioningEngine() {
+  const { status } = useDecisioningSetup();
+
+  // Docked co-marketer chat — same mount/enter/leave choreography as the
+  // Campaigns page (see there for the double-rAF rationale).
   const [chatOpen, setChatOpen] = useState(false);
-  // `chatMounted` keeps the docked column in the DOM while its exit animation
-  // plays; `chatIn` drives the enter/leave transition (slide + fade + width).
   const [chatMounted, setChatMounted] = useState(false);
   const [chatIn, setChatIn] = useState(false);
-  // Bumped on every open so <ChatInterface/> remounts fresh — this clears any
-  // leftover attachments/typed input (and the input height they grew to) from a
-  // previous session, even if the prior instance never fully unmounted.
   const [chatSession, setChatSession] = useState(0);
   const [isAgentsOverlayOpen, setIsAgentsOverlayOpen] = useState(false);
-  // Nudge sequencing: the decisioning-engine discovery card (and the pulsing
-  // dot on its L1 entry) appears only after the co-marketer nudge closes.
-  const [showDecisioningNudge, setShowDecisioningNudge] = useState(false);
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(new Set());
 
-  // Coordinate mount → enter and leave → unmount so both directions animate.
   useEffect(() => {
     if (chatOpen) {
       setChatMounted(true);
       setChatSession((n) => n + 1);
-      // Double rAF: the first frame lets the browser paint the fully-closed
-      // state, the second flips to open. A single frame can get coalesced with
-      // the mount, so the transition starts mid-way and looks like a hard jump.
       let raf2 = 0;
       const raf1 = requestAnimationFrame(() => {
         raf2 = requestAnimationFrame(() => setChatIn(true));
@@ -51,12 +35,11 @@ export default function Campaigns() {
         cancelAnimationFrame(raf2);
       };
     }
-    // Closing: play the leave transition, then unmount once it finishes.
     setChatIn(false);
     if (isAgentsOverlayOpen) setIsAgentsOverlayOpen(false);
   }, [chatOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Mirrors the agent-toggle wiring used on the home (Index) page.
+  // Mirrors the agent-toggle wiring used on the Campaigns page.
   const handleToggleAgent = (agentId: string, agentName: string) => {
     const agent = marketingAgents.find((a) => a.id === agentId);
     if (!agent) return;
@@ -83,59 +66,38 @@ export default function Campaigns() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#F4F8FF]">
-      <L1Nav decisioningNudge={showDecisioningNudge} />
-
-      {showDecisioningNudge && (
-        <DecisioningNudge onClose={() => setShowDecisioningNudge(false)} />
-      )}
+      <L1Nav active="decisioning" />
 
       <div className="flex min-w-0 flex-1 flex-col p-2">
         <TopNav
+          label="Decisioning engine"
+          showCoMarketerNudge={false}
           onOpenChat={() => setChatOpen(true)}
-          onNudgeDismiss={() => setShowDecisioningNudge(true)}
         />
 
         <div className="mt-2 flex min-h-0 flex-1 gap-2">
-          {/* Campaigns content */}
-          <div className="scroll-slim min-w-0 flex-1 overflow-y-auto px-2 pt-4">
-            <PageHeader />
-
-            {/* gap keeps the scrollable tab strip clear of the toolbar when the
-                docked chat squeezes this column; the toolbar never shrinks. */}
-            <div className="mt-5 flex items-end justify-between gap-6 border-b border-[#DDE2EE]">
-              <TabBar compact={chatOpen} />
-              <div className="shrink-0 pb-2">
-                <TableToolbar compact={chatOpen} />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <CampaignTable />
-            </div>
-
-            <div className="mt-4 pb-8">
-              <Pagination />
+          <div className="min-w-0 flex-1 overflow-y-auto px-4 pt-4">
+            <div key={status} className="animate-in fade-in duration-500">
+              {status === "processing" ? (
+                <DecisioningProcessingState />
+              ) : status === "ready" ? (
+                <DecisioningReadyState />
+              ) : (
+                <DecisioningEmptyState />
+              )}
             </div>
           </div>
 
-          {/* Co-marketer chat — docked third column (fills column height, never exceeds viewport) */}
+          {/* Co-marketer chat — docked column, identical to Campaigns. */}
           {chatMounted && (
             <div
               className={cn(
-                // justify-end pins the fixed-width panel to the right edge, so
-                // the growing clip box reveals it as a slide-in from the right
-                // rather than a left-to-right wipe.
-                // NOTE: no will-change/transform here — those establish a
-                // stacking context that would trap the chat's fullscreen
-                // `fixed z-50` overlay behind the table's `sticky z-10` column.
                 "flex h-full min-h-0 shrink-0 justify-end overflow-hidden pr-1",
                 "transition-[width,opacity] duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
                 "motion-reduce:transition-none",
                 chatIn ? "w-[474px] opacity-100" : "w-0 opacity-0"
               )}
               onTransitionEnd={(e) => {
-                // Only react to the width transition on this element (not bubbled
-                // child transitions) and only when we've finished closing.
                 if (e.target === e.currentTarget && e.propertyName === "width" && !chatIn) {
                   setChatMounted(false);
                 }
