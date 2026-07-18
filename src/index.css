@@ -445,6 +445,57 @@
   to { --snake-angle: 360deg; }
 }
 
+/* Decisioning empty-state flow diagram ---------------------------------- */
+
+/* A single bright pulse that RELAYS through the decisioning path in order —
+   signal -> engine -> selected action -> learn -> feed back — then repeats.
+   All segments share one master duration and start delay; each segment only
+   travels during its own slice of the cycle and stays fully off-path (hidden)
+   before and after, so exactly one dot is ever moving and it hands off cleanly
+   from one connector to the next.
+
+   Paths set pathLength="1" with stroke-dasharray "0.16 1", so offsets are in
+   normalised 0..1 units. Offset 0.16 parks the dash just before the start
+   (hidden); -1 parks it just past the end (hidden). */
+@keyframes flowSeg1 {
+  0% { stroke-dashoffset: 0.16; }
+  20% { stroke-dashoffset: -1; }
+  100% { stroke-dashoffset: -1; }
+}
+@keyframes flowSeg2 {
+  0%, 20% { stroke-dashoffset: 0.16; }
+  44% { stroke-dashoffset: -1; }
+  100% { stroke-dashoffset: -1; }
+}
+@keyframes flowSeg3 {
+  0%, 44% { stroke-dashoffset: 0.16; }
+  68% { stroke-dashoffset: -1; }
+  100% { stroke-dashoffset: -1; }
+}
+@keyframes flowSeg4 {
+  0%, 68% { stroke-dashoffset: 0.16; }
+  92% { stroke-dashoffset: -1; }
+  100% { stroke-dashoffset: -1; }
+}
+
+/* A left-to-right shine sweep across a card, fired once per relay cycle as the
+   pulse arrives (last ~1s of the shared 5s cycle) — signals "this action was
+   taken". Held off-screen the rest of the cycle. A white streak is invisible
+   on a white card, so the visible tint is applied on the element itself. */
+@keyframes cardShine {
+  0%, 80% { transform: translateX(-160%) skewX(-12deg); }
+  100% { transform: translateX(320%) skewX(-12deg); }
+}
+
+/* Gentle node halo — a soft breathing ring, deliberately small so it never
+   reaches the connectors (unlike Tailwind's animate-ping, which scales to 2x
+   and swallowed the arrows). */
+@keyframes deHalo {
+  0% { transform: scale(0.9); opacity: 0.55; }
+  70% { transform: scale(1.18); opacity: 0; }
+  100% { transform: scale(1.18); opacity: 0; }
+}
+
 /* Amber variant — the decisioning-engine icon on the dark L1 rail. Same
    rotating snake, but in the icon's peach/orange palette over a faint warm
    base ring instead of the light-blue-on-white treatment. */
