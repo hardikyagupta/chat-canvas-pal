@@ -66,14 +66,8 @@ function NavButton({
             </span>
           )}
           {icon === iconDecisioning ? (
-            /* Full-color animated badge — no dimming, slightly larger. The
-               wrapper carries the same rotating snake-border ring as the
-               "Ask co-marketer" button on /campaigns (circular via
-               rounded-full, which .snake-border inherits). */
-            <span className="relative grid h-[30px] w-[30px] place-items-center rounded-full">
-              <span aria-hidden="true" className="snake-border snake-border--amber" />
-              <img src={icon} alt="" className="relative z-[1] h-[26px] w-[26px]" />
-            </span>
+            /* Full-color animated badge — no dimming, slightly larger. */
+            <img src={icon} alt="" className="h-[26px] w-[26px]" />
           ) : (
             <img
               src={icon}

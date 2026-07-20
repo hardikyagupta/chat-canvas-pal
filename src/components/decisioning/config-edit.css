@@ -1,0 +1,61 @@
+/* Cloned from objective-flow.css's creation-flow navbar — used for the
+   dedicated "Edit configuration" page so it matches the campaign/objective
+   creation header (sticky white bar, title lockup, primary Save + close X). */
+
+.decfg-flow {
+  --dc-brand: #2F68E5;
+  --dc-brand-hover: #4F7EF0;
+  --dc-brand-active: #1F51BE;
+  --dc-brand-subtle: #EDF1FF;
+  --dc-ink: #17173A;
+  --dc-muted: #6F6F8D;
+  --dc-line: #DDE2EE;
+  --dc-canvas: #F4F8FF;
+  min-height: 100vh;
+  background: var(--dc-canvas);
+  color: var(--dc-ink);
+  font-family: 'Manrope', sans-serif;
+}
+
+.decfg-navbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  height: 60px;
+  padding: 0 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--dc-line);
+  background: #fff;
+}
+
+.decfg-title-lockup { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.decfg-thumbnail {
+  width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto;
+  border-radius: 5px; background: var(--dc-brand-subtle); color: var(--dc-brand);
+}
+.decfg-thumbnail svg { width: 22px; height: 22px; }
+.decfg-title-lockup strong {
+  max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px;
+}
+
+.decfg-actions { display: flex; align-items: center; gap: 8px; }
+.decfg-actions button {
+  height: 36px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .035em;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.decfg-save {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0 16px;
+  border: 1.5px solid var(--dc-brand); background: var(--dc-brand); color: #fff;
+}
+.decfg-save:hover { background: var(--dc-brand-hover); }
+.decfg-save:active { background: var(--dc-brand-active); }
+.decfg-save svg { width: 16px; height: 16px; }
+.decfg-close {
+  width: 36px; min-width: 36px; padding: 0; display: grid; place-items: center;
+  border: 1.5px solid var(--dc-line); background: #fff; color: var(--dc-muted);
+}
+.decfg-close:hover { border-color: #9898B0; background: #F6F8FF; color: var(--dc-ink); }
+.decfg-close svg { width: 16px; height: 16px; }

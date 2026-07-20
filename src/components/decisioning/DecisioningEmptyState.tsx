@@ -142,7 +142,7 @@ function FlowCard({
   );
 }
 
-function DecisioningIllustration() {
+export function DecisioningIllustration() {
   return (
     <div className="relative h-[560px] w-[540px] shrink-0 overflow-visible">
       {/* Connectors — each segment fades in with the node it feeds into */}
@@ -343,30 +343,20 @@ export default function DecisioningEmptyState() {
 
           {/* Steps */}
           <ol className="mt-7 flex flex-col gap-3">
-            {STEPS.map((step, i) => (
-              <li key={step.title} className="relative flex items-center gap-4">
-                {/* connector rail — a continuous line running behind the numbers */}
-                {i < STEPS.length - 1 && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute left-3 top-1/2 h-[calc(100%+12px)] w-px -translate-x-1/2 bg-[#E6EAF4]"
-                  />
-                )}
-                <span className="relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-[#C9D4EE] bg-white font-manrope text-[12px] font-bold text-[#2F68E5]">
-                  {i + 1}
+            {STEPS.map((step) => (
+              <li
+                key={step.title}
+                className="flex items-center gap-3.5 rounded-xl border border-[#E6EAF4] p-3.5"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#EEF3FF]">
+                  <step.icon className="h-5 w-5 text-[#2F68E5]" strokeWidth={1.8} />
                 </span>
-
-                <div className="flex flex-1 items-center gap-3.5 rounded-xl border border-[#E6EAF4] p-3.5">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#EEF3FF]">
-                    <step.icon className="h-5 w-5 text-[#2F68E5]" strokeWidth={1.8} />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="font-manrope text-[14px] font-bold text-[#17173A]">
-                      {step.title}
-                    </div>
-                    <div className="mt-0.5 font-manrope text-[13px] leading-[18px] text-[#6F6F8D]">
-                      {step.desc}
-                    </div>
+                <div className="min-w-0">
+                  <div className="font-manrope text-[14px] font-bold text-[#17173A]">
+                    {step.title}
+                  </div>
+                  <div className="mt-0.5 font-manrope text-[13px] leading-[18px] text-[#6F6F8D]">
+                    {step.desc}
                   </div>
                 </div>
               </li>
@@ -380,12 +370,12 @@ export default function DecisioningEmptyState() {
           )}
 
           <button
-            onClick={() => navigate("/decisioning-engine/setup")}
+            onClick={() => navigate("/decisioning-engine/preview")}
             className={`${
               resuming ? "mt-2" : "mt-8"
             } flex w-fit items-center gap-2 rounded-lg bg-[#2F68E5] px-5 py-3 font-manrope text-[14px] font-semibold tracking-[0.3px] text-white transition-colors hover:bg-[#255ad2]`}
           >
-            {resuming ? "Resume setup" : "Set up decisioning engine"}
+            {resuming ? "Resume setup" : "GET STARTED"}
           </button>
 
           <p className="mt-4 font-manrope text-[12px] text-[#9A9AB0]">

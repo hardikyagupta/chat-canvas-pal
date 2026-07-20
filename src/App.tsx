@@ -9,6 +9,9 @@ import Index from "./pages/Index";
 import Settings from "./pages/Settings";
 import Campaigns from "./pages/Campaigns";
 import DecisioningEngine from "./pages/DecisioningEngine";
+import DecisioningEnginePreview from "./pages/DecisioningEnginePreview";
+import DecisioningConfiguration from "./pages/DecisioningConfiguration";
+import DecisioningPerformance from "./pages/DecisioningPerformance";
 import DecisioningSetup from "./pages/DecisioningSetup";
 import ObjectiveCreationFlow from "./components/decisioning/ObjectiveCreationFlow";
 import NotFound from "./pages/NotFound";
@@ -28,6 +31,9 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/decisioning-engine" element={<DecisioningEngine />} />
+              <Route path="/decisioning-engine/preview" element={<DecisioningEnginePreview />} />
+              <Route path="/decisioning-engine/configuration" element={<DecisioningConfiguration />} />
+              <Route path="/decisioning-engine/objective/performance" element={<DecisioningPerformance />} />
               <Route path="/decisioning-engine/setup" element={<DecisioningSetup />} />
               <Route path="/decisioning-engine/objective/new" element={<ObjectiveCreationFlow />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

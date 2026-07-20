@@ -1,0 +1,117 @@
+/* ------------------------------------------------------------------ */
+/* Journey Preview — the final step of the objective flow. A scrollable */
+/* node graph (Goal → Audience → Content → channels → templates). Each  */
+/* node's pencil/arrow jumps back to the relevant step. Scoped under     */
+/* .journey-preview.                                                     */
+/* ------------------------------------------------------------------ */
+
+.journey-preview {
+  --jl-ink: #17173A;
+  --jl-muted: #6F6F8D;
+  --jl-line: #C8D2E6;
+  --jl-border: #E6EAF4;
+  width: 100%;
+  color: var(--jl-ink);
+  font-family: 'Manrope', sans-serif;
+  background: #fff;
+  border: 1px solid #EBEBF5;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(23, 23, 58, 0.10);
+  padding: 28px 32px 32px;
+}
+.journey-preview * { box-sizing: border-box; }
+
+/* ---- Header ---- */
+.jp-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.jp-header h1 { margin: 0 0 4px; font-size: 15px; }
+.jp-header p { margin: 0; color: var(--jl-muted); font-size: 11px; }
+
+.jp-simulate {
+  display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+  border: 1px solid #2F68E5; border-radius: 8px; background: #2F68E5;
+  color: #fff; font-family: inherit; font-size: 13px; font-weight: 700;
+  padding: 10px 16px; cursor: pointer; transition: background-color 150ms ease;
+}
+.jp-simulate:hover { background: #2557C7; }
+.jp-simulate svg { width: 16px; height: 16px; }
+
+/* ---- Scroll canvas ---- */
+.jp-scroll {
+  margin-top: 22px; max-height: 620px; overflow: auto;
+  border: 1px solid #EEF1F8; border-radius: 12px;
+  background-color: #fff;
+  background-image: radial-gradient(#DEE4F0 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+  padding: 44px 40px 56px;
+}
+.jp-canvas {
+  width: max-content; min-width: 100%; margin: 0 auto;
+  display: flex; flex-direction: column; align-items: center;
+  transform-origin: top center; transform: scale(var(--jp-zoom, 1));
+  transition: transform 160ms ease;
+}
+
+/* ---- Connectors ---- */
+.jp-line { width: 2px; height: 26px; background: var(--jl-line); }
+
+.jp-linear { display: flex; flex-direction: column; align-items: center; }
+
+.jp-tree { display: flex; justify-content: center; }
+.jp-tree ul { position: relative; display: flex; justify-content: center; margin: 0; padding: 0; }
+.jp-tree li { position: relative; list-style: none; padding: 26px 16px 0; display: flex; flex-direction: column; align-items: center; }
+.jp-tree li::before, .jp-tree li::after {
+  content: ''; position: absolute; top: 0; right: 50%; width: 50%; height: 26px;
+  border-top: 2px solid var(--jl-line);
+}
+.jp-tree li::after { right: auto; left: 50%; border-left: 2px solid var(--jl-line); }
+.jp-tree li:first-child::before, .jp-tree li:last-child::after { border: 0 none; }
+.jp-tree li:last-child::before { border-right: 2px solid var(--jl-line); border-top-right-radius: 8px; }
+.jp-tree li:first-child::after { border-top-left-radius: 8px; }
+
+/* ---- Cards ---- */
+.jp-card {
+  position: relative; display: flex; align-items: center; gap: 14px;
+  background: #fff; border: 1px solid var(--jl-border); border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(23, 23, 58, 0.05); padding: 15px 16px;
+}
+.jp-node { width: 440px; }
+.jp-icon { width: 44px; height: 44px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 10px; }
+.jp-icon svg { width: 22px; height: 22px; }
+.jp-card-text { flex: 1; min-width: 0; }
+.jp-card-text strong { display: block; font-size: 16px; font-weight: 800; color: var(--jl-ink); }
+.jp-card-text span { display: block; margin-top: 2px; font-size: 13px; color: #4A4A63; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jp-card-text small { display: block; margin-top: 2px; font-size: 12px; color: var(--jl-muted); }
+
+.jp-edit, .jp-arrow {
+  width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center;
+  border: 1px solid #E1E7F5; border-radius: 8px; background: #fff; color: #2F68E5; cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.jp-edit:hover, .jp-arrow:hover { background: #EEF3FF; border-color: #C9D4EE; }
+.jp-edit svg, .jp-arrow svg { width: 16px; height: 16px; }
+
+/* ---- Channel + template nodes ---- */
+.jp-branch-inner { display: flex; flex-direction: column; align-items: center; }
+.jp-chan { width: 264px; }
+.jp-tpl {
+  width: 264px; display: flex; align-items: center; gap: 10px;
+  background: #FAFBFF; border: 1px solid var(--jl-border); border-radius: 12px; padding: 11px 13px;
+}
+.jp-tpl-icon { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 8px; background: #EEF3FF; color: #2F68E5; }
+.jp-tpl-icon svg { width: 17px; height: 17px; }
+.jp-tpl-text { min-width: 0; }
+.jp-tpl-text small { display: block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--jl-muted); }
+.jp-tpl-text strong { display: block; margin-top: 1px; font-size: 13px; font-weight: 700; color: var(--jl-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- Icon tones ---- */
+.tone-blue .jp-icon { background: #EAF1FF; color: #2F68E5; }
+.tone-purple .jp-icon { background: #F1EBFF; color: #7C3AED; }
+.tone-green .jp-icon { background: #E4F5EC; color: #16A34A; }
+.tone-pink .jp-icon { background: #FCE7F1; color: #DB2777; }
+.tone-orange .jp-icon { background: #FFEFE0; color: #E8823B; }
+
+@media (max-width: 760px) {
+  .journey-preview { padding: 20px 16px; }
+  .jp-node { width: 300px; }
+  .jp-scroll { padding: 32px 20px; }
+}

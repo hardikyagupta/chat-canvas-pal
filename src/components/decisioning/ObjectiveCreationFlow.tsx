@@ -1,38 +1,49 @@
 import {
-  BadgeCheck,
   Check,
   ChevronDown,
   ChevronUp,
+  Eye,
+  Info,
   Library,
-  LoaderCircle,
+  Lightbulb,
   Mail,
   MessageCircle,
-  MoreHorizontal,
-  ShieldCheck,
   Sparkles,
   Target,
+  Users,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import ContentPool from "@/components/decisioning/ContentPool";
+import JourneyPreview, { type EditableStep } from "@/components/decisioning/JourneyPreview";
+import { useDecisioningSetup } from "@/contexts/DecisioningSetupContext";
 import "./objective-flow.css";
 
 /**
- * Four-step objective creation flow (Goal → Guardrails → Content pool →
- * Validation), ported from the netcore-decisioning prototype. Styling lives in
+ * Four-step objective creation flow (Goal → Audience → Content → Preview),
+ * ported from the netcore-decisioning prototype. Styling lives in
  * objective-flow.css (objective-* classes); state is local to the component.
  */
 
-type StepId = "goal" | "guardrails" | "content" | "validation";
+type StepId = "goal" | "audience" | "content" | "preview";
 
 const steps: { id: StepId; label: string; icon: typeof Target }[] = [
   { id: "goal", label: "Goal", icon: Target },
-  { id: "guardrails", label: "Guardrails", icon: ShieldCheck },
-  { id: "content", label: "Content pool", icon: Library },
-  { id: "validation", label: "Validation", icon: BadgeCheck },
+  { id: "audience", label: "Audience", icon: Users },
+  { id: "content", label: "Content", icon: Library },
+  { id: "preview", label: "Preview", icon: Eye },
+];
+
+const audienceType = "All contacts";
+
+const audiencePersonas = [
+  { id: "high-intent", name: "High-intent buyers", tag: "Primary", tone: "primary", reachable: 260889 },
+  { id: "occasional", name: "Occasional buyers", tag: "Secondary", tone: "secondary", reachable: 9503 },
+  { id: "price-sensitive", name: "Price Sensitive", tag: "Tertiary", tone: "tertiary", reachable: 260889 },
 ];
 
 const contentAssets = [
@@ -41,26 +52,34 @@ const contentAssets = [
   { id: "free-express", title: "Free-express unlock", channel: "WhatsApp", icon: MessageCircle },
 ];
 
-const validationCohorts = [
-  { name: "Recent one-time buyers", size: "182K", lift: "3.4×", driver: "recency + category affinity", when: "within 14 days" },
-  { name: "Considered browsers", size: "121K", lift: "2.1×", driver: "high email engagement", when: "next known occasion" },
-  { name: "Lapsing repeaters", size: "94K", lift: "1.6×", driver: "declining order frequency", when: "before day 30" },
-  { name: "Cold / no purchase history", size: "143K", lift: "1.2×", driver: "grounded occasion prior", when: "on next occasion" },
-];
-
 export default function ObjectiveCreationFlow() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { launchObjective, saveDraftObjective } = useDecisioningSetup();
   const [step, setStep] = useState<StepId>("goal");
-  const [name, setName] = useState("Win the second purchase");
+  // Arriving from an opportunity's "Create objective" CTA seeds the name with
+  // that opportunity's title (see OpportunityCard).
+  const [name] = useState(
+    (location.state as { objectiveName?: string } | null)?.objectiveName ??
+      "Win the second purchase"
+  );
   const [intent, setIntent] = useState("Repeat purchase");
   const [horizon, setHorizon] = useState("90 days");
   const [value, setValue] = useState("40");
   const [arbitration, setArbitration] = useState(true);
-  const [consent, setConsent] = useState(true);
+  const [personaPct, setPersonaPct] = useState<Record<string, number>>({
+    "high-intent": 30,
+    occasional: 20,
+    "price-sensitive": 8,
+  });
+  const [excludeList, setExcludeList] = useState(false);
   const [selectedAssets, setSelectedAssets] = useState<string[]>(contentAssets.map((asset) => asset.id));
   const [saved, setSaved] = useState("just now");
-  const [validating, setValidating] = useState(false);
-  const [summaryOpen, setSummaryOpen] = useState<Record<string, boolean>>({ goal: true, guardrails: false, content: false, validation: false, engine: false });
+  const [summaryOpen, setSummaryOpen] = useState<Record<string, boolean>>({ goal: true, audience: false, content: false });
+  const [launching, setLaunching] = useState(false);
+
+  const personaCount = (id: string, reachable: number) => Math.round((reachable * (personaPct[id] ?? 0)) / 100);
+  const totalAudience = audiencePersonas.reduce((sum, p) => sum + personaCount(p.id, p.reachable), 0);
 
   const activeIndex = steps.findIndex((item) => item.id === step);
   const isLast = activeIndex === steps.length - 1;
@@ -70,44 +89,56 @@ export default function ObjectiveCreationFlow() {
   );
 
   useEffect(() => {
-    setSummaryOpen({ goal: step === "goal", guardrails: step === "guardrails", content: step === "content", validation: step === "validation", engine: false });
+    setSummaryOpen({ goal: step === "goal", audience: step === "audience", content: step === "content" });
   }, [step]);
 
   const exitFlow = () => navigate("/decisioning-engine");
 
+  const launch = () => {
+    // Show the "engine is creating your objective" loader, then land the user
+    // on the objectives board with the new card.
+    setLaunching(true);
+    window.setTimeout(() => {
+      launchObjective({
+        title: name,
+        description:
+          "Monitoring one-time buyers and triggering re-engagement across selected channels.",
+        goal: intent,
+        channels: selectedAssetNames.length
+          ? "Email, App push, SMS, Web Push"
+          : "Email",
+      });
+      exitFlow();
+    }, 11000);
+  };
+
   const moveNext = () => {
-    if (validating) return;
-    if (step === "content") {
-      setValidating(true);
-      window.setTimeout(() => {
-        setSaved("validated just now");
-        setStep("validation");
-        setValidating(false);
-      }, 1400);
-      return;
-    }
     if (!isLast) setStep(steps[activeIndex + 1].id);
-    else exitFlow();
+    else launch();
   };
 
-  const primaryActionLabel = validating ? "Validating plan" : step === "content" ? "Validate plan" : isLast ? "Finish" : "Next step";
+  const primaryActionLabel = isLast ? "Launch objective" : "Next step";
 
-  const toggleAsset = (id: string) => {
-    setSelectedAssets((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  // "Finish later" saves the current progress as a draft objective and returns
+  // the user to the objectives board, where it shows up as a Draft card.
+  const finishLater = () => {
+    saveDraftObjective({
+      title: name || "Untitled objective",
+      description: `Draft — ${intent} objective, setup in progress.`,
+    });
+    exitFlow();
   };
-
-  const save = () => setSaved("just now");
 
   return (
     <div className="objective-flow">
       <header className="objective-navbar">
         <div className="objective-title-lockup">
           <span className="objective-thumbnail"><Target /></span>
-          <strong>{name || "Untitled objective"}</strong>
+          <strong>Create objective</strong>
         </div>
         <div className="objective-navbar-actions">
-          <Button variant="outline" onClick={save}>Finish later</Button>
-          <Button onClick={moveNext} disabled={validating}>{validating ? <LoaderCircle className="objective-spinner" /> : null}{primaryActionLabel}</Button>
+          <Button variant="outline" onClick={finishLater}>Finish later</Button>
+          <Button onClick={moveNext}>{primaryActionLabel}</Button>
           <Button variant="outline" size="icon" aria-label="Close objective" onClick={exitFlow}><X /></Button>
         </div>
       </header>
@@ -139,24 +170,24 @@ export default function ObjectiveCreationFlow() {
         </div>
       </div>
 
-      <main className="objective-canvas">
+      <main className="objective-canvas" data-step={step}>
         <section className="objective-work-column">
+          {step === "content" ? (
+            <ContentPool />
+          ) : step === "preview" ? (
+            <JourneyPreview onEdit={(s: EditableStep) => setStep(s)} />
+          ) : (
           <div className="objective-form-card">
             {step === "goal" && (
               <div className="objective-form-section">
                 <SectionHeading title="Define the goal" description="The engine turns business value into a calibrated decision." />
-                <Field label="Objective name" required>
-                  <div className="counted-input">
-                    <Input value={name} onChange={(event) => setName(event.target.value.slice(0, 100))} />
-                    <span>{name.length}/100</span>
-                  </div>
-                </Field>
-                <Field label="Intent" required>
-                  <div className="objective-choice-row">
-                    {["Repeat purchase", "Acquisition", "Reactivation", "Premium grow"].map((item) => (
-                      <button key={item} className={intent === item ? "selected" : ""} onClick={() => setIntent(item)}>{item}{intent === item && <Check />}</button>
-                    ))}
-                  </div>
+                <Field label="Goal" required>
+                  <select value={intent} onChange={(event) => setIntent(event.target.value)}>
+                    <option>Repeat purchase</option>
+                    <option>Acquisition</option>
+                    <option>Reactivation</option>
+                    <option>Premium grow</option>
+                  </select>
                 </Field>
                 <div className="objective-two-fields">
                   <Field label="Horizon" required>
@@ -172,77 +203,81 @@ export default function ObjectiveCreationFlow() {
               </div>
             )}
 
-            {step === "guardrails" && (
+            {step === "audience" && (
               <div className="objective-form-section">
-                <SectionHeading title="Guardrails & control" description="These policies are evaluated before every score becomes an action." />
-                <ToggleRow checked={consent} onCheckedChange={setConsent} title="Require marketing consent" description="Exclude customers without active marketing consent before scoring." />
-                <SettingRow title="Frequency cap" description="Maximum communication pressure across routed channels" value="Max 3 / week" />
-                <SettingRow title="Quiet hours" description="Customer-local delivery suppression window" value="9:00pm – 8:00am" />
-                <SettingRow title="Governance hold-out" description="Do-nothing control used to measure true incremental lift" value="10%" />
-                <div className="objective-note"><ShieldCheck /><p><strong>Inherited policy floor.</strong> Objective controls can be stricter than workspace defaults, never looser.</p></div>
-              </div>
-            )}
+                <SectionHeading title="Audience personas" description="Adjust the audience for each persona using the slider." />
 
-            {step === "content" && (
-              <div className="objective-form-section">
-                <SectionHeading title="Approved content pool" description="Make actions available. Assignment happens after cohort discovery." />
-                <div className="objective-assets">
-                  {contentAssets.map((asset) => {
-                    const Icon = asset.icon;
-                    const selected = selectedAssets.includes(asset.id);
+                <div className="objective-personas">
+                  {audiencePersonas.map((persona) => {
+                    const pct = personaPct[persona.id] ?? 0;
+                    const count = personaCount(persona.id, persona.reachable);
                     return (
-                      <button key={asset.id} className={selected ? "selected" : ""} onClick={() => toggleAsset(asset.id)}>
-                        <span><Icon /></span>
-                        <div><strong>{asset.title}</strong><small>{asset.channel} · approved creative</small></div>
-                        <em>{selected ? <Check /> : null}</em>
-                        <MoreHorizontal />
-                      </button>
+                      <div key={persona.id} className="objective-persona-card">
+                        <div className="objective-persona-head">
+                          <div className="objective-persona-title">
+                            <strong>{persona.name}</strong>
+                            <Info className="objective-persona-info" />
+                            <span className={`objective-persona-tag ${persona.tone}`}>{persona.tag}</span>
+                          </div>
+                          <div className="objective-reachable">
+                            <Users />
+                            <span>Reachable contacts</span>
+                            <b>{persona.reachable.toLocaleString()}</b>
+                          </div>
+                        </div>
+                        <div className="objective-persona-body">
+                          <div className="objective-persona-count">
+                            <span className="objective-persona-iconbox"><Users /></span>
+                            <strong>{count.toLocaleString()}</strong>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={pct}
+                            onChange={(event) =>
+                              setPersonaPct((current) => ({ ...current, [persona.id]: Number(event.target.value) }))
+                            }
+                            className="objective-slider"
+                            style={{ ["--val" as string]: pct }}
+                            aria-label={`${persona.name} audience size`}
+                          />
+                          <div className="objective-slider-labels">
+                            <span>Focused audience</span>
+                            <span>Maximum reach</span>
+                          </div>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
-                <Button variant="outline" className="objective-library-button"><Library /> Pull from Content library</Button>
-                <div className="objective-note"><Sparkles /><p><strong>No manual targeting here.</strong> The engine discovers cohorts first, then optimizes offer × channel × timing for each person.</p></div>
-              </div>
-            )}
 
-            {step === "validation" && (
-              <div className="objective-validation-view">
-                <div className="objective-validation-banner">
-                  <span><Check /></span>
-                  <div>
-                    <strong>Validation complete — before you spend</strong>
-                    <p>Trained and leakage-checked on a hold-out. Nothing has been sent yet.</p>
+                <div className="objective-audience-hint">
+                  <Lightbulb />
+                  <p>
+                    You're prioritizing high-intent buyers while keeping lower-intent personas
+                    limited. This can improve conversion chances while controlling campaign cost.
+                  </p>
+                </div>
+
+                <div className="objective-exclude">
+                  <strong>Exclude contacts</strong>
+                  <div className="objective-exclude-row">
+                    <div>
+                      Exclude list/segment
+                      <Info />
+                    </div>
+                    <Switch checked={excludeList} onCheckedChange={setExcludeList} aria-label="Exclude list/segment" />
                   </div>
-                </div>
-                <div className="objective-validation-metrics">
-                  <ValidationMetric label="Predicted lift" value="2.7×" positive />
-                  <ValidationMetric label="Model quality (AUC)" value="0.71" />
-                  <ValidationMetric label="Eligible audience" value="540K" />
-                  <ValidationMetric label="In hold-out (control)" value="54K" />
-                </div>
-                <div className="objective-validation-table-wrap">
-                  <table className="objective-validation-table">
-                    <thead><tr><th>Auto-discovered cohort</th><th>Size</th><th>Lift</th><th>Top "why" driver</th><th>Best "when"</th></tr></thead>
-                    <tbody>{validationCohorts.map((cohort) => <tr key={cohort.name}><td>{cohort.name}</td><td>{cohort.size}</td><td>{cohort.lift}</td><td>{cohort.driver}</td><td>{cohort.when}</td></tr>)}</tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {validating && (
-              <div className="objective-validating-overlay" role="status" aria-live="polite">
-                <div className="objective-validating-card">
-                  <LoaderCircle className="objective-spinner" />
-                  <strong>Validating plan</strong>
-                  <p>Training the model, checking leakage, and evaluating the hold-out.</p>
-                  <div><span /></div>
                 </div>
               </div>
             )}
 
           </div>
+          )}
         </section>
 
+        {step !== "content" && step !== "preview" && (
         <aside className="objective-summary">
           <div className="objective-summary-heading">
             <h2>Summary</h2>
@@ -250,43 +285,47 @@ export default function ObjectiveCreationFlow() {
           </div>
           <SummarySection id="goal" label="Goal" open={summaryOpen.goal} onToggle={() => setSummaryOpen({ ...summaryOpen, goal: !summaryOpen.goal })}>
             <SummaryField label="Objective name" value={name || "Not set"} />
-            <SummaryField label="Intent" value={intent} />
+            <SummaryField label="Goal" value={intent} />
             <SummaryField label="Horizon" value={horizon} />
             <SummaryField label="Conversion value" value={value} />
             <SummaryField label="Arbitration" value={arbitration ? "Across all running objectives" : "Objective only"} />
           </SummarySection>
-          <SummarySection id="guardrails" label="Guardrails" open={summaryOpen.guardrails} onToggle={() => setSummaryOpen({ ...summaryOpen, guardrails: !summaryOpen.guardrails })}>
-            <SummaryField label="Consent" value={consent ? "Required" : "Workspace default"} />
-            <SummaryField label="Frequency cap" value="Max 3 / week" />
-            <SummaryField label="Quiet hours" value="9:00pm – 8:00am" />
-            <SummaryField label="Hold-out" value="10%" />
+          <SummarySection id="audience" label="Audience" open={summaryOpen.audience} onToggle={() => setSummaryOpen({ ...summaryOpen, audience: !summaryOpen.audience })}>
+            <SummaryField label="Source" value={audienceType} />
+            {audiencePersonas.map((persona) => (
+              <SummaryField key={persona.id} label={persona.name} value={personaCount(persona.id, persona.reachable).toLocaleString()} />
+            ))}
+            <SummaryField label="Total selected" value={totalAudience.toLocaleString()} />
+            <SummaryField label="Exclusions" value={excludeList ? "List/segment excluded" : "None"} />
           </SummarySection>
-          <SummarySection id="content" label="Content pool" open={summaryOpen.content} onToggle={() => setSummaryOpen({ ...summaryOpen, content: !summaryOpen.content })}>
+          <SummarySection id="content" label="Content" open={summaryOpen.content} onToggle={() => setSummaryOpen({ ...summaryOpen, content: !summaryOpen.content })}>
             {selectedAssetNames.length ? selectedAssetNames.map((asset) => <SummaryField key={asset} label="Approved action" value={asset} />) : <p className="objective-empty">No approved actions selected.</p>}
           </SummarySection>
-          <SummarySection id="validation" label="Validation" open={summaryOpen.validation} onToggle={() => setSummaryOpen({ ...summaryOpen, validation: !summaryOpen.validation })}>
-            <SummaryField label="Status" value="Complete" />
-            <SummaryField label="Predicted lift" value="2.7×" />
-            <SummaryField label="Model quality" value="0.71 AUC" />
-            <SummaryField label="Eligible audience" value="540K" />
-            <SummaryField label="Hold-out control" value="54K" />
-          </SummarySection>
-          <SummarySection id="engine" label="Automated by the engine" open={summaryOpen.engine} onToggle={() => setSummaryOpen({ ...summaryOpen, engine: !summaryOpen.engine })}>
-            <ul className="objective-engine-list">
-              <li>Derives point-in-time eligible customers</li>
-              <li>Builds cohorts and sub-cohorts</li>
-              <li>Calibrates propensity, why, and when</li>
-              <li>Validates lift on the hold-out</li>
-              <li>Picks one best action per person</li>
-            </ul>
-          </SummarySection>
-          <div className="objective-audience-estimate">
-            <span>ESTIMATED ELIGIBLE AUDIENCE</span>
-            <strong>≈ 540K one-time buyers</strong>
-            <small>Derived from grounded context v3</small>
-          </div>
         </aside>
+        )}
       </main>
+
+      {launching && <LaunchOverlay />}
+    </div>
+  );
+}
+
+/**
+ * Full-screen confirmation shown after "Launch objective": a 50% black overlay
+ * with the engine loader GIF centered at its exact dimensions (1382×720). The
+ * GIF carries its own messaging, so no extra copy is layered on top. Save the
+ * loader to public/objective-loader.gif.
+ */
+function LaunchOverlay() {
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
+      <img
+        src="/objective-loader.gif"
+        alt="Creating your objective"
+        width={691}
+        height={360}
+        className="h-auto max-h-[80vh] w-[691px] max-w-[80vw] object-contain"
+      />
     </div>
   );
 }
@@ -303,18 +342,10 @@ function ToggleRow({ checked, onCheckedChange, title, description }: { checked: 
   return <div className="objective-setting-row"><div><strong>{title}</strong><p>{description}</p></div><Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={title} /></div>;
 }
 
-function SettingRow({ title, description, value }: { title: string; description: string; value: string }) {
-  return <div className="objective-setting-row"><div><strong>{title}</strong><p>{description}</p></div><button>{value}<ChevronDown /></button></div>;
-}
-
 function SummarySection({ label, open, onToggle, children }: { id: string; label: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
   return <section className="objective-summary-section"><button onClick={onToggle}><strong>{label}</strong>{open ? <ChevronUp /> : <ChevronDown />}</button>{open && <div className="objective-summary-body">{children}</div>}</section>;
 }
 
 function SummaryField({ label, value }: { label: string; value: string }) {
   return <div className="objective-summary-field"><span>{label}</span><strong>{value}</strong></div>;
-}
-
-function ValidationMetric({ label, value, positive }: { label: string; value: string; positive?: boolean }) {
-  return <div className="objective-validation-metric"><span>{label}</span><strong className={positive ? "positive" : ""}>{value}</strong></div>;
 }
