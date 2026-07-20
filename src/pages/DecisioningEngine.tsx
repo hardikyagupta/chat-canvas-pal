@@ -70,7 +70,7 @@ export default function DecisioningEngine() {
 
       <div className="flex min-w-0 flex-1 flex-col p-2">
         <TopNav
-          label="Decisioning engine"
+          label="Customer Engagement"
           showCoMarketerNudge={false}
           onOpenChat={() => setChatOpen(true)}
         />

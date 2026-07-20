@@ -14,11 +14,25 @@ export interface BrandWikiData {
   brandName: string;
   brandVoice: string;
   audience: string;
+  /** Website the brand details were imported/fetched from, if any. */
+  website?: string;
+  /** Answers to the detailed brand questionnaire, keyed by question id. */
+  answers: Record<string, string>;
+}
+
+/** A user-defined event row: a name they typed, mapped to a detected brand event. */
+export interface CustomEventMapping {
+  id: string;
+  label: string;
+  /** detected brand event id, or "none" */
+  mappedTo: string;
 }
 
 export interface EventMappingData {
   /** standard event id -> detected brand event id (or "none") */
   mappings: Record<string, string>;
+  /** user-added custom events */
+  customEvents?: CustomEventMapping[];
 }
 
 export interface GuardrailsData {
@@ -29,6 +43,20 @@ export interface GuardrailsData {
   holdoutPercent: number;
 }
 
+export type ObjectiveStatus = "live" | "paused" | "draft";
+
+/** A launched decisioning objective, shown as a card in the ready state. */
+export interface LaunchedObjective {
+  id: string;
+  title: string;
+  description: string;
+  status: ObjectiveStatus;
+  /** Goal / intent the engine is optimising toward. */
+  goal: string;
+  channels: string;
+  revenue: string;
+}
+
 interface DecisioningSetupState {
   version: 1;
   status: SetupStatus;
@@ -36,12 +64,11 @@ interface DecisioningSetupState {
   eventMapping: EventMappingData | null;
   guardrails: GuardrailsData | null;
   processingStartedAt: number | null;
+  objectives: LaunchedObjective[];
 }
 
 /** Real wall-clock length of the simulated processing run (demo-friendly). */
-export const PROCESSING_DURATION_MS = 60 * 1000;
-/** What the countdown *displays* — the product story is "about 4 hours". */
-export const DISPLAY_DURATION_MS = 4 * 60 * 60 * 1000;
+export const PROCESSING_DURATION_MS = 10 * 1000;
 
 export const STANDARD_EVENTS = [
   { id: "page_view", label: "Page view" },
@@ -88,6 +115,15 @@ interface DecisioningSetupContextValue extends DecisioningSetupState {
   /** Dev/demo escape hatch — jump the processing clock to done. */
   simulateCompletion: () => void;
   resetSetup: () => void;
+  /** Launch a new objective; returns the created objective's id. */
+  launchObjective: (data?: Partial<Omit<LaunchedObjective, "id">>) => string;
+  /** Save a work-in-progress objective as a draft; returns its id. */
+  saveDraftObjective: (data?: Partial<Omit<LaunchedObjective, "id" | "status">>) => string;
+  duplicateObjective: (id: string) => void;
+  pauseObjective: (id: string) => void;
+  resumeObjective: (id: string) => void;
+  archiveObjective: (id: string) => void;
+  deleteObjective: (id: string) => void;
   /** All three configs saved — Review & confirm becomes available. */
   allConfigured: boolean;
   configuredCount: number;
@@ -100,7 +136,22 @@ const DEFAULT_STATE: DecisioningSetupState = {
   eventMapping: null,
   guardrails: null,
   processingStartedAt: null,
+  objectives: [],
 };
+
+/** Demo defaults for a freshly launched objective (mirrors the Figma card). */
+const DEFAULT_OBJECTIVE: Omit<LaunchedObjective, "id"> = {
+  title: "Repeat purchase objective is running",
+  description:
+    "Monitoring one-time buyers and triggering re-engagement across selected channels.",
+  status: "live",
+  goal: "Repeat purchase",
+  channels: "Email, App push, SMS, Web Push",
+  revenue: "$3130",
+};
+
+let objectiveSeq = 0;
+const nextObjectiveId = () => `obj-${++objectiveSeq}-${Date.now()}`;
 
 const DecisioningSetupContext = createContext<DecisioningSetupContextValue | null>(null);
 
@@ -142,6 +193,77 @@ export const DecisioningSetupProvider: React.FC<{ children: React.ReactNode }> =
         processingStartedAt: Date.now() - PROCESSING_DURATION_MS,
       })),
     resetSetup: () => setState(DEFAULT_STATE),
+    launchObjective: (data) => {
+      const id = nextObjectiveId();
+      setState((s) => ({
+        ...s,
+        status: "ready",
+        objectives: [{ ...DEFAULT_OBJECTIVE, ...data, id }, ...s.objectives],
+      }));
+      return id;
+    },
+    saveDraftObjective: (data) => {
+      const id = nextObjectiveId();
+      setState((s) => ({
+        ...s,
+        status: "ready",
+        objectives: [
+          {
+            ...DEFAULT_OBJECTIVE,
+            title: "Untitled objective",
+            description: "Draft — finish setup to launch this objective.",
+            // Drafts start with no computed values; the card shows hyphens
+            // for anything the user hasn't filled in yet.
+            goal: "",
+            channels: "",
+            revenue: "",
+            ...data,
+            status: "draft",
+            id,
+          },
+          ...s.objectives,
+        ],
+      }));
+      return id;
+    },
+    duplicateObjective: (id) =>
+      setState((s) => {
+        const source = s.objectives.find((o) => o.id === id);
+        if (!source) return s;
+        const index = s.objectives.findIndex((o) => o.id === id);
+        const copy: LaunchedObjective = {
+          ...source,
+          id: nextObjectiveId(),
+          title: `${source.title} (copy)`,
+        };
+        const objectives = [...s.objectives];
+        objectives.splice(index + 1, 0, copy);
+        return { ...s, objectives };
+      }),
+    pauseObjective: (id) =>
+      setState((s) => ({
+        ...s,
+        objectives: s.objectives.map((o) =>
+          o.id === id ? { ...o, status: "paused" } : o
+        ),
+      })),
+    resumeObjective: (id) =>
+      setState((s) => ({
+        ...s,
+        objectives: s.objectives.map((o) =>
+          o.id === id ? { ...o, status: "live" } : o
+        ),
+      })),
+    archiveObjective: (id) =>
+      setState((s) => ({
+        ...s,
+        objectives: s.objectives.filter((o) => o.id !== id),
+      })),
+    deleteObjective: (id) =>
+      setState((s) => ({
+        ...s,
+        objectives: s.objectives.filter((o) => o.id !== id),
+      })),
     allConfigured: configuredCount === 3,
     configuredCount,
   };

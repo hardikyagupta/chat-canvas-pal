@@ -511,6 +511,25 @@
       rgba(255, 154, 68, 0) 360deg
     ),
     rgba(255, 154, 68, 0.28);
+  animation: none;
+}
+
+/* Green variant — the live decisioning objective card. Same travelling snake
+   as the co-marketer CTA, in the card's success-green palette over a solid
+   green base ring so the border stays continuous with a bright segment
+   sweeping around it. */
+.snake-border--green {
+  background:
+    conic-gradient(
+      from var(--snake-angle),
+      transparent 0deg,
+      transparent 255deg,
+      rgba(0, 196, 140, 0) 280deg,
+      #00c48c 330deg,
+      #5ce0bd 350deg,
+      rgba(0, 196, 140, 0) 360deg
+    ),
+    #00c48c;
 }
 
 .input-border-shimmer {
@@ -761,4 +780,100 @@
   /* Light, subtle hover (previous grey was too dark). */
   border-color: var(--color-line-strong);
   background-color: var(--color-surface-0);
+}
+
+/* ---- Decisioning "ready" isometric illustration ---- */
+@keyframes isoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes isoCoinBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes isoShadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.5; }
+  50% { transform: scaleX(0.85); opacity: 0.32; }
+}
+@keyframes isoRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes objTap {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-3px, -3px); }
+}
+
+/* ===========================================================================
+   Decisioning action-button system — one shared spec for the toolbar-style
+   action buttons across the Decisioning Engine (page header, panel footers,
+   card CTAs), so labels like "Create objective" or "Save" render identically
+   wherever they appear instead of each call site hand-tuning its own height/
+   radius/blue. Uses the --color-royal palette token (the app's single brand
+   blue) rather than a locally hardcoded hex.
+   Not applied to buttons with a different intentional scale/role (hero CTAs,
+   bevelled card CTAs, buttons height-locked to a sibling input).
+   ========================================================================= */
+.dc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.dc-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.dc-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Primary — filled royal blue, white text/icon. The default action. */
+.dc-btn-primary {
+  border: 1.5px solid var(--color-royal);
+  background-color: var(--color-royal);
+  color: var(--color-white);
+}
+.dc-btn-primary:hover:not(:disabled) {
+  background-color: var(--color-royal-strong);
+  border-color: var(--color-royal-strong);
+}
+
+/* Secondary (neutral) — white bg, grey border, dark text. Non-blue actions
+   like "Edit configuration" or "Cancel". */
+.dc-btn-secondary {
+  border: 1px solid var(--color-line);
+  background-color: var(--color-white);
+  color: var(--color-ink);
+}
+.dc-btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-royal-pale-soft);
+}
+.dc-btn-secondary svg {
+  color: var(--color-grey);
+}
+
+/* Secondary (royal blue) — white bg, royal-blue border/text. For blue-emphasis
+   actions that sit next to a neutral secondary and shouldn't read as filled,
+   e.g. "Create objective" next to "Edit configuration". */
+.dc-btn-secondary-blue {
+  border: 1.5px solid var(--color-royal);
+  background-color: var(--color-white);
+  color: var(--color-royal);
+}
+.dc-btn-secondary-blue:hover:not(:disabled) {
+  background-color: var(--color-royal-pale);
 }

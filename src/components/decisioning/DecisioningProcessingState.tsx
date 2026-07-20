@@ -3,24 +3,15 @@ import { Check, Loader2 } from "lucide-react";
 import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
 import { Progress } from "@/components/ui/progress";
 import {
-  DISPLAY_DURATION_MS,
   PROCESSING_DURATION_MS,
   useDecisioningSetup,
 } from "@/contexts/DecisioningSetupContext";
 
 const PHASES = [
-  "Reading brand wiki",
-  "Mapping event streams",
-  "Training decision models",
+  "Understanding your brand",
+  "Connecting customer signals",
+  "Preparing decision intelligence",
 ];
-
-function formatRemaining(displayMs: number) {
-  const totalMinutes = Math.ceil(displayMs / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours > 0) return `About ${hours}h ${minutes}m remaining`;
-  return `About ${minutes}m remaining`;
-}
 
 export default function DecisioningProcessingState() {
   const { processingStartedAt, markReady, simulateCompletion } = useDecisioningSetup();
@@ -43,8 +34,7 @@ export default function DecisioningProcessingState() {
     if (progress >= 1) markReady();
   }, [progress, markReady]);
 
-  const remainingDisplayMs = (1 - progress) * DISPLAY_DURATION_MS;
-  const almostDone = PROCESSING_DURATION_MS - elapsed < 10_000;
+  const almostDone = PROCESSING_DURATION_MS - elapsed < 2_500;
 
   const handleTimerClick = () => {
     const s = skipClicks.current;
@@ -61,8 +51,8 @@ export default function DecisioningProcessingState() {
   };
 
   return (
-    <div className="mx-auto mt-8 w-full max-w-[560px]">
-      <div className="flex flex-col items-center rounded-lg border border-[#DDE2EE] bg-white p-10 text-center">
+    <div className="w-full">
+      <div className="flex flex-col items-center rounded-2xl bg-white px-10 py-16 text-center">
         {/* Pulsing engine mark */}
         <span className="relative grid h-14 w-14 place-items-center">
           <span className="absolute inset-0 animate-pulse rounded-full bg-[#FC5E02]/15" />
@@ -72,11 +62,15 @@ export default function DecisioningProcessingState() {
         </span>
 
         <h2 className="mt-5 font-manrope text-[20px] font-bold leading-tight text-[#17173A]">
-          Building your decisioning engine
+          Preparing your Decisioning Agent for launch
         </h2>
         <p className="mt-1.5 max-w-[400px] font-manrope text-[13px] leading-[19px] text-[#6F6F8D]">
-          We're reading your brand wiki, wiring up your events, and training the first
-          decision models.
+          Your brand context, customer events, and operating rules are being transformed
+          into a decision-ready intelligence layer.
+        </p>
+        <p className="mt-2 max-w-[400px] font-manrope text-[13px] leading-[19px] text-[#6F6F8D]">
+          Once ready, your agent can begin optimising the next best action for every
+          eligible customer.
         </p>
 
         <div className="mt-6 w-full max-w-[400px]">
@@ -88,7 +82,7 @@ export default function DecisioningProcessingState() {
             onClick={handleTimerClick}
             className="mt-2 select-none font-manrope text-[12px] font-medium text-[#6F6F8D]"
           >
-            {almostDone ? "Almost done — finishing touches" : formatRemaining(remainingDisplayMs)}
+            {almostDone ? "Almost done — finishing touches" : "Takes approx. 4 hours"}
           </p>
         </div>
 
@@ -125,7 +119,7 @@ export default function DecisioningProcessingState() {
         </ul>
 
         <p className="mt-7 font-manrope text-[12px] text-[#6F6F8D]">
-          Feel free to close this tab — processing continues either way.
+          Feel free to move from this page — processing continues either way.
         </p>
       </div>
     </div>

@@ -16,7 +16,7 @@ export default function DecisioningNudge({ onClose }: { onClose: () => void }) {
     <div
       className="fixed left-14 top-[96px] z-50 animate-in fade-in slide-in-from-bottom-4 duration-500"
       role="dialog"
-      aria-label="Meet the Decisioning engine"
+      aria-label="Go beyond regular campaigns"
     >
       {/* Pointer arrow — points left at the decisioning icon in the rail.
           Sits above the clipped card so overflow-hidden doesn't cut it. */}
@@ -52,11 +52,10 @@ export default function DecisioningNudge({ onClose }: { onClose: () => void }) {
           {/* Blurb */}
           <div className="flex flex-col gap-1 p-4">
             <span className="font-manrope text-[14px] font-semibold leading-[20px] text-[#17173A]">
-              Meet the Decisioning engine
+            Go beyond regular campaigns
             </span>
             <p className="font-manrope text-[13px] font-medium leading-[20px] text-[#6F6F8D]">
-              Let AI pick the best channel, time, and message for every
-              customer — automatically.
+            Create an objective and let the Decisioning Engine determine the next best action for each customer.
             </p>
           </div>
         </button>
