@@ -64,25 +64,23 @@ function ConfigCard({
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-manrope text-[14px] font-bold text-[#17173A]">
-            {title}
-          </span>
-          {configured ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#E7EFEA] px-2 py-0.5 font-manrope text-[11px] font-semibold text-[#00A576]">
-              Configured
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF4E5] px-2 py-0.5 font-manrope text-[11px] font-semibold text-[#C77700]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#F5A623]" />
-              Not configured
-            </span>
-          )}
-        </div>
+        <span className="font-manrope text-[14px] font-bold text-[#17173A]">
+          {title}
+        </span>
         <div className="mt-0.5 truncate font-manrope text-[13px] leading-[18px] text-[#6F6F8D]">
           {configured && summary ? summary : description}
         </div>
       </div>
+      {configured ? (
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#E7EFEA] px-2 py-0.5 font-manrope text-[11px] font-semibold text-[#00A576]">
+          Configured
+        </span>
+      ) : (
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FFF4E5] px-2 py-0.5 font-manrope text-[11px] font-semibold text-[#C77700]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#F5A623]" />
+          Not configured
+        </span>
+      )}
       <ChevronRight className="h-4 w-4 shrink-0 text-[#B7C4E6] transition-transform group-hover:translate-x-0.5" />
     </button>
   );
@@ -175,7 +173,7 @@ export default function DecisioningBoard() {
           </div>
 
           {/* config cards */}
-          <div className="mt-4 flex flex-col gap-3">
+          <div className="mt-4 flex w-1/2 flex-col gap-3">
             <ConfigCard
               icon={BookOpen}
               title="Brand wiki"
@@ -206,7 +204,7 @@ export default function DecisioningBoard() {
             /* All three done — the gate to kick off the 4-hour preparation */
             <div className="mt-6 rounded-xl border border-[#E6EAF4] bg-[#F8FAFF] p-6 animate-in fade-in slide-in-from-bottom-2 duration-400">
               <h3 className="font-manrope text-[18px] font-bold text-[#17173A]">
-                Your engine is ready for preparation
+                Your Decisioning Engine is ready for a launch
               </h3>
               <p className="mt-1.5 font-manrope text-[13px] leading-[20px] text-[#6F6F8D]">
                 Review your setup and start preparation. This takes about 4 hours
@@ -217,7 +215,7 @@ export default function DecisioningBoard() {
                 className="mt-4 flex w-fit items-center gap-2 rounded-lg bg-[#2F68E5] px-5 py-3 font-manrope text-[14px] font-semibold uppercase tracking-[0.5px] text-white transition-colors hover:bg-[#255ad2]"
               >
                 <Play className="h-4 w-4 fill-current" strokeWidth={0} />
-                Review &amp; start preparation
+                Review &amp; Launch
               </button>
               <div className="mt-4 flex items-start gap-2">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#9AA0C0]" strokeWidth={1.8} />

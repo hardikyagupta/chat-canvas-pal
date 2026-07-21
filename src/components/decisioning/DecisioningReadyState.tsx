@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookOpen,
@@ -6,8 +7,10 @@ import {
   Plus,
   Settings,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import ReadyObjectiveIllustration from "@/components/decisioning/ReadyObjectiveIllustration";
 import ObjectiveCard from "@/components/decisioning/ObjectiveCard";
 import OpportunityCard, { type Opportunity } from "@/components/decisioning/OpportunityCard";
@@ -21,33 +24,25 @@ import {
 const OPPORTUNITIES: Opportunity[] = [
   {
     title: "Recover second purchases from high-value dormant buyers",
-    tags: ["High-AOV Dormant Buyers", "~664K people"],
-    valueTag: "₹400 / conversion",
-    channelTags: ["WhatsApp", "Email"],
+    audience: "High-AOV dormant buyers",
+    reach: "~664K people",
+    value: "₹400 / conversion",
+    channels: "WhatsApp + Email",
     confidence: "high",
-    description:
+    recommendedObjective: "Win the second purchase",
+    detail:
       'These buyers historically spent at a high per-order value (~₹83 AOV vs ~₹12 population) across ~26 orders, then went quiet. The second-purchase objective (1→2) carries your highest value-per-conversion at ₹400. Reachable on WhatsApp + Email; app push converts them at zero.',
-    creativeTags: [
-      'social proof (ratings / "X bought this")',
-      "value framing over loyalty tone",
-      "moderate urgency",
-    ],
-    evidence: "s1, s4",
   },
   {
-    title: "Convert first-time buyers with evergreen creative",
-    tags: ["IP-Agnostic Mainstream (No Fandom Signal)", "~3.3M people"],
-    valueTag: "₹250 / conversion",
-    channelTags: ["Email", "WhatsApp"],
+    title: "Convert first-time buyers with evergreen product messaging",
+    audience: "Mainstream first-time buyers",
+    reach: "~3.3M people",
+    value: "₹250 / conversion",
+    channels: "Email + WhatsApp",
     confidence: "high",
-    description:
+    recommendedObjective: "Drive first-to-second purchase",
+    detail:
       "Non-fandom / evergreen content is significantly over-represented in first-purchase winners. This large mainstream audience shows no single-fandom signal, so lead with product-led, socially-proofed creative rather than IP collabs.",
-    creativeTags: [
-      "non-fandom / evergreen tone",
-      "add social proof",
-      "de-prioritise women-specific targeting",
-    ],
-    evidence: "s2, s5",
   },
 ];
 
@@ -62,6 +57,14 @@ export default function DecisioningReadyState() {
   const navigate = useNavigate();
   const { objectives } = useDecisioningSetup();
   const hasObjectives = objectives.length > 0;
+
+  // Brief skeleton while the engine "surfaces" its opportunities. Held in the
+  // parent so switching tabs and coming back doesn't replay the load.
+  const [insightsReady, setInsightsReady] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setInsightsReady(true), 1500);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return (
     <div className="w-full">
@@ -86,17 +89,24 @@ export default function DecisioningReadyState() {
             <Settings strokeWidth={1.8} />
             Edit configuration
           </button>
-          <button
-            onClick={() => navigate("/decisioning-engine/objective/new")}
-            className="dc-btn dc-btn-secondary-blue"
-          >
-            <Plus strokeWidth={2.5} />
-            Create objective
-          </button>
+          {/* The empty state carries its own "Create objective" CTA inside the
+              card, so the header only shows this action once objectives exist. */}
+          {hasObjectives && (
+            <button
+              onClick={() => navigate("/decisioning-engine/objective/v2")}
+              className="dc-btn dc-btn-primary"
+            >
+              <Plus strokeWidth={2.5} />
+              Create objective
+            </button>
+          )}
         </div>
       </div>
 
-      <Tabs defaultValue="objectives">
+      {/* Landing tab: once an objective is live, drop the user on Objectives so
+          they see their running objective. Only when no objective exists after
+          activation (~4 hrs) do we surface Insights to nudge them to start one. */}
+      <Tabs defaultValue={hasObjectives ? "objectives" : "insights"}>
         <TabsList className="h-auto w-fit gap-1 rounded-lg bg-[#EEF1F7] p-1">
           <TabsTrigger
             value="objectives"
@@ -125,13 +135,72 @@ export default function DecisioningReadyState() {
         </TabsContent>
 
         <TabsContent value="insights" className="mt-6">
-          <div className="flex flex-col gap-5">
-            {OPPORTUNITIES.map((opportunity, i) => (
-              <OpportunityCard key={opportunity.title} opportunity={opportunity} rank={i + 1} />
-            ))}
+          {/* Intro — tells the user these are ready-to-launch starting points. */}
+          <div className="mb-6 max-w-[760px]">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-[18px] w-[18px] text-[#2F68E5]" strokeWidth={1.8} />
+              <h2 className="font-manrope text-[18px] font-bold leading-tight text-[#17173A]">
+                Start with these opportunities
+              </h2>
+            </div>
+            <p className="mt-2 font-manrope text-[14px] leading-[22px] text-[#6F6F8D]">
+              Your engine analysed your customers and surfaced the highest-impact
+              opportunities to act on. Launch an objective from any one below — the
+              recommended setup is pre-filled so you can get going in a click.
+            </p>
           </div>
+
+          {insightsReady ? (
+            <div className="flex flex-col gap-5 animate-in fade-in duration-500">
+              {OPPORTUNITIES.map((opportunity, i) => (
+                <OpportunityCard key={opportunity.title} opportunity={opportunity} rank={i + 1} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-5" aria-hidden>
+              <OpportunitySkeleton />
+              <OpportunitySkeleton />
+            </div>
+          )}
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+/** Loading placeholder mirroring OpportunityCard's layout — shown briefly while
+    the engine surfaces its opportunities. */
+function OpportunitySkeleton() {
+  return (
+    <div className="rounded-2xl border border-[#E6EAF4] bg-white p-6">
+      {/* Header — rank, title, confidence pill */}
+      <div className="flex items-start gap-4">
+        <Skeleton className="h-9 w-10 shrink-0 rounded-lg" />
+        <Skeleton className="mt-1 h-5 w-[52%] max-w-[420px]" />
+        <Skeleton className="ml-auto h-7 w-[130px] shrink-0 rounded-full" />
+      </div>
+
+      {/* Four-up metric summary */}
+      <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-[#EEF1F7] pt-5 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="min-w-0">
+            <Skeleton className="h-3 w-[55%]" />
+            <Skeleton className="mt-2 h-4 w-[80%]" />
+          </div>
+        ))}
+      </div>
+
+      {/* Recommended objective row */}
+      <div className="mt-5 flex items-center gap-2 border-t border-[#EEF1F7] pt-5">
+        <Skeleton className="h-4 w-4 rounded-full" />
+        <Skeleton className="h-4 w-[180px]" />
+      </div>
+
+      {/* Actions */}
+      <div className="mt-5 flex items-center gap-3">
+        <Skeleton className="h-9 w-[150px] rounded-lg" />
+        <Skeleton className="h-9 w-[110px] rounded-lg" />
+      </div>
     </div>
   );
 }
@@ -153,13 +222,13 @@ function EmptyObjectivesBody() {
     <div className="flex w-full items-start gap-10 rounded-2xl border border-[#E6EAF4] bg-white px-10 py-12">
       {/* LHS content */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <h2 className="font-manrope text-[16px] font-bold leading-tight text-[#17173A]">
-          Your decisioning engine is ready
+        <h2 className="font-manrope text-[18px] font-bold leading-tight text-[#17173A]">
+          Create your first objective
         </h2>
         <p className="mt-3 max-w-[460px] font-manrope text-[14px] leading-[22px] text-[#6F6F8D]">
-          Your brand context, event mappings and guardrails are configured.
-          Create your first objective to define the business outcome the engine
-          should optimise.
+          Your brand context, event mappings and guardrails are all set. Tell the
+          engine the business outcome you want — it decides the channel, content,
+          timing and incentive for every customer to get you there.
         </p>
 
         {/* Stat row */}
@@ -180,13 +249,22 @@ function EmptyObjectivesBody() {
           </span>
         </div>
 
-        <button
-          onClick={() => navigate("/decisioning-engine/objective/new")}
-          className="mt-9 flex w-fit items-center gap-2 font-manrope text-[13px] font-medium text-[#6F6F8D] transition-colors hover:text-[#17173A]"
-        >
-          <HelpCircle className="h-4 w-4" strokeWidth={1.8} />
-          Learn how objectives work
-        </button>
+        <div className="mt-9 flex flex-wrap items-center gap-5">
+          <button
+            onClick={() => navigate("/decisioning-engine/objective/v2")}
+            className="dc-btn dc-btn-primary"
+          >
+            <Plus strokeWidth={2.5} />
+            Create objective
+          </button>
+          <button
+            onClick={() => navigate("/decisioning-engine/objective/new")}
+            className="flex w-fit items-center gap-2 font-manrope text-[13px] font-medium text-[#6F6F8D] transition-colors hover:text-[#17173A]"
+          >
+            <HelpCircle className="h-4 w-4" strokeWidth={1.8} />
+            Learn how objectives work
+          </button>
+        </div>
       </div>
 
       {/* RHS — animated "create an objective" illustration */}

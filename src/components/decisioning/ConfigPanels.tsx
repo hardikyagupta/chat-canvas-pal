@@ -91,12 +91,7 @@ function PanelShell({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
         <div className="flex items-center gap-3 border-t border-[#DDE2EE] px-6 py-4">
-          {footerNote && (
-            <p className="min-w-0 flex-1 text-[12px] leading-snug text-[#6F6F8D]">
-              {footerNote}
-            </p>
-          )}
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
           <button
             onClick={() => onOpenChange(false)}
             disabled={saving}
@@ -113,6 +108,11 @@ function PanelShell({
             {saveLabel}
           </button>
           </div>
+          {footerNote && (
+            <p className="min-w-0 flex-1 text-[12px] leading-snug text-[#6F6F8D]">
+              {footerNote}
+            </p>
+          )}
         </div>
       </SheetContent>
     </Sheet>
@@ -566,7 +566,7 @@ export function EventMappingPanel({
         onOpenChange(false);
       }}
     >
-      <div className="flex flex-col divide-y divide-[#EEF1F8]">
+      <div className="flex flex-col">
         {STANDARD_EVENTS.map((ev) => (
           <div key={ev.id} className="flex items-center gap-3 py-3">
             <span className="min-w-0 flex-1 text-[13px] font-semibold text-[#17173A]">

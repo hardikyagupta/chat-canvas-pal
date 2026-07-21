@@ -23,18 +23,18 @@ import { useDecisioningSetup } from "@/contexts/DecisioningSetupContext";
 const STEPS = [
   {
     icon: BookOpen,
-    title: "Teach the engine",
-    desc: "Add brand context, map events and define guardrails",
+    title: "Personalised for every customer",
+    desc: "The engine picks the most relevant next action for each eligible customer.",
   },
   {
     icon: Settings,
-    title: "Prepare the engine",
-    desc: "We validate your setup and prepare decision models",
+    title: "Less manual campaign work",
+    desc: "The engine handles channel, content, timing, and incentive decisions.",
   },
   {
     icon: Target,
-    title: "Create an objective",
-    desc: "Choose the business outcome the engine should optimise for",
+    title: "Always within your rules",
+    desc: "Every decision follows the limits and brand rules you configure.",
   },
 ];
 
@@ -331,9 +331,9 @@ export default function DecisioningEmptyState() {
             Decisioning engine
           </span>
           <h2 className="mt-3 font-manrope text-[34px] font-extrabold leading-[1.15] text-[#17173A]">
-            Turn customer signals into
+          Create objectives. 
             <br />
-            the next best action
+            Let the engine decide who gets what, when, and where.
           </h2>
           <p className="mt-4 font-manrope text-[14px] leading-[22px] text-[#6F6F8D]">
             Set up your brand context, customer events and operating guardrails.
@@ -342,7 +342,7 @@ export default function DecisioningEmptyState() {
           </p>
 
           {/* Steps */}
-          <ol className="mt-7 flex flex-col gap-3">
+          <ol className="mt-7 flex w-full max-w-[520px] flex-col gap-3">
             {STEPS.map((step) => (
               <li
                 key={step.title}

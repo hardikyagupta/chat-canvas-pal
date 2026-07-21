@@ -1,22 +1,6 @@
 import { useMemo, useState } from "react";
-import {
-  Bell,
-  Eye,
-  Globe,
-  Mail,
-  MessageSquare,
-  Monitor,
-  Pencil,
-  Plus,
-  Smartphone,
-  Tablet,
-} from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Bell, Eye, Globe, Mail, MessageSquare } from "lucide-react";
+import TemplatePreviewSheet, { MappedPreview } from "./TemplatePreviewSheet";
 import "./content-pool.css";
 
 /**
@@ -158,49 +142,6 @@ function formatPeople(count: number) {
   return String(count);
 }
 
-/* ---- Netcore logo mark (small "N") ---- */
-function NetcoreMark() {
-  return (
-    <span className="cp-logo-mark">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M4 20V6.5C4 5.7 4.9 5.2 5.6 5.7L18 14.5V4"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
-  );
-}
-
-/* Rendered inside the top card's preview frame and the preview side panel. */
-function MappedPreview() {
-  return (
-    <>
-      <div className="cp-preview-topbar">
-        <NetcoreMark />
-        <b>Netcore</b>
-      </div>
-      <div className="cp-preview-hero">
-        <p className="cp-hero-kicker">Upgrade your WATCH, Upgrade your WORLD.</p>
-        <p className="cp-hero-title">
-          INTRODUCING <em>VOLT 3.0</em>
-        </p>
-        <p className="cp-hero-sub">
-          A whole new series of smartwatches with a blend of innovation, style and functionality.
-        </p>
-        <div className="cp-hero-watches">
-          <span className="cp-hero-watch" />
-          <span className="cp-hero-watch" />
-          <span className="cp-hero-watch" />
-        </div>
-      </div>
-    </>
-  );
-}
-
 export default function ContentPool() {
   const [activeChannel, setActiveChannel] = useState<string>("email");
   const [values, setValues] = useState<Record<string, string>>(() => {
@@ -209,9 +150,6 @@ export default function ContentPool() {
     return init;
   });
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
-  const [browserView, setBrowserView] = useState(true);
-  const [mobileView, setMobileView] = useState(false);
 
   const channel = useMemo(
     () => CHANNELS.find((c) => c.id === activeChannel) ?? CHANNELS[0],
@@ -258,6 +196,19 @@ export default function ContentPool() {
             </button>
           );
         })}
+      </div>
+
+      {/* Mapped audience for the active channel — surfaced right under the tabs. */}
+      <div className="cp-audience-card">
+        <span className="cp-audience-eyebrow">Mapped audience</span>
+        <div className="cp-audience-row">
+          <span className="cp-audience-name">{channel.audience.name}</span>
+          <span className="cp-audience-lift">{channel.audience.lift}</span>
+          <span className="cp-audience-chip">sends</span>
+        </div>
+        <p className="cp-audience-stat">
+          {channel.audience.stat} · {formatPeople(channel.audience.people)} people
+        </p>
       </div>
 
       {/* Body: content form (left) + mapped template (right) */}
@@ -309,18 +260,6 @@ export default function ContentPool() {
           <p className="cp-template-name">{mappedName}</p>
           <p className="cp-template-id">Template ID: {mappedId}</p>
 
-          <div className="cp-audience-card">
-            <span className="cp-audience-eyebrow">Mapped audience</span>
-            <div className="cp-audience-row">
-              <span className="cp-audience-name">{channel.audience.name}</span>
-              <span className="cp-audience-lift">{channel.audience.lift}</span>
-              <span className="cp-audience-chip">sends</span>
-            </div>
-            <p className="cp-audience-stat">
-              {channel.audience.stat} · {formatPeople(channel.audience.people)} people
-            </p>
-          </div>
-
           <div className="cp-template-actions">
             <button
               className="cp-btn"
@@ -334,99 +273,14 @@ export default function ContentPool() {
         </div>
       </div>
 
-      {/* Email preview side panel — widened to fit a 640px email body. */}
-      <Sheet open={previewOpen} onOpenChange={setPreviewOpen}>
-        <SheetContent
-          side="right"
-          className="w-full gap-0 p-0 sm:max-w-[760px]"
-        >
-          <SheetTitle className="sr-only">Email preview</SheetTitle>
-          <SheetDescription className="sr-only">
-            Preview of the mapped template for the {channel.name} channel.
-          </SheetDescription>
-
-          <div className="cp-preview-panel">
-            <div className="cp-pp-toolbar">
-              <div className="cp-pp-left">
-                <button className="cp-pp-btn" type="button">
-                  <Pencil strokeWidth={2} />
-                  Edit template
-                </button>
-              </div>
-
-              <div className="cp-pp-devices" role="group" aria-label="Preview device">
-                <button
-                  className={`cp-pp-device${device === "desktop" ? " active" : ""}`}
-                  type="button"
-                  aria-label="Desktop"
-                  aria-pressed={device === "desktop"}
-                  onClick={() => setDevice("desktop")}
-                >
-                  <Monitor strokeWidth={1.8} />
-                </button>
-                <button
-                  className={`cp-pp-device${device === "tablet" ? " active" : ""}`}
-                  type="button"
-                  aria-label="Tablet"
-                  aria-pressed={device === "tablet"}
-                  onClick={() => setDevice("tablet")}
-                >
-                  <Tablet strokeWidth={1.8} />
-                </button>
-                <button
-                  className={`cp-pp-device${device === "mobile" ? " active" : ""}`}
-                  type="button"
-                  aria-label="Mobile"
-                  aria-pressed={device === "mobile"}
-                  onClick={() => setDevice("mobile")}
-                >
-                  <Smartphone strokeWidth={1.8} />
-                </button>
-              </div>
-
-              <div className="cp-pp-right">
-                <label className="cp-pp-check">
-                  <input
-                    type="checkbox"
-                    checked={browserView}
-                    onChange={(e) => setBrowserView(e.target.checked)}
-                  />
-                  Browser view
-                </label>
-                <label className="cp-pp-check">
-                  <input
-                    type="checkbox"
-                    checked={mobileView}
-                    onChange={(e) => setMobileView(e.target.checked)}
-                  />
-                  Mobile view
-                </label>
-              </div>
-            </div>
-
-            <div className="cp-pp-scroll">
-              <div className="cp-pp-heading">
-                <strong>{mappedName}</strong>
-                <span>Template ID: {mappedId}</span>
-              </div>
-
-              <div className={`cp-pp-canvas ${device}`}>
-                <button className="cp-pp-dropzone" type="button">
-                  <Plus strokeWidth={2} />
-                  Add Header
-                </button>
-                <div className="cp-pp-body">
-                  <MappedPreview />
-                </div>
-                <button className="cp-pp-dropzone" type="button">
-                  <Plus strokeWidth={2} />
-                  Add Footer
-                </button>
-              </div>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Template preview side panel — widened to fit a 640px email body. */}
+      <TemplatePreviewSheet
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        mappedName={mappedName}
+        mappedId={mappedId}
+        channelName={channel.name}
+      />
     </div>
   );
 }

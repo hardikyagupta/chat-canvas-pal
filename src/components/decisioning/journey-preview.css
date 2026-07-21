@@ -26,14 +26,23 @@
 .jp-header h1 { margin: 0 0 4px; font-size: 15px; }
 .jp-header p { margin: 0; color: var(--jl-muted); font-size: 11px; }
 
-.jp-simulate {
-  display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
-  border: 1px solid #2F68E5; border-radius: 8px; background: #2F68E5;
-  color: #fff; font-family: inherit; font-size: 13px; font-weight: 700;
-  padding: 10px 16px; cursor: pointer; transition: background-color 150ms ease;
+/* ---- Zoom controls (right of the header text block) ---- */
+.jp-zoom {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 4px;
+  padding: 3px; border: 1px solid var(--jl-border); border-radius: 10px; background: #fff;
 }
-.jp-simulate:hover { background: #2557C7; }
-.jp-simulate svg { width: 16px; height: 16px; }
+.jp-zoom-btn {
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border: 0; border-radius: 7px; background: transparent; color: #2F68E5; cursor: pointer;
+  transition: background-color 150ms ease;
+}
+.jp-zoom-btn:hover { background: #EEF3FF; }
+.jp-zoom-btn:disabled { color: #B7C0D6; cursor: default; background: transparent; }
+.jp-zoom-btn svg { width: 16px; height: 16px; }
+.jp-zoom-value {
+  min-width: 38px; text-align: center; font-size: 12px; font-weight: 700;
+  color: var(--jl-ink); font-variant-numeric: tabular-nums;
+}
 
 /* ---- Scroll canvas ---- */
 .jp-scroll {
@@ -47,8 +56,10 @@
 .jp-canvas {
   width: max-content; min-width: 100%; margin: 0 auto;
   display: flex; flex-direction: column; align-items: center;
-  transform-origin: top center; transform: scale(var(--jp-zoom, 1));
-  transition: transform 160ms ease;
+  /* `zoom` (not transform: scale) so the graph's layout box actually shrinks —
+     margin auto then keeps it centered and it fits without being pushed off to
+     one side the way a scale() transform would. */
+  zoom: var(--jp-zoom, 1);
 }
 
 /* ---- Connectors ---- */
@@ -96,10 +107,16 @@
 .jp-tpl {
   width: 264px; display: flex; align-items: center; gap: 10px;
   background: #FAFBFF; border: 1px solid var(--jl-border); border-radius: 12px; padding: 11px 13px;
+  cursor: pointer; text-align: left; font: inherit; transition: border-color .15s, box-shadow .15s, background .15s;
 }
+.jp-tpl:hover { background: #F4F7FF; border-color: #C9D4EE; box-shadow: 0 2px 8px rgba(47, 104, 229, .1); }
+.jp-tpl:focus-visible { outline: 2px solid #2F68E5; outline-offset: 2px; }
 .jp-tpl-icon { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 8px; background: #EEF3FF; color: #2F68E5; }
 .jp-tpl-icon svg { width: 17px; height: 17px; }
-.jp-tpl-text { min-width: 0; }
+.jp-tpl-text { min-width: 0; flex: 1 1 auto; }
+.jp-tpl-eye { flex: 0 0 auto; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; color: var(--jl-muted); }
+.jp-tpl:hover .jp-tpl-eye { color: #2F68E5; background: #EEF3FF; }
+.jp-tpl-eye svg { width: 16px; height: 16px; }
 .jp-tpl-text small { display: block; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--jl-muted); }
 .jp-tpl-text strong { display: block; margin-top: 1px; font-size: 13px; font-weight: 700; color: var(--jl-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

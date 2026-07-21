@@ -62,7 +62,7 @@ export default function DecisioningProcessingState() {
         </span>
 
         <h2 className="mt-5 font-manrope text-[20px] font-bold leading-tight text-[#17173A]">
-          Preparing your Decisioning Agent for launch
+          Preparing your Decisioning Engine for launch
         </h2>
         <p className="mt-1.5 max-w-[400px] font-manrope text-[13px] leading-[19px] text-[#6F6F8D]">
           Your brand context, customer events, and operating rules are being transformed
