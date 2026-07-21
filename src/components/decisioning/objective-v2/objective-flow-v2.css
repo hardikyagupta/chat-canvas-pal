@@ -1,0 +1,309 @@
+.objective-flow-v2 {
+  --of-brand: #2F68E5;
+  --of-brand-hover: #4F7EF0;
+  --of-brand-active: #1F51BE;
+  --of-brand-subtle: #EDF1FF;
+  --of-ink: #17173A;
+  --of-text: #17173A;
+  --of-muted: #6F6F8D;
+  --of-faint: #9494AE;
+  --of-line: #DDE2EE;
+  --of-soft: #FAFBFF;
+  --of-canvas: #F4F8FF;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--of-canvas);
+  color: var(--of-ink);
+  font-family: 'Manrope', sans-serif;
+}
+
+.objective-flow-v2 button { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+.objective-flow-v2 svg { width: 16px; height: 16px; }
+
+/* ---- Navbar (mirrors the original flow) ---- */
+.ov2-navbar {
+  flex: 0 0 auto;
+  z-index: 20;
+  height: 60px;
+  padding: 0 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--of-line);
+  background: #fff;
+}
+.ov2-title-lockup { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.ov2-thumbnail { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 5px; background: var(--of-brand-subtle); color: var(--of-brand); }
+.ov2-thumbnail svg { width: 22px; height: 22px; }
+.ov2-title-lockup strong { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.ov2-navbar-actions { display: flex; align-items: center; gap: 8px; }
+.ov2-navbar-actions button { height: 36px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .035em; }
+.ov2-navbar-actions button:first-child { border: 1.5px solid var(--of-brand); background: #fff; color: var(--of-brand); }
+.ov2-navbar-actions button:first-child:hover { background: var(--of-brand-subtle); }
+.ov2-navbar-actions button:nth-child(2) { border-color: var(--of-brand); background: var(--of-brand); color: #fff; }
+.ov2-navbar-actions button:nth-child(2):hover { background: var(--of-brand-hover); }
+.ov2-navbar-actions button:nth-child(2):active { background: var(--of-brand-active); }
+.ov2-navbar-actions button:last-child { width: 36px; min-width: 36px; padding: 0; border: 1.5px solid var(--of-line); background: #fff; color: var(--of-muted); }
+.ov2-navbar-actions button:last-child:hover { border-color: #9898B0; background: #F6F8FF; color: var(--of-ink); }
+.ov2-navbar-actions button:disabled { opacity: .7; cursor: default; }
+.ov2-spinner { animation: ov2-spin .7s linear infinite; }
+@keyframes ov2-spin { to { transform: rotate(360deg); } }
+
+/* ---- Sticky footer (navigation CTAs) ---- */
+.ov2-footer {
+  flex: 0 0 auto;
+  z-index: 20;
+  min-height: 64px;
+  margin: 0 120px 20px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #EBEBF5;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(23,23,58,.14);
+}
+.ov2-footer-progress { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ov2-progress-track { width: 280px; max-width: 100%; height: 6px; border-radius: 999px; background: #E7EBF3; overflow: hidden; }
+.ov2-progress-fill { display: block; height: 100%; min-width: 10%; border-radius: 999px; background: var(--of-brand); transition: width 300ms ease; }
+.ov2-progress-title { font-size: 13px; font-weight: 600; color: var(--of-ink); }
+.ov2-progress-dot { color: var(--of-brand); margin: 0 3px; }
+.ov2-footer-hint { color: var(--of-muted); font-size: 11px; font-weight: 600; }
+.ov2-footer-actions { display: flex; align-items: center; gap: 8px; }
+.ov2-footer-actions button { height: 40px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .035em; }
+.ov2-footer-actions .ov2-btn-secondary { border: 1.5px solid var(--of-brand); background: #fff; color: var(--of-brand); }
+.ov2-footer-actions .ov2-btn-secondary:hover { background: var(--of-brand-subtle); color: var(--of-brand); }
+.ov2-footer-actions .ov2-btn-primary { border-color: var(--of-brand); background: var(--of-brand); color: #fff; }
+.ov2-footer-actions .ov2-btn-primary:hover { background: var(--of-brand-hover); }
+.ov2-footer-actions .ov2-btn-primary:active { background: var(--of-brand-active); }
+.ov2-footer-actions button:disabled { opacity: .7; cursor: default; }
+
+/* ---- Canvas ---- */
+.ov2-canvas { flex: 1 1 auto; width: 100%; overflow-y: auto; padding: 40px 120px 72px; }
+.ov2-heading { margin-bottom: 24px; }
+.ov2-heading h1 { margin: 0 0 6px; font-size: 22px; font-weight: 800; }
+.ov2-heading p { margin: 0; color: var(--of-muted); font-size: 13px; }
+
+/* ---- Accordion ---- */
+.ov2-accordion { display: flex; flex-direction: column; gap: 14px; }
+
+.ov2-card {
+  border: 1px solid #EBEBF5;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(23,23,58,.08);
+  overflow: hidden;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.ov2-card.active { border-color: #C7D4FF; box-shadow: 0 6px 20px rgba(47,104,229,.12); }
+.ov2-card.locked { background: #FBFCFF; box-shadow: none; }
+
+.ov2-card-header {
+  width: 100%;
+  min-height: 68px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.ov2-card-header:disabled { cursor: default; }
+.ov2-card.complete .ov2-card-header:hover { background: #F6F8FF; }
+
+.ov2-badge {
+  width: 32px; height: 32px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  border: 1px solid var(--of-line); border-radius: 50%;
+  background: #fff; color: var(--of-faint);
+}
+.ov2-badge svg { width: 16px; height: 16px; }
+.ov2-card.active .ov2-badge { border-color: var(--of-brand); background: var(--of-brand); color: #fff; }
+.ov2-card.complete .ov2-badge { border-color: #16A34A; background: #E4F5EC; color: #16A34A; }
+
+.ov2-card-label { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.ov2-card-label strong { font-size: 15px; font-weight: 700; }
+.ov2-card.locked .ov2-card-label strong { color: var(--of-faint); }
+.ov2-card-desc { color: var(--of-muted); font-size: 12px; }
+.ov2-card-summary { color: var(--of-ink); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ov2-chevron { flex: 0 0 auto; color: var(--of-faint); transition: transform 200ms ease; }
+.ov2-card.active .ov2-chevron { transform: rotate(180deg); color: var(--of-brand); }
+
+/* Expand/collapse animator. The wrapper transitions grid-template-rows from
+   0fr (collapsed) to 1fr (open); the inner element clips the body with
+   overflow:hidden so the height eases open and shut instead of snapping. */
+.ov2-card-bodywrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 340ms cubic-bezier(.4, 0, .2, 1);
+}
+.ov2-card-bodywrap.open { grid-template-rows: 1fr; }
+.ov2-card-bodywrap-inner { overflow: hidden; min-height: 0; }
+
+.ov2-card-body {
+  padding: 4px 20px 24px;
+  border-top: 1px solid #F0F1F7;
+  /* Fade the contents in/out in step with the height ease. */
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.ov2-card-bodywrap.open .ov2-card-body { opacity: 1; transition-delay: 60ms; }
+.ov2-form-section { padding-top: 22px; }
+
+/* Left-aligned "Done" action that advances to the next step, sitting at the
+   bottom of each (non-preview) step card. Carries its own padding so it works
+   whether the body is padded (form steps) or full-bleed (content step). */
+.ov2-card-actions { display: flex; justify-content: flex-start; padding: 20px 0 4px; }
+.ov2-card-actions button {
+  height: 40px; border-radius: 4px; font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .035em;
+  display: inline-flex; align-items: center; gap: 8px;
+  border-color: var(--of-brand); background: var(--of-brand); color: #fff;
+}
+.ov2-card-actions button:hover { background: var(--of-brand-hover); }
+.ov2-card-actions button:active { background: var(--of-brand-active); }
+.ov2-card-actions button:disabled { opacity: .7; cursor: default; }
+/* Full-bleed bodies (content/preview) zero their padding; restore a left inset
+   so the action lines up with the content above it. */
+.ov2-card-body:has(.content-pool) .ov2-card-actions { padding: 0 44px 40px; }
+
+/* ---- Loading skeleton (shown briefly when advancing to a step) ---- */
+.ov2-skeleton { display: flex; flex-direction: column; gap: 14px; padding-top: 20px; }
+.ov2-skeleton.panel { padding-top: 8px; padding-bottom: 8px; }
+.ov2-skeleton .ov2-sk-line,
+.ov2-skeleton .ov2-sk-block {
+  border-radius: 8px;
+  background: linear-gradient(100deg, #EEF1F7 30%, #F7F9FD 50%, #EEF1F7 70%);
+  background-size: 220% 100%;
+  animation: ov2-shimmer 1.3s ease-in-out infinite;
+}
+.ov2-sk-line { height: 12px; }
+.ov2-sk-line-sm { width: 96px; }
+.ov2-sk-line-md { width: 150px; }
+.ov2-sk-line-lg { width: 220px; height: 16px; }
+.ov2-sk-input { height: 40px; max-width: 480px; }
+.ov2-sk-row { height: 64px; max-width: 480px; }
+.ov2-sk-panel { height: 320px; }
+@keyframes ov2-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ov2-card-bodywrap { transition: none; }
+  .ov2-card-body { transition: none; }
+  .ov2-skeleton .ov2-sk-line,
+  .ov2-skeleton .ov2-sk-block { animation: none; }
+}
+
+/* Content and Preview bring their own layout/padding — trim the card padding. */
+.ov2-card-body:has(.content-pool),
+.ov2-card-body:has(.journey-preview) { padding: 0; }
+
+/* These panels ship their own border/radius/shadow, but nested inside the
+   accordion card that already has one, that reads as a double border. Strip
+   the inner container so only the card's border (and its border-top under the
+   header) remains. */
+.ov2-card-body .content-pool,
+.ov2-card-body .journey-preview {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ---- Form fields (reused from the original Goal/Audience bodies) ---- */
+/* Keep inputs to a comfortable reading width, left-aligned, rather than
+   stretching across the now full-width card. */
+.objective-flow-v2 .objective-field,
+.objective-flow-v2 .objective-two-fields,
+.objective-flow-v2 .objective-setting-row { max-width: 480px; }
+.objective-flow-v2 .objective-field { display: block; margin-bottom: 22px; }
+.objective-flow-v2 .objective-field > span { display: block; margin-bottom: 7px; color: var(--of-text); font-size: 11px; font-weight: 650; }
+.objective-flow-v2 .objective-field > span b { color: var(--of-ink); }
+.objective-flow-v2 .objective-field input,
+.objective-flow-v2 .objective-field select { width: 100%; height: 40px; border: 1px solid var(--of-line); border-radius: 8px; background: #fff; box-shadow: none; color: var(--of-ink); font-size: 13px; font-weight: 500; }
+.objective-flow-v2 .objective-field input:hover,
+.objective-flow-v2 .objective-field select:hover { border-color: #9898B0; background: #F6F8FF; }
+.objective-flow-v2 .objective-field input:focus,
+.objective-flow-v2 .objective-field select:focus { border: 1.5px solid var(--of-brand); outline: none; box-shadow: 0 0 0 4px rgba(47,104,229,.15); background: #fff; }
+.objective-flow-v2 .objective-field select {
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  padding: 0 38px 0 11px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236F6F8D' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.objective-flow-v2 .objective-two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.objective-flow-v2 .objective-setting-row { min-height: 72px; padding: 13px 0; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 1px solid var(--of-line); }
+.objective-flow-v2 .objective-setting-row > div { min-width: 0; }
+.objective-flow-v2 .objective-setting-row strong { font-size: 12px; }
+.objective-flow-v2 .objective-setting-row p { margin: 4px 0 0; color: var(--of-muted); font-size: 10.5px; line-height: 1.45; }
+.objective-flow-v2 .objective-setting-row [role="switch"][data-state="checked"] { background: var(--of-brand); }
+
+/* ---- Audience step (reused) ---- */
+.objective-flow-v2 .objective-personas { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+.objective-flow-v2 .objective-persona-card { border: 1px solid var(--of-line); border-radius: 8px; }
+.objective-flow-v2 .objective-persona-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--of-line); }
+.objective-flow-v2 .objective-persona-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.objective-flow-v2 .objective-persona-title strong { font-size: 16px; font-weight: 700; color: #17173A; }
+.objective-flow-v2 .objective-persona-info { width: 16px; height: 16px; color: #9494AE; }
+.objective-flow-v2 .objective-persona-tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.objective-flow-v2 .objective-persona-tag.primary { color: #0A8FFD; background: #F4F8FF; }
+.objective-flow-v2 .objective-persona-tag.secondary { color: #BE52F2; background: #FAE7FF; }
+.objective-flow-v2 .objective-persona-tag.tertiary { color: #FFA26B; background: #FFF8E7; }
+.objective-flow-v2 .objective-reachable { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; border: 1px solid var(--of-line); border-radius: 64px; padding: 5px 12px; opacity: 0.75; }
+.objective-flow-v2 .objective-reachable svg { width: 16px; height: 16px; color: var(--of-muted); }
+.objective-flow-v2 .objective-reachable span { font-size: 12px; font-weight: 700; color: #17173A; }
+.objective-flow-v2 .objective-reachable b { font-size: 14px; font-weight: 700; color: #17173A; }
+.objective-flow-v2 .objective-persona-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.objective-flow-v2 .objective-persona-count { display: flex; align-items: center; gap: 10px; }
+.objective-flow-v2 .objective-persona-iconbox { width: 36px; height: 36px; border-radius: 6px; background: #F4F8FF; display: grid; place-items: center; }
+.objective-flow-v2 .objective-persona-iconbox svg { width: 20px; height: 20px; color: var(--of-brand); }
+.objective-flow-v2 .objective-persona-count strong { font-size: 24px; font-weight: 800; color: #143F93; }
+
+.objective-flow-v2 .objective-slider {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(to right, #143F93 0 calc(var(--val, 0) * 1%), #E7EBF3 calc(var(--val, 0) * 1%) 100%);
+}
+.objective-flow-v2 .objective-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; border: 2px solid #143F93; box-shadow: 0 1px 3px rgba(23, 23, 58, 0.2);
+}
+.objective-flow-v2 .objective-slider::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid #143F93;
+  box-shadow: 0 1px 3px rgba(23, 23, 58, 0.2);
+}
+.objective-flow-v2 .objective-slider-labels { display: flex; justify-content: space-between; font-size: 14px; color: var(--of-muted); }
+
+.objective-flow-v2 .objective-audience-hint {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: #F4F8FF; border: 1px solid var(--of-line); border-radius: 8px; padding: 12px 16px;
+  margin-bottom: 24px;
+}
+.objective-flow-v2 .objective-audience-hint svg { width: 18px; height: 18px; color: var(--of-brand); flex: 0 0 auto; margin-top: 1px; }
+.objective-flow-v2 .objective-audience-hint p { font-size: 14px; line-height: 20px; color: #17173A; }
+
+.objective-flow-v2 .objective-exclude { display: flex; flex-direction: column; gap: 8px; }
+.objective-flow-v2 .objective-exclude > strong { font-size: 14px; font-weight: 700; color: #17173A; }
+.objective-flow-v2 .objective-exclude-row {
+  display: flex; align-items: center; justify-content: space-between;
+  border: 1px solid var(--of-line); border-radius: 8px; padding: 16px;
+}
+.objective-flow-v2 .objective-exclude-row > div { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #17173A; }
+.objective-flow-v2 .objective-exclude-row > div svg { width: 16px; height: 16px; color: #9494AE; }
+
+@media (max-width: 760px) {
+  .ov2-navbar { height: 58px; padding: 0 16px; }
+  .ov2-title-lockup strong { max-width: 38vw; }
+  .ov2-canvas { padding: 24px 14px 56px; }
+  .ov2-footer { margin: 0 14px 14px; padding: 12px 14px; }
+  .ov2-footer-hint { display: none; }
+  .ov2-footer-actions { flex: 1; justify-content: flex-end; }
+  .objective-flow-v2 .objective-two-fields { grid-template-columns: 1fr; gap: 0; }
+}

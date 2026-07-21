@@ -1,15 +1,19 @@
+import { useState } from "react";
 import {
   ArrowRight,
   Bell,
+  Eye,
   FileText,
-  FlaskConical,
   Globe,
   Mail,
   MessageSquare,
   Pencil,
   Target,
   Users,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
+import TemplatePreviewSheet from "./TemplatePreviewSheet";
 import "./journey-preview.css";
 
 /**
@@ -25,13 +29,14 @@ const CHANNELS: {
   name: string;
   offer: string;
   template: string;
+  templateId: string;
   icon: typeof Mail;
   tone: string;
 }[] = [
-  { id: "email", name: "Email", offer: "Second-purchase offer", template: "New launch (1)", icon: Mail, tone: "purple" },
-  { id: "sms", name: "SMS", offer: "Free-shipping nudge", template: "Free shipping SMS", icon: MessageSquare, tone: "pink" },
-  { id: "push", name: "Push notification", offer: "Complete-the-set reminder", template: "Complete set push", icon: Bell, tone: "blue" },
-  { id: "webpush", name: "Web push", offer: "Limited-time comeback offer", template: "Comeback offer", icon: Globe, tone: "orange" },
+  { id: "email", name: "Email", offer: "Second-purchase offer", template: "New launch (1)", templateId: "868", icon: Mail, tone: "purple" },
+  { id: "sms", name: "SMS", offer: "Free-shipping nudge", template: "Free shipping SMS", templateId: "742", icon: MessageSquare, tone: "pink" },
+  { id: "push", name: "Push notification", offer: "Complete-the-set reminder", template: "Complete set push", templateId: "915", icon: Bell, tone: "blue" },
+  { id: "webpush", name: "Web push", offer: "Limited-time comeback offer", template: "Comeback offer", templateId: "603", icon: Globe, tone: "orange" },
 ];
 
 function StepNode({
@@ -78,6 +83,18 @@ export default function JourneyPreview({
   /** When false (e.g. the performance page), all edit affordances are hidden. */
   editable?: boolean;
 }) {
+  const [previewChannel, setPreviewChannel] = useState<
+    (typeof CHANNELS)[number] | null
+  >(null);
+  // Start zoomed out so the whole graph (all channels + templates) is visible
+  // in the first view; the user can zoom in for detail.
+  const ZOOM_MIN = 0.4;
+  const ZOOM_MAX = 1.2;
+  const ZOOM_STEP = 0.15;
+  const [zoom, setZoom] = useState(0.55);
+  const clampZoom = (z: number) =>
+    Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 100) / 100));
+
   return (
     <div className="journey-preview">
       <div className="jp-header">
@@ -89,14 +106,34 @@ export default function JourneyPreview({
               : "A quick view of your configuration."}
           </p>
         </div>
-        <button className="jp-simulate">
-          <FlaskConical strokeWidth={1.9} />
-          Test &amp; Simulate
-        </button>
+        <div className="jp-zoom" role="group" aria-label="Zoom controls">
+          <button
+            type="button"
+            className="jp-zoom-btn"
+            onClick={() => setZoom((z) => clampZoom(z - ZOOM_STEP))}
+            disabled={zoom <= ZOOM_MIN}
+            aria-label="Zoom out"
+          >
+            <ZoomOut strokeWidth={1.9} />
+          </button>
+          <span className="jp-zoom-value">{Math.round(zoom * 100)}%</span>
+          <button
+            type="button"
+            className="jp-zoom-btn"
+            onClick={() => setZoom((z) => clampZoom(z + ZOOM_STEP))}
+            disabled={zoom >= ZOOM_MAX}
+            aria-label="Zoom in"
+          >
+            <ZoomIn strokeWidth={1.9} />
+          </button>
+        </div>
       </div>
 
       <div className="jp-scroll">
-        <div className="jp-canvas">
+        <div
+          className="jp-canvas"
+          style={{ ["--jp-zoom" as string]: zoom }}
+        >
           {/* Linear chain */}
           <div className="jp-linear">
             <StepNode
@@ -158,7 +195,12 @@ export default function JourneyPreview({
                         )}
                       </div>
                       <span className="jp-line" />
-                      <div className="jp-tpl">
+                      <button
+                        type="button"
+                        className="jp-tpl"
+                        onClick={() => setPreviewChannel(c)}
+                        aria-label={`Preview ${c.template} template`}
+                      >
                         <span className="jp-tpl-icon">
                           <FileText strokeWidth={1.8} />
                         </span>
@@ -166,7 +208,10 @@ export default function JourneyPreview({
                           <small>Template</small>
                           <strong>{c.template}</strong>
                         </div>
-                      </div>
+                        <span className="jp-tpl-eye" aria-hidden>
+                          <Eye strokeWidth={1.9} />
+                        </span>
+                      </button>
                     </div>
                   </li>
                 );
@@ -175,6 +220,16 @@ export default function JourneyPreview({
           </div>
         </div>
       </div>
+
+      <TemplatePreviewSheet
+        open={previewChannel !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewChannel(null);
+        }}
+        mappedName={previewChannel?.template ?? ""}
+        mappedId={previewChannel?.templateId ?? ""}
+        channelName={previewChannel?.name ?? ""}
+      />
     </div>
   );
 }

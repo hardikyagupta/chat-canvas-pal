@@ -14,6 +14,7 @@ import DecisioningConfiguration from "./pages/DecisioningConfiguration";
 import DecisioningPerformance from "./pages/DecisioningPerformance";
 import DecisioningSetup from "./pages/DecisioningSetup";
 import ObjectiveCreationFlow from "./components/decisioning/ObjectiveCreationFlow";
+import ObjectiveCreationFlowV2 from "./components/decisioning/objective-v2/ObjectiveCreationFlowV2";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/decisioning-engine/objective/performance" element={<DecisioningPerformance />} />
               <Route path="/decisioning-engine/setup" element={<DecisioningSetup />} />
               <Route path="/decisioning-engine/objective/new" element={<ObjectiveCreationFlow />} />
+              <Route path="/decisioning-engine/objective/v2" element={<ObjectiveCreationFlowV2 />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
