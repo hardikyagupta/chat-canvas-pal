@@ -18,8 +18,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import ContentPool from "@/components/decisioning/ContentPool";
-import JourneyPreview, { type EditableStep } from "@/components/decisioning/JourneyPreview";
+import ContentMapping from "@/components/decisioning/ContentMapping";
+import ObjectiveJourneyPreview, { type EditableStep } from "@/components/decisioning/ObjectiveJourneyPreview";
 import { useDecisioningSetup } from "@/contexts/DecisioningSetupContext";
 import "./objective-flow.css";
 
@@ -173,9 +173,9 @@ export default function ObjectiveCreationFlow() {
       <main className="objective-canvas" data-step={step}>
         <section className="objective-work-column">
           {step === "content" ? (
-            <ContentPool />
+            <ContentMapping />
           ) : step === "preview" ? (
-            <JourneyPreview onEdit={(s: EditableStep) => setStep(s)} />
+            <ObjectiveJourneyPreview onEdit={(s: EditableStep) => setStep(s)} />
           ) : (
           <div className="objective-form-card">
             {step === "goal" && (
