@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Monitor, Pencil, Plus, Smartphone, Tablet } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Monitor, Pencil, Smartphone, Tablet } from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
+import TemplateFrame from "./TemplateFrame";
 import "./content-pool.css";
 
 /**
@@ -57,22 +58,31 @@ export function MappedPreview() {
   );
 }
 
+/* The template editor opens in a new tab (stand-in for the real builder). */
+const TEMPLATE_EDITOR_URL = "https://uce-email.lovable.app/";
+const openTemplateEditor = () =>
+  window.open(TEMPLATE_EDITOR_URL, "_blank", "noopener,noreferrer");
+
 export default function TemplatePreviewSheet({
   open,
   onOpenChange,
   mappedName,
   mappedId,
   channelName,
+  templateSrc,
+  preview,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mappedName: string;
   mappedId: string;
   channelName: string;
+  /* Public URL of the real template HTML; rendered in an iframe when present. */
+  templateSrc?: string;
+  /* Optional custom preview body; falls back to the default mapped preview. */
+  preview?: ReactNode;
 }) {
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
-  const [browserView, setBrowserView] = useState(true);
-  const [mobileView, setMobileView] = useState(false);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -85,7 +95,7 @@ export default function TemplatePreviewSheet({
         <div className="cp-preview-panel">
           <div className="cp-pp-toolbar">
             <div className="cp-pp-left">
-              <button className="cp-pp-btn" type="button">
+              <button className="cp-pp-btn" type="button" onClick={openTemplateEditor}>
                 <Pencil strokeWidth={2} />
                 Edit template
               </button>
@@ -120,25 +130,6 @@ export default function TemplatePreviewSheet({
                 <Smartphone strokeWidth={1.8} />
               </button>
             </div>
-
-            <div className="cp-pp-right">
-              <label className="cp-pp-check">
-                <input
-                  type="checkbox"
-                  checked={browserView}
-                  onChange={(e) => setBrowserView(e.target.checked)}
-                />
-                Browser view
-              </label>
-              <label className="cp-pp-check">
-                <input
-                  type="checkbox"
-                  checked={mobileView}
-                  onChange={(e) => setMobileView(e.target.checked)}
-                />
-                Mobile view
-              </label>
-            </div>
           </div>
 
           <div className="cp-pp-scroll">
@@ -148,17 +139,18 @@ export default function TemplatePreviewSheet({
             </div>
 
             <div className={`cp-pp-canvas ${device}`}>
-              <button className="cp-pp-dropzone" type="button">
-                <Plus strokeWidth={2} />
-                Add Header
-              </button>
               <div className="cp-pp-body">
-                <MappedPreview />
+                {templateSrc ? (
+                  <TemplateFrame
+                    mode="preview"
+                    device={device}
+                    src={templateSrc}
+                    title={mappedName}
+                  />
+                ) : (
+                  preview ?? <MappedPreview />
+                )}
               </div>
-              <button className="cp-pp-dropzone" type="button">
-                <Plus strokeWidth={2} />
-                Add Footer
-              </button>
             </div>
           </div>
         </div>

@@ -14,6 +14,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import TemplatePreviewSheet from "./TemplatePreviewSheet";
+import { templateSrc } from "./emailTemplates";
 import "./journey-preview.css";
 
 /**
@@ -229,6 +230,7 @@ export default function JourneyPreview({
         mappedName={previewChannel?.template ?? ""}
         mappedId={previewChannel?.templateId ?? ""}
         channelName={previewChannel?.name ?? ""}
+        templateSrc={templateSrc(previewChannel?.templateId)}
       />
     </div>
   );
