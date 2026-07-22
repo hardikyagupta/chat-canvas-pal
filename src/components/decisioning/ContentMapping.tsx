@@ -19,7 +19,15 @@ const openTemplateEditor = () =>
   window.open(TEMPLATE_EDITOR_URL, "_blank", "noopener,noreferrer");
 import TemplatePreviewSheet from "./TemplatePreviewSheet";
 import TemplateFrame from "./TemplateFrame";
-import { EMAIL_TEMPLATES, templateSrc } from "./emailTemplates";
+import { templateSrc } from "./emailTemplates";
+import {
+  TEMPLATES,
+  poolFor as sharedPoolFor,
+  resolveAssignedOrRecommended,
+  slotKey,
+  type Audience,
+  type Template,
+} from "./contentMappingRules";
 import "./content-mapping.css";
 
 /**
@@ -39,15 +47,6 @@ import "./content-mapping.css";
  *
  * Self-contained demo data; the card spans the full canvas (no RHS summary).
  */
-
-type SubCohort = { id: string; label: string; count: number };
-type Audience = { id: string; name: string; count: number; subCohorts: SubCohort[] };
-
-type Template = {
-  id: string;
-  name: string;
-  type: string;
-};
 
 const CHANNELS: { id: string; name: string; icon: typeof Mail }[] = [
   { id: "email", name: "Email", icon: Mail },
@@ -71,39 +70,9 @@ const AUDIENCES: Audience[] = [
   { id: "price-sensitive", name: "Price sensitive buyers", count: 63921, subCohorts: [] },
 ];
 
-// Template metadata is sourced from the shared registry (the same 8 real
-// HTML templates rendered in the gallery and preview), so names/IDs stay in
-// one place. See ./emailTemplates.
-const TEMPLATES: Record<string, Template> = Object.fromEntries(
-  Object.values(EMAIL_TEMPLATES).map((t) => [t.id, { id: t.id, name: t.name, type: t.type }]),
-);
-
-// The engine's default main-audience template per channel.
-const CHANNEL_DEFAULT: Record<string, string> = {
-  email: "912",
-  sms: "742",
-  push: "915",
-  webpush: "603",
-};
-
-// Template suggestions offered in the gallery for each channel. Email rotates
-// across all 8 templates by audience position (see EMAIL_ROTATION), so every
-// template surfaces somewhere; the other channels keep a fixed pool.
-const CHANNEL_POOL: Record<string, string[]> = {
-  sms: ["742", "915", "603", "868"],
-  push: ["915", "603", "912", "774"],
-  webpush: ["603", "912", "337", "664"],
-};
-
-// Email galleries show exactly 4 templates per audience/cohort, but the set of
-// 4 rotates by the audience's position so all 8 real templates get used across
-// the flow (keyed by index, not id, since audiences are supplied dynamically).
-const EMAIL_ROTATION: string[][] = [
-  ["912", "868", "664", "337"],
-  ["774", "742", "915", "603"],
-  ["912", "664", "774", "915"],
-  ["868", "337", "742", "603"],
-];
+// Template metadata, defaults, and pools are sourced from ./contentMappingRules
+// (the shared registry also consumed by ObjectiveJourneyPreview), so the
+// editor and the read-only recap never drift apart.
 
 // On entering the Content step the engine "generates" the template mapping:
 // the RHS plays a Lottie loader for this long, then reveals the templates.
@@ -119,19 +88,19 @@ function formatCount(n: number) {
   return n.toLocaleString();
 }
 
-/** Full key for a mapping slot: audience + channel + scope ("parent" | cohortId). */
-function slotKey(audienceId: string, channelId: string, scope: string) {
-  return `${audienceId}::${channelId}::${scope}`;
-}
-
 export default function ContentMapping({
   active,
   audiences,
+  onAssignmentsChange,
 }: {
   active?: boolean;
   /** Audience groups to map, sourced from the Audience step. Falls back to the
       built-in demo data when the component is rendered standalone. */
   audiences?: Audience[];
+  /** Fired whenever the assignments map changes, with the full current map
+      (keyed by slotKey(audienceId, channelId, scope) -> templateId), so a
+      parent flow can recap the real mapping in a Preview step. */
+  onAssignmentsChange?: (assignments: Record<string, string>) => void;
 } = {}) {
   const groups = audiences && audiences.length > 0 ? audiences : AUDIENCES;
   const [activeAudienceId, setActiveAudienceId] = useState(groups[0].id);
@@ -182,10 +151,13 @@ export default function ContentMapping({
 
   // Scroll the generating animation into view when it starts, so arriving from
   // the Audience step lands the user right on the loader (no manual scroll).
+  // Aligned to the top ("start"), not centered — centering could scroll the
+  // card's own header (and the left audience column) above the viewport,
+  // cropping the step instead of landing cleanly at its top.
   useEffect(() => {
     if (!generating) return;
     const t = window.setTimeout(
-      () => genRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      () => genRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
       100,
     );
     return () => window.clearTimeout(t);
@@ -208,44 +180,26 @@ export default function ContentMapping({
     }
   }, [groups, activeAudienceId]);
 
-  const audience = useMemo(
-    () => groups.find((a) => a.id === activeAudienceId) ?? groups[0],
-    [groups, activeAudienceId],
-  );
+  // Notify the parent flow of the live mapping so a Preview step can recap it.
+  // Depends only on `assignments` — a parent re-render that hands down a new
+  // `onAssignmentsChange` identity must not re-arm this effect.
+  useEffect(() => {
+    onAssignmentsChange?.(assignments);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignments]);
+
   const channel = useMemo(
     () => CHANNELS.find((c) => c.id === activeChannelId) ?? CHANNELS[0],
     [activeChannelId],
   );
 
-  // Position of a scope within its audience: parent = 0, sub-cohorts follow. Used
-  // to pick a distinct default template per scope so switching scopes visibly
-  // changes the RHS even before the user makes an explicit choice.
-  const scopeIndex = (scope: string): number => {
-    if (scope === "parent") return 0;
-    const i = audience.subCohorts.findIndex((c) => c.id === scope);
-    return i < 0 ? 0 : i + 1;
-  };
-
   // The pool of template IDs offered for the active channel. Email rotates its
   // 4 suggestions by the active audience's position so all 8 templates surface;
   // other channels use their fixed pool.
-  const poolFor = (channelId: string): string[] => {
-    if (channelId === "email") {
-      const audIndex = Math.max(0, groups.findIndex((a) => a.id === activeAudienceId));
-      return EMAIL_ROTATION[audIndex % EMAIL_ROTATION.length];
-    }
-    return CHANNEL_POOL[channelId] ?? [];
-  };
+  const poolFor = (channelId: string): string[] => sharedPoolFor(channelId, groups, activeAudienceId);
 
-  const resolveTemplate = (scope: string): Template => {
-    const direct = assignments[slotKey(activeAudienceId, activeChannelId, scope)];
-    if (direct) return TEMPLATES[direct];
-    // No explicit pick yet: recommend a distinct template per scope from the
-    // channel pool, so each audience/sub-cohort starts on its own suggestion.
-    const pool = poolFor(activeChannelId);
-    const recommended = pool[scopeIndex(scope) % pool.length];
-    return TEMPLATES[recommended ?? CHANNEL_DEFAULT[activeChannelId]];
-  };
+  const resolveTemplate = (scope: string): Template =>
+    resolveAssignedOrRecommended(groups, assignments, activeAudienceId, activeChannelId, scope).template;
 
   const galleryTemplates = poolFor(activeChannelId).map((id) => TEMPLATES[id]);
 
