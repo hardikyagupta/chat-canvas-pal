@@ -10,6 +10,7 @@
   --of-line: #DDE2EE;
   --of-soft: #FAFBFF;
   --of-canvas: #F4F8FF;
+  --of-figure: #143F93;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -247,39 +248,36 @@
 .objective-flow-v2 .objective-setting-row [role="switch"][data-state="checked"] { background: var(--of-brand); }
 
 /* ---- Audience step (reused) ---- */
-.objective-flow-v2 .objective-personas { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
-.objective-flow-v2 .objective-persona-card { border: 1px solid var(--of-line); border-radius: 8px; }
-.objective-flow-v2 .objective-persona-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--of-line); }
+.objective-flow-v2 .objective-personas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; margin-bottom: 24px; }
+.objective-flow-v2 .objective-persona-card { min-width: 0; border: 1px solid var(--of-line); border-radius: 6px; }
+.objective-flow-v2 .objective-persona-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--of-line); }
 .objective-flow-v2 .objective-persona-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.objective-flow-v2 .objective-persona-title strong { font-size: 16px; font-weight: 700; color: #17173A; }
-.objective-flow-v2 .objective-persona-info { width: 16px; height: 16px; color: #9494AE; }
-.objective-flow-v2 .objective-persona-tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
-.objective-flow-v2 .objective-persona-tag.primary { color: #0A8FFD; background: #F4F8FF; }
-.objective-flow-v2 .objective-persona-tag.secondary { color: #BE52F2; background: #FAE7FF; }
-.objective-flow-v2 .objective-persona-tag.tertiary { color: #FFA26B; background: #FFF8E7; }
-.objective-flow-v2 .objective-reachable { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; border: 1px solid var(--of-line); border-radius: 64px; padding: 5px 12px; opacity: 0.75; }
+.objective-flow-v2 .objective-persona-title strong { font-size: 15px; font-weight: 600; color: var(--of-ink); letter-spacing: -0.01em; }
+.objective-flow-v2 .objective-persona-info { width: 20px; height: 20px; color: #9494AE; flex: 0 0 auto; }
+.objective-flow-v2 .objective-reachable { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; border: 1px solid var(--of-line); border-radius: 64px; padding: 5px 12px; opacity: 0.6; }
 .objective-flow-v2 .objective-reachable svg { width: 16px; height: 16px; color: var(--of-muted); }
-.objective-flow-v2 .objective-reachable span { font-size: 12px; font-weight: 700; color: #17173A; }
-.objective-flow-v2 .objective-reachable b { font-size: 14px; font-weight: 700; color: #17173A; }
-.objective-flow-v2 .objective-persona-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-.objective-flow-v2 .objective-persona-count { display: flex; align-items: center; gap: 10px; }
-.objective-flow-v2 .objective-persona-iconbox { width: 36px; height: 36px; border-radius: 6px; background: #F4F8FF; display: grid; place-items: center; }
+.objective-flow-v2 .objective-reachable span { font-size: 12px; font-weight: 500; color: var(--of-muted); }
+.objective-flow-v2 .objective-reachable b { font-size: 13px; font-weight: 600; color: var(--of-ink); }
+.objective-flow-v2 .objective-persona-body { padding: 16px; }
+.objective-flow-v2 .objective-persona-count { display: flex; align-items: center; gap: 8px; }
+.objective-flow-v2 .objective-persona-iconbox { width: 36px; height: 36px; border-radius: 4px; background: #F4F8FF; display: grid; place-items: center; flex: 0 0 auto; }
 .objective-flow-v2 .objective-persona-iconbox svg { width: 20px; height: 20px; color: var(--of-brand); }
-.objective-flow-v2 .objective-persona-count strong { font-size: 24px; font-weight: 800; color: #143F93; }
+.objective-flow-v2 .objective-persona-count-text { display: flex; flex-direction: column; }
+.objective-flow-v2 .objective-persona-count-text strong { font-size: 24px; line-height: 28px; font-weight: 700; color: var(--of-figure); letter-spacing: -0.02em; }
+.objective-flow-v2 .objective-persona-count-text span { font-size: 13px; font-weight: 500; color: var(--of-muted); }
 
-.objective-flow-v2 .objective-slider {
-  -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 999px; cursor: pointer;
-  background: linear-gradient(to right, #143F93 0 calc(var(--val, 0) * 1%), #E7EBF3 calc(var(--val, 0) * 1%) 100%);
-}
-.objective-flow-v2 .objective-slider::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; border: 2px solid #143F93; box-shadow: 0 1px 3px rgba(23, 23, 58, 0.2);
-}
-.objective-flow-v2 .objective-slider::-moz-range-thumb {
-  width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid #143F93;
-  box-shadow: 0 1px 3px rgba(23, 23, 58, 0.2);
-}
-.objective-flow-v2 .objective-slider-labels { display: flex; justify-content: space-between; font-size: 14px; color: var(--of-muted); }
+.objective-flow-v2 .ov2-generating { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 40px 24px 48px; gap: 4px; }
+.objective-flow-v2 .ov2-generating-lottie { width: 140px; height: 140px; }
+.objective-flow-v2 .ov2-generating-title { margin-top: 12px; font-size: 20px; font-weight: 700; color: #17173A; }
+.objective-flow-v2 .ov2-generating-phase { font-size: 14px; color: var(--of-muted); animation: ov2-phase-fade 0.4s ease; }
+@keyframes ov2-phase-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.objective-flow-v2 .objective-persona-cohorts { display: flex; flex-direction: column; gap: 16px; padding: 0 16px 16px; }
+.objective-flow-v2 .objective-persona-cohorts-title { font-size: 12px; font-weight: 600; color: var(--of-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.objective-flow-v2 .objective-cohort-row { display: flex; align-items: center; gap: 8px; border: 1px solid var(--of-line); border-radius: 8px; padding: 8px; }
+.objective-flow-v2 .objective-cohort-dot { width: 8px; height: 8px; border-radius: 999px; background: #C7CEDF; flex: 0 0 auto; }
+.objective-flow-v2 .objective-cohort-label { flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 500; color: var(--of-ink); letter-spacing: normal; }
+.objective-flow-v2 .objective-cohort-count { font-size: 18px; line-height: 20px; font-weight: 600; color: var(--of-figure); }
 
 .objective-flow-v2 .objective-audience-hint {
   display: flex; gap: 10px; align-items: flex-start;
