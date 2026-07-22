@@ -1,0 +1,301 @@
+/* ------------------------------------------------------------------ */
+/* Content mapping — audience-first Content step (2-column layout).     */
+/*   Left  : audience groups (with sub-cohort scopes)                   */
+/*   Right : channel tabs -> template gallery -> selected preview       */
+/* Scoped under .content-mapping; shares the objective-flow tokens.     */
+/* ------------------------------------------------------------------ */
+
+.content-mapping {
+  --cm-brand: #2F68E5;
+  --cm-brand-hover: #4F7EF0;
+  --cm-brand-subtle: #EEF3FF;
+  --cm-ink: #17173A;
+  --cm-muted: #6F6F8D;
+  --cm-faint: #9494AE;
+  --cm-line: #E6EAF4;
+  --cm-line-strong: #DDE2EE;
+  --cm-soft: #F7F9FE;
+
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  align-items: start;
+  gap: 0;
+  width: 100%;
+  color: var(--cm-ink);
+  font-family: 'Manrope', sans-serif;
+  background: #fff;
+  border: 1px solid #EBEBF5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.content-mapping * { box-sizing: border-box; }
+.content-mapping svg { width: 16px; height: 16px; }
+
+.cm-col-head { margin-bottom: 16px; }
+.cm-col-title {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 0 4px; font-size: 17px; font-weight: 800; color: var(--cm-ink);
+}
+.cm-col-info { width: 15px; height: 15px; color: var(--cm-faint); }
+.cm-col-desc { margin: 0; color: var(--cm-muted); font-size: 13px; line-height: 1.5; }
+
+/* ---- Left: audience groups ---- */
+.cm-audiences { padding: 26px 18px; border-right: 1px solid var(--cm-line); background: var(--cm-soft); align-self: stretch; }
+.cm-audience-list { display: flex; flex-direction: column; gap: 2px; }
+
+/* Flat nav — no per-group box. Selection lives on the individual ROW (parent
+   header or a sub-cohort), never on a wrapping card. `.active` only means the
+   group is OPEN (its children are revealed); `.selected` means that row is the
+   chosen mapping scope. */
+.cm-audience-block { background: none; border: 0; }
+
+.cm-audience {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+  padding: 12px 12px; background: none;
+  border: 0; border-radius: 10px;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+.cm-audience:hover { background: #EEF2FB; }
+/* Selected parent scope: individual row highlight. */
+.cm-audience.selected { background: var(--cm-brand-subtle); box-shadow: inset 0 0 0 1.5px var(--cm-brand); }
+
+.cm-audience-icon {
+  width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center;
+  border-radius: 10px; background: #EEF1F7; color: var(--cm-muted);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.cm-audience.selected .cm-audience-icon { background: #fff; color: var(--cm-brand); }
+.cm-audience-icon svg { width: 19px; height: 19px; }
+.cm-audience-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.cm-audience-name { font-size: 15px; font-weight: 700; color: var(--cm-ink); }
+.cm-audience.selected .cm-audience-name { color: #1F51BE; }
+.cm-audience-count { font-size: 13px; font-weight: 600; color: var(--cm-muted); }
+.cm-audience-caret { flex: 0 0 auto; color: var(--cm-faint); transition: transform 200ms ease; }
+/* Caret points right when collapsed, up when the group is open (matches ref). */
+.cm-audience-block.active .cm-audience-caret { transform: rotate(-90deg); color: var(--cm-brand); }
+
+/* Sub-cohorts branching from the parent — a small tree of clickable scopes.
+   A vertical trunk runs down the left gutter and each cohort taps into it with
+   a horizontal branch; the last branch terminates the trunk in an L. */
+.cm-scopes {
+  position: relative;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px 14px 14px 20px;
+}
+/* Vertical trunk (full height; the last cohort masks the tail below its branch). */
+.cm-scopes::before {
+  content: ""; position: absolute; left: 34px; top: 0; bottom: 14px;
+  width: 1.5px; background: var(--cm-line-strong);
+}
+.cm-scope {
+  position: relative; margin-left: 30px;
+  display: flex; align-items: center; gap: 10px; width: calc(100% - 30px);
+  padding: 8px 10px; border: 0; border-radius: 10px; background: none; cursor: pointer; text-align: left;
+  color: var(--cm-muted); transition: background-color 130ms ease, box-shadow 130ms ease, color 130ms ease;
+}
+/* Horizontal branch from the trunk into the cohort row. */
+.cm-scope::before {
+  content: ""; position: absolute; left: -16px; top: 50%;
+  width: 16px; border-top: 1.5px solid var(--cm-line-strong);
+}
+/* The last cohort erases the trunk below its branch so the tree ends cleanly
+   (mask blends with the soft nav background, since there's no white card now). */
+.cm-scope:last-child::after {
+  content: ""; position: absolute; left: -16px; top: calc(50% + 1px);
+  width: 1.5px; height: 40px; background: var(--cm-soft);
+}
+.cm-scope:hover { background: #EEF2FB; color: var(--cm-ink); }
+.cm-scope.selected { background: var(--cm-brand-subtle); box-shadow: inset 0 0 0 1.5px var(--cm-brand); color: var(--cm-ink); }
+.cm-scope-icon {
+  width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center;
+  border-radius: 8px; background: #EEF1F7; color: var(--cm-muted);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.cm-scope.selected .cm-scope-icon { background: #fff; color: var(--cm-brand); }
+.cm-scope-icon svg { width: 17px; height: 17px; }
+.cm-scope-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cm-scope-name { font-size: 14px; font-weight: 700; color: var(--cm-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm-scope.selected .cm-scope-name { color: #1F51BE; }
+.cm-scope-count { font-size: 12.5px; font-weight: 600; color: var(--cm-muted); }
+.cm-scope.selected .cm-scope-count { color: var(--cm-brand); }
+
+/* ---- Right: content mapping ---- */
+.cm-mapping { padding: 26px 28px; min-width: 0; }
+.cm-mapping-head { margin-bottom: 18px; }
+
+.cm-channels { display: flex; gap: 4px; border-bottom: 1px solid var(--cm-line); margin-bottom: 22px; }
+.cm-channel {
+  display: inline-flex; align-items: center; gap: 8px; padding: 12px 14px;
+  border: 0; background: none; cursor: pointer; margin-bottom: -1px;
+  border-bottom: 2px solid transparent; color: var(--cm-muted);
+  font-size: 14px; font-weight: 700; font-family: inherit; white-space: nowrap;
+}
+.cm-channel svg { color: var(--cm-faint); }
+.cm-channel:hover { color: var(--cm-ink); }
+.cm-channel:hover svg { color: var(--cm-muted); }
+.cm-channel.active { color: var(--cm-brand); border-bottom-color: var(--cm-brand); }
+.cm-channel.active svg { color: var(--cm-brand); }
+
+/* Gallery — fluid cards that fill the row (no horizontal scroll, no trailing
+   empty column). Each card shows a live email preview that scales to the card
+   width, so the create-template card is always visible after the templates. */
+.cm-gallery {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px; padding: 4px 2px 14px; margin-bottom: 12px;
+}
+.cm-card {
+  display: flex; flex-direction: column;
+  border: 1.5px solid var(--cm-line); border-radius: 14px; background: #fff;
+  cursor: pointer; text-align: center; overflow: hidden;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.cm-card:hover { border-color: #C9D4EE; box-shadow: 0 6px 18px rgba(23,23,58,.10); }
+.cm-card.chosen { border-color: var(--cm-brand); box-shadow: 0 0 0 3px rgba(47,104,229,.14); }
+/* The thumbnail is a container: the email artwork inside sizes itself from the
+   container width (see --u below), so it stays a faithful miniature at any card
+   width. A fixed aspect ratio clips it to a consistent top slice. */
+.cm-card-thumb {
+  position: relative; width: 100%; aspect-ratio: 4 / 5; overflow: hidden;
+  container-type: inline-size; background: #EEF0F5; border-bottom: 1px solid var(--cm-line);
+}
+/* Real template rendered in an iframe; scaled to fit by TemplateFrame (JS). */
+.cm-card-thumb .tf-thumb { position: absolute; inset: 0; }
+.cm-card-thumb .tf-thumb-frame { border: 0; display: block; background: #fff; }
+/* Hover overlay + eye affordance -> opens the template in the side panel */
+.cm-card-overlay {
+  position: absolute; inset: 0; z-index: 2; display: grid; place-items: center;
+  background: rgba(13, 20, 40, 0.42); opacity: 0; pointer-events: none;
+  transition: opacity 160ms ease;
+}
+.cm-card:hover .cm-card-overlay,
+.cm-card:focus-within .cm-card-overlay { opacity: 1; pointer-events: auto; }
+.cm-card-eye {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%;
+  background: #fff; color: var(--cm-ink); cursor: pointer;
+  box-shadow: 0 4px 14px rgba(13,20,40,.35); transition: transform 140ms ease, color 140ms ease;
+}
+.cm-card-eye:hover { transform: scale(1.08); color: var(--cm-brand); }
+.cm-card-eye svg { width: 20px; height: 20px; }
+.cm-card-check {
+  position: absolute; top: 8px; right: 8px; z-index: 3; width: 24px; height: 24px;
+  display: grid; place-items: center; border-radius: 50%;
+  background: var(--cm-brand); color: #fff; box-shadow: 0 1px 4px rgba(23,23,58,.25);
+}
+.cm-card-check svg { width: 14px; height: 14px; }
+.cm-card-foot { padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 3px; }
+.cm-card-name { font-size: 14px; font-weight: 700; color: var(--cm-ink); line-height: 1.25; }
+.cm-card-id { font-size: 12.5px; font-weight: 600; color: var(--cm-muted); }
+
+/* Create-template card — stretches to match the row height via the grid. */
+.cm-card-create {
+  align-items: center; justify-content: center; gap: 2px; min-height: 300px;
+  border-style: dashed; border-color: var(--cm-line-strong);
+}
+.cm-card-create:hover { border-color: var(--cm-brand); background: var(--cm-brand-subtle); box-shadow: none; }
+.cm-card-create .cm-card-name { margin-top: 2px; }
+.cm-card-plus {
+  width: 44px; height: 44px; margin: 16px 0 14px; display: grid; place-items: center;
+  border-radius: 50%; border: 1.5px solid var(--cm-brand); color: var(--cm-brand);
+}
+.cm-card-plus svg { width: 20px; height: 20px; }
+.cm-card-create-name { color: var(--cm-brand); }
+
+/* Generating state — shimmering template skeletons fill the RHS, with the
+   Lottie loader + caption overlaid and centered over the skeleton block. */
+.cm-generating { position: relative; }
+.cm-generating-head {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; pointer-events: none;
+}
+/* 2× the previous size; negative margins crop the Lottie's internal whitespace
+   so the caption sits close to the artwork. */
+.cm-generating-lottie { width: 340px; height: 340px; margin: -80px 0 -120px; }
+.cm-generating-title { margin: 0; font-size: 19px; font-weight: 800; color: var(--cm-ink); }
+.cm-generating-phase {
+  margin: 6px 0 0; font-size: 13.5px; font-weight: 600; color: var(--cm-muted);
+  animation: cm-fade 400ms ease both;
+}
+@keyframes cm-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Shimmering skeleton cards standing in for the templates being generated. */
+.cm-skeleton-grid {
+  width: 100%; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
+}
+.cm-skel-card { border: 1.5px solid var(--cm-line); border-radius: 14px; overflow: hidden; background: #fff; }
+.cm-skel-thumb { width: 100%; aspect-ratio: 4 / 5; }
+.cm-skel-foot { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.cm-skel-line { height: 12px; border-radius: 6px; }
+.cm-skel-line.short { width: 45%; }
+.cm-skel-thumb, .cm-skel-line {
+  background: linear-gradient(100deg, #EEF0F5 30%, #F7F9FE 50%, #EEF0F5 70%);
+  background-size: 220% 100%;
+  animation: cm-shimmer 1.3s ease-in-out infinite;
+}
+@keyframes cm-shimmer {
+  0% { background-position: 180% 0; }
+  100% { background-position: -80% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-skel-thumb, .cm-skel-line { animation: none; }
+}
+
+/* Templates rise from bottom to top on reveal (staggered via inline delay). */
+@keyframes cm-rise {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.cm-card.rise { animation: cm-rise 640ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .cm-card.rise { animation: cm-fade 300ms ease both; }
+}
+
+/* Info note */
+.cm-note {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 22px;
+  padding: 12px 16px; border-radius: 10px; background: var(--cm-brand-subtle);
+}
+.cm-note svg { width: 18px; height: 18px; color: var(--cm-brand); flex: 0 0 auto; }
+.cm-note p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--cm-ink); }
+
+/* ---- Email template artwork ----
+   All dimensions are expressed as multiples of --u (a length). At full size
+   (--u: 1px) the email is a 360px column, used in the preview side panel. In a
+   gallery thumbnail, --u is set to (100cqw / 360) so the exact same artwork
+   fills the card width — a pixel-faithful miniature at any card size.
+   Self-contained (box-sizing here too) since it also renders inside the sheet
+   portal, outside the .content-mapping scope. */
+.cm-email, .cm-email * { box-sizing: border-box; }
+.cm-email {
+  --u: 1px;
+  width: calc(360 * var(--u)); margin-inline: auto;
+  border-radius: calc(10 * var(--u)); overflow: hidden;
+  box-shadow: 0 calc(8 * var(--u)) calc(24 * var(--u)) rgba(23, 23, 58, 0.14);
+  font-family: 'Manrope', sans-serif;
+}
+.cm-email-top { display: flex; align-items: center; justify-content: space-between; padding: calc(20 * var(--u)) calc(24 * var(--u)) calc(4 * var(--u)); }
+.cm-email-brand { font-size: calc(16 * var(--u)); font-weight: 800; letter-spacing: .24em; }
+.cm-email-eyebrow { font-size: calc(10 * var(--u)); font-weight: 800; letter-spacing: .16em; }
+
+.cm-email-image { height: calc(150 * var(--u)); margin: calc(16 * var(--u)) calc(24 * var(--u)) 0; border-radius: calc(10 * var(--u)); background-size: cover; background-position: center; }
+.cm-email-image.tall { height: calc(176 * var(--u)); }
+
+.cm-email-content { padding: calc(22 * var(--u)) calc(26 * var(--u)) calc(32 * var(--u)); text-align: center; }
+.cm-email-kicker { display: inline-block; font-size: calc(11 * var(--u)); font-weight: 800; letter-spacing: .18em; }
+.cm-email-title { margin: calc(12 * var(--u)) 0 0; font-size: calc(34 * var(--u)); line-height: 1.08; font-weight: 800; font-family: Georgia, 'Times New Roman', serif; }
+.cm-email-big { margin: calc(8 * var(--u)) 0 0; font-size: calc(46 * var(--u)); font-weight: 900; line-height: 1; letter-spacing: -.01em; }
+.cm-email-sub { margin: calc(14 * var(--u)) auto 0; max-width: calc(280 * var(--u)); font-size: calc(13 * var(--u)); line-height: 1.55; opacity: .82; }
+.cm-email-grid { display: flex; gap: calc(8 * var(--u)); margin: calc(20 * var(--u)) 0 0; }
+.cm-email-grid span { flex: 1; height: calc(72 * var(--u)); border-radius: calc(8 * var(--u)); background-size: cover; background-position: center; }
+.cm-email-cta {
+  display: inline-block; margin-top: calc(22 * var(--u)); padding: calc(13 * var(--u)) calc(30 * var(--u)); border-radius: calc(6 * var(--u));
+  font-size: calc(13 * var(--u)); font-weight: 700;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 860px) {
+  .content-mapping { grid-template-columns: minmax(0, 1fr); }
+  .cm-audiences { border-right: 0; border-bottom: 1px solid var(--cm-line); }
+  .cm-channels { overflow-x: auto; }
+}
