@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
-import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { Progress } from "@/components/ui/progress";
 import {
   PROCESSING_DURATION_MS,
@@ -53,13 +53,13 @@ export default function DecisioningProcessingState() {
   return (
     <div className="w-full">
       <div className="flex flex-col items-center rounded-2xl bg-white px-10 py-16 text-center">
-        {/* Pulsing engine mark */}
-        <span className="relative grid h-14 w-14 place-items-center">
-          <span className="absolute inset-0 animate-pulse rounded-full bg-[#FC5E02]/15" />
-          <span className="relative grid h-11 w-11 place-items-center rounded-full bg-[#FFF1E6]">
-            <img src={iconDecisioning} alt="" className="h-7 w-7" />
-          </span>
-        </span>
+        {/* Launch animation */}
+        <DotLottieReact
+          src="https://lottie.host/955cb302-39a6-4d43-80f5-54dce1391ac2/KgDRjdANks.lottie"
+          autoplay
+          loop
+          className="h-[140px] w-[140px]"
+        />
 
         <h2 className="mt-5 font-manrope text-[20px] font-bold leading-tight text-[#17173A]">
           Preparing your Decisioning Engine for launch
@@ -67,10 +67,6 @@ export default function DecisioningProcessingState() {
         <p className="mt-1.5 max-w-[400px] font-manrope text-[13px] leading-[19px] text-[#6F6F8D]">
           Your brand context, customer events, and operating rules are being transformed
           into a decision-ready intelligence layer.
-        </p>
-        <p className="mt-2 max-w-[400px] font-manrope text-[13px] leading-[19px] text-[#6F6F8D]">
-          Once ready, your agent can begin optimising the next best action for every
-          eligible customer.
         </p>
 
         <div className="mt-6 w-full max-w-[400px]">

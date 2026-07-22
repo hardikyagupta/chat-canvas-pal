@@ -52,10 +52,10 @@ export default function DecisioningNudge({ onClose }: { onClose: () => void }) {
           {/* Blurb */}
           <div className="flex flex-col gap-1 p-4">
             <span className="font-manrope text-[14px] font-semibold leading-[20px] text-[#17173A]">
-            Go beyond regular campaigns
+            Still creating campaigns the old way? Let AI take it from idea to action
             </span>
             <p className="font-manrope text-[13px] font-medium leading-[20px] text-[#6F6F8D]">
-            Create an objective and let the Decisioning Engine determine the next best action for each customer.
+            Let the Decisioning Engine choose the right customer, channel, message, timing.
             </p>
           </div>
         </button>

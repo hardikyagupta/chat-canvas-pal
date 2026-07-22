@@ -6,7 +6,6 @@ import {
   Check,
   ChevronRight,
   GitMerge,
-  Play,
   ShieldCheck,
 } from "lucide-react";
 import {
@@ -90,6 +89,7 @@ function ConfigCard({
 export default function DecisioningBoard() {
   const navigate = useNavigate();
   const {
+    status,
     brandWiki,
     eventMapping,
     guardrails,
@@ -184,7 +184,7 @@ export default function DecisioningBoard() {
             />
             <ConfigCard
               icon={GitMerge}
-              title="Event mapping"
+              title="Event definition"
               description="Map your events to the engine's"
               configured={!!eventMapping}
               summary={`${mappedCount} of ${STANDARD_EVENTS.length} events mapped`}
@@ -200,7 +200,10 @@ export default function DecisioningBoard() {
             />
           </div>
 
-          {allConfigured ? (
+          {status === "ready" ? (
+            /* Post-launch "Edit configuration" state — no launch card here */
+            null
+          ) : allConfigured ? (
             /* All three done — the gate to kick off the 4-hour preparation */
             <div className="mt-6 rounded-xl border border-[#E6EAF4] bg-[#F8FAFF] p-6 animate-in fade-in slide-in-from-bottom-2 duration-400">
               <h3 className="font-manrope text-[18px] font-bold text-[#17173A]">
@@ -214,8 +217,7 @@ export default function DecisioningBoard() {
                 onClick={handleStartPreparation}
                 className="mt-4 flex w-fit items-center gap-2 rounded-lg bg-[#2F68E5] px-5 py-3 font-manrope text-[14px] font-semibold uppercase tracking-[0.5px] text-white transition-colors hover:bg-[#255ad2]"
               >
-                <Play className="h-4 w-4 fill-current" strokeWidth={0} />
-                Review &amp; Launch
+                Launch
               </button>
               <div className="mt-4 flex items-start gap-2">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#9AA0C0]" strokeWidth={1.8} />
