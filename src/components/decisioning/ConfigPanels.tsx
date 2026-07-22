@@ -93,19 +93,19 @@ function PanelShell({
         <div className="flex items-center gap-3 border-t border-[#DDE2EE] px-6 py-4">
           <div className="flex shrink-0 items-center gap-2">
           <button
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-            className="dc-btn dc-btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
             onClick={handleSave}
             disabled={saving}
             className="dc-btn dc-btn-primary min-w-[92px]"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {saveLabel}
+          </button>
+          <button
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+            className="dc-btn dc-btn-secondary"
+          >
+            Cancel
           </button>
           </div>
           {footerNote && (
@@ -216,7 +216,7 @@ export function BrandWikiPanel({
       open={open}
       onOpenChange={onOpenChange}
       title="Brand wiki"
-      description="Give the engine your brand's story — docs, voice, and who you sell to."
+      description="Brand story, voice and audience"
       saveLabel="Save"
       successMessage="Brand wiki configured"
       footerNote="Answers will be used to guide content generation and decisioning."
@@ -553,10 +553,10 @@ export function EventMappingPanel({
     <PanelShell
       open={open}
       onOpenChange={onOpenChange}
-      title="Event mapping"
-      description="Match your event names to the ones the engine understands."
+      title="Event definition"
+      description="Map your events to the engine's"
       saveLabel="Save"
-      successMessage="Event mapping configured"
+      successMessage="Event definition configured"
       onSave={() => {
         // Drop empty custom rows so blank names never persist.
         const cleaned = customEvents
@@ -648,7 +648,7 @@ export function GuardrailsPanel({
       open={open}
       onOpenChange={onOpenChange}
       title="Guardrails"
-      description="Hard limits the engine will never cross, no matter what it learns."
+      description="Limits the engine always respects"
       saveLabel="Save"
       successMessage="Guardrails configured"
       onSave={() => {

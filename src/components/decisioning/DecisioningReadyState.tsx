@@ -66,6 +66,8 @@ export default function DecisioningReadyState() {
     return () => window.clearTimeout(timer);
   }, []);
 
+  const [activeTab, setActiveTab] = useState(hasObjectives ? "objectives" : "insights");
+
   return (
     <div className="w-full">
       {/* Page header — identical title, subtitle and button pair whether or
@@ -106,7 +108,7 @@ export default function DecisioningReadyState() {
       {/* Landing tab: once an objective is live, drop the user on Objectives so
           they see their running objective. Only when no objective exists after
           activation (~4 hrs) do we surface Insights to nudge them to start one. */}
-      <Tabs defaultValue={hasObjectives ? "objectives" : "insights"}>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="h-auto w-fit gap-1 rounded-lg bg-[#EEF1F7] p-1">
           <TabsTrigger
             value="objectives"
@@ -116,9 +118,12 @@ export default function DecisioningReadyState() {
           </TabsTrigger>
           <TabsTrigger
             value="insights"
-            className="rounded-md px-4 py-2 font-manrope text-[13px] font-semibold text-[#6F6F8D] data-[state=active]:bg-white data-[state=active]:text-[#17173A] data-[state=active]:shadow-[0px_1px_3px_rgba(23,23,58,0.1)]"
+            className="flex items-center gap-1.5 rounded-md px-4 py-2 font-manrope text-[13px] font-semibold text-[#6F6F8D] data-[state=active]:bg-white data-[state=active]:text-[#17173A] data-[state=active]:shadow-[0px_1px_3px_rgba(23,23,58,0.1)]"
           >
-            Insights
+            Opportunities
+            <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#E7EDFF] px-1 font-manrope text-[11px] font-semibold text-[#2F68E5]">
+              {OPPORTUNITIES.length}
+            </span>
           </TabsTrigger>
         </TabsList>
 
@@ -130,7 +135,7 @@ export default function DecisioningReadyState() {
               ))}
             </div>
           ) : (
-            <EmptyObjectivesBody />
+            <EmptyObjectivesBody onUseOpportunities={() => setActiveTab("insights")} />
           )}
         </TabsContent>
 
@@ -140,12 +145,12 @@ export default function DecisioningReadyState() {
             <div className="flex items-center gap-2">
               <Sparkles className="h-[18px] w-[18px] text-[#2F68E5]" strokeWidth={1.8} />
               <h2 className="font-manrope text-[18px] font-bold leading-tight text-[#17173A]">
-                Start with these opportunities
+                Here are the list of opportunities decisioning engine surfaced for you
               </h2>
             </div>
             <p className="mt-2 font-manrope text-[14px] leading-[22px] text-[#6F6F8D]">
               Your engine analysed your customers and surfaced the highest-impact
-              opportunities to act on. Launch an objective from any one below — the
+              opportunities to act on. Launch an objective from any one below - the
               recommended setup is pre-filled so you can get going in a click.
             </p>
           </div>
@@ -207,7 +212,7 @@ function OpportunitySkeleton() {
 
 /** Full-width card — text left, illustration right. Shown once the engine is
     ready but no objective has been launched yet. */
-function EmptyObjectivesBody() {
+function EmptyObjectivesBody({ onUseOpportunities }: { onUseOpportunities: () => void }) {
   const navigate = useNavigate();
   const { eventMapping, guardrails } = useDecisioningSetup();
 
@@ -226,7 +231,7 @@ function EmptyObjectivesBody() {
           Create your first objective
         </h2>
         <p className="mt-3 max-w-[460px] font-manrope text-[14px] leading-[22px] text-[#6F6F8D]">
-          Your brand context, event mappings and guardrails are all set. Tell the
+          Your brand context, event definitions and guardrails are all set. Tell the
           engine the business outcome you want — it decides the channel, content,
           timing and incentive for every customer to get you there.
         </p>
@@ -257,14 +262,21 @@ function EmptyObjectivesBody() {
             <Plus strokeWidth={2.5} />
             Create objective
           </button>
+          <span className="font-manrope text-[13px] text-[#6F6F8D]">or</span>
           <button
-            onClick={() => navigate("/decisioning-engine/objective/new")}
-            className="flex w-fit items-center gap-2 font-manrope text-[13px] font-medium text-[#6F6F8D] transition-colors hover:text-[#17173A]"
+            onClick={onUseOpportunities}
+            className="font-manrope text-[13px] font-semibold text-[#2F68E5] transition-colors hover:text-[#1E4FBF]"
           >
-            <HelpCircle className="h-4 w-4" strokeWidth={1.8} />
-            Learn how objectives work
+            Create using Opportunities
           </button>
         </div>
+        <button
+          onClick={() => navigate("/decisioning-engine/objective/new")}
+          className="mt-5 flex w-fit items-center gap-2 font-manrope text-[13px] font-medium text-[#6F6F8D] transition-colors hover:text-[#17173A]"
+        >
+          <HelpCircle className="h-4 w-4" strokeWidth={1.8} />
+          Learn how objectives work
+        </button>
       </div>
 
       {/* RHS — animated "create an objective" illustration */}

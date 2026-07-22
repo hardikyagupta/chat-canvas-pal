@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Bell, Eye, Globe, Mail, MessageSquare } from "lucide-react";
-import TemplatePreviewSheet, { MappedPreview } from "./TemplatePreviewSheet";
+import TemplatePreviewSheet from "./TemplatePreviewSheet";
+import TemplateFrame from "./TemplateFrame";
+import { templateSrc } from "./emailTemplates";
 import "./content-pool.css";
 
 /**
@@ -254,7 +256,7 @@ export default function ContentPool() {
           </div>
 
           <div className="cp-preview">
-            <MappedPreview />
+            <TemplateFrame mode="thumb" src={templateSrc(mappedId) ?? ""} title={mappedName} />
           </div>
 
           <p className="cp-template-name">{mappedName}</p>
@@ -280,6 +282,7 @@ export default function ContentPool() {
         mappedName={mappedName}
         mappedId={mappedId}
         channelName={channel.name}
+        templateSrc={templateSrc(mappedId)}
       />
     </div>
   );

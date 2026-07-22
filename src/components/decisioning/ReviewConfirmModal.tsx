@@ -105,7 +105,7 @@ export default function ReviewConfirmModal({
               />
               <SummarySection
                 icon={GitMerge}
-                title="Event mapping"
+                title="Event definition"
                 lines={[
                   ["Events mapped", `${mappedCount} of ${STANDARD_EVENTS.length}`],
                   [

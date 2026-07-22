@@ -97,8 +97,8 @@ export default function DecisioningSetup() {
               />
               <SetupCard
                 icon={GitMerge}
-                title="Event mapping"
-                description="Match your event names to the ones the engine understands"
+                title="Event definition"
+                description="Map your events to the engine's"
                 configured={!!eventMapping}
                 summary={`${mappedCount} of ${STANDARD_EVENTS.length} events mapped`}
                 onConfigure={() => setOpenModal("eventMapping")}
