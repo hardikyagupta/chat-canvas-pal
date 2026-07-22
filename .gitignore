@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Source email-template exports (extracted into public/email-templates/); keep zips/source out of git
+/Email-templates/
+*.zip
