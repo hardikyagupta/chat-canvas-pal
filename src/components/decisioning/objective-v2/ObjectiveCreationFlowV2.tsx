@@ -6,6 +6,7 @@ import {
   Library,
   Lightbulb,
   Loader2,
+  Rocket,
   Target,
   Users,
   X,
@@ -13,11 +14,14 @@ import {
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import ContentMapping from "@/components/decisioning/ContentMapping";
-import JourneyPreview, { type EditableStep } from "@/components/decisioning/JourneyPreview";
+import ObjectiveJourneyPreview, {
+  type EditableStep,
+} from "@/components/decisioning/ObjectiveJourneyPreview";
 import { useDecisioningSetup } from "@/contexts/DecisioningSetupContext";
 import "./objective-flow-v2.css";
 
@@ -175,6 +179,11 @@ export default function ObjectiveCreationFlowV2() {
     [personaEnabled],
   );
 
+  // Live template assignments lifted from ContentMapping (keyed by
+  // `${audienceId}::${channelId}::${scope}` -> templateId), so the Preview
+  // step can recap the real per-audience/sub-cohort/channel mapping.
+  const [contentAssignments, setContentAssignments] = useState<Record<string, string>>({});
+
   const openIndex = activeStep ? steps.findIndex((item) => item.id === activeStep) : -1;
   // What "Next step" acts on: the open card, or the furthest reached if all are collapsed.
   const nextFrom = openIndex === -1 ? furthestIndex : openIndex;
@@ -201,21 +210,29 @@ export default function ObjectiveCreationFlowV2() {
   const exitFlow = () => navigate("/decisioning-engine");
 
   const launch = () => {
-    // Show the "engine is creating your objective" loader, then land the user
-    // on the objectives board with the new card.
+    // Show the "engine is creating your objective" loader. The completion
+    // (board navigation + success toast) is driven by LaunchOverlay once the
+    // GIF has finished playing — see finishLaunch.
     setLaunching(true);
-    window.setTimeout(() => {
-      launchObjective({
-        title: name,
-        description:
-          "Monitoring one-time buyers and triggering re-engagement across selected channels.",
-        goal: intent,
-        channels: selectedAssetNames.length
-          ? "Email, App push, SMS, Web Push"
-          : "Email",
-      });
-      exitFlow();
-    }, 11000);
+  };
+
+  // Land the user on the objectives board with the new card and confirm the
+  // launch. Called by LaunchOverlay after the GIF has played through, so the
+  // success toast never appears before the animation finishes.
+  const finishLaunch = () => {
+    launchObjective({
+      title: name,
+      description:
+        "Monitoring one-time buyers and triggering re-engagement across selected channels.",
+      goal: intent,
+      channels: selectedAssetNames.length
+        ? "Email, App push, SMS, Web Push"
+        : "Email",
+    });
+    exitFlow();
+    toast.success("Your objective has been successfully launched", {
+      icon: <Rocket className="h-4 w-4 text-[#2F68E5]" strokeWidth={2.5} />,
+    });
   };
 
   const goToStep = (index: number) => {
@@ -231,6 +248,29 @@ export default function ObjectiveCreationFlowV2() {
     const offset = 24; // breathing room above the card header
     const top = container.scrollTop + (el.getBoundingClientRect().top - container.getBoundingClientRect().top) - offset;
     container.scrollTo({ top, behavior: "smooth" });
+  };
+
+  // Scroll to `id` once the previously-active card's collapse animation
+  // (.ov2-card-bodywrap's grid-template-rows transition) actually finishes,
+  // rather than guessing a fixed delay. A heavy previous step (Content, with
+  // its template-preview iframes) can take noticeably longer than the
+  // nominal 340ms to actually settle, so a fixed timeout that works for a
+  // light step (a form) can still fire mid-collapse for a heavy one — the
+  // still-shrinking previous card then keeps shifting the target upward
+  // after we've already scrolled, cropping its header above the viewport.
+  // Falls back to a timeout in case the transition never fires (e.g. the
+  // user has reduced-motion, which disables it) so the scroll always happens.
+  const scrollToStepWhenSettled = (id: StepId, collapsingId: StepId) => {
+    const bodywrap = cardRefs.current[collapsingId]?.querySelector<HTMLElement>(".ov2-card-bodywrap");
+    const fallback = window.setTimeout(() => scrollToStep(id), 420);
+    if (!bodywrap) return;
+    const onEnd = (e: TransitionEvent) => {
+      if (e.propertyName !== "grid-template-rows") return;
+      window.clearTimeout(fallback);
+      bodywrap.removeEventListener("transitionend", onEnd);
+      scrollToStep(id);
+    };
+    bodywrap.addEventListener("transitionend", onEnd);
   };
 
   // Accordion header: open any card, or collapse it if it's already open.
@@ -259,8 +299,10 @@ export default function ObjectiveCreationFlowV2() {
     setAdvancing(true);
     if (usesSkeleton) setLoadingStep(targetId);
     goToStep(target);
-    // Content scrolls its own generating animation into view; others scroll here.
-    if (usesSkeleton) window.setTimeout(() => scrollToStep(targetId), 60);
+    // Every step scrolls its card's header to the top, once the previous
+    // card's own collapse has actually finished settling (see
+    // scrollToStepWhenSettled) rather than after a guessed delay.
+    scrollToStepWhenSettled(targetId, steps[nextFrom].id);
     window.setTimeout(() => {
       setLoadingStep(null);
       setAdvancing(false);
@@ -370,6 +412,8 @@ export default function ObjectiveCreationFlowV2() {
                         <div className="ov2-card-body">
                           {item.id === "audience" ? (
                             <AudienceGeneratingState />
+                          ) : item.id === "preview" ? (
+                            <PreviewLoadingState />
                           ) : (
                             <StepSkeleton stepId={item.id} />
                           )}
@@ -486,11 +530,19 @@ export default function ObjectiveCreationFlowV2() {
                     )}
 
                     {item.id === "content" && (
-                      <ContentMapping active={activeStep === "content"} audiences={contentAudiences} />
+                      <ContentMapping
+                        active={activeStep === "content"}
+                        audiences={contentAudiences}
+                        onAssignmentsChange={setContentAssignments}
+                      />
                     )}
 
                     {item.id === "preview" && (
-                      <JourneyPreview onEdit={(s: EditableStep) => goToStep(steps.findIndex((step) => step.id === s))} />
+                      <ObjectiveJourneyPreview
+                        onEdit={(s: EditableStep) => goToStep(steps.findIndex((step) => step.id === s))}
+                        audiences={contentAudiences}
+                        assignments={contentAssignments}
+                      />
                     )}
 
                     {item.id !== "preview" && (
@@ -532,7 +584,7 @@ export default function ObjectiveCreationFlowV2() {
         </div>
       </footer>
 
-      {launching && <LaunchOverlay />}
+      {launching && <LaunchOverlay onComplete={finishLaunch} />}
     </div>
   );
 }
@@ -541,7 +593,20 @@ export default function ObjectiveCreationFlowV2() {
  * Full-screen confirmation shown after "Launch objective": a 50% black overlay
  * with the engine loader GIF centered. Mirrors the original flow's overlay.
  */
-function LaunchOverlay() {
+function LaunchOverlay({ onComplete }: { onComplete: () => void }) {
+  // Actual play length of objective-loader.gif (352 frames ≈ 11.76s, per
+  // `gifsicle --info`). The GIF loops forever, so matching this lets one full
+  // pass play before the overlay navigates away. No cache-buster on the src,
+  // so the GIF is served from cache after the first launch and starts instantly.
+  const GIF_DURATION_MS = 11760;
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => onCompleteRef.current(), GIF_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
       <img
@@ -579,6 +644,17 @@ function StepSkeleton({ stepId }: { stepId: StepId }) {
           <div className="ov2-sk-block ov2-sk-row" />
         </>
       )}
+    </div>
+  );
+}
+
+/** Shown while the Preview step is loading — a plain blue spinner, since the
+    journey tree needs a layout pass and a shimmer skeleton can't approximate
+    its shape the way it can for a form or a card grid. */
+function PreviewLoadingState() {
+  return (
+    <div className="ov2-preview-loading" aria-hidden>
+      <Loader2 className="ov2-spinner ov2-preview-spinner" />
     </div>
   );
 }

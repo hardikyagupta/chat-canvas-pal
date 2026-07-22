@@ -7,9 +7,9 @@ import {
   Pause,
   Pencil,
   Play,
-  Sparkles,
   Trash2,
 } from "lucide-react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import {
   ActionMenu,
   ActionMenuContent,
@@ -67,15 +67,12 @@ export default function ObjectiveCard({ objective }: { objective: LaunchedObject
       <div className="relative flex flex-col gap-4">
         {/* Thumbnail + status + menu */}
         <div className="flex items-start justify-between">
-          <div
-            className="flex h-[68px] w-[96px] items-center justify-center rounded-[8px] shadow-[inset_0px_4px_6px_0px_rgba(255,255,255,0.6)]"
-            style={{
-              backgroundImage:
-                "linear-gradient(35deg, #010818 20%, #0160de 51%, #f08fe9 84%)",
-            }}
-          >
-            <Sparkles className="h-4 w-4 text-white" strokeWidth={1.8} />
-          </div>
+          <DotLottieReact
+            src="https://lottie.host/11b5eedd-6efe-47b7-abc4-5c8e38d16b2c/vazcMnLuO1.lottie"
+            loop
+            autoplay
+            className="h-[68px] w-[96px] shrink-0 overflow-hidden rounded-[8px]"
+          />
 
           <div className="flex items-center gap-2">
             {draft ? (
@@ -104,7 +101,11 @@ export default function ObjectiveCard({ objective }: { objective: LaunchedObject
               <ActionMenuContent align="end" side="bottom">
                 <ActionMenuItem
                   icon={Pencil}
-                  onSelect={() => navigate("/decisioning-engine/objective/new")}
+                  onSelect={() =>
+                    draft
+                      ? navigate("/decisioning-engine/objective/v2")
+                      : navigate("/decisioning-engine/objective/new")
+                  }
                 >
                   Edit objective
                 </ActionMenuItem>
@@ -187,7 +188,7 @@ export default function ObjectiveCard({ objective }: { objective: LaunchedObject
       <button
         onClick={() =>
           draft
-            ? navigate("/decisioning-engine/objective/new")
+            ? navigate("/decisioning-engine/objective/v2")
             : navigate("/decisioning-engine/objective/performance", {
                 state: { objective },
               })

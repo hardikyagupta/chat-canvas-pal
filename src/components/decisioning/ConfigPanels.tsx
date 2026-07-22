@@ -553,10 +553,10 @@ export function EventMappingPanel({
     <PanelShell
       open={open}
       onOpenChange={onOpenChange}
-      title="Event definition"
+      title="Event definitions"
       description="Map your events to the engine's"
       saveLabel="Save"
-      successMessage="Event definition configured"
+      successMessage="Event definitions configured"
       onSave={() => {
         // Drop empty custom rows so blank names never persist.
         const cleaned = customEvents

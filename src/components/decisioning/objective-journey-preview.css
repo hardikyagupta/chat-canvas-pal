@@ -85,14 +85,50 @@
 .oj-sizer { position: relative; margin: 0 auto; }
 .oj-inner { position: relative; padding: 48px 56px; width: max-content; }
 
+/* ---- Full screen ---- */
+/* The card itself is repositioned fixed, covering the viewport minus an
+   80px inset on every side — the same DOM node the canvas always used, just
+   resized/repositioned via CSS, so nothing unmounts and the existing
+   ResizeObserver-driven measurement keeps working unchanged.
+   Opens/closes as a fade + scale, the standard modern-dialog motion (Radix/
+   Headless UI style): starts at .96 scale/0 opacity, eases in with a
+   decelerate curve on open and a quicker accelerate curve back out on close
+   (the `.entered` class is removed a frame before `.oj-fullscreen` itself,
+   see openFullscreen/closeFullscreen, so the fade-out actually gets to play
+   instead of the layout snapping back to inline immediately). */
+.oj-fullscreen-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 15, 40, .55); z-index: 200;
+  opacity: 0; transition: opacity 240ms cubic-bezier(.4, 0, .2, 1);
+}
+.oj-fullscreen-backdrop.entered { opacity: 1; }
+
+.objective-journey.oj-fullscreen {
+  position: fixed; inset: 80px; z-index: 201; margin: 0; width: auto;
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 12px;
+  opacity: 0; transform: scale(.96);
+  transition: opacity 240ms cubic-bezier(.4, 0, .2, 1), transform 240ms cubic-bezier(.4, 0, .2, 1);
+}
+.objective-journey.oj-fullscreen.entered { opacity: 1; transform: scale(1); }
+.objective-journey.oj-fullscreen .oj-header,
+.objective-journey.oj-fullscreen .oj-legend { flex: 0 0 auto; }
+.objective-journey.oj-fullscreen .oj-scroll { flex: 1 1 auto; height: auto; min-height: 0; }
+
 /* ---- SVG connector layer (behind the nodes) ---- */
 .oj-edges { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; z-index: 0; }
 .oj-edge { stroke: var(--oj-line); stroke-width: 2; stroke-linecap: round; fill: none; }
 
 /* ---- Recursive vertical tree ---- */
 .oj-subtree { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
-.oj-children { display: flex; flex-direction: row; align-items: flex-start; gap: 26px; margin-top: 64px; }
+.oj-children { display: flex; flex-direction: row; align-items: flex-start; gap: 40px; margin-top: 88px; }
 .oj-branch { display: flex; flex-direction: column; align-items: center; }
+
+/* Sub-cohorts render as their own tier below an audience's own channel row,
+   with extra vertical room so the connectors routed down to them (see the
+   waist-routed elbow paths in the component) stay clear of the row above
+   instead of cutting across it. Each card carries its own "Subcohort" tag
+   (.oj-card-kicker) rather than a heading floating on the canvas. */
+.oj-cohort-group { display: flex; flex-direction: column; align-items: center; margin-top: 88px; }
 
 /* ---- Cards ---- */
 .oj-card {
@@ -114,6 +150,11 @@ button.oj-card:focus-visible { outline: 2px solid #2F68E5; outline-offset: 2px; 
 .oj-icon { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 10px; }
 .oj-icon svg { width: 19px; height: 19px; }
 .oj-card-text { flex: 1; min-width: 0; }
+.oj-card-kicker {
+  display: block; font-style: normal; font-size: 9.5px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--oj-muted); margin-bottom: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .oj-card-text strong { display: block; font-size: 13.5px; font-weight: 800; color: var(--oj-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .oj-card-text span { display: block; margin-top: 2px; font-size: 11.5px; color: #4A4A63; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

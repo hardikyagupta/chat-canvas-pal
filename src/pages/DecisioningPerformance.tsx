@@ -27,9 +27,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import JourneyPreview, {
+import ObjectiveJourneyPreview, {
   type EditableStep,
-} from "@/components/decisioning/JourneyPreview";
+} from "@/components/decisioning/ObjectiveJourneyPreview";
 import {
   useDecisioningSetup,
   type LaunchedObjective,
@@ -42,8 +42,10 @@ import "@/components/decisioning/config-edit.css";
  *
  * Chrome mirrors the "Edit configuration" page: the same sticky white navbar
  * (title lockup + close X), no other CTAs. Below it, two tabs — Performance
- * (metrics + charts) and Preview (the node-level JourneyPreview from the last
- * step of the objective creation flow).
+ * (metrics + charts) and Preview (the same audience/sub-cohort/channel/
+ * template tree used in the objective creation flow's own Preview step,
+ * rendered read-only — editable={false} disables every edit affordance,
+ * leaving only the template eye/preview icons active).
  */
 
 type Tab = "performance" | "preview";
@@ -246,7 +248,7 @@ export default function DecisioningPerformance() {
           <PerformanceTab objective={objective} />
         ) : (
           <div className="mx-auto w-full max-w-[1200px] px-[54px] py-8">
-            <JourneyPreview onEdit={(_s: EditableStep) => {}} editable={false} />
+            <ObjectiveJourneyPreview onEdit={(_s: EditableStep) => {}} editable={false} />
           </div>
         )}
       </div>
