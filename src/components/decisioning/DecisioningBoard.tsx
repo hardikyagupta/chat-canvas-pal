@@ -184,7 +184,7 @@ export default function DecisioningBoard() {
             />
             <ConfigCard
               icon={GitMerge}
-              title="Event definition"
+              title="Event definitions"
               description="Map your events to the engine's"
               configured={!!eventMapping}
               summary={`${mappedCount} of ${STANDARD_EVENTS.length} events mapped`}

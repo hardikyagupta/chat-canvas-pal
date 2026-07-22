@@ -163,7 +163,7 @@ export default function DecisioningConfiguration() {
           />
           <ConfigCard
             icon={GitMerge}
-            title="Event definition"
+            title="Event definitions"
             configured={!!eventMapping}
             summary={eventSummary}
             onEdit={() => setOpenPanel("events")}
