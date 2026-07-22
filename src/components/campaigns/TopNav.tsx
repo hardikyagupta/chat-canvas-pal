@@ -10,23 +10,26 @@ export default function TopNav({
   label = "Customer Engagement",
   showAskCoMarketer = true,
   showCoMarketerNudge = true,
-  onNudgeDismiss,
 }: {
   onOpenChat?: () => void;
   label?: string;
   showAskCoMarketer?: boolean;
-  /** False keeps the button but skips its discovery nudge (and dot). */
+  /** False keeps the button but skips its discovery nudge (and dot). Toggling
+   *  this true later (e.g. once a preceding nudge closes) shows the nudge. */
   showCoMarketerNudge?: boolean;
-  /** Fired once when the co-marketer discovery nudge closes (any path). */
-  onNudgeDismiss?: () => void;
 }) {
-  // Discovery nudge shown under the Ask co-marketer button on first load.
+  // Discovery nudge shown under the Ask co-marketer button, controlled by
+  // the showCoMarketerNudge prop (which may flip true after mount if this
+  // nudge is sequenced behind another one).
   const [showNudge, setShowNudge] = useState(showCoMarketerNudge);
   const nudgeWrapRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (showCoMarketerNudge) setShowNudge(true);
+  }, [showCoMarketerNudge]);
+
   const dismissNudge = () => {
     setShowNudge(false);
-    onNudgeDismiss?.();
   };
 
   // Dismiss the nudge when clicking anywhere outside it (and its button).
