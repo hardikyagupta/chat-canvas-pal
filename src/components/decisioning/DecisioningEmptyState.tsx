@@ -330,10 +330,8 @@ export default function DecisioningEmptyState() {
           <span className="font-manrope text-[12px] font-bold uppercase tracking-[0.6px] text-[#2F68E5]">
             Decisioning engine
           </span>
-          <h2 className="mt-3 font-manrope text-[32px] font-extrabold leading-[1.15] text-[#17173A]">
-          Achieve every objective into customer-level decisions.
-            <br />
-            Let the engine decide who gets what, when, and where.
+          <h2 className="mt-3 max-w-[560px] font-manrope text-[28px] font-bold leading-[1.2] text-[#17173A]">
+            Achieve every objective through customer-level decisions. Let the engine decide who gets what, when, and where.
           </h2>
           <p className="mt-4 font-manrope text-[14px] leading-[22px] text-[#6F6F8D]">
             Set up your brand context, customer events and operating guardrails.

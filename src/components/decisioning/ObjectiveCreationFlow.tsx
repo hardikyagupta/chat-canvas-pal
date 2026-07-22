@@ -8,6 +8,7 @@ import {
   Lightbulb,
   Mail,
   MessageCircle,
+  Rocket,
   Sparkles,
   Target,
   Users,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -77,6 +79,11 @@ export default function ObjectiveCreationFlow() {
   const [saved, setSaved] = useState("just now");
   const [summaryOpen, setSummaryOpen] = useState<Record<string, boolean>>({ goal: true, audience: false, content: false });
   const [launching, setLaunching] = useState(false);
+  // Bust the browser's decoded-GIF cache each time the loader shows: reusing
+  // the exact same <img src> can make the browser resume playback from
+  // wherever the GIF last left off (its final "objective is live" frame)
+  // instead of restarting from frame 0, flashing the end state up front.
+  const [loaderNonce, setLoaderNonce] = useState(0);
 
   const personaCount = (id: string, reachable: number) => Math.round((reachable * (personaPct[id] ?? 0)) / 100);
   const totalAudience = audiencePersonas.reduce((sum, p) => sum + personaCount(p.id, p.reachable), 0);
@@ -97,6 +104,7 @@ export default function ObjectiveCreationFlow() {
   const launch = () => {
     // Show the "engine is creating your objective" loader, then land the user
     // on the objectives board with the new card.
+    setLoaderNonce(Date.now());
     setLaunching(true);
     window.setTimeout(() => {
       launchObjective({
@@ -109,6 +117,9 @@ export default function ObjectiveCreationFlow() {
           : "Email",
       });
       exitFlow();
+      toast.success("Your objective has been successfully launched", {
+        icon: <Rocket className="h-4 w-4 text-[#2F68E5]" strokeWidth={2.5} />,
+      });
     }, 11000);
   };
 
@@ -305,7 +316,7 @@ export default function ObjectiveCreationFlow() {
         )}
       </main>
 
-      {launching && <LaunchOverlay />}
+      {launching && <LaunchOverlay nonce={loaderNonce} />}
     </div>
   );
 }
@@ -316,11 +327,12 @@ export default function ObjectiveCreationFlow() {
  * GIF carries its own messaging, so no extra copy is layered on top. Save the
  * loader to public/objective-loader.gif.
  */
-function LaunchOverlay() {
+function LaunchOverlay({ nonce }: { nonce: number }) {
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
       <img
-        src="/objective-loader.gif"
+        key={nonce}
+        src={`/objective-loader.gif?v=${nonce}`}
         alt="Creating your objective"
         width={691}
         height={360}

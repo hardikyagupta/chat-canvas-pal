@@ -4,10 +4,11 @@ import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
 
 /**
  * Decisioning engine discovery nudge — a small card anchored next to the
- * decisioning entry in the L1 rail, floating up into place. Shown after the
- * co-marketer nudge is dismissed (sequenced by the Campaigns page). Thumbnail
- * banner on top (the animated decisioning orb itself), a short blurb below,
- * and a cross to dismiss. Clicking the card opens the decisioning engine.
+ * decisioning entry in the L1 rail, floating up into place. Shown first on
+ * the Campaigns page; closing it (sequenced by that page) reveals the
+ * co-marketer nudge. Thumbnail banner on top (the animated decisioning orb
+ * itself), a short blurb below, and a cross to dismiss. Clicking the card
+ * opens the decisioning engine.
  */
 export default function DecisioningNudge({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();

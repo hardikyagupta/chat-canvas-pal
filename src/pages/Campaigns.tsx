@@ -30,8 +30,10 @@ export default function Campaigns() {
   const [chatSession, setChatSession] = useState(0);
   const [isAgentsOverlayOpen, setIsAgentsOverlayOpen] = useState(false);
   // Nudge sequencing: the decisioning-engine discovery card (and the pulsing
-  // dot on its L1 entry) appears only after the co-marketer nudge closes.
-  const [showDecisioningNudge, setShowDecisioningNudge] = useState(false);
+  // dot on its L1 entry) shows first; the co-marketer nudge appears only
+  // after it closes.
+  const [showDecisioningNudge, setShowDecisioningNudge] = useState(true);
+  const [showCoMarketerNudge, setShowCoMarketerNudge] = useState(false);
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(new Set());
 
   // Coordinate mount → enter and leave → unmount so both directions animate.
@@ -86,13 +88,18 @@ export default function Campaigns() {
       <L1Nav decisioningNudge={showDecisioningNudge} />
 
       {showDecisioningNudge && (
-        <DecisioningNudge onClose={() => setShowDecisioningNudge(false)} />
+        <DecisioningNudge
+          onClose={() => {
+            setShowDecisioningNudge(false);
+            setShowCoMarketerNudge(true);
+          }}
+        />
       )}
 
       <div className="flex min-w-0 flex-1 flex-col p-2">
         <TopNav
           onOpenChat={() => setChatOpen(true)}
-          onNudgeDismiss={() => setShowDecisioningNudge(true)}
+          showCoMarketerNudge={showCoMarketerNudge}
         />
 
         <div className="mt-2 flex min-h-0 flex-1 gap-2">
