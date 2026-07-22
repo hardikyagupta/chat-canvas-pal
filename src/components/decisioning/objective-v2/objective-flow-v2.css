@@ -149,7 +149,7 @@
 .ov2-card-bodywrap-inner { overflow: hidden; min-height: 0; }
 
 .ov2-card-body {
-  padding: 4px 20px 24px;
+  padding: 20px 20px 24px;
   border-top: 1px solid #F0F1F7;
   /* Fade the contents in/out in step with the height ease. */
   opacity: 0;
@@ -174,6 +174,10 @@
 /* Full-bleed bodies (content/preview) zero their padding; restore a left inset
    so the action lines up with the content above it. */
 .ov2-card-body:has(.content-pool) .ov2-card-actions { padding: 0 44px 40px; }
+
+/* ---- Preview loading (plain spinner, not the shimmer skeleton) ---- */
+.ov2-preview-loading { display: grid; place-items: center; min-height: 360px; }
+.ov2-preview-spinner { width: 34px; height: 34px; color: var(--of-brand); }
 
 /* ---- Loading skeleton (shown briefly when advancing to a step) ---- */
 .ov2-skeleton { display: flex; flex-direction: column; gap: 14px; padding-top: 20px; }
@@ -205,14 +209,14 @@
 
 /* Content and Preview bring their own layout/padding — trim the card padding. */
 .ov2-card-body:has(.content-pool),
-.ov2-card-body:has(.journey-preview) { padding: 0; }
+.ov2-card-body:has(.objective-journey) { padding: 0; }
 
 /* These panels ship their own border/radius/shadow, but nested inside the
    accordion card that already has one, that reads as a double border. Strip
    the inner container so only the card's border (and its border-top under the
    header) remains. */
 .ov2-card-body .content-pool,
-.ov2-card-body .journey-preview {
+.ov2-card-body .objective-journey {
   border: 0;
   border-radius: 0;
   box-shadow: none;
