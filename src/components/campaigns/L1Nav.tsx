@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "/campaign-assets/netcore-logo.svg";
 import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
@@ -14,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import EngageL2 from "./EngageL2";
 
 /**
  * L1 left navigation rail — 48px wide, Primary/Ash (#291E30), rounded on the
@@ -89,40 +91,67 @@ function NavButton({
 
 export default function L1Nav({
   active = "engage",
+  activeEngageItem = "campaigns",
   decisioningNudge = false,
 }: {
   active?: string;
+  /** Which Engage L2 item renders active when that menu is open. */
+  activeEngageItem?: string;
   /** Highlights the decisioning entry with the pulsing discovery dot. */
   decisioningNudge?: boolean;
 }) {
   const navigate = useNavigate();
+  const [showEngageMenu, setShowEngageMenu] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Dismiss the Engage L2 menu on any click outside the rail/menu.
+  useEffect(() => {
+    if (!showEngageMenu) return;
+    const onDocDown = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setShowEngageMenu(false);
+    };
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, [showEngageMenu]);
 
   return (
-    <nav className="flex h-full w-12 shrink-0 flex-col items-center rounded-r-lg bg-[#291E30]">
-      {/* Brand mark */}
-      <div className="mt-6 flex h-5 w-full items-center justify-center">
-        <img src={logo} alt="Netcore" className="h-5 w-5" />
-      </div>
+    <div ref={containerRef} className="contents">
+      <nav className="flex h-full w-12 shrink-0 flex-col items-center rounded-r-lg bg-[#291E30]">
+        {/* Brand mark */}
+        <div className="mt-6 flex h-5 w-full items-center justify-center">
+          <img src={logo} alt="Netcore" className="h-5 w-5" />
+        </div>
 
-      {/* Primary destinations */}
-      <div className="mt-[26px] flex flex-col gap-2">
-        {primary.map((item) => (
-          <NavButton
-            key={item.key}
-            icon={item.icon}
-            label={item.label}
-            active={item.key === active}
-            onClick={item.route ? () => navigate(item.route) : undefined}
-            showDot={item.key === "decisioning" && decisioningNudge}
-          />
-        ))}
-      </div>
+        {/* Primary destinations */}
+        <div className="mt-[26px] flex flex-col gap-2">
+          {primary.map((item) => (
+            <NavButton
+              key={item.key}
+              icon={item.icon}
+              label={item.label}
+              active={item.key === active}
+              onClick={
+                item.key === "engage"
+                  ? () => setShowEngageMenu((v) => !v)
+                  : item.route
+                  ? () => navigate(item.route)
+                  : undefined
+              }
+              showDot={item.key === "decisioning" && decisioningNudge}
+            />
+          ))}
+        </div>
 
-      {/* Bottom: settings + profile */}
-      <div className="mb-8 mt-auto flex flex-col gap-2">
-        <NavButton icon={iconSettings} label="Settings" />
-        <NavButton icon={iconProfile} label="Profile" />
-      </div>
-    </nav>
+        {/* Bottom: settings + profile */}
+        <div className="mb-8 mt-auto flex flex-col gap-2">
+          <NavButton icon={iconSettings} label="Settings" />
+          <NavButton icon={iconProfile} label="Profile" />
+        </div>
+      </nav>
+
+      {showEngageMenu && (
+        <EngageL2 active={activeEngageItem} onClose={() => setShowEngageMenu(false)} />
+      )}
+    </div>
   );
 }

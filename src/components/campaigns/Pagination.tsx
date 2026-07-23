@@ -8,13 +8,13 @@ import {
 
 const pages = ["01", "02", "03", "04", "05"];
 
-export default function Pagination() {
+export default function Pagination({ unitLabel = "campaigns" }: { unitLabel?: string }) {
   const active = "01";
   return (
     <div className="flex items-center justify-between">
       {/* Rows per page */}
       <button className="flex h-10 w-[215px] items-center justify-between rounded-[5px] border border-[#DDE2EE] bg-white px-2.5 font-manrope text-sm text-[#17173A]">
-        10 campaigns per page
+        10 {unitLabel} per page
         <ChevronDown className="h-5 w-5 text-[#6F6F8D]" strokeWidth={1.8} />
       </button>
 

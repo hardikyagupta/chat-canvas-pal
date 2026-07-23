@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { tabs } from "./campaigns.data";
+import { tabs as defaultTabs } from "./campaigns.data";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -9,7 +9,13 @@ const pad = (n: number) => String(n).padStart(2, "0");
  * In `compact` mode (chat panel open) the strip becomes horizontally
  * scrollable with ‹ › arrows so it fits the reduced width.
  */
-export default function TabBar({ compact = false }: { compact?: boolean }) {
+export default function TabBar({
+  compact = false,
+  tabs = defaultTabs,
+}: {
+  compact?: boolean;
+  tabs?: { label: string; count: number }[];
+}) {
   const [active, setActive] = useState(0);
   const scroller = useRef<HTMLDivElement>(null);
 
