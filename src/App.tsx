@@ -8,6 +8,8 @@ import { DecisioningSetupProvider } from "@/contexts/DecisioningSetupContext";
 import Index from "./pages/Index";
 import Settings from "./pages/Settings";
 import Campaigns from "./pages/Campaigns";
+import Journeys from "./pages/Journeys";
+import JourneyBuilder from "./pages/JourneyBuilder";
 import DecisioningEngine from "./pages/DecisioningEngine";
 import DecisioningEnginePreview from "./pages/DecisioningEnginePreview";
 import DecisioningConfiguration from "./pages/DecisioningConfiguration";
@@ -31,6 +33,8 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/campaigns" element={<Campaigns />} />
+              <Route path="/journeys" element={<Journeys />} />
+              <Route path="/journeys/new" element={<JourneyBuilder />} />
               <Route path="/decisioning-engine" element={<DecisioningEngine />} />
               <Route path="/decisioning-engine/preview" element={<DecisioningEnginePreview />} />
               <Route path="/decisioning-engine/configuration" element={<DecisioningConfiguration />} />
