@@ -3,7 +3,7 @@ import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ArrowUp, StopCircle, X, Plus, FileVideo, FileAudio, FileText, File as FileIcon, Loader2 } from 'lucide-react';
+import { ArrowUp, StopCircle, X, Plus, FileVideo, FileAudio, FileText, File as FileIcon, Loader2, Paperclip, Telescope } from 'lucide-react';
 import { marketingAgents, MarketingAgent } from '@/data/agents';
 import { cn } from "@/lib/utils";
 
@@ -74,6 +74,8 @@ interface ChatInputProps {
   isQuestionnaireActive?: boolean;
   selectedContextChip?: string | null;
   onClearSelectedContextChip?: () => void;
+  /** Fired when the user picks "Deep research agent" from the "+" popover. */
+  onDeepResearch?: () => void;
   /** Drives the input shimmer (set by parent on every send / while generating). */
   shimmer?: boolean;
   /** Fired with the live textarea value on every change (typing, clear-on-send). */
@@ -101,6 +103,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   isQuestionnaireActive = false,
   selectedContextChip = null,
   onClearSelectedContextChip,
+  onDeepResearch,
   shimmer = false,
   onInputValueChange,
   placeholder = "How can I help you today?",
@@ -108,6 +111,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [showMentionList, setShowMentionList] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [mentionSearch, setMentionSearch] = useState("");
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
@@ -521,31 +525,58 @@ const ChatInput: React.FC<ChatInputProps> = ({
               )}
             </div>
 
-            {/* + button — single action: opens the file picker to add files or
-                photos. Left edge by default, bottom-left when expanded. Matches
-                the 32×32 send-button size. */}
-            <Tooltip>
-              <TooltipTrigger asChild>
+            {/* + button — opens a popover with two actions: add photos & files,
+                and the deep research agent. Left edge by default, bottom-left
+                when expanded. Matches the 32×32 send-button size. */}
+            <Popover open={showAddMenu} onOpenChange={setShowAddMenu}>
+              <PopoverTrigger asChild>
                 <button
                   type="button"
-                  aria-label="Add files or photos"
-                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="Add photos, files, or start deep research"
                   disabled={isQuestionnaireActive || isLoading}
                   className={cn(
                     "flex items-center justify-center w-[32px] h-[32px] rounded-[8px] shrink-0 transition-colors",
                     (isQuestionnaireActive || isLoading)
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:bg-[oklch(0_0_0_/_0.06)]",
+                    showAddMenu && "bg-[oklch(0_0_0_/_0.06)]",
                     expanded ? "order-2" : "order-1"
                   )}
                 >
                   <Plus className="w-[20px] h-[20px] text-[var(--color-charcoal)]" />
                 </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="start" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>
-                Add files or photos
-              </TooltipContent>
-            </Tooltip>
+              </PopoverTrigger>
+              <PopoverContent
+                side="top"
+                align="start"
+                sideOffset={8}
+                className="w-[240px] p-[4px] rounded-[12px]"
+                style={{ fontFamily: 'Manrope, sans-serif' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddMenu(false);
+                    fileInputRef.current?.click();
+                  }}
+                  className="flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
+                >
+                  <Paperclip className="w-[18px] h-[18px] text-[var(--color-charcoal)] shrink-0" />
+                  Add photos and files
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddMenu(false);
+                    onDeepResearch?.();
+                  }}
+                  className="flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
+                >
+                  <Telescope className="w-[18px] h-[18px] text-[var(--color-charcoal)] shrink-0" />
+                  Deep research agent
+                </button>
+              </PopoverContent>
+            </Popover>
 
             {/* Context chip — bottom-left when selected (after the + button) */}
             {selectedContextChip && (
