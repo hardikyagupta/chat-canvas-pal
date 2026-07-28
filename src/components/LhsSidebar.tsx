@@ -30,6 +30,22 @@ const ReportsIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+// Scheduler menu icon (Phosphor "calendar-check" glyph) — same family/weight as
+// the other menu glyphs so all icons read as one set. Uses currentColor.
+const SchedulerIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 256 256" fill="currentColor" className={className} aria-hidden="true">
+    <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48Zm136,160H48V96H208V208Zm-30.34-90.34a8,8,0,0,1,0,11.31l-40,40a8,8,0,0,1-11.32,0l-20-20a8,8,0,0,1,11.32-11.31L132,152l34.34-34.35A8,8,0,0,1,177.66,117.66Z" />
+  </svg>
+);
+
+// Custom agents menu icon (Phosphor "robot" glyph) — same family/weight as the
+// Chats/Bookmarks/Reports glyphs so all menu icons read as one set. currentColor.
+const CustomAgentsIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 256 256" fill="currentColor" className={className} aria-hidden="true">
+    <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16ZM104,140a12,12,0,1,1-12-12A12,12,0,0,1,104,140Zm72,0a12,12,0,1,1-12-12A12,12,0,0,1,176,140Zm-8,52a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,192ZM16,120a8,8,0,0,1,8,8v24a8,8,0,0,1-16,0V128A8,8,0,0,1,16,120Zm232,0a8,8,0,0,1,8,8v24a8,8,0,0,1-16,0V128A8,8,0,0,1,248,120Z" />
+  </svg>
+);
+
 export interface LhsChatItem {
   id: string;
   title: string;
@@ -44,9 +60,11 @@ interface LhsSidebarProps {
   busyChatId?: string | null;
   onSelectChat?: (id: string) => void;
   onNewChat?: () => void;
+  onOpenCustomAgents?: () => void;
   onOpenChats?: () => void;
   onOpenBookmarks?: () => void;
   onOpenReports?: () => void;
+  onOpenScheduler?: () => void;
   onOpenSettings?: () => void;
   // Collapse/expand the sidebar. The header toggle collapses; when collapsed the
   // logo doubles as the expand button.
@@ -99,9 +117,11 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   busyChatId = null,
   onSelectChat,
   onNewChat,
+  onOpenCustomAgents,
   onOpenChats,
   onOpenBookmarks,
   onOpenReports,
+  onOpenScheduler,
   onOpenSettings,
   onToggleCollapse,
 }) => {
@@ -170,8 +190,10 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
     // Search now lives in the header (next to the collapse toggle), not here.
     { key: 'new-chat', label: 'New chat', icon: Plus, onClick: onNewChat, isNewChat: true },
     { key: 'chats', label: 'Chats', icon: ChatsIcon, onClick: onOpenChats },
-    { key: 'bookmarks', label: 'Bookmarks', icon: BookmarkIcon, onClick: onOpenBookmarks },
+    { key: 'custom-agents', label: 'Agents', icon: CustomAgentsIcon, onClick: onOpenCustomAgents },
     { key: 'reports', label: 'Reports', icon: ReportsIcon, onClick: onOpenReports },
+    { key: 'scheduler', label: 'Scheduler', icon: SchedulerIcon, onClick: onOpenScheduler },
+    { key: 'bookmarks', label: 'Bookmarks', icon: BookmarkIcon, onClick: onOpenBookmarks },
   ];
 
   // Labels self-clip via max-width (so the root can be overflow-visible for tooltips)
