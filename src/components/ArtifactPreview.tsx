@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, ChevronDown, PanelRightClose, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Copy, Check, ChevronDown, X, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { ActionMenu, ActionMenuTrigger, ActionMenuContent, ActionMenuItem } from '@/components/ui/action-menu';
 import {
   PieChart, Pie, Cell,
@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { DocBody } from './DeepResearchDoc';
 
 const MANROPE = 'Manrope, sans-serif';
 const chartTick = { fontSize: 11, fill: 'var(--color-grey)', fontFamily: MANROPE };
@@ -26,7 +27,11 @@ interface ArtifactPreviewProps {
   onDownloadPdf?: () => void;        // Copy ▾ → Download as PDF
   onToggleExpand?: () => void;       // widen the artifact leftward up to the LHS nav (hiding the chat)
   isExpanded?: boolean;              // whether the artifact currently fills the chat+artifact region
+  hideExpandToggle?: boolean;        // hide the split-view toggle (e.g. opened from Reports — no chat to split with)
   bare?: boolean;                    // drop the outer card border/radius (full-bleed, e.g. widget view)
+  // When provided, the panel renders this document (e.g. a Deep Research report)
+  // in place of the default dashboard, reusing the same panel chrome.
+  doc?: { title: string; summaryHeading?: string; paragraphs: string[]; citations?: number };
 }
 
 // ---- KPI cards ----
@@ -112,7 +117,9 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   onDownloadPdf,
   onToggleExpand,
   isExpanded = false,
+  hideExpandToggle = false,
   bare = false,
+  doc,
 }) => {
   // "Copy" flips to a "Copied" checkmark briefly after a click.
   const [copied, setCopied] = useState(false);
@@ -129,7 +136,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
           <div className="flex flex-1 min-w-0 items-center gap-[6px]">
             {/* Expand toggle — widens the artifact leftward up to the LHS nav (hiding the chat).
                 Sits to the LEFT of the label; the chevrons point the way the panel grows. */}
-            {onToggleExpand && (
+            {onToggleExpand && !hideExpandToggle && (
               <UITooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -149,7 +156,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
               </UITooltip>
             )}
             <p className="min-w-0 truncate text-[14px] font-medium text-foreground">
-              {fileName}
+              {doc?.title ?? fileName}
             </p>
           </div>
           {/* Copy — split button: "Copy" copies; the chevron opens the download menu */}
@@ -187,26 +194,39 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
               </ActionMenuContent>
             </ActionMenu>
           </div>
-          {/* Collapse the artifact panel */}
+          {/* Close the artifact panel */}
           <UITooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
                 onClick={onClose}
                 className="flex items-center justify-center p-[6px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-                aria-label="Collapse artifact"
+                aria-label="Close artifact"
               >
-                <PanelRightClose className="size-[18px] text-[var(--color-slate)]" />
+                <X className="size-[18px] text-[var(--color-slate)]" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]" style={{ fontFamily: MANROPE, fontWeight: 500 }}>
-              <p>Collapse artifact</p>
+              <p>Close artifact</p>
             </TooltipContent>
           </UITooltip>
         </div>
       </TooltipProvider>
 
-      {/* content-area (scrollable) */}
+      {/* content-area (scrollable) — a document (e.g. Deep Research report) when
+          `doc` is provided, otherwise the default dashboard readout. */}
+      {doc ? (
+        <div className="w-full flex-1 overflow-y-auto hover-scroll px-[24px] py-[24px]">
+          <div className="mx-auto w-full max-w-[860px]">
+            {typeof doc.citations === 'number' && (
+              <p className="mb-[12px] text-[13px] leading-[18px] text-[var(--color-grey)]" style={{ fontFamily: MANROPE }}>
+                {doc.citations} citations
+              </p>
+            )}
+            <DocBody title={doc.title} summaryHeading={doc.summaryHeading} paragraphs={doc.paragraphs} />
+          </div>
+        </div>
+      ) : (
       <div className="flex flex-col gap-[16px] items-start px-[16px] py-[16px] w-full flex-1 overflow-y-auto hover-scroll">
         <p className="text-[20px] font-semibold leading-[28px] text-[var(--color-ink)] w-full">
           {title}
@@ -378,6 +398,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

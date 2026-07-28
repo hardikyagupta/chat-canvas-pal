@@ -3,7 +3,6 @@ import AgentAvatar from './AgentAvatar';
 import AgentOrb3D from './orb/AgentOrb3D';
 import type { OrbState } from './orb/AgentOrb3DCanvas';
 import { getOrbTheme } from './orb/agentOrbTheme';
-import { loaderLabels } from './GeneratingLoader';
 
 /**
  * AgentThreadHeader — introduces an agent's turn, per the Figma design.
@@ -66,13 +65,6 @@ interface AgentThreadHeaderProps {
    * transient "working" visual; the SVG is the settled identity.
    */
   settled?: boolean;
-  /**
-   * While the agent is working (not yet settled), the saying bubble doubles as
-   * the generating loader: the thinking icon plus the cycling loader states,
-   * opening with the agent's own saying. Used on the deliberation turn, where
-   * the floating pill above the input is suppressed in favor of this.
-   */
-  sayingLoader?: boolean;
 }
 
 const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
@@ -85,22 +77,8 @@ const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
   fromName,
   live = true,
   settled = false,
-  sayingLoader = false,
 }) => {
   const resolvedSaying = saying ?? AGENT_SAYINGS[name.trim().toLowerCase()];
-  const showSayingLoader = sayingLoader && !settled;
-  // Loader states shown in the bubble: the agent's saying leads, then the
-  // shared generating-loader labels cycle behind it.
-  const sayingLoaderLabels = resolvedSaying ? [resolvedSaying, ...loaderLabels] : loaderLabels;
-  const [sayingLabelIndex, setSayingLabelIndex] = useState(0);
-
-  useEffect(() => {
-    if (!showSayingLoader) return;
-    const interval = setInterval(() => {
-      setSayingLabelIndex((prev) => (prev + 1) % sayingLoaderLabels.length);
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [showSayingLoader, sayingLoaderLabels.length]);
   const [revealed, setRevealed] = useState(revealDelay <= 0);
   const [orbState, setOrbState] = useState<OrbState>('entering');
   // Headers that mount already settled (older turns, re-renders) show the SVG
@@ -198,26 +176,15 @@ const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
           {name}
         </p>
 
-        {(resolvedSaying || showSayingLoader) && (
+        {resolvedSaying && (
           // Static bubble — the thinking chevron lives on the ThinkingState
-          // ("Thought for Xs") component that follows, not here. In sayingLoader
-          // mode it carries the generating loader (icon + cycling states) until
-          // the answer settles, then reverts to the static saying.
+          // ("Thought for Xs") component that follows, not here.
           <div className="flex w-fit max-w-full items-center gap-[6px] rounded-tl-[2px] rounded-tr-[8px] rounded-br-[8px] rounded-bl-[8px] border border-[var(--color-line)] bg-card px-[8px] py-[6px]">
-            {showSayingLoader && (
-              <span className="w-[18px] h-[18px] shrink-0 overflow-hidden flex items-center justify-center" aria-hidden="true">
-                <img src="/thinking-loader.gif" alt="" className="w-[18px] h-[18px] pointer-events-none" />
-              </span>
-            )}
             <span
-              className={
-                showSayingLoader
-                  ? 'text-[12px] leading-[18px] font-normal thinking-shimmer-gradient whitespace-nowrap'
-                  : 'text-[12px] leading-[18px] font-normal text-[var(--color-grey)]'
-              }
+              className="text-[12px] leading-[18px] font-normal text-[var(--color-grey)]"
               style={{ fontFamily: 'Manrope, sans-serif' }}
             >
-              {showSayingLoader ? sayingLoaderLabels[sayingLabelIndex % sayingLoaderLabels.length] : resolvedSaying}
+              {resolvedSaying}
             </span>
           </div>
         )}

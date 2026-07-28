@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-// Shared with AgentThreadHeader, whose saying bubble cycles these same states
-// on the deliberation turn (where the floating pill is suppressed).
 export const loaderLabels = [
   'Starting to roll...',
   'Crunching the numbers...',

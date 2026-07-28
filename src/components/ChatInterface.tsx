@@ -11,7 +11,6 @@ import ChatMessage from './ChatMessage';
 import { MarketingAgent, marketingAgents } from '@/data/agents';
 import { CONVERSATIONS, ConversationVariant, CAMPAIGNS_FLOW, AgentArtifactCardData } from '@/data/conversations';
 import AgentSwitchDivider from './AgentSwitchDivider';
-import AgentDeliberation from './AgentDeliberation';
 import AgentThreadHeader from './AgentThreadHeader';
 import AvatarStack from './AvatarStack';
 import { cn } from '@/lib/utils';
@@ -19,6 +18,8 @@ import { ThemeToggle } from '../../components/theme-provider';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import DeepResearchPlan from "./DeepResearchPlan";
+import DeepResearchDoc from "./DeepResearchDoc";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -29,7 +30,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ModeSwitchConfirmation } from './ModeSwitchConfirmation';
 import LhsSidebar, { defaultChats } from './LhsSidebar';
+import SettingsModal from './SettingsModal';
 import ChatListPage from './ChatListPage';
+import ReportsPage from './ReportsPage';
+import { generatedReports } from '@/data/reports';
 import RhsHeader from './RhsHeader';
 import RotatingWord from './RotatingWord';
 import { GradientShimmer } from 'gradient-shimmer';
@@ -37,7 +41,7 @@ import MinViewLhsOverlay from './MinViewLhsOverlay';
 import ArtifactPreview from './ArtifactPreview';
 import LineNav, { LineNavItem } from './LineNav';
 import FeedbackModal, { FeedbackSentiment } from './FeedbackModal';
-import { ThumbsUp, ThumbsDown, CheckCircle2, TrendingUp, MousePointerClick, FileText, Activity, DollarSign } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, CheckCircle2, TrendingUp, MousePointerClick, FileText, Activity, DollarSign, Search, RefreshCw, Megaphone, Compass } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { playResponseCue, playToggleCue, playExpandCue } from '@/lib/playCue';
 import { ContentAgentSegmentAccordions } from './ContentAgentSegmentAccordions';
@@ -108,12 +112,14 @@ interface ChatMessageData {
   // Set once this switch's answer finishes streaming: the header swaps the live
   // orb for the agent's SVG avatar and the divider waves freeze.
   switchSettled?: boolean;
-  // Turn opens with the agent-deliberation huddle (all candidates orbit the AI
-  // orb, one gets picked) instead of the switch divider.
-  isAgentDeliberation?: boolean;
-  deliberationCandidates?: string[];
   // Agent-handed artifact card (segment / journey), revealed after the answer streams.
   agentArtifactCard?: AgentArtifactCardData;
+  // ChatGPT-style deep-research plan card (title + steps), rendered inline.
+  deepResearchPlan?: { title: string; steps: string[] };
+  // Finished deep-research report, shown as a full-width doc preview.
+  deepResearchDoc?: { title: string; citations: number; summaryHeading?: string; paragraphs: string[] };
+  // Reply chip shown above a user turn (e.g. the plan title an edit follows up on).
+  replyContext?: string;
 }
 
 // Props for the main ChatInterface component
@@ -196,9 +202,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     if (feedbackToastTimerRef.current) clearTimeout(feedbackToastTimerRef.current);
   };
   const [isGeneratingOutput, setIsGeneratingOutput] = useState(false); // Drives the persistent bottom-of-thread loader
-  // The deliberation turn moves the generating loader into the thread header's
-  // saying bubble, so the floating pill above the input stays hidden for it.
-  const [suppressGeneratingPill, setSuppressGeneratingPill] = useState(false);
   const [contentApproved, setContentApproved] = useState(false); // New state for content approval
   const [segmentsApproved, setSegmentsApproved] = useState(false); // New state for segments approval
   const [contentGenerated, setContentGenerated] = useState(false); // New state for content generation
@@ -225,6 +228,37 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // Chat options dropdown state
   const [openChatId, setOpenChatId] = useState<string | null>(null);
   const [selectedStarterChip, setSelectedStarterChip] = useState<string | null>(null);
+  // Deep-research mode — toggled from the ChatInput "+" popover. When on, the
+  // empty-state starter chips are replaced by the deep-research category pills;
+  // picking a category then reveals its prompts (mirrors the starter-chip flow).
+  const [deepResearchActive, setDeepResearchActive] = useState(false);
+  const [selectedDeepResearchCategory, setSelectedDeepResearchCategory] = useState<string | null>(null);
+  // Set (to the card's title) when the user taps "Edit" on a plan card — the
+  // composer switches into an editable "follow up" field carrying that reply chip.
+  const [deepResearchEditTitle, setDeepResearchEditTitle] = useState<string | null>(null);
+  // The scripted deep-research story reused by the initial send and every edit.
+  const DEEP_RESEARCH_STORY = {
+    title: 'WhatsApp channel performance — this quarter',
+    steps: [
+      "Pull this quarter's WhatsApp delivery, open, and click-through rates across every campaign.",
+      "Break down where messages are lost — undelivered, blocked, and opted-out — and size the leak.",
+      "Benchmark WhatsApp against Email, SMS, and APN for the same audiences and journeys.",
+      "Identify the segments, templates, and send-times driving the strongest WhatsApp engagement.",
+      "Recommend the fixes most likely to recover delivery and lift conversions next quarter.",
+    ],
+  };
+  // The finished report, shown as a full-width doc preview once the card completes.
+  const DEEP_RESEARCH_DOC = {
+    title: 'WhatsApp Channel Performance — This Quarter',
+    citations: 9,
+    summaryHeading: 'Executive summary',
+    paragraphs: [
+      "This quarter WhatsApp reached more people than any other channel but <strong>delivered the least of what it sent</strong> — over 60% of published messages never landed. The gap traces back to a handful of templates and unverified sender numbers, not the audience, which means most of it is recoverable.",
+      "Email and APN are quietly carrying your qualified engagement, with near-100% delivery and the steadiest click rates. WhatsApp's raw reach is being wasted at the delivery step, so the channel looks weak on outcomes despite the largest send volume.",
+      "The three lowest-performing templates account for the majority of failures, and a small cluster of multi-channel, high-intent users are the ones most worth protecting. Re-verifying sender identities and re-sequencing the 48-hour follow-up are the highest-leverage fixes.",
+      "If delivery recovers to roughly 85%, we estimate <strong>~4,800 recovered conversations and an 18–24% lift in WhatsApp-attributed conversions</strong> next quarter — at no additional send cost.",
+    ],
+  };
   const starterChips = [
     "Seasonal Trend",
     "CTR Monitoring",
@@ -239,6 +273,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     "QBR Report": FileText,
     "Channel Anomalies": Activity,
     "Revenue Monitoring": DollarSign,
+  };
+  // Flat outline icons for the deep-research category pills — matches the default
+  // starter chips (was emoji). Keyed by the group header.
+  const deepResearchGroupIcons: Record<string, LucideIcon> = {
+    "Performance & diagnostics": Search,
+    "Retention & lifetime value": TrendingUp,
+    "Revenue growth": DollarSign,
+    "Win-back & reactivation": RefreshCw,
+    "Channels & campaigns": Megaphone,
+    "Journeys & audiences": Compass,
   };
   const starterPromptsByChip: Record<string, string[]> = {
     "Seasonal Trend": [
@@ -275,6 +319,112 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     "Channel Anomalies": "Investigate channel anomalies",
     "Revenue Monitoring": "Track revenue performance",
   };
+
+  // Deep-research suggestion set: category sections (emoji + header) each with a
+  // couple of chips. The chip's short `label` is shown; clicking sends the fuller
+  // `prompt` — a "get a detailed report" style deep-research request.
+  const deepResearchPromptGroups: {
+    emoji: string;
+    header: string;
+    chips: { label: string; prompt: string }[];
+  }[] = [
+    {
+      emoji: "🔍",
+      header: "Performance & diagnostics",
+      chips: [
+        {
+          label: "Quarterly performance diagnostic",
+          prompt:
+            "Run a full quarterly performance diagnostic across every channel — delivery, engagement, conversion, and spend — and tell me exactly where we're winning and where we're leaking.",
+        },
+        {
+          label: "Executive summary & opportunities",
+          prompt:
+            "Give me an executive summary of this quarter's marketing performance, with the top three opportunities I should act on next.",
+        },
+      ],
+    },
+    {
+      emoji: "📈",
+      header: "Retention & lifetime value",
+      chips: [
+        {
+          label: "Is our retention improving?",
+          prompt:
+            "Analyze our customer retention and repeat-purchase trends over the last four quarters and tell me whether retention is actually improving.",
+        },
+        {
+          label: "Best long-term-value channel",
+          prompt:
+            "Which acquisition channel produces the highest long-term customer lifetime value, and how should that change where we invest?",
+        },
+      ],
+    },
+    {
+      emoji: "💰",
+      header: "Revenue growth",
+      chips: [
+        {
+          label: "A plan to grow revenue",
+          prompt:
+            "Build me a data-backed plan to grow revenue next quarter, with the specific segments, channels, and journeys to prioritize.",
+        },
+        {
+          label: "Where revenue concentrates",
+          prompt:
+            "Show me where our revenue actually concentrates — by segment, channel, and campaign — and how dependent we are on our top customers.",
+        },
+      ],
+    },
+    {
+      emoji: "🔁",
+      header: "Win-back & reactivation",
+      chips: [
+        {
+          label: "Reactivate lapsed customers",
+          prompt:
+            "Identify our lapsed customers and design a win-back strategy to reactivate the ones most likely to return.",
+        },
+        {
+          label: "Dormant-audience opportunity",
+          prompt:
+            "Estimate the revenue opportunity sitting in our dormant audience and the best way to re-engage them.",
+        },
+      ],
+    },
+    {
+      emoji: "📢",
+      header: "Channels & campaigns",
+      chips: [
+        {
+          label: "Optimize the channel mix",
+          prompt:
+            "Analyze our current channel mix and recommend how to reallocate budget across channels for the best return.",
+        },
+        {
+          label: "What made winning campaigns win",
+          prompt:
+            "Break down what our best-performing campaigns had in common and how to repeat those wins.",
+        },
+      ],
+    },
+    {
+      emoji: "🧭",
+      header: "Journeys & audiences",
+      chips: [
+        {
+          label: "Journey health audit",
+          prompt:
+            "Audit the health of our active journeys — entry rates, drop-off points, and conversion — and flag the ones that need fixing.",
+        },
+        {
+          label: "Best & worst segments",
+          prompt:
+            "Compare our best and worst performing segments and tell me what's driving the difference.",
+        },
+      ],
+    },
+  ];
 
   // Live mirror of the ChatInput textarea value — drives the typed-trigger suggestions below.
   const [liveInputValue, setLiveInputValue] = useState("");
@@ -366,15 +516,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // no component swap and no position jump between the two states.
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
   // RHS page: the default conversation view, or the full Chats / Bookmarks list page
-  const [activePage, setActivePage] = useState<'home' | 'chats' | 'bookmarks'>('home');
+  const [activePage, setActivePage] = useState<'home' | 'chats' | 'bookmarks' | 'reports'>('home');
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   // Minimized-view LHS overlay (opened from the widget header menu icon)
   const [showMinOverlay, setShowMinOverlay] = useState(false);
   // Artifact preview split-view (opened from a message's "Preview" button)
   const [showArtifactPreview, setShowArtifactPreview] = useState(false);
   const [artifactFullExpanded, setArtifactFullExpanded] = useState(false);
+  // Opened from the Reports page → no chat to split with (hide the split-view
+  // toggle), and closing returns to the Reports page rather than home.
+  const [artifactFromReports, setArtifactFromReports] = useState(false);
   const [artifactClosing, setArtifactClosing] = useState(false); // exit-animation flag
   const hasOpenedArtifactRef = useRef(false);
   const artifactCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // What the artifact panel renders. `null` → the default dashboard readout;
+  // a `deepResearch` entry → that report's document (see ArtifactPreview `doc`).
+  const [activeArtifact, setActiveArtifact] = useState<
+    | { kind: 'deepResearch'; doc: { title: string; citations: number; summaryHeading?: string; paragraphs: string[] } }
+    | null
+  >(null);
 
   // Artifact column is drag-resizable; width is a % of the whole content row.
   // Minimum widths (px) that must hold while resizing so nothing overflows or
@@ -427,14 +587,33 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     }
   };
 
+  // Open a Deep Research report in the RHS artifact panel. `fullExpanded` opens
+  // the doc previewer full-bleed (chat hidden) — used when arriving from the
+  // Reports page, where there's no conversation to sit beside.
+  const openDeepResearchArtifact = (
+    doc: { title: string; citations: number; summaryHeading?: string; paragraphs: string[] },
+    opts?: { fullExpanded?: boolean; fromReports?: boolean }
+  ) => {
+    setActiveArtifact({ kind: 'deepResearch', doc });
+    handleOpenArtifactPreview();
+    if (opts?.fullExpanded) setArtifactFullExpanded(true);
+    setArtifactFromReports(!!opts?.fromReports);
+  };
+
   const handleCloseArtifactPreview = () => {
+    // If the doc was opened from the Reports page, return there on close
+    // (instead of landing on whatever chat/home was behind it).
+    const returnToReports = artifactFromReports;
     // Play the slide-out/fade exit before unmounting
     setArtifactClosing(true);
     if (artifactCloseTimerRef.current) clearTimeout(artifactCloseTimerRef.current);
     artifactCloseTimerRef.current = setTimeout(() => {
       setShowArtifactPreview(false);
       setArtifactFullExpanded(false);
+      setArtifactFromReports(false);
       setArtifactClosing(false);
+      setActiveArtifact(null);
+      if (returnToReports) setActivePage('reports');
     }, 320);
   };
 
@@ -781,6 +960,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     setShowArtifactPreview(false);
     setArtifactFullExpanded(false);
     setArtifactClosing(false);
+    setActiveArtifact(null);
     hasOpenedArtifactRef.current = false;
   };
 
@@ -973,7 +1153,6 @@ The content has been updated across all channels to reflect your changes.`;
     resetFeedback();
     setMockChatCompleted(false);
     setIsGeneratingOutput(true);
-    setSuppressGeneratingPill(!!turn?.deliberation);
 
     // Pin the just-sent message near the top so the response reveals below it.
     setTimeout(() => {
@@ -1012,12 +1191,8 @@ The content has been updated across all channels to reflect your changes.`;
       {
         type: 'chat', isAI: true, content: '',
         isAgentSwitch: true,
-        isAgentDeliberation: !!turn.deliberation,
-        deliberationCandidates: turn.deliberation?.candidates,
         switchAgentLabel: turn.switchAgentLabel,
-        // The deliberation's big orb already morphed through the candidates'
-        // colors, so the thread header orb mounts directly in the winner's.
-        switchFromLabel: turn.deliberation ? undefined : prevLabel,
+        switchFromLabel: prevLabel,
         reasoningSteps: turn.reasoningSteps,
         avatarSrc: agent?.avatarSrc, avatarIcon: agent?.icon, avatarBgClass: agent?.colorClass,
       },
@@ -1072,13 +1247,7 @@ The content has been updated across all channels to reflect your changes.`;
         if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
         // Let the two-beat divider (Calling in agents… → Switched to <agent>)
         // and the staged thread-header reveal play out before the thinking dots.
-        // The deliberation (orb morphing through candidates → divider flip →
-        // orb collapse → header reveal) needs a longer runway before the
-        // thinking loader comes in.
-        mockMessageTimeoutRef.current = setTimeout(
-          () => step(index + 1),
-          def.isAgentDeliberation ? 7400 : 2600
-        );
+        mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 2600);
         return;
       }
       setMessages(prev => [...prev, {
@@ -1094,7 +1263,68 @@ The content has been updated across all channels to reflect your changes.`;
     mockMessageTimeoutRef.current = setTimeout(() => step(0), 500);
   };
 
+  // Deep-research story — whatever the user sends while the deep-research chip is
+  // active, we swap in the scripted WhatsApp-performance research and drop the
+  // ChatGPT-style plan card into the thread.
+  const addDeepResearchTurn = (userMessage: ChatMessageData) => {
+    const sentMsgIndex = messages.length;
+    const planMessage: ChatMessageData = {
+      type: 'chat',
+      isAI: true,
+      content: '',
+      deepResearchPlan: {
+        title: DEEP_RESEARCH_STORY.title,
+        steps: DEEP_RESEARCH_STORY.steps,
+      },
+    };
+    setMessages((prev) => [...prev, userMessage, planMessage]);
+
+    // Pin the just-sent prompt near the top so the plan reveals below it.
+    setTimeout(() => {
+      document.getElementById(`msg-${sentMsgIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
+
+  const handleDeepResearchSend = () => {
+    // Leaving deep-research mode; the plan card drives the flow from here.
+    setDeepResearchActive(false);
+    setSelectedDeepResearchCategory(null);
+    setSelectedStarterChip(null);
+    setShowSuggestions(false);
+    setDynamicSuggestions(null);
+
+    addDeepResearchTurn({
+      type: 'chat',
+      isAI: false,
+      content: 'A deep research on my WhatsApp channel performance this quarter',
+    });
+  };
+
+  // Submitting the "Edit" follow-up — post the tweak as a new user turn (carrying
+  // the plan's reply chip) and re-run the same processing card beneath it.
+  const handleDeepResearchFollowup = (followup: string) => {
+    const replyContext = deepResearchEditTitle ?? undefined;
+    setDeepResearchEditTitle(null);
+    addDeepResearchTurn({
+      type: 'chat',
+      isAI: false,
+      content: followup,
+      replyContext,
+    });
+  };
+
   const handleSendMessage = (message: string) => {
+    // Deep-research mode intercepts every send with the scripted research story.
+    if (deepResearchActive) {
+      handleDeepResearchSend();
+      return;
+    }
+    // Follow-up submitted from the "Edit" composer.
+    if (deepResearchEditTitle) {
+      handleDeepResearchFollowup(message);
+      return;
+    }
+
     // The /campaigns docked chat plays a bespoke agent-relay flow.
     if (conversationVariant === 'campaigns') {
       handleCampaignsSend(message);
@@ -2342,6 +2572,7 @@ The content has been updated across all channels to reflect your changes.`;
             onNewChat={handleNewChat}
             onOpenChats={() => setActivePage('chats')}
             onOpenBookmarks={() => setActivePage('bookmarks')}
+            onOpenReports={() => setActivePage('reports')}
           />
         )}
 
@@ -2353,6 +2584,12 @@ The content has been updated across all channels to reflect your changes.`;
             onSubmit={handleFeedbackSubmit}
           />
         )}
+
+        {/* Settings modal — opened from the Settings button at the bottom of the LHS rail */}
+        <SettingsModal
+          isOpen={settingsModalOpen}
+          onClose={() => setSettingsModalOpen(false)}
+        />
 
 
         {/* Main content area: Layout changes based on view mode */}
@@ -2371,8 +2608,9 @@ The content has been updated across all channels to reflect your changes.`;
               onNewChat={handleNewChat}
               onOpenChats={() => setActivePage('chats')}
               onOpenBookmarks={() => setActivePage('bookmarks')}
+              onOpenReports={() => setActivePage('reports')}
               onSelectChat={() => setActivePage('home')}
-              onOpenSettings={() => navigate('/settings')}
+              onOpenSettings={() => setSettingsModalOpen(true)}
               onToggleCollapse={() => setLhsCollapsed(prev => !prev)}
             />
           )}
@@ -2424,15 +2662,28 @@ The content has been updated across all channels to reflect your changes.`;
               Renders in both expanded and minimized (mobile) views. */}
           {activePage !== 'home' && (
             <div className="absolute inset-0 z-20 overflow-hidden bg-[var(--color-surface-0)]">
-              <ChatListPage
-                title={activePage === 'chats' ? 'Chats' : 'Bookmarks'}
-                searchPlaceholder={activePage === 'chats' ? 'Search chats' : 'Search bookmarks'}
-                chats={activePage === 'chats' ? defaultChats : bookmarkedChats}
-                showNewChat={activePage === 'chats'}
-                onNewChat={handleNewChat}
-                onSelectChat={() => setActivePage('home')}
-                compact={!isExpanded}
-              />
+              {activePage === 'reports' ? (
+                <ReportsPage
+                  reports={generatedReports}
+                  compact={!isExpanded}
+                  onSelectReport={(report) => {
+                    // Leave the reports overlay and open the doc previewer full-bleed
+                    // (no chat beside it — there's no conversation to show).
+                    setActivePage('home');
+                    openDeepResearchArtifact({ ...report.doc }, { fullExpanded: true, fromReports: true });
+                  }}
+                />
+              ) : (
+                <ChatListPage
+                  title={activePage === 'chats' ? 'Chats' : 'Bookmarks'}
+                  searchPlaceholder={activePage === 'chats' ? 'Search chats' : 'Search bookmarks'}
+                  chats={activePage === 'chats' ? defaultChats : bookmarkedChats}
+                  showNewChat={activePage === 'chats'}
+                  onNewChat={handleNewChat}
+                  onSelectChat={() => setActivePage('home')}
+                  compact={!isExpanded}
+                />
+              )}
             </div>
           )}
           {/* Conversation column — fills the chat area. In expanded view the artifact
@@ -2473,7 +2724,7 @@ The content has been updated across all channels to reflect your changes.`;
                 messages.length === 0 ? "justify-center" : ""
               )}>
                 <div className={cn(
-                  "flex flex-col items-start space-y-0 w-full",
+                  "flex flex-col items-start space-y-[24px] w-full",
                   isExpanded ? "max-w-[768px]" : "max-w-full",
                   messages.length > 0 ? "pb-8" : ""
                 )}>
@@ -2490,11 +2741,76 @@ The content has been updated across all channels to reflect your changes.`;
                           isMockAgentChatActive={isMockAgentChatActive}
                           onStopMockConversation={stopMockConversation}
                           isQuestionnaireActive={false}
-                          selectedContextChip={selectedStarterChip}
-                          onClearSelectedContextChip={() => setSelectedStarterChip(null)}
+                          selectedContextChip={deepResearchActive ? selectedDeepResearchCategory : selectedStarterChip}
+                          onClearSelectedContextChip={
+                            deepResearchActive
+                              ? () => setSelectedDeepResearchCategory(null)
+                              : () => setSelectedStarterChip(null)
+                          }
                           onInputValueChange={setLiveInputValue}
+                          onDeepResearchChange={(active) => {
+                            setDeepResearchActive(active);
+                            // Reset selection context whenever the mode toggles so
+                            // we always start on the category pills.
+                            setSelectedStarterChip(null);
+                            setSelectedDeepResearchCategory(null);
+                          }}
                         />
-                        {matchedTypedTrigger && (
+                        {/* Deep research: category pills first (like the default
+                            starter pills). */}
+                        {deepResearchActive && !selectedDeepResearchCategory && (
+                          <div className="flex flex-wrap gap-[8px] items-center justify-center w-full">
+                            {deepResearchPromptGroups.map((group) => {
+                              const GroupIcon = deepResearchGroupIcons[group.header];
+                              return (
+                              <button
+                                key={group.header}
+                                type="button"
+                                className="fig-chip flex items-center justify-center gap-[6px] px-[10px] py-[6px] rounded-[8px] whitespace-nowrap shrink-0"
+                                onClick={() => setSelectedDeepResearchCategory(group.header)}
+                              >
+                                {GroupIcon && (
+                                  <GroupIcon className="size-[14px] text-[var(--color-slate)] shrink-0" />
+                                )}
+                                <span
+                                  className="font-normal text-[12px] leading-[16px] text-[var(--color-ink)] tracking-[0.36px]"
+                                  style={{ fontFamily: "Manrope, sans-serif" }}
+                                >
+                                  {group.header}
+                                </span>
+                              </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {/* Deep research: the selected category's prompts (like the
+                            default selected-chip prompt list). */}
+                        {deepResearchActive && selectedDeepResearchCategory && (
+                          <div className="w-full flex flex-col gap-[8px]">
+                            <p
+                              className="px-[2px] font-semibold text-[13px] leading-[18px] text-[var(--color-grey)] tracking-[0.42px]"
+                              style={{ fontFamily: "Manrope, sans-serif" }}
+                            >
+                              {selectedDeepResearchCategory}
+                            </p>
+                            {(deepResearchPromptGroups.find((g) => g.header === selectedDeepResearchCategory)?.chips ?? []).map((chip) => (
+                              <button
+                                key={chip.label}
+                                type="button"
+                                className="w-full text-left p-[12px] rounded-[8px] cursor-pointer bg-card border border-[var(--color-line)] hover:bg-[var(--color-surface-0)] transition-colors"
+                                onClick={() => handleSendMessage(chip.prompt)}
+                              >
+                                <p
+                                  className="text-[13px] leading-[18px] text-[var(--color-slate)]"
+                                  style={{ fontFamily: "Manrope, sans-serif" }}
+                                >
+                                  {chip.label}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {!deepResearchActive && matchedTypedTrigger && (
                           <div key={matchedTypedTrigger.trigger} className="w-full flex flex-col">
                             {matchedTypedTrigger.suggestions.map((suggestion, index) => {
                               const prefix = suggestion.slice(0, matchedTypedTrigger.trigger.length);
@@ -2528,7 +2844,7 @@ The content has been updated across all channels to reflect your changes.`;
                             })}
                           </div>
                         )}
-                        {!matchedTypedTrigger && !selectedStarterChip && (
+                        {!deepResearchActive && !matchedTypedTrigger && !selectedStarterChip && (
                           <div className="flex flex-wrap gap-[8px] items-center justify-center w-full">
                             {starterChips.map((chipLabel, index) => {
                               const ChipIcon = starterChipIcons[chipLabel];
@@ -2553,7 +2869,7 @@ The content has been updated across all channels to reflect your changes.`;
                             })}
                           </div>
                         )}
-                        {!matchedTypedTrigger && selectedStarterChip && (
+                        {!deepResearchActive && !matchedTypedTrigger && selectedStarterChip && (
                           <div className="w-full flex flex-col gap-[8px]">
                             <p
                               className="px-[2px] font-semibold text-[13px] leading-[18px] text-[var(--color-grey)] tracking-[0.42px]"
@@ -2597,41 +2913,58 @@ The content has been updated across all channels to reflect your changes.`;
                     // divider, then the avatar + name + saying header below it,
                     // stacked with a 16px gap, introducing this agent's thread.
                     <div className="flex w-full flex-col gap-[16px] mb-[8px] animate-in fade-in duration-500">
-                      {message.isAgentDeliberation ? (
-                        // Turn 4: the deliberation reel — candidate agents roll
-                        // through a slot until one is picked, then this becomes
-                        // the standard switch divider.
-                        <AgentDeliberation
-                          candidates={message.deliberationCandidates ?? []}
-                          chosenLabel={message.switchAgentLabel || ''}
-                          settled={!!message.switchSettled}
-                        />
-                      ) : (
-                        <AgentSwitchDivider
-                          agentLabel={message.switchAgentLabel || ''}
-                          avatarSrc={message.avatarSrc}
-                          icon={message.avatarIcon}
-                          colorClass={message.avatarBgClass}
-                          settled={!!message.switchSettled}
-                        />
-                      )}
+                      <AgentSwitchDivider
+                        agentLabel={message.switchAgentLabel || ''}
+                        avatarSrc={message.avatarSrc}
+                        icon={message.avatarIcon}
+                        colorClass={message.avatarBgClass}
+                        settled={!!message.switchSettled}
+                      />
                       <AgentThreadHeader
                         name={message.switchAgentLabel || ''}
                         avatarSrc={message.avatarSrc}
                         fromName={message.switchFromLabel}
                         settled={!!message.switchSettled}
-                        // On the deliberation turn the saying bubble carries the
-                        // generating loader (the floating pill is suppressed).
-                        sayingLoader={!!message.isAgentDeliberation}
                         // Only the most recent hand-off keeps the live WebGL orb —
                         // older headers fall back to the static SVG so a single
                         // WebGL context exists at a time.
                         live={index === messages.reduce((acc, m, i) => (m.isAgentSwitch ? i : acc), -1)}
-                        // Hold the header until the beat above has settled — the
-                        // divider's "Calling in agents… → Switched to", or the
-                        // deliberation's decide + orb collapse (~6150ms) — so
-                        // the hand-off reads as a sequence.
-                        revealDelay={message.isAgentDeliberation ? 6300 : 1700}
+                        // Hold the header until the "Calling in agents… → Switched
+                        // to" divider above has settled so the hand-off reads as a
+                        // sequence rather than everything landing at once.
+                        revealDelay={1700}
+                      />
+                    </div>
+                  ) : message.deepResearchDoc ? (
+                    // Finished report — full-width doc preview replacing the card.
+                    <DeepResearchDoc
+                      title={message.deepResearchDoc.title}
+                      citations={message.deepResearchDoc.citations}
+                      summaryHeading={message.deepResearchDoc.summaryHeading}
+                      paragraphs={message.deepResearchDoc.paragraphs}
+                      onExpand={() => openDeepResearchArtifact(message.deepResearchDoc!)}
+                    />
+                  ) : message.deepResearchPlan ? (
+                    // Constrained width — the plan/progress card shouldn't span the
+                    // full chat column.
+                    <div className="w-full max-w-[600px]">
+                      <DeepResearchPlan
+                        title={message.deepResearchPlan.title}
+                        steps={message.deepResearchPlan.steps}
+                        onEdit={() => {
+                          // Switch the composer into "follow up" edit mode.
+                          setDeepResearchEditTitle(message.deepResearchPlan!.title);
+                        }}
+                        onComplete={() => {
+                          // Replace this plan card with the finished doc preview.
+                          setMessages((prev) =>
+                            prev.map((m, i) =>
+                              i === index
+                                ? { type: 'chat', isAI: true, content: '', deepResearchDoc: DEEP_RESEARCH_DOC }
+                                : m
+                            )
+                          );
+                        }}
                       />
                     </div>
                   ) : message.type === 'system' ? (
@@ -2642,6 +2975,19 @@ The content has been updated across all channels to reflect your changes.`;
                       agentColorClass={message.agentColorClass}
                     />
                   ) : (
+                    <>
+                    {message.replyContext && (
+                      // Reply chip above a user turn (e.g. the plan an edit follows up on).
+                      <div className="flex w-full justify-end mb-[6px]">
+                        <span
+                          className="flex items-center gap-[6px] text-[13px] leading-[18px] text-[var(--color-grey)]"
+                          style={{ fontFamily: "Manrope, sans-serif" }}
+                        >
+                          <CornerDownRight className="h-[14px] w-[14px] shrink-0" />
+                          <span className="truncate max-w-[280px]">{message.replyContext}</span>
+                        </span>
+                      </div>
+                    )}
                     <ChatMessage
                       messageId={`msg-${index}`}
                       isExpanded={isExpanded}
@@ -2769,6 +3115,7 @@ The content has been updated across all channels to reflect your changes.`;
                       onDownloadArtifact={() => {}}
                       onPreviewArtifact={handleOpenArtifactPreview}
                     />
+                    </>
                   )}
                   </div>
                 ))}
@@ -2864,7 +3211,7 @@ The content has been updated across all channels to reflect your changes.`;
                     isExpanded ? "w-full max-w-[768px]" : "w-full"
                   )}>
                     {/* Floating "still loading" pill, centered just above the input (both views) */}
-                    {isGeneratingOutput && !suppressGeneratingPill && (
+                    {isGeneratingOutput && (
                       <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-[10px] z-20">
                         <GeneratingLoader pill />
                       </div>
@@ -2897,6 +3244,9 @@ The content has been updated across all channels to reflect your changes.`;
                       onSend={handleSendMessage}
                       isMockAgentChatActive={isMockAgentChatActive}
                       shimmer={inputShimmer || isGeneratingOutput}
+                      // "Edit" on a plan card → follow-up composer with a reply chip.
+                      replyContext={deepResearchEditTitle}
+                      onClearReplyContext={() => setDeepResearchEditTitle(null)}
                       onStopMockConversation={stopMockConversation}
                       isQuestionnaireActive={(() => {
                         const lastMessage = messages[messages.length - 1];
@@ -2922,7 +3272,7 @@ The content has been updated across all channels to reflect your changes.`;
                         return false;
                       })()}
                       selectedContextChip={null}
-                      placeholder="Write a message"
+                      placeholder={deepResearchEditTitle ? "Follow up with questions or adjustments" : "Write a message"}
                     />
                     {/* Footer text below input — widget view only (expanded uses card footer) */}
                     {!isExpanded && (
@@ -2967,8 +3317,7 @@ The content has been updated across all channels to reflect your changes.`;
           {/* Artifact — EXPANDED view: opens as a top-level third column,
               so the layout reads LHS | chat | artifact (Claude-style).
               Drag the left handle to resize; releases snap to 42 / 50 / 60%. */}
-          {/* COMMENTED OUT (kept for later): expanded-view artifact third column. */}
-          {false && isExpanded && showArtifactPreview && (
+          {isExpanded && showArtifactPreview && (
             <div
               className={cn(
                 // Not shrink-0: when the LHS expands and space tightens, the artifact
@@ -3005,7 +3354,9 @@ The content has been updated across all channels to reflect your changes.`;
                 onClose={handleCloseArtifactPreview}
                 onToggleExpand={() => setArtifactFullExpanded((v) => !v)}
                 isExpanded={artifactFullExpanded}
+                hideExpandToggle={artifactFromReports}
                 bare
+                doc={activeArtifact?.kind === 'deepResearch' ? activeArtifact.doc : undefined}
               />
             </div>
           )}

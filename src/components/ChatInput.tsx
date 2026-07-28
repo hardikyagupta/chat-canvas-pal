@@ -3,7 +3,7 @@ import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ArrowUp, StopCircle, X, Plus, FileVideo, FileAudio, FileText, File as FileIcon, Loader2, Paperclip, Telescope } from 'lucide-react';
+import { ArrowUp, StopCircle, X, Plus, FileVideo, FileAudio, FileText, File as FileIcon, Loader2, Paperclip, CornerDownRight, Atom } from 'lucide-react';
 import { marketingAgents, MarketingAgent } from '@/data/agents';
 import { cn } from "@/lib/utils";
 
@@ -74,8 +74,14 @@ interface ChatInputProps {
   isQuestionnaireActive?: boolean;
   selectedContextChip?: string | null;
   onClearSelectedContextChip?: () => void;
-  /** Fired when the user picks "Deep research agent" from the "+" popover. */
+  /** Fired when the user picks "Deep research" from the "+" popover. */
   onDeepResearch?: () => void;
+  /** Fired whenever deep-research mode toggles on/off (popover pick / chip dismiss). */
+  onDeepResearchChange?: (active: boolean) => void;
+  /** Reply context shown as a banner above the field (e.g. a plan being edited). */
+  replyContext?: string | null;
+  /** Clears the reply-context banner. */
+  onClearReplyContext?: () => void;
   /** Drives the input shimmer (set by parent on every send / while generating). */
   shimmer?: boolean;
   /** Fired with the live textarea value on every change (typing, clear-on-send). */
@@ -104,6 +110,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
   selectedContextChip = null,
   onClearSelectedContextChip,
   onDeepResearch,
+  onDeepResearchChange,
+  replyContext = null,
+  onClearReplyContext,
   shimmer = false,
   onInputValueChange,
   placeholder = "How can I help you today?",
@@ -372,7 +381,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     // textarea on its own row with the actions below. The 'linear' variant starts
     // as a compact single-row pill and only expands once the text wraps to
     // multiple lines or a context chip is selected.
-    const expanded = layout === 'expanded' || isMultiline || !!selectedContextChip || deepResearchActive;
+    const expanded = layout === 'expanded' || isMultiline || !!selectedContextChip || deepResearchActive || !!replyContext;
     return (
       <div className="relative w-full">
         {/* Outer container — height grows smoothly when chip appears */}
@@ -497,6 +506,31 @@ const ChatInput: React.FC<ChatInputProps> = ({
             </div>
           )}
 
+          {/* Reply-context chip — shown above the field when following up on a
+              deep-research plan ("Edit"). Per Figma it's a full-bleed chalk bar
+              flush to the composer's top/side edges (the negative margins cancel
+              the container's 12px padding; the rounded container clips it), with
+              its own 16/12 inner padding. Not a divider. Its X clears the context. */}
+          {replyContext && (
+            <div className="relative z-10 -mx-[12px] -mt-[12px] mb-[12px] flex items-center justify-between gap-[8px] bg-[var(--color-surface-1)] px-[16px] py-[12px]">
+              <span
+                className="flex min-w-0 items-center gap-[6px] text-[13px] leading-[18px] text-[var(--color-grey)]"
+                style={{ fontFamily: 'Manrope, sans-serif' }}
+              >
+                <CornerDownRight className="h-[14px] w-[14px] shrink-0" />
+                <span className="truncate">{replyContext}</span>
+              </span>
+              <button
+                type="button"
+                onClick={onClearReplyContext}
+                aria-label="Clear reply context"
+                className="flex size-[24px] shrink-0 items-center justify-center rounded-[6px] text-[var(--color-grey)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)] hover:text-[var(--color-ink)]"
+              >
+                <X className="h-[14px] w-[14px]" />
+              </button>
+            </div>
+          )}
+
           {/* Flex-wrap row: textarea + chip + send. Compact single row by default;
               when `expanded`, the textarea takes the full width (basis-full) so it
               wraps everything else (chip, send) to a row below — text reaches the
@@ -571,30 +605,39 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     setShowAddMenu(false);
                     setDeepResearchActive(true);
                     onDeepResearch?.();
+                    onDeepResearchChange?.(true);
                   }}
                   className="flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
                 >
-                  <Telescope className="w-[18px] h-[18px] text-[var(--color-charcoal)] shrink-0" />
-                  Deep research agent
+                  <Atom className="w-[18px] h-[18px] text-[var(--color-charcoal)] shrink-0" strokeWidth={1.75} />
+                  Deep research
                 </button>
               </PopoverContent>
             </Popover>
 
             {/* Deep research chip — sits between the + button and the context
-                chip once "Deep research agent" is picked from the + popover. */}
+                chip once "Deep research" is picked from the + popover. */}
             {deepResearchActive && (
               <button
                 type="button"
-                onClick={() => setDeepResearchActive(false)}
-                className="order-3 inline-flex items-center gap-[4px] border border-[var(--color-line-input)] rounded-[4px] px-[6px] py-[4px] bg-white whitespace-nowrap animate-in fade-in duration-200"
+                onClick={() => {
+                  setDeepResearchActive(false);
+                  onDeepResearchChange?.(false);
+                }}
+                className="order-3 inline-flex items-center gap-[4px] border border-[var(--color-royal)] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_oklch(0.554_0.199_263.043_/_0.1)] whitespace-nowrap animate-in fade-in duration-200"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)",
+                }}
               >
+                <Atom className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" strokeWidth={1.75} />
                 <span
-                  className="text-[12px] leading-[16px] text-[var(--color-charcoal)]"
+                  className="text-[12px] leading-[16px] text-[var(--color-royal)]"
                   style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                 >
-                  Deep research agent
+                  Deep research
                 </span>
-                <X className="w-[14px] h-[14px] text-[var(--color-charcoal)] shrink-0" />
+                <X className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" />
               </button>
             )}
 
