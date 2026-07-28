@@ -59,13 +59,6 @@ export interface CampaignsTurn {
   artifactCard?: AgentArtifactCardData;
   /** Suggested prompt shown after this turn (seeds the next turn). Omit on the last turn. */
   nextSuggestion?: string;
-  /**
-   * When set, the turn opens with the agent-deliberation reel (candidate
-   * agents roll through a slot while the AI decides, then it settles into the
-   * standard switch divider) instead of the divider's "calling" beat. The
-   * candidate matching switchAgentLabel is the one the reel locks onto.
-   */
-  deliberation?: { candidates: string[] };
 }
 
 export const CAMPAIGNS_FLOW: CampaignsTurn[] = [
@@ -147,16 +140,13 @@ export const CAMPAIGNS_FLOW: CampaignsTurn[] = [
     },
     nextSuggestion: "Estimate the impact this journey could have on conversions.",
   },
-  // Turn 4 — the co-marketer deliberates over all three specialists (the
-  // agent reel animation) and routes the question back to the Insights agent.
+  // Turn 4 — routes the question back to the Insights agent (Journey agent →
+  // Insights agent) with the standard switch-divider hand-off.
   {
     userPrompt: "Estimate the impact this journey could have on conversions.",
     navLabel: "Impact estimate",
     switchAgentId: "insight-agent",
     switchAgentLabel: "Insights agent",
-    deliberation: {
-      candidates: ["Insights agent", "Segment agent", "Journey agent"],
-    },
     reasoningSteps: [
       "Loading the journey and its 12,133-user segment",
       "Applying per-channel click and conversion benchmarks",

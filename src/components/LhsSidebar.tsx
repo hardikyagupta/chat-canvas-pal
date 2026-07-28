@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, MoreHorizontal, Search, PanelLeftClose, ArrowRightToLine } from 'lucide-react';
+import { Plus, MoreHorizontal, Search, PanelLeftClose, ArrowRightToLine, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import ChatActionsMenu from './ChatActionsMenu';
@@ -22,6 +22,14 @@ const BookmarkIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+// Reports menu icon (Phosphor "chart-bar" glyph) — same family/weight as the
+// Chats/Bookmarks glyphs so all menu icons read as one set. Uses currentColor.
+const ReportsIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 256 256" fill="currentColor" className={className} aria-hidden="true">
+    <path d="M224,200h-8V40a8,8,0,0,0-8-8H152a8,8,0,0,0-8,8V80H96a8,8,0,0,0-8,8v40H48a8,8,0,0,0-8,8v64H32a8,8,0,0,0,0,16H224a8,8,0,0,0,0-16ZM160,48h40V200H160ZM104,96h40V200H104ZM56,144H88v56H56Z" />
+  </svg>
+);
+
 export interface LhsChatItem {
   id: string;
   title: string;
@@ -38,6 +46,8 @@ interface LhsSidebarProps {
   onNewChat?: () => void;
   onOpenChats?: () => void;
   onOpenBookmarks?: () => void;
+  onOpenReports?: () => void;
+  onOpenSettings?: () => void;
   // Collapse/expand the sidebar. The header toggle collapses; when collapsed the
   // logo doubles as the expand button.
   onToggleCollapse?: () => void;
@@ -91,6 +101,8 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   onNewChat,
   onOpenChats,
   onOpenBookmarks,
+  onOpenReports,
+  onOpenSettings,
   onToggleCollapse,
 }) => {
   const [chatsOpen] = useState(true);
@@ -159,6 +171,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
     { key: 'new-chat', label: 'New chat', icon: Plus, onClick: onNewChat, isNewChat: true },
     { key: 'chats', label: 'Chats', icon: ChatsIcon, onClick: onOpenChats },
     { key: 'bookmarks', label: 'Bookmarks', icon: BookmarkIcon, onClick: onOpenBookmarks },
+    { key: 'reports', label: 'Reports', icon: ReportsIcon, onClick: onOpenReports },
   ];
 
   // Labels self-clip via max-width (so the root can be overflow-visible for tooltips)
@@ -411,6 +424,38 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Footer — Settings pinned to the bottom of the rail. Matches the menu-row
+          layout so the icon aligns with the logo/menu icons at 24px. */}
+      <div className="mt-auto flex w-full flex-col px-[12px] pb-[12px] pt-[8px] shrink-0">
+        <button
+          type="button"
+          onClick={collapsed ? (e) => { e.stopPropagation(); onOpenSettings?.(); } : onOpenSettings}
+          aria-label="Settings"
+          className={cn(
+            'group relative flex h-[32px] items-center w-full rounded-[8px] transition-colors',
+            collapsed ? 'cursor-default' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
+          )}
+        >
+          <span
+            className={cn(
+              'flex items-center justify-center shrink-0 transition-colors',
+              collapsed
+                ? 'size-[32px] mx-auto rounded-[8px] group-hover:bg-[oklch(0_0_0_/_0.06)]'
+                : 'w-[40px] h-[32px]'
+            )}
+          >
+            <Settings className="size-[18px] text-[var(--color-charcoal)] transition-transform duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-[1.15] group-hover:-rotate-6" />
+          </span>
+          <span
+            className={cn('text-[13px] text-[var(--color-charcoal)]', labelCls)}
+            style={labelStyle({ fontFamily: 'Manrope, sans-serif', fontWeight: 400 })}
+          >
+            Settings
+          </span>
+          {collapsed && <RailTooltip label="Settings" />}
+        </button>
       </div>
 
       <DeleteChatDialog
