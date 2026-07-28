@@ -33,7 +33,13 @@ import LhsSidebar, { defaultChats } from './LhsSidebar';
 import SettingsModal from './SettingsModal';
 import ChatListPage from './ChatListPage';
 import ReportsPage from './ReportsPage';
+import SchedulerPage from './SchedulerPage';
+import CustomAgentsPage from './CustomAgentsPage';
+import CustomAgentDetail from './CustomAgentDetail';
+import CreateCustomAgentModal from './CreateCustomAgentModal';
+import { initialCustomAgents, type CustomAgent } from '@/data/customAgents';
 import { generatedReports } from '@/data/reports';
+import { scheduledReports, scheduleTemplates } from '@/data/schedules';
 import RhsHeader from './RhsHeader';
 import RotatingWord from './RotatingWord';
 import { GradientShimmer } from 'gradient-shimmer';
@@ -516,7 +522,36 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // no component swap and no position jump between the two states.
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
   // RHS page: the default conversation view, or the full Chats / Bookmarks list page
-  const [activePage, setActivePage] = useState<'home' | 'chats' | 'bookmarks' | 'reports'>('home');
+  const [activePage, setActivePage] = useState<'home' | 'chats' | 'bookmarks' | 'reports' | 'scheduler' | 'custom-agents'>('home');
+
+  // Custom agents (Claude-Projects-style) — prototype store in React state. The
+  // list page shows all agents; selecting one opens its detail page.
+  const [customAgents, setCustomAgents] = useState<CustomAgent[]>(initialCustomAgents);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  // Agent attached to the home composer via "+" → "Add to agent" (shows a chip).
+  const [composerAgent, setComposerAgent] = useState<{ id: string; name: string } | null>(null);
+  const [composerCreateOpen, setComposerCreateOpen] = useState(false);
+
+  const createCustomAgent = (data: { name: string; description: string }): CustomAgent => {
+    const agent: CustomAgent = {
+      id: `agent-${Date.now()}`,
+      name: data.name,
+      description: data.description,
+      instructions: '',
+      files: [],
+      updatedAt: 'now',
+    };
+    setCustomAgents((prev) => [agent, ...prev]);
+    setSelectedAgentId(agent.id);
+    return agent;
+  };
+  const updateCustomAgent = (id: string, patch: Partial<CustomAgent>) =>
+    setCustomAgents((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  const deleteCustomAgent = (id: string) => {
+    setCustomAgents((prev) => prev.filter((a) => a.id !== id));
+    setSelectedAgentId((cur) => (cur === id ? null : cur));
+  };
+  const openCustomAgents = () => { setSelectedAgentId(null); setActivePage('custom-agents'); };
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   // Minimized-view LHS overlay (opened from the widget header menu icon)
   const [showMinOverlay, setShowMinOverlay] = useState(false);
@@ -939,6 +974,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     hasRunStoryRef.current = false;
     hasRunFollowupsRef.current = false;
     setActivePage('home');
+    setSelectedAgentId(null);
     setMessages([]);
     setShowSuggestions(false);
     setDynamicSuggestions(null);
@@ -2570,9 +2606,11 @@ The content has been updated across all channels to reflect your changes.`;
             activeChatId={null}
             onClose={() => setShowMinOverlay(false)}
             onNewChat={handleNewChat}
+            onOpenCustomAgents={openCustomAgents}
             onOpenChats={() => setActivePage('chats')}
             onOpenBookmarks={() => setActivePage('bookmarks')}
             onOpenReports={() => setActivePage('reports')}
+            onOpenScheduler={() => setActivePage('scheduler')}
           />
         )}
 
@@ -2591,6 +2629,18 @@ The content has been updated across all channels to reflect your changes.`;
           onClose={() => setSettingsModalOpen(false)}
         />
 
+        {/* Create-agent modal — opened from the composer's "+" → "Add to agent" →
+            "Create a new agent". The new agent is attached to the composer as a chip. */}
+        <CreateCustomAgentModal
+          open={composerCreateOpen}
+          onClose={() => setComposerCreateOpen(false)}
+          onSubmit={(data) => {
+            const agent = createCustomAgent(data);
+            setComposerAgent({ id: agent.id, name: agent.name });
+            setComposerCreateOpen(false);
+          }}
+        />
+
 
         {/* Main content area: Layout changes based on view mode */}
         <div
@@ -2606,9 +2656,11 @@ The content has been updated across all channels to reflect your changes.`;
               activeChatId={activeLhsChatId}
               busyChatId={busyLhsChatId}
               onNewChat={handleNewChat}
+              onOpenCustomAgents={openCustomAgents}
               onOpenChats={() => setActivePage('chats')}
               onOpenBookmarks={() => setActivePage('bookmarks')}
               onOpenReports={() => setActivePage('reports')}
+              onOpenScheduler={() => setActivePage('scheduler')}
               onSelectChat={() => setActivePage('home')}
               onOpenSettings={() => setSettingsModalOpen(true)}
               onToggleCollapse={() => setLhsCollapsed(prev => !prev)}
@@ -2673,6 +2725,43 @@ The content has been updated across all channels to reflect your changes.`;
                     openDeepResearchArtifact({ ...report.doc }, { fullExpanded: true, fromReports: true });
                   }}
                 />
+              ) : activePage === 'scheduler' ? (
+                <SchedulerPage
+                  initialSchedules={scheduledReports}
+                  templates={scheduleTemplates}
+                  availableReports={generatedReports}
+                  compact={!isExpanded}
+                  onSelectSchedule={(schedule) => {
+                    // Leave the scheduler overlay and open the report in the doc
+                    // previewer full-bleed (same as opening a report).
+                    setActivePage('home');
+                    openDeepResearchArtifact({ ...schedule.doc }, { fullExpanded: true, fromReports: true });
+                  }}
+                />
+              ) : activePage === 'custom-agents' ? (
+                (() => {
+                  const selectedAgent = customAgents.find((a) => a.id === selectedAgentId) ?? null;
+                  return selectedAgent ? (
+                    <CustomAgentDetail
+                      agent={selectedAgent}
+                      compact={!isExpanded}
+                      onBack={() => setSelectedAgentId(null)}
+                      onEditAgent={(id, data) => updateCustomAgent(id, { ...data, updatedAt: 'now' })}
+                      onDeleteAgent={deleteCustomAgent}
+                      onUpdateAgent={updateCustomAgent}
+                      onStartChat={handleNewChat}
+                    />
+                  ) : (
+                    <CustomAgentsPage
+                      agents={customAgents}
+                      compact={!isExpanded}
+                      onCreate={createCustomAgent}
+                      onOpenAgent={(id) => setSelectedAgentId(id)}
+                      onEditAgent={(id, data) => updateCustomAgent(id, { ...data, updatedAt: 'now' })}
+                      onDeleteAgent={deleteCustomAgent}
+                    />
+                  );
+                })()
               ) : (
                 <ChatListPage
                   title={activePage === 'chats' ? 'Chats' : 'Bookmarks'}
@@ -2755,6 +2844,10 @@ The content has been updated across all channels to reflect your changes.`;
                             setSelectedStarterChip(null);
                             setSelectedDeepResearchCategory(null);
                           }}
+                          agents={customAgents.map((a) => ({ id: a.id, name: a.name }))}
+                          selectedAgentChip={composerAgent}
+                          onSelectAgentChip={setComposerAgent}
+                          onCreateAgentFromComposer={() => setComposerCreateOpen(true)}
                         />
                         {/* Deep research: category pills first (like the default
                             starter pills). */}
