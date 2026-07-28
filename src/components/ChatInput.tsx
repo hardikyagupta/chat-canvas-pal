@@ -3,7 +3,7 @@ import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ArrowUp, StopCircle, X, Plus, FileVideo, FileAudio, FileText, File as FileIcon, Loader2, Paperclip, CornerDownRight, Atom } from 'lucide-react';
+import { ArrowUp, StopCircle, X, Plus, FileVideo, FileAudio, FileText, File as FileIcon, Loader2, Paperclip, CornerDownRight, Atom, ChevronRight, Bot } from 'lucide-react';
 import { marketingAgents, MarketingAgent } from '@/data/agents';
 import { cn } from "@/lib/utils";
 
@@ -97,6 +97,15 @@ interface ChatInputProps {
    *    the expanded shape once the text wraps to multiple lines or a chip is set.
    */
   layout?: 'expanded' | 'linear';
+  /** Custom agents offered under the "+" → "Add to agent" submenu. When omitted
+   *  or empty, the submenu still appears with just "Create a new agent". */
+  agents?: Array<{ id: string; name: string }>;
+  /** Controlled selected-agent chip (shows in the field). */
+  selectedAgentChip?: { id: string; name: string } | null;
+  /** Fires when the chip is set (agent picked) or cleared (chip's × clicked). */
+  onSelectAgentChip?: (agent: { id: string; name: string } | null) => void;
+  /** Fires when "Create a new agent" is picked from the "+" → "Add to agent" submenu. */
+  onCreateAgentFromComposer?: () => void;
 }
 
 // Temporary feature flag to disable @-agent mention dropdown
@@ -117,10 +126,28 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onInputValueChange,
   placeholder = "How can I help you today?",
   layout = 'expanded',
+  agents,
+  selectedAgentChip = null,
+  onSelectAgentChip,
+  onCreateAgentFromComposer,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [showMentionList, setShowMentionList] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  // "Custom agents" L2 flyout — opens to the right of its row on hover.
+  const [agentSubOpen, setAgentSubOpen] = useState(false);
+  const agentSubTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const agentMenuEnabled = agents !== undefined || !!onCreateAgentFromComposer;
+  const openAgentSub = () => {
+    if (agentSubTimer.current) clearTimeout(agentSubTimer.current);
+    setAgentSubOpen(true);
+  };
+  // Small grace period so moving from the row across the gap into the flyout
+  // doesn't dismiss it.
+  const closeAgentSubSoon = () => {
+    if (agentSubTimer.current) clearTimeout(agentSubTimer.current);
+    agentSubTimer.current = setTimeout(() => setAgentSubOpen(false), 140);
+  };
   const [deepResearchActive, setDeepResearchActive] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [mentionSearch, setMentionSearch] = useState("");
@@ -563,7 +590,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
             {/* + button — opens a popover with two actions: add photos & files,
                 and the deep research agent. Left edge by default, bottom-left
                 when expanded. Matches the 32×32 send-button size. */}
-            <Popover open={showAddMenu} onOpenChange={setShowAddMenu}>
+            <Popover
+              open={showAddMenu}
+              onOpenChange={(o) => {
+                setShowAddMenu(o);
+                if (!o) setAgentSubOpen(false);
+              }}
+            >
               <PopoverTrigger asChild>
                 <button
                   type="button"
@@ -585,7 +618,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 side="top"
                 align="start"
                 sideOffset={8}
-                className="w-[240px] p-[4px] rounded-[12px]"
+                className="w-[248px] p-[4px] rounded-[12px]"
                 style={{ fontFamily: 'Manrope, sans-serif' }}
               >
                 <button
@@ -612,6 +645,66 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   <Atom className="w-[18px] h-[18px] text-[var(--color-charcoal)] shrink-0" strokeWidth={1.75} />
                   Deep research
                 </button>
+                {agentMenuEnabled && (
+                  // "Custom agents" row + L2 flyout. The flyout is a descendant so
+                  // hovering it keeps the row "entered"; the timeout bridges the gap.
+                  <div className="relative" onMouseEnter={openAgentSub} onMouseLeave={closeAgentSubSoon}>
+                    <button
+                      type="button"
+                      onClick={() => (agentSubOpen ? setAgentSubOpen(false) : openAgentSub())}
+                      className={cn(
+                        "flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]",
+                        agentSubOpen && "bg-[oklch(0_0_0_/_0.06)]"
+                      )}
+                    >
+                      <Bot className="w-[18px] h-[18px] text-[var(--color-charcoal)] shrink-0" strokeWidth={1.75} />
+                      <span className="flex-1">Custom agents</span>
+                      <ChevronRight className="w-[16px] h-[16px] text-[var(--color-grey)] shrink-0" />
+                    </button>
+
+                    {agentSubOpen && (
+                      <div
+                        onMouseEnter={openAgentSub}
+                        onMouseLeave={closeAgentSubSoon}
+                        className="absolute left-full top-[-4px] z-50 ml-[4px] w-[236px] p-[4px] rounded-[12px] border border-border bg-popover shadow-[0px_8px_20px_0px_oklch(0_0_0_/_0.12)] animate-in fade-in-0 zoom-in-95 slide-in-from-left-1"
+                      >
+                        <div className="flex flex-col max-h-[220px] overflow-y-auto hover-scroll">
+                          {(agents ?? []).map((a) => (
+                            <button
+                              key={a.id}
+                              type="button"
+                              onClick={() => {
+                                onSelectAgentChip?.(a);
+                                setAgentSubOpen(false);
+                                setShowAddMenu(false);
+                              }}
+                              className="flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
+                            >
+                              <Bot className="w-[16px] h-[16px] text-[var(--color-charcoal)] shrink-0" strokeWidth={1.75} />
+                              <span className="truncate">{a.name}</span>
+                            </button>
+                          ))}
+                          {(agents ?? []).length === 0 && (
+                            <p className="px-[10px] py-[8px] text-[13px] text-[var(--color-grey-soft)]">No agents yet</p>
+                          )}
+                        </div>
+                        <div className="my-[4px] h-px bg-[var(--color-line)]" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAgentSubOpen(false);
+                            setShowAddMenu(false);
+                            onCreateAgentFromComposer?.();
+                          }}
+                          className="flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
+                        >
+                          <Plus className="w-[16px] h-[16px] text-[var(--color-charcoal)] shrink-0" />
+                          Create a new agent
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </PopoverContent>
             </Popover>
 
@@ -639,6 +732,45 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 </span>
                 <X className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" />
               </button>
+            )}
+
+            {/* Selected agent chip — set from the "+" → "Add to agent" submenu.
+                The × reveals on hover; the tooltip repeats the agent name. */}
+            {selectedAgentChip && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="order-3 group inline-flex items-center gap-[4px] border border-[var(--color-royal)] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_oklch(0.554_0.199_263.043_/_0.1)] whitespace-nowrap animate-in fade-in duration-200"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)",
+                    }}
+                  >
+                    <Bot className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" strokeWidth={1.75} />
+                    <span
+                      className="max-w-[140px] truncate text-[12px] leading-[16px] text-[var(--color-royal)]"
+                      style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
+                    >
+                      {selectedAgentChip.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onSelectAgentChip?.(null)}
+                      aria-label={`Remove ${selectedAgentChip.name}`}
+                      className="hidden group-hover:inline-flex items-center justify-center shrink-0"
+                    >
+                      <X className="w-[14px] h-[14px] text-[var(--color-royal)]" />
+                    </button>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]"
+                  style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+                >
+                  {selectedAgentChip.name}
+                </TooltipContent>
+              </Tooltip>
             )}
 
             {/* Context chip — bottom-left when selected (after the + button) */}
