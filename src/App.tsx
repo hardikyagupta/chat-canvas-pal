@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AtmosphereProvider } from "@/contexts/AtmosphereContext";
+import { ReportThemeProvider } from "@/contexts/ReportThemeContext";
 import { DecisioningSetupProvider } from "@/contexts/DecisioningSetupContext";
 import Index from "./pages/Index";
 import Settings from "./pages/Settings";
@@ -27,6 +28,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AtmosphereProvider>
+        <ReportThemeProvider>
         <DecisioningSetupProvider>
           <BrowserRouter>
             <Routes>
@@ -47,6 +49,7 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </DecisioningSetupProvider>
+        </ReportThemeProvider>
       </AtmosphereProvider>
     </TooltipProvider>
   </QueryClientProvider>

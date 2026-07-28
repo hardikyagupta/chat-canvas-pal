@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Plus, MessageSquare, Bookmark, BarChart3, ChevronDown, MoreHorizontal, Check } from 'lucide-react';
+import { X, Plus, MessageSquare, Bookmark, BarChart3, Bot, CalendarClock, ChevronDown, MoreHorizontal, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LhsChatItem } from './LhsSidebar';
 import ChatActionsMenu from './ChatActionsMenu';
@@ -11,9 +11,11 @@ interface MinViewLhsOverlayProps {
   onClose: () => void;
   onSelectChat?: (id: string) => void;
   onNewChat?: () => void;
+  onOpenCustomAgents?: () => void;
   onOpenChats?: () => void;
   onOpenBookmarks?: () => void;
   onOpenReports?: () => void;
+  onOpenScheduler?: () => void;
 }
 
 const defaultChats: LhsChatItem[] = [
@@ -45,9 +47,11 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
   onClose,
   onSelectChat,
   onNewChat,
+  onOpenCustomAgents,
   onOpenChats,
   onOpenBookmarks,
   onOpenReports,
+  onOpenScheduler,
 }) => {
   // `entered` drives the enter/exit animation. We mount hidden, flip it on in
   // the next frame to slide in, and flip it off (then unmount) to slide out.
@@ -115,8 +119,10 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
   const menuActions = [
     { key: 'new-chat', label: 'New chat', icon: Plus, onClick: onNewChat, isNewChat: true },
     { key: 'chats', label: 'Chats', icon: MessageSquare, onClick: onOpenChats },
-    { key: 'bookmarks', label: 'Bookmarks', icon: Bookmark, onClick: onOpenBookmarks },
+    { key: 'custom-agents', label: 'Agents', icon: Bot, onClick: onOpenCustomAgents },
     { key: 'reports', label: 'Reports', icon: BarChart3, onClick: onOpenReports },
+    { key: 'scheduler', label: 'Scheduler', icon: CalendarClock, onClick: onOpenScheduler },
+    { key: 'bookmarks', label: 'Bookmarks', icon: Bookmark, onClick: onOpenBookmarks },
   ];
 
   return (

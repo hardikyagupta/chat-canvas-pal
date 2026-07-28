@@ -1,10 +1,11 @@
 import React from 'react';
-import { SquarePen, MessageSquare, Bookmark, Settings } from 'lucide-react';
+import { SquarePen, MessageSquare, Bookmark, CalendarClock, Settings } from 'lucide-react';
 
 interface LhsSidebarCollapsedProps {
   onNewChat?: () => void;
   onOpenChats?: () => void;
   onOpenBookmarks?: () => void;
+  onOpenScheduler?: () => void;
   onOpenSettings?: () => void;
 }
 
@@ -12,12 +13,14 @@ const LhsSidebarCollapsed: React.FC<LhsSidebarCollapsedProps> = ({
   onNewChat,
   onOpenChats,
   onOpenBookmarks,
+  onOpenScheduler,
   onOpenSettings,
 }) => {
   const actions = [
     { key: 'new-chat', icon: SquarePen, label: 'New chat', onClick: onNewChat },
     { key: 'chats', icon: MessageSquare, label: 'Chats', onClick: onOpenChats },
     { key: 'bookmarks', icon: Bookmark, label: 'Bookmarks', onClick: onOpenBookmarks },
+    { key: 'scheduler', icon: CalendarClock, label: 'Scheduler', onClick: onOpenScheduler },
   ];
 
   return (

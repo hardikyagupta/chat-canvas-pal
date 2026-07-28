@@ -2,12 +2,13 @@ import React from 'react';
 import {
   Search, Palette, SlidersHorizontal, Sparkles, UserRound,
   Database, Blocks, Bell, ShieldCheck, Cog, Check, X,
-  Plus, Pencil, Trash2, MoreHorizontal,
+  Plus, Pencil, Trash2, MoreHorizontal, FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { useAtmosphere } from '@/contexts/AtmosphereContext';
 import { useTheme } from '../../components/theme-provider';
+import ReportCustomizationPanel from './ReportCustomizationPanel';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
 
@@ -16,6 +17,7 @@ type NavItem = { id: string; label: string; icon: React.ComponentType<{ classNam
 const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   { title: 'APPEARANCE', items: [
     { id: 'theme', label: 'Theme', icon: Palette },
+    { id: 'reports', label: 'Report customization', icon: FileText },
     { id: 'general', label: 'General', icon: SlidersHorizontal },
   ] },
   { title: 'INTELLIGENCE', items: [
@@ -73,7 +75,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               <span className="text-[15px] font-bold text-[var(--color-ink)]" style={FONT}>Settings</span>
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-[12px] pb-[16px]">
-              <div className="flex h-[38px] w-full items-center gap-[9px] rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[11px]">
+              <div className="flex h-[38px] w-full shrink-0 items-center gap-[9px] rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[11px]">
                 <Search className="size-[16px] text-[var(--color-grey-soft)]" />
                 <span className="text-[12px] text-[var(--color-grey-soft)]" style={FONT}>Search settings…</span>
               </div>
@@ -137,6 +139,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     setThemeId={setThemeId}
                     presets={presets}
                   />
+                ) : activeNav === 'reports' ? (
+                  <ReportCustomizationPanel />
                 ) : activeNav === 'personalization' ? (
                   <PersonalizationPanel />
                 ) : (
