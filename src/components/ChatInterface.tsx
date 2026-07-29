@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ModeSwitchConfirmation } from './ModeSwitchConfirmation';
 import LhsSidebar, { defaultChats } from './LhsSidebar';
+import type { LhsChatItem } from './LhsSidebar';
 import SettingsModal from './SettingsModal';
 import ChatListPage from './ChatListPage';
 import ReportsPage from './ReportsPage';
@@ -37,7 +38,9 @@ import SchedulerPage from './SchedulerPage';
 import CustomAgentsPage from './CustomAgentsPage';
 import CustomAgentDetail from './CustomAgentDetail';
 import CreateCustomAgentModal from './CreateCustomAgentModal';
-import { initialCustomAgents, type CustomAgent } from '@/data/customAgents';
+import { initialCustomAgents, MONTHLY_REPORT_AGENT_NAME, type CustomAgent } from '@/data/customAgents';
+import { generateAgentAvatar, generateAgentOrbTheme } from '@/lib/agentAvatar';
+import type { OrbTheme } from '@/components/orb/agentOrbTheme';
 import { generatedReports } from '@/data/reports';
 import { scheduledReports, scheduleTemplates } from '@/data/schedules';
 import RhsHeader from './RhsHeader';
@@ -118,12 +121,20 @@ interface ChatMessageData {
   // Set once this switch's answer finishes streaming: the header swaps the live
   // orb for the agent's SVG avatar and the divider waves freeze.
   switchSettled?: boolean;
+  // Custom-agent hand-off: an orb theme derived from the agent's avatar palette
+  // (so the live fluid orb matches it) and a one-line "what it does" saying.
+  switchOrbTheme?: OrbTheme;
+  switchSaying?: string;
   // Agent-handed artifact card (segment / journey), revealed after the answer streams.
   agentArtifactCard?: AgentArtifactCardData;
   // ChatGPT-style deep-research plan card (title + steps), rendered inline.
   deepResearchPlan?: { title: string; steps: string[] };
   // Finished deep-research report, shown as a full-width doc preview.
-  deepResearchDoc?: { title: string; citations: number; summaryHeading?: string; paragraphs: string[] };
+  deepResearchDoc?: { title: string; citations: number; summaryHeading?: string; paragraphs: string[]; skeletonMs?: number; docFeedback?: boolean };
+  // The doc a plan card swaps itself into once it finishes (agent report flow).
+  planResultDoc?: { title: string; citations: number; summaryHeading?: string; paragraphs: string[] };
+  // Suppress this message's copy/thumbs feedback row (e.g. a lead-in above a doc).
+  hideFeedback?: boolean;
   // Reply chip shown above a user turn (e.g. the plan title an edit follows up on).
   replyContext?: string;
 }
@@ -263,6 +274,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       "Email and APN are quietly carrying your qualified engagement, with near-100% delivery and the steadiest click rates. WhatsApp's raw reach is being wasted at the delivery step, so the channel looks weak on outcomes despite the largest send volume.",
       "The three lowest-performing templates account for the majority of failures, and a small cluster of multi-channel, high-intent users are the ones most worth protecting. Re-verifying sender identities and re-sequencing the 48-hour follow-up are the highest-leverage fixes.",
       "If delivery recovers to roughly 85%, we estimate <strong>~4,800 recovered conversations and an 18–24% lift in WhatsApp-attributed conversions</strong> next quarter — at no additional send cost.",
+    ],
+  };
+  // Monthly report agent — the report it generates when a chat is launched from
+  // its page. Reuses DeepResearchDoc (skeleton loader → report preview).
+  const MONTHLY_REPORT_DOC = {
+    title: 'Monthly Marketing Performance — Last Month',
+    citations: 0, // hide the citations label for this report
+    summaryHeading: 'Executive summary',
+    skeletonMs: 2200,
+    docFeedback: true, // show a thumbs feedback row below the finished report
+    paragraphs: [
+      "Last month total marketing-attributed revenue rose <strong>+14.2% month-over-month</strong> to ₹2.41 Cr, driven almost entirely by Email and a recovering WhatsApp channel. Overall reach was flat, so the gain came from better conversion of the audience you already have — not more sends.",
+      "Email remains the workhorse: <strong>near-100% delivery, a 22.6% open rate, and 41% of attributed revenue</strong>. Push quietly had its best month of the year on click-through, while SMS engagement slipped and is the one channel trending the wrong way for the third month running.",
+      "The top three journeys — Welcome, Abandoned Cart, and Win-back — account for <strong>68% of automated revenue</strong>, with Abandoned Cart the single biggest mover at +31% MoM after the 48-hour follow-up was re-sequenced. High-intent, multi-channel users are your most valuable and fastest-growing segment.",
+      "Going into next month, the highest-leverage moves are to <strong>scale the re-sequenced cart journey, refresh the two fatiguing SMS templates, and shift more Win-back budget to Push</strong>, where cost-per-conversion is now lowest.",
     ],
   };
   const starterChips = [
@@ -531,6 +557,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // Agent attached to the home composer via "+" → "Add to agent" (shows a chip).
   const [composerAgent, setComposerAgent] = useState<{ id: string; name: string } | null>(null);
   const [composerCreateOpen, setComposerCreateOpen] = useState(false);
+  // When a chat is launched from a custom-agent's detail page, we (a) override the
+  // derived chat title with the agent's name and (b) queue the launch so the
+  // scripted "Switched to <agent>" intro can play once the view has reset.
+  const [chatTitleOverride, setChatTitleOverride] = useState<string | null>(null);
+  const [pendingAgentChat, setPendingAgentChat] = useState<{ agent: { id: string; name: string }; message: string } | null>(null);
+  // Chats started from an agent's page, persisted so they show in Recents (global)
+  // and under that agent's page as its chat history. `activeAgentChatId` is the one
+  // currently open in the conversation view (so Recents doesn't double it up).
+  const [agentChats, setAgentChats] = useState<LhsChatItem[]>([]);
+  const [activeAgentChatId, setActiveAgentChatId] = useState<string | null>(null);
 
   const createCustomAgent = (data: { name: string; description: string }): CustomAgent => {
     const agent: CustomAgent = {
@@ -540,6 +576,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       instructions: '',
       files: [],
       updatedAt: 'now',
+      avatarSrc: generateAgentAvatar(data.name),
     };
     setCustomAgents((prev) => [agent, ...prev]);
     setSelectedAgentId(agent.id);
@@ -856,12 +893,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     return raw.length > MAX ? `${raw.slice(0, MAX).trimEnd()}…` : raw;
   }, [messages]);
 
+  // Agent-launched chats (newest first) sit above the seeded defaults in Recents.
+  const allRecents = useMemo<LhsChatItem[]>(() => [...agentChats, ...defaultChats], [agentChats]);
+
   // The live conversation shows up as the top "active" chat in the LHS list.
   const CURRENT_CHAT_ID = '__current__';
   const lhsChats = useMemo(() => {
-    if (messages.length === 0) return defaultChats;
-    return [{ id: CURRENT_CHAT_ID, title: chatName || 'New chat', time: 'now' }, ...defaultChats];
-  }, [messages.length, chatName]);
+    if (messages.length === 0) return allRecents;
+    const live: LhsChatItem = { id: CURRENT_CHAT_ID, title: chatName || 'New chat', time: 'now' };
+    // The live chat already represents the active agent chat — drop its persisted
+    // twin so Recents doesn't show it twice.
+    return [live, ...allRecents.filter(c => c.id !== activeAgentChatId)];
+  }, [messages.length, chatName, allRecents, activeAgentChatId]);
   const activeLhsChatId = messages.length > 0 ? CURRENT_CHAT_ID : null;
   // Pulse the active chat while it is still generating output.
   const busyLhsChatId =
@@ -975,6 +1018,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     hasRunFollowupsRef.current = false;
     setActivePage('home');
     setSelectedAgentId(null);
+    setComposerAgent(null);
+    setChatTitleOverride(null);
+    setPendingAgentChat(null);
+    setActiveAgentChatId(null);
     setMessages([]);
     setShowSuggestions(false);
     setDynamicSuggestions(null);
@@ -999,6 +1046,214 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     setActiveArtifact(null);
     hasOpenedArtifactRef.current = false;
   };
+
+  // A recents-list title, derived from the user's first message. Kept short.
+  const shortenChatTitle = (raw: string) => {
+    const t = raw.trim();
+    const MAX = 32;
+    return t.length > MAX ? `${t.slice(0, MAX).trimEnd()}…` : t;
+  };
+
+  // The user can type anything into the composer, but the first message shown in
+  // an agent chat should always read as a sensible, well-formed prompt for that
+  // agent. So we map whatever was typed to the agent's clean starter prompt: its
+  // own `starterPrompt` when set, otherwise one derived from its name/description.
+  const senseAgentPrompt = (agentId: string, _typed: string): string => {
+    const full = customAgents.find(a => a.id === agentId);
+    const starter = full?.starterPrompt?.trim();
+    if (starter) return starter;
+    // No explicit starter: a clean, always-grammatical opener based on the name.
+    const name = full?.name?.trim() || 'this agent';
+    return `Help me get started with ${name}.`;
+  };
+
+  // Reset the conversation and queue a scripted "Switched to <agent>" intro for
+  // the given agent + prompt. Shared by both a fresh launch from the agent's
+  // page (handleStartAgentChat) and re-opening a past chat (handleOpenAgentChat).
+  const primeAgentChat = (agent: { id: string; name: string }, message: string, chatId: string) => {
+    handleNewChat();
+    setComposerAgent({ id: agent.id, name: agent.name });
+    setChatTitleOverride(agent.name); // header label = agent name
+    setActiveAgentChatId(chatId);
+    setPendingAgentChat({ agent, message });
+  };
+
+  // Launched from a custom-agent's detail page: persist a Recents entry for this
+  // agent, then prime the scripted intro chat.
+  const handleStartAgentChat = (agent: { id: string; name: string }, message: string) => {
+    const chatId = `agent-chat-${Date.now()}`;
+    // Map whatever the user typed into a sensible, well-formed first prompt.
+    const prompt = senseAgentPrompt(agent.id, message);
+    const title = prompt.trim() ? shortenChatTitle(prompt) : `Chat with ${agent.name}`;
+    setAgentChats(prev => [{ id: chatId, title, time: 'now', agentId: agent.id }, ...prev]);
+    primeAgentChat(agent, prompt, chatId);
+  };
+
+  // Re-open a persisted agent chat from a Recents / history row — replays its
+  // intro without creating a duplicate entry.
+  const handleOpenAgentChat = (chat: LhsChatItem) => {
+    const agent = customAgents.find(a => a.id === chat.agentId);
+    if (!agent) return;
+    setAgentChats(prev => [chat, ...prev.filter(c => c.id !== chat.id)]); // bump to top
+    primeAgentChat({ id: agent.id, name: agent.name }, chat.title, chat.id);
+  };
+
+  // Selecting any Recents / chat-list row: agent chats replay their scripted
+  // intro; everything else just returns to the (current) conversation view.
+  const handleSelectChat = (id: string) => {
+    const agentChat = agentChats.find(c => c.id === id);
+    if (agentChat) handleOpenAgentChat(agentChat);
+    else setActivePage('home');
+  };
+
+  // Scripted intro for an agent-launched chat: the user's prompt, a
+  // "Switched to <agent>" hand-off divider, a thinking beat, then the agent's
+  // reply. Mirrors the campaigns relay sequencer (switch → thinking → answer).
+  const runAgentIntroChat = (agent: { id: string; name: string }, message: string) => {
+    const userMessage: ChatMessageData = {
+      type: 'chat', isAI: false, content: message, onAnimationComplete: () => {},
+    };
+    // The agent's soft-gradient avatar drives the hand-off thread header.
+    const fullAgent = customAgents.find(a => a.id === agent.id);
+    const avatarSrc = fullAgent?.avatarSrc;
+    const isReportAgent = agent.name.trim().toLowerCase() === MONTHLY_REPORT_AGENT_NAME.toLowerCase();
+    // One-line "what it does" saying under the agent's name in the hand-off header.
+    const saying = isReportAgent
+      ? "Let me pull last month's performance into a clear report."
+      : (fullAgent?.description || undefined);
+
+    // The "Switched to <agent>" hand-off + a thinking beat open every agent chat.
+    const intro: ChatMessageData[] = [
+      {
+        type: 'chat', isAI: true, content: '',
+        isAgentSwitch: true,
+        switchAgentLabel: agent.name,
+        avatarSrc,
+        // The live fluid orb animates in the agent's own avatar colors, then
+        // settles into its SVG avatar; plus a one-line "what it does" saying.
+        switchOrbTheme: generateAgentOrbTheme(agent.name),
+        switchSaying: saying,
+        reasoningSteps: [`Understanding your request`, `Reviewing ${agent.name}'s instructions`],
+      },
+      {
+        type: 'chat', isAI: true, content: '',
+        isThinkingState: true,
+        thinkingDuration: 3,
+        reasoningSteps: isReportAgent
+          ? [
+              `Gathering last month's campaign metrics`,
+              `Comparing against the prior month and last year`,
+              `Drafting the report outline`,
+            ]
+          : [
+              `Reading the prompt and any attached context`,
+              `Mapping it to ${agent.name}'s instructions`,
+              `Outlining a first response`,
+            ],
+      },
+    ];
+
+    // The Monthly report agent generates a document: a short lead-in line
+    // (feedback suppressed so nothing sits between it and the doc), then the
+    // finished report reveals itself (loading skeleton → report → thumbs).
+    const body: ChatMessageData[] = isReportAgent
+      ? [
+          {
+            type: 'chat', isAI: true, agentName: agent.name, avatarSrc,
+            content:
+              "Here's your monthly performance report. I pulled last month's numbers across " +
+              "every channel, compared them to the prior month and last year, and summarized " +
+              "the headline movers below.",
+            hidePerformanceDashboard: true,
+            hideFeedback: true,
+          },
+          {
+            type: 'chat', isAI: true, content: '',
+            deepResearchDoc: MONTHLY_REPORT_DOC,
+          },
+        ]
+      : [
+          {
+            type: 'chat', isAI: true, agentName: agent.name, avatarSrc,
+            content:
+              `I'm on it as <strong>${agent.name}</strong>. Here's how I'd approach ` +
+              `${message.trim() ? `“${message.trim()}”` : 'this'}:\n\n` +
+              `• Break the request down and pull in the relevant context from my instructions and files\n` +
+              `• Draft an initial plan and flag anything I need from you\n` +
+              `• Iterate with you until it's ready to ship\n\n` +
+              `Want me to go deeper on any of these?`,
+            hidePerformanceDashboard: true,
+          },
+        ];
+
+    const sequence: ChatMessageData[] = [...intro, ...body];
+
+    setMessages([userMessage]);
+    setIsGeneratingOutput(true);
+    setInputShimmer(true);
+    setIsMockAgentChatActive(true);
+    isMockAgentChatActiveRef.current = true;
+    isStoryFlowActiveRef.current = true;
+
+    const finalize = () => {
+      // Settle the switch marker (orb → SVG avatar, waves stop) and hand control
+      // back. A plan card, if present, self-drives from here and swaps to the doc.
+      setMessages(prev => prev.map(m =>
+        m.isAgentSwitch && !m.switchSettled ? { ...m, switchSettled: true } : m
+      ));
+      setIsMockAgentChatActive(false);
+      isStoryFlowActiveRef.current = false;
+      setIsGeneratingOutput(false);
+      clearInputShimmer();
+      setMockChatCompleted(true);
+      playResponseCue();
+      if (mockMessageTimeoutRef.current) { clearTimeout(mockMessageTimeoutRef.current); mockMessageTimeoutRef.current = null; }
+    };
+
+    const step = (index: number) => {
+      if (!isMockAgentChatActiveRef.current) {
+        if (mockMessageTimeoutRef.current) { clearTimeout(mockMessageTimeoutRef.current); mockMessageTimeoutRef.current = null; }
+        return;
+      }
+      if (index >= sequence.length) { finalize(); return; }
+      const def = sequence[index];
+      // The switch divider isn't a ChatMessage and never fires onAnimationComplete
+      // — advance on a timer once its two-beat reveal has played.
+      if (def.isAgentSwitch) {
+        setMessages(prev => [...prev, def]);
+        if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+        mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 2600);
+        return;
+      }
+      // The report doc renders its own loading skeleton before revealing and
+      // isn't a streaming ChatMessage — drop it in and finalize.
+      if (def.deepResearchDoc || def.deepResearchPlan) {
+        setMessages(prev => [...prev, def]);
+        finalize();
+        return;
+      }
+      setMessages(prev => [...prev, {
+        ...def,
+        onAnimationComplete: () => {
+          if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+          mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 650);
+        },
+      }]);
+    };
+
+    if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+    mockMessageTimeoutRef.current = setTimeout(() => step(0), 600);
+  };
+
+  // Play the queued agent intro once `handleNewChat` has emptied the thread, so
+  // the sequence runs from a fresh, clean conversation.
+  useEffect(() => {
+    if (!pendingAgentChat || messages.length > 0) return;
+    const { agent, message } = pendingAgentChat;
+    setPendingAgentChat(null);
+    runAgentIntroChat(agent, message);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAgentChat, messages.length]);
 
   const handleModeSwitch = (newMode: 'collaborative' | 'autonomous') => {
     if (newMode !== selectedMode) {
@@ -1350,6 +1605,13 @@ The content has been updated across all channels to reflect your changes.`;
   };
 
   const handleSendMessage = (message: string) => {
+    // A custom-agent chip in the composer routes the opening turn into that
+    // agent's scripted thread (Switched to <agent> → thinking → reply/report),
+    // so an agent can be triggered from the main input, not just its own page.
+    if (composerAgent && messages.length === 0) {
+      handleStartAgentChat({ id: composerAgent.id, name: composerAgent.name }, message);
+      return;
+    }
     // Deep-research mode intercepts every send with the scripted research story.
     if (deepResearchActive) {
       handleDeepResearchSend();
@@ -2661,7 +2923,7 @@ The content has been updated across all channels to reflect your changes.`;
               onOpenBookmarks={() => setActivePage('bookmarks')}
               onOpenReports={() => setActivePage('reports')}
               onOpenScheduler={() => setActivePage('scheduler')}
-              onSelectChat={() => setActivePage('home')}
+              onSelectChat={handleSelectChat}
               onOpenSettings={() => setSettingsModalOpen(true)}
               onToggleCollapse={() => setLhsCollapsed(prev => !prev)}
             />
@@ -2691,7 +2953,7 @@ The content has been updated across all channels to reflect your changes.`;
           )}>
           {isExpanded && (
             <RhsHeader
-              chatName={activePage === 'home' ? chatName : null}
+              chatName={activePage === 'home' ? (chatTitleOverride ?? chatName) : null}
               showSidebarToggle={false}
               sidebarCollapsed={lhsCollapsed}
               onToggleSidebar={() => setLhsCollapsed(prev => !prev)}
@@ -2749,7 +3011,11 @@ The content has been updated across all channels to reflect your changes.`;
                       onEditAgent={(id, data) => updateCustomAgent(id, { ...data, updatedAt: 'now' })}
                       onDeleteAgent={deleteCustomAgent}
                       onUpdateAgent={updateCustomAgent}
-                      onStartChat={handleNewChat}
+                      onStartChat={(message) =>
+                        handleStartAgentChat({ id: selectedAgent.id, name: selectedAgent.name }, message)
+                      }
+                      chats={agentChats.filter((c) => c.agentId === selectedAgent.id)}
+                      onSelectChat={handleSelectChat}
                     />
                   ) : (
                     <CustomAgentsPage
@@ -2766,10 +3032,10 @@ The content has been updated across all channels to reflect your changes.`;
                 <ChatListPage
                   title={activePage === 'chats' ? 'Chats' : 'Bookmarks'}
                   searchPlaceholder={activePage === 'chats' ? 'Search chats' : 'Search bookmarks'}
-                  chats={activePage === 'chats' ? defaultChats : bookmarkedChats}
+                  chats={activePage === 'chats' ? allRecents : bookmarkedChats}
                   showNewChat={activePage === 'chats'}
                   onNewChat={handleNewChat}
-                  onSelectChat={() => setActivePage('home')}
+                  onSelectChat={handleSelectChat}
                   compact={!isExpanded}
                 />
               )}
@@ -2999,7 +3265,18 @@ The content has been updated across all channels to reflect your changes.`;
                     // scroll-margin keeps the message clear of the top edge when we
                     // scrollIntoView({block:'start'}) on send. Expanded must also clear
                     // the 32px sticky top-fade; widget just needs breathing room.
-                    className={cn("w-full", isExpanded ? "scroll-mt-[44px]" : "scroll-mt-[16px]")}
+                    className={cn(
+                      "w-full",
+                      isExpanded ? "scroll-mt-[44px]" : "scroll-mt-[16px]",
+                      // Tighten the agent-turn intro. The messages share a 24px
+                      // space-y, but the header → "Thought for Xs" → answer
+                      // sequence reads as one unit. Overriding the space-y here
+                      // (the header's mb-8 + the thought's py-2-top already add
+                      // 16px; the thought's py-2-bottom + the answer's py-2-top
+                      // add 16px) lands the two gaps at 16px and 24px.
+                      message.isThinkingState && messages[index - 1]?.isAgentSwitch && "!mt-0",
+                      messages[index - 1]?.isThinkingState && "!mt-[8px]",
+                    )}
                   >
                   {message.isAgentSwitch ? (
                     // Per Figma (node 16530:16033): the wavy "Switched to <agent>"
@@ -3016,6 +3293,8 @@ The content has been updated across all channels to reflect your changes.`;
                       <AgentThreadHeader
                         name={message.switchAgentLabel || ''}
                         avatarSrc={message.avatarSrc}
+                        saying={message.switchSaying}
+                        theme={message.switchOrbTheme}
                         fromName={message.switchFromLabel}
                         settled={!!message.switchSettled}
                         // Only the most recent hand-off keeps the live WebGL orb —
@@ -3035,7 +3314,10 @@ The content has been updated across all channels to reflect your changes.`;
                       citations={message.deepResearchDoc.citations}
                       summaryHeading={message.deepResearchDoc.summaryHeading}
                       paragraphs={message.deepResearchDoc.paragraphs}
+                      skeletonMs={message.deepResearchDoc.skeletonMs}
                       onExpand={() => openDeepResearchArtifact(message.deepResearchDoc!)}
+                      onThumbsUp={message.deepResearchDoc.docFeedback ? () => setFeedbackModal('up') : undefined}
+                      onThumbsDown={message.deepResearchDoc.docFeedback ? () => setFeedbackModal('down') : undefined}
                     />
                   ) : message.deepResearchPlan ? (
                     // Constrained width — the plan/progress card shouldn't span the
@@ -3050,10 +3332,12 @@ The content has been updated across all channels to reflect your changes.`;
                         }}
                         onComplete={() => {
                           // Replace this plan card with the finished doc preview.
+                          // Agent report flows carry their own target doc.
+                          const resultDoc = message.planResultDoc ?? DEEP_RESEARCH_DOC;
                           setMessages((prev) =>
                             prev.map((m, i) =>
                               i === index
-                                ? { type: 'chat', isAI: true, content: '', deepResearchDoc: DEEP_RESEARCH_DOC }
+                                ? { type: 'chat', isAI: true, content: '', deepResearchDoc: resultDoc }
                                 : m
                             )
                           );
@@ -3093,6 +3377,7 @@ The content has been updated across all channels to reflect your changes.`;
                       animate={disableAnimation ? false : message.animate}
                       animationSpeed={message.animationSpeed}
                       isLastMessage={index === messages.length - 1}
+                      hideFeedback={message.hideFeedback}
                       showExecuteFlowCTA={
                         index === messages.length - 1 &&
                         mockChatCompleted &&
@@ -3366,6 +3651,10 @@ The content has been updated across all channels to reflect your changes.`;
                       })()}
                       selectedContextChip={null}
                       placeholder={deepResearchEditTitle ? "Follow up with questions or adjustments" : "Write a message"}
+                      agents={customAgents.map((a) => ({ id: a.id, name: a.name }))}
+                      selectedAgentChip={composerAgent}
+                      onSelectAgentChip={setComposerAgent}
+                      onCreateAgentFromComposer={() => setComposerCreateOpen(true)}
                     />
                     {/* Footer text below input — widget view only (expanded uses card footer) */}
                     {!isExpanded && (
