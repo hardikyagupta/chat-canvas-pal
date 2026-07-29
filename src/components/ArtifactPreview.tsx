@@ -218,7 +218,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
       {doc ? (
         <div className="w-full flex-1 overflow-y-auto hover-scroll px-[24px] py-[24px]">
           <div className="mx-auto w-full max-w-[860px]">
-            {typeof doc.citations === 'number' && (
+            {typeof doc.citations === 'number' && doc.citations > 0 && (
               <p className="mb-[12px] text-[13px] leading-[18px] text-[var(--color-grey)]" style={{ fontFamily: MANROPE }}>
                 {doc.citations} citations
               </p>
