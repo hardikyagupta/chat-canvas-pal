@@ -327,8 +327,11 @@ const ReportCustomizationPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="mt-[4px] flex items-center justify-between">
+      {/* Actions — pinned to the bottom of the scrollable settings pane so they
+          stay visible while the customization options scroll underneath. The
+          negative margins + padding let the bar span the pane's full width and
+          sit flush with its bottom edge, covering the content that scrolls by. */}
+      <div className="sticky bottom-0 z-10 -mx-[32px] -mb-[40px] mt-[4px] flex items-center justify-between border-t border-[var(--color-line)] bg-[var(--color-surface-0)] px-[32px] pb-[24px] pt-[16px]">
         <button
           type="button"
           onClick={onReset}
