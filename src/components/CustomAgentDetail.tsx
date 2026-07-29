@@ -2,10 +2,11 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import {
   ArrowLeft, MoreHorizontal, Plus, Pencil, Trash2, X,
-  Paperclip, TextCursorInput, Github, FileText, Bot,
+  Paperclip, TextCursorInput, Github, FileText, Bot, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CustomAgent, AgentFile } from '@/data/customAgents';
+import type { LhsChatItem } from './LhsSidebar';
 import {
   ActionMenu,
   ActionMenuTrigger,
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/action-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ChatInput from './ChatInput';
+import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
 import CreateCustomAgentModal from './CreateCustomAgentModal';
 
@@ -34,6 +36,10 @@ interface CustomAgentDetailProps {
   onUpdateAgent: (id: string, patch: Partial<CustomAgent>) => void;
   /** Drop into a normal chat (reuses the parent's new-chat handler). */
   onStartChat: (message: string) => void;
+  /** This agent's past chats, shown as history below the composer. */
+  chats?: LhsChatItem[];
+  /** Open a past chat by id. */
+  onSelectChat?: (id: string) => void;
 }
 
 /* ── Set instructions modal ──────────────────────────────────────── */
@@ -204,6 +210,8 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
   onDeleteAgent,
   onUpdateAgent,
   onStartChat,
+  chats = [],
+  onSelectChat,
 }) => {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
@@ -215,6 +223,51 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
   // simulated upload settles (mirrors ChatInput's mock upload).
   const [uploadingIds, setUploadingIds] = React.useState<Set<string>>(new Set());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Local (prototype) state for per-chat actions in Recents: rename overrides,
+  // deletions, bookmarks, which row's menu is open, and inline-rename editing.
+  // Mirrors LhsSidebar / ChatListPage so the popover behaves identically.
+  const [titleOverrides, setTitleOverrides] = React.useState<Record<string, string>>({});
+  const [deletedChatIds, setDeletedChatIds] = React.useState<Set<string>>(new Set());
+  const [bookmarkedIds, setBookmarkedIds] = React.useState<Set<string>>(new Set());
+  const [chatMenuOpenId, setChatMenuOpenId] = React.useState<string | null>(null);
+  const [renamingId, setRenamingId] = React.useState<string | null>(null);
+  const [renameValue, setRenameValue] = React.useState('');
+  const [deleteChatTarget, setDeleteChatTarget] = React.useState<{ id: string; title: string } | null>(null);
+  const renameInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (renamingId) renameInputRef.current?.focus();
+  }, [renamingId]);
+
+  const startRename = (id: string, current: string) => {
+    setChatMenuOpenId(null);
+    setRenamingId(id);
+    setRenameValue(current);
+  };
+  const commitRename = () => {
+    if (renamingId) {
+      const next = renameValue.trim();
+      if (next) setTitleOverrides((prev) => ({ ...prev, [renamingId]: next }));
+    }
+    setRenamingId(null);
+  };
+  const cancelRename = () => setRenamingId(null);
+  const toggleBookmark = (id: string) =>
+    setBookmarkedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const requestDeleteChat = (id: string, title: string) => {
+    setChatMenuOpenId(null);
+    setDeleteChatTarget({ id, title });
+  };
+  const confirmDeleteChat = () => {
+    if (deleteChatTarget) setDeletedChatIds((prev) => new Set(prev).add(deleteChatTarget.id));
+    setDeleteChatTarget(null);
+  };
 
   const genId = () => `f-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
 
@@ -259,20 +312,29 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
           </button>
         </div>
 
-        {/* Header — name + description, three-dot menu (no star/bookmark). */}
+        {/* Header — avatar + name + description, three-dot menu (no star/bookmark). */}
         <div className="flex items-start justify-between gap-[12px] pt-[10px] pb-[16px] shrink-0">
-          <div className="flex min-w-0 flex-col gap-[4px]">
-            <h1
-              className={cn('font-semibold text-[var(--color-ink)]', compact ? 'text-[20px] leading-[26px]' : 'text-[28px] leading-[34px]')}
-              style={FONT}
-            >
-              {agent.name}
-            </h1>
-            {agent.description && (
-              <p className="text-[14px] leading-[20px] text-[var(--color-grey)]" style={FONT}>
-                {agent.description}
-              </p>
+          <div className="flex min-w-0 items-start gap-[14px]">
+            {agent.avatarSrc && (
+              <img
+                src={agent.avatarSrc}
+                alt=""
+                className={cn('rounded-full object-cover shrink-0', compact ? 'size-[40px]' : 'size-[52px]')}
+              />
             )}
+            <div className="flex min-w-0 flex-col gap-[4px]">
+              <h1
+                className={cn('font-semibold text-[var(--color-ink)]', compact ? 'text-[20px] leading-[26px]' : 'text-[28px] leading-[34px]')}
+                style={FONT}
+              >
+                {agent.name}
+              </h1>
+              {agent.description && (
+                <p className="text-[14px] leading-[20px] text-[var(--color-grey)]" style={FONT}>
+                  {agent.description}
+                </p>
+              )}
+            </div>
           </div>
           <ActionMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
             <ActionMenuTrigger asChild>
@@ -298,7 +360,102 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
         <div className={cn('flex-1 min-h-0 overflow-y-auto pt-[6px] pb-[32px] hover-scroll -mx-[4px] px-[4px]', compact ? 'flex flex-col gap-[16px]' : 'grid grid-cols-[minmax(0,1fr)_360px] gap-[24px] items-start')}>
           {/* Chat input column */}
           <div className="flex flex-col gap-[10px]">
-            <ChatInput placeholder="How can I help you today?" onSend={onStartChat} />
+            <ChatInput
+              key={agent.id}
+              placeholder="How can I help you today?"
+              onSend={onStartChat}
+              initialValue={agent.starterPrompt}
+            />
+
+            {/* Recents — this agent's chat history, newest first. */}
+            {chats.length > 0 && (
+              <div className="flex flex-col mt-[16px]">
+                <span
+                  className="px-[6px] pb-[6px] text-[13px] font-medium text-[var(--color-grey)]"
+                  style={FONT}
+                >
+                  Recents
+                </span>
+                <div className="flex flex-col">
+                  {chats.filter((chat) => !deletedChatIds.has(chat.id)).map((chat) => {
+                    const isRenaming = chat.id === renamingId;
+                    const isMenuOpen = chat.id === chatMenuOpenId;
+                    const title = titleOverrides[chat.id] ?? chat.title;
+                    return (
+                      <div
+                        key={chat.id}
+                        className={cn(
+                          'group flex items-center gap-[12px] rounded-[10px] px-[6px] py-[10px] transition-colors',
+                          isRenaming ? 'bg-[oklch(0_0_0_/_0.04)]' : 'hover:bg-[oklch(0_0_0_/_0.04)]'
+                        )}
+                      >
+                        <MessageSquare className="size-[18px] shrink-0 text-[var(--color-slate)]" />
+                        {isRenaming ? (
+                          <input
+                            ref={renameInputRef}
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') commitRename();
+                              else if (e.key === 'Escape') cancelRename();
+                            }}
+                            onBlur={commitRename}
+                            className="flex-1 min-w-0 bg-transparent border-0 p-0 text-[15px] text-[var(--color-ink)] focus:outline-none"
+                            style={FONT}
+                          />
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => onSelectChat?.(chat.id)}
+                              className="flex-1 min-w-0 truncate text-left text-[15px] text-[var(--color-ink)]"
+                              style={FONT}
+                            >
+                              {title}
+                            </button>
+                            {/* Timestamp by default; hides to make room for the actions
+                                menu on hover / when the menu is open (mirrors the LHS). */}
+                            <span
+                              className={cn(
+                                'shrink-0 text-[13px] text-[var(--color-grey)]',
+                                isMenuOpen ? 'hidden' : 'group-hover:hidden'
+                              )}
+                              style={FONT}
+                            >
+                              {chat.time === 'now' ? 'just now' : chat.time}
+                            </span>
+                            <ChatActionsMenu
+                              open={isMenuOpen}
+                              onOpenChange={(o) => setChatMenuOpenId(o ? chat.id : null)}
+                              align="end"
+                              side="bottom"
+                              modal={false}
+                              isBookmarked={bookmarkedIds.has(chat.id)}
+                              onRename={() => startRename(chat.id, title)}
+                              onBookmark={() => toggleBookmark(chat.id)}
+                              onDelete={() => requestDeleteChat(chat.id, title)}
+                              trigger={
+                                <button
+                                  type="button"
+                                  onClick={(e) => e.stopPropagation()}
+                                  aria-label="Chat options"
+                                  className={cn(
+                                    'items-center justify-center size-[26px] rounded-[6px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.1)] data-[state=open]:bg-[oklch(0_0_0_/_0.1)] shrink-0',
+                                    isMenuOpen ? 'flex' : 'hidden group-hover:flex'
+                                  )}
+                                >
+                                  <MoreHorizontal className="size-[16px]" />
+                                </button>
+                              }
+                            />
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Instructions + Files card */}
@@ -475,6 +632,13 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
         fallbackName="this agent"
         chatName={agent.name}
         onConfirm={() => { setDeleteOpen(false); onDeleteAgent(agent.id); }}
+      />
+
+      <DeleteChatDialog
+        open={!!deleteChatTarget}
+        onOpenChange={(o) => !o && setDeleteChatTarget(null)}
+        chatName={deleteChatTarget?.title}
+        onConfirm={confirmDeleteChat}
       />
     </div>
   );

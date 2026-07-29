@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import AgentAvatar from '../AgentAvatar';
-import { getOrbTheme } from './agentOrbTheme';
+import { getOrbTheme, type OrbTheme } from './agentOrbTheme';
 import type { OrbState } from './AgentOrb3DCanvas';
 
 /**
@@ -53,6 +53,8 @@ interface AgentOrb3DProps {
   live?: boolean;
   /** Passed through to the SVG fallback. */
   avatarSrc?: string;
+  /** Explicit orb colors, overriding the name→theme lookup (custom agents). */
+  theme?: OrbTheme;
 }
 
 const AgentOrb3D: React.FC<AgentOrb3DProps> = ({
@@ -62,6 +64,7 @@ const AgentOrb3D: React.FC<AgentOrb3DProps> = ({
   size = 40,
   live = true,
   avatarSrc,
+  theme,
 }) => {
   const reducedMotion = useReducedMotion();
 
@@ -87,7 +90,7 @@ const AgentOrb3D: React.FC<AgentOrb3DProps> = ({
     >
       <Suspense fallback={fallback}>
         <Canvas3D
-          theme={getOrbTheme(name)}
+          theme={theme ?? getOrbTheme(name)}
           fromTheme={fromName ? getOrbTheme(fromName) : undefined}
           state={state}
           size={size}

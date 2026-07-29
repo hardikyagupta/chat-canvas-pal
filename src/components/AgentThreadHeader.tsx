@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import AgentAvatar from './AgentAvatar';
 import AgentOrb3D from './orb/AgentOrb3D';
 import type { OrbState } from './orb/AgentOrb3DCanvas';
-import { getOrbTheme } from './orb/agentOrbTheme';
+import { getOrbTheme, type OrbTheme } from './orb/agentOrbTheme';
 
 /**
  * AgentThreadHeader — introduces an agent's turn, per the Figma design.
@@ -65,6 +65,12 @@ interface AgentThreadHeaderProps {
    * transient "working" visual; the SVG is the settled identity.
    */
   settled?: boolean;
+  /**
+   * Explicit orb colors, overriding the name→theme lookup. Custom agents pass
+   * a theme derived from their avatar palette so the live fluid orb animates in
+   * the same colors as the settled SVG avatar.
+   */
+  theme?: OrbTheme;
 }
 
 const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
@@ -77,6 +83,7 @@ const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
   fromName,
   live = true,
   settled = false,
+  theme,
 }) => {
   const resolvedSaying = saying ?? AGENT_SAYINGS[name.trim().toLowerCase()];
   const [revealed, setRevealed] = useState(revealDelay <= 0);
@@ -84,7 +91,7 @@ const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
   // Headers that mount already settled (older turns, re-renders) show the SVG
   // statically; the reveal animation only plays on a live orb → SVG handover.
   const mountedSettledRef = useRef(settled);
-  const orbTheme = getOrbTheme(name);
+  const orbTheme = theme ?? getOrbTheme(name);
 
   useEffect(() => {
     if (revealDelay <= 0) return;
@@ -158,6 +165,7 @@ const AgentThreadHeader: React.FC<AgentThreadHeaderProps> = ({
               size={size}
               live={live}
               avatarSrc={avatarSrc}
+              theme={theme}
             />
           )}
         </span>

@@ -1,8 +1,8 @@
 import React from 'react';
 import {
   Search, Palette, SlidersHorizontal, Sparkles, UserRound,
-  Database, Blocks, Bell, ShieldCheck, Cog, Check, X,
-  Plus, Pencil, Trash2, MoreHorizontal, FileText,
+  Blocks, Bell, ShieldCheck, Cog, Check, X,
+  Plus, Pencil, Trash2, MoreHorizontal, FileText, Upload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -22,8 +22,7 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   ] },
   { title: 'INTELLIGENCE', items: [
     { id: 'model', label: 'Model & behavior', icon: Sparkles },
-    { id: 'personalization', label: 'Personalization', icon: UserRound },
-    { id: 'memory', label: 'Memory', icon: Database },
+    { id: 'personalization', label: 'Memory & personalization', icon: UserRound },
   ] },
   { title: 'CAPABILITIES', items: [
     { id: 'tools', label: 'Tools & integrations', icon: Blocks },
@@ -276,15 +275,21 @@ const SettingCopy: React.FC<{ title: string; sub: string }> = ({ title, sub }) =
 );
 
 /* ── Personalization panel ───────────────────────────────────────── */
-type PersonalizationTab = 'profile' | 'knowledge';
+type PersonalizationTab = 'profile' | 'wiki';
 
-interface KnowledgeItem {
+const TAB_LABEL: Record<PersonalizationTab, string> = {
+  profile: 'Profile',
+  wiki: 'Brand wiki',
+};
+
+interface WikiItem {
   id: string;
   name: string;
   useWhen: string;
   content: string;
   enabled: boolean;
   createdAt: string; // display label, e.g. "28 Jul"
+  fileName?: string; // set when the entry was created from an uploaded document
 }
 
 const PersonalizationPanel: React.FC = () => {
@@ -296,33 +301,57 @@ const PersonalizationPanel: React.FC = () => {
   const [about, setAbout] = React.useState('');
   const [instructions, setInstructions] = React.useState('');
 
-  // Knowledge store
-  const [items, setItems] = React.useState<KnowledgeItem[]>([]);
+  // Brand wiki store
+  const [items, setItems] = React.useState<WikiItem[]>([]);
   const [query, setQuery] = React.useState('');
   const [editorOpen, setEditorOpen] = React.useState(false);
-  const [editing, setEditing] = React.useState<KnowledgeItem | null>(null);
+  const [editing, setEditing] = React.useState<WikiItem | null>(null);
   const [menuFor, setMenuFor] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const filtered = items.filter((it) =>
     (it.name + it.content + it.useWhen).toLowerCase().includes(query.trim().toLowerCase())
   );
 
   const openAdd = () => { setEditing(null); setEditorOpen(true); };
-  const openEdit = (it: KnowledgeItem) => { setEditing(it); setEditorOpen(true); setMenuFor(null); };
+  const openEdit = (it: WikiItem) => { setEditing(it); setEditorOpen(true); setMenuFor(null); };
+
+  const addItem = (data: { name: string; content: string; useWhen?: string; fileName?: string }) =>
+    setItems((prev) => [
+      {
+        id: `k-${prev.length}-${prev.reduce((m, i) => Math.max(m, Number(i.id.split('-')[1]) || 0), 0) + 1}`,
+        useWhen: '',
+        ...data,
+        enabled: true,
+        createdAt: '28 Jul',
+      },
+      ...prev,
+    ]);
+
+  // Upload a document straight into the wiki (separate from the manual "Add"
+  // flow). Text files have their contents read in; other docs are attached by
+  // name with a short placeholder body.
+  const MAX = 2000;
+  const onUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file
+    if (!file) return;
+    const name = file.name.replace(/\.[^.]+$/, '');
+    if (/\.(txt|md|markdown|csv|json|html?|rtf)$/i.test(file.name) || file.type.startsWith('text/')) {
+      const reader = new FileReader();
+      reader.onload = () =>
+        addItem({ name, content: String(reader.result ?? '').slice(0, MAX), fileName: file.name });
+      reader.readAsText(file);
+    } else {
+      addItem({ name, content: `Uploaded document: ${file.name}`, fileName: file.name });
+    }
+  };
 
   const handleSave = (data: { name: string; useWhen: string; content: string }) => {
     if (editing) {
       setItems((prev) => prev.map((it) => (it.id === editing.id ? { ...it, ...data } : it)));
     } else {
-      setItems((prev) => [
-        {
-          id: `k-${prev.length}-${prev.reduce((m, i) => Math.max(m, Number(i.id.split('-')[1]) || 0), 0) + 1}`,
-          ...data,
-          enabled: true,
-          createdAt: '28 Jul',
-        },
-        ...prev,
-      ]);
+      addItem(data);
     }
     setEditorOpen(false);
     setEditing(null);
@@ -339,7 +368,7 @@ const PersonalizationPanel: React.FC = () => {
     <div className="flex flex-col gap-[16px]">
       {/* Heading */}
       <div className="flex flex-col gap-[8px]">
-        <h1 className="text-[24px] font-medium text-[var(--color-ink)]" style={FONT}>Personalization</h1>
+        <h1 className="text-[24px] font-medium text-[var(--color-ink)]" style={FONT}>Memory &amp; personalization</h1>
         <p className="text-[13px] text-[var(--color-grey)]" style={FONT}>
           Manage who you are and what the assistant remembers.
         </p>
@@ -347,7 +376,7 @@ const PersonalizationPanel: React.FC = () => {
 
       {/* Tabs */}
       <div className="flex items-center gap-[24px] border-b border-[var(--color-line)]">
-        {(['profile', 'knowledge'] as PersonalizationTab[]).map((t) => {
+        {(['profile', 'wiki'] as PersonalizationTab[]).map((t) => {
           const on = tab === t;
           return (
             <button
@@ -355,12 +384,12 @@ const PersonalizationPanel: React.FC = () => {
               type="button"
               onClick={() => setTab(t)}
               className={cn(
-                'relative -mb-px pb-[10px] text-[14px] capitalize transition-colors',
+                'relative -mb-px pb-[10px] text-[14px] transition-colors',
                 on ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-grey)] hover:text-[var(--color-slate)]'
               )}
               style={FONT}
             >
-              {t}
+              {TAB_LABEL[t]}
               {on && <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[var(--color-ink)]" />}
             </button>
           );
@@ -406,7 +435,7 @@ const PersonalizationPanel: React.FC = () => {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search knowledge"
+                placeholder="Search brand wiki"
                 className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none"
                 style={FONT}
               />
@@ -420,6 +449,22 @@ const PersonalizationPanel: React.FC = () => {
               <Plus className="size-[15px]" />
               Add
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.md,.markdown,.csv,.json,.html,.htm,.rtf,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,text/*"
+              className="hidden"
+              onChange={onUpload}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex h-[38px] shrink-0 items-center gap-[6px] rounded-[9px] border border-[var(--color-line-input)] bg-card px-[14px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
+              style={FONT}
+            >
+              <Upload className="size-[15px]" />
+              Upload
+            </button>
           </div>
 
           {filtered.length === 0 ? (
@@ -428,7 +473,7 @@ const PersonalizationPanel: React.FC = () => {
                 <Search className="size-[20px] text-[var(--color-grey-soft)]" />
               </div>
               <p className="text-[13px] text-[var(--color-grey-soft)]" style={FONT}>
-                {items.length === 0 ? 'No knowledge yet' : 'No matches found'}
+                {items.length === 0 ? 'No brand wiki entries yet' : 'No matches found'}
               </p>
             </div>
           ) : (
@@ -443,12 +488,17 @@ const PersonalizationPanel: React.FC = () => {
                     <Switch checked={it.enabled} onCheckedChange={() => toggle(it.id)} />
                   </div>
                   <p className="line-clamp-2 pr-[40px] text-[13px] text-[var(--color-grey)]" style={FONT}>{it.content}</p>
+                  {it.fileName && (
+                    <span className="mt-[4px] flex w-fit items-center gap-[6px] rounded-[7px] bg-[var(--color-surface-1)] px-[8px] py-[4px] text-[11px] text-[var(--color-slate)]" style={FONT}>
+                      <FileText className="size-[13px]" /> {it.fileName}
+                    </span>
+                  )}
                   <div className="mt-[6px] flex items-center justify-between">
                     <p className="text-[12px] text-[var(--color-grey-soft)]" style={FONT}>Created {it.createdAt}</p>
                     <div className="relative">
                       <button
                         type="button"
-                        aria-label="Knowledge options"
+                        aria-label="Brand wiki options"
                         onClick={() => setMenuFor((cur) => (cur === it.id ? null : it.id))}
                         className="flex size-[28px] items-center justify-center rounded-[7px] text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
                       >
@@ -487,7 +537,7 @@ const PersonalizationPanel: React.FC = () => {
       )}
 
       {editorOpen && (
-        <KnowledgeEditor
+        <WikiEditor
           initial={editing}
           onCancel={() => { setEditorOpen(false); setEditing(null); }}
           onSave={handleSave}
@@ -497,10 +547,10 @@ const PersonalizationPanel: React.FC = () => {
   );
 };
 
-const KnowledgeEditor: React.FC<{
-  initial: KnowledgeItem | null;
+const WikiEditor: React.FC<{
+  initial: WikiItem | null;
   onCancel: () => void;
-  onSave: (data: { name: string; useWhen: string; content: string }) => void;
+  onSave: (data: { name: string; useWhen: string; content: string; fileName?: string }) => void;
 }> = ({ initial, onCancel, onSave }) => {
   const [name, setName] = React.useState(initial?.name ?? '');
   const [useWhen, setUseWhen] = React.useState(initial?.useWhen ?? '');
@@ -525,7 +575,7 @@ const KnowledgeEditor: React.FC<{
       >
         <div className="flex items-center justify-between">
           <h2 className="text-[17px] font-bold text-[var(--color-ink)]" style={FONT}>
-            {initial ? 'Edit Knowledge' : 'Add Knowledge'}
+            {initial ? 'Edit brand wiki entry' : 'Add to brand wiki'}
           </h2>
           <button
             type="button"
@@ -538,10 +588,10 @@ const KnowledgeEditor: React.FC<{
         </div>
 
         <Field label="Name">
-          <TextInput value={name} onChange={setName} placeholder="Name of the knowledge" />
+          <TextInput value={name} onChange={setName} placeholder="Name of the entry" />
         </Field>
         <Field label="Use when">
-          <TextInput value={useWhen} onChange={setUseWhen} placeholder="When to use this knowledge" />
+          <TextInput value={useWhen} onChange={setUseWhen} placeholder="When to use this entry" />
         </Field>
         <Field label="Content">
           <div className="relative">
@@ -549,7 +599,7 @@ const KnowledgeEditor: React.FC<{
               value={content}
               onChange={(v) => setContent(v.slice(0, MAX))}
               rows={6}
-              placeholder="Content of the knowledge"
+              placeholder="Content of the entry"
             />
             <span className="pointer-events-none absolute bottom-[10px] right-[12px] text-[11px] text-[var(--color-grey-soft)]" style={FONT}>
               {content.length} / {MAX}

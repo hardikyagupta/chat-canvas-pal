@@ -50,6 +50,8 @@ export interface LhsChatItem {
   id: string;
   title: string;
   time: string;
+  /** Set when this chat was started from a custom agent's page. */
+  agentId?: string;
 }
 
 interface LhsSidebarProps {
@@ -192,7 +194,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
     { key: 'chats', label: 'Chats', icon: ChatsIcon, onClick: onOpenChats },
     { key: 'custom-agents', label: 'Agents', icon: CustomAgentsIcon, onClick: onOpenCustomAgents },
     { key: 'reports', label: 'Reports', icon: ReportsIcon, onClick: onOpenReports },
-    { key: 'scheduler', label: 'Scheduler', icon: SchedulerIcon, onClick: onOpenScheduler },
+    { key: 'scheduler', label: 'Scheduled', icon: SchedulerIcon, onClick: onOpenScheduler },
     { key: 'bookmarks', label: 'Bookmarks', icon: BookmarkIcon, onClick: onOpenBookmarks },
   ];
 

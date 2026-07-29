@@ -16,7 +16,7 @@ interface CreateCustomAgentModalProps {
 /**
  * Two-field dialog for creating a custom agent (name + description). Reused for
  * "Edit details" by passing `initial` (prefills the fields and swaps the copy).
- * Modal chrome mirrors SettingsModal's KnowledgeEditor so all dialogs match.
+ * Modal chrome mirrors SettingsModal's WikiEditor so all dialogs match.
  */
 const CreateCustomAgentModal: React.FC<CreateCustomAgentModalProps> = ({
   open,

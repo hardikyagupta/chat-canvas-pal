@@ -45,6 +45,9 @@ const AgentAvatar: React.FC<AgentAvatarProps> = ({ seed, src, size = 40, classNa
         width: size,
         height: size,
         flexShrink: 0,
+        // Clip to a circle — the soft-gradient tiles carry a light square edge
+        // that would otherwise read as a white box behind the orb.
+        borderRadius: '50%',
         ...style,
       }}
     />

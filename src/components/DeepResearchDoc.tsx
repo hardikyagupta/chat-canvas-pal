@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Download, Maximize2 } from 'lucide-react';
+import { FileText, Download, Maximize2, ThumbsUp, ThumbsDown } from 'lucide-react';
 
 /**
  * DeepResearchDoc — the finished deep-research report shown inline once the
@@ -12,7 +12,8 @@ const MANROPE = { fontFamily: 'Manrope, sans-serif' } as const;
 
 interface DeepResearchDocProps {
   title: string;
-  citations: number;
+  /** Citation count; the label is hidden when 0 or omitted. */
+  citations?: number;
   summaryHeading?: string;
   /** Report paragraphs; may contain inline <strong> markup. */
   paragraphs: string[];
@@ -21,6 +22,9 @@ interface DeepResearchDocProps {
   onDownload?: () => void;
   /** Open the report in the RHS artifact panel. */
   onExpand?: () => void;
+  /** When provided, a thumbs feedback row shows below the revealed doc. */
+  onThumbsUp?: () => void;
+  onThumbsDown?: () => void;
 }
 
 export const DocBody: React.FC<Pick<DeepResearchDocProps, 'title' | 'summaryHeading' | 'paragraphs'>> = ({
@@ -80,6 +84,8 @@ const DeepResearchDoc: React.FC<DeepResearchDocProps> = ({
   skeletonMs = 1200,
   onDownload,
   onExpand,
+  onThumbsUp,
+  onThumbsDown,
 }) => {
   const [ready, setReady] = useState(false);
 
@@ -93,9 +99,11 @@ const DeepResearchDoc: React.FC<DeepResearchDocProps> = ({
 
   return (
     <div className="flex w-full flex-col gap-[12px] animate-in fade-in duration-500">
-      <p className="text-[13px] leading-[18px] text-[var(--color-grey)]" style={MANROPE}>
-        {citations} citations
-      </p>
+      {typeof citations === 'number' && citations > 0 && (
+        <p className="text-[13px] leading-[18px] text-[var(--color-grey)]" style={MANROPE}>
+          {citations} citations
+        </p>
+      )}
 
       <div className="w-full overflow-hidden rounded-[16px] border border-[var(--color-line-input)] bg-card">
         {/* Header — doc icon · title · download · expand */}
@@ -135,6 +143,28 @@ const DeepResearchDoc: React.FC<DeepResearchDocProps> = ({
           />
         </div>
       </div>
+
+      {/* Feedback — sits below the finished doc (ChatGPT-style thumbs). */}
+      {(onThumbsUp || onThumbsDown) && (
+        <div className="flex items-center gap-1 text-[var(--color-grey-soft)]">
+          <button
+            type="button"
+            onClick={onThumbsUp}
+            aria-label="Good response"
+            className="flex items-center justify-center p-2 rounded-md transition-colors hover:text-[var(--color-success)] hover:bg-[color-mix(in_oklab,var(--color-success)_10%,transparent)]"
+          >
+            <ThumbsUp className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onThumbsDown}
+            aria-label="Bad response"
+            className="flex items-center justify-center p-2 rounded-md transition-colors hover:text-destructive hover:bg-destructive/10"
+          >
+            <ThumbsDown className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

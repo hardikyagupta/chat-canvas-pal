@@ -64,9 +64,17 @@ const AgentCard: React.FC<{
       aria-label={`Open ${agent.name}`}
       className="flex flex-col gap-[10px] p-[18px] text-left"
     >
-      <span className="flex size-[36px] items-center justify-center rounded-[10px] bg-[color-mix(in_oklch,var(--color-plum)_16%,transparent)] shrink-0">
-        <Bot className="size-[20px] text-[var(--color-plum)]" />
-      </span>
+      {agent.avatarSrc ? (
+        <img
+          src={agent.avatarSrc}
+          alt=""
+          className="size-[36px] rounded-full object-cover shrink-0"
+        />
+      ) : (
+        <span className="flex size-[36px] items-center justify-center rounded-[10px] bg-[color-mix(in_oklch,var(--color-plum)_16%,transparent)] shrink-0">
+          <Bot className="size-[20px] text-[var(--color-plum)]" />
+        </span>
+      )}
       <span className="mt-[2px] truncate text-[16px] leading-[22px] font-semibold text-[var(--color-ink)]" style={MANROPE}>
         {agent.name}
       </span>
