@@ -106,6 +106,8 @@ interface ChatInputProps {
   onSelectAgentChip?: (agent: { id: string; name: string } | null) => void;
   /** Fires when "Create a new agent" is picked from the "+" → "Add to agent" submenu. */
   onCreateAgentFromComposer?: () => void;
+  /** Pre-fills the composer with a suggested prompt the user can edit or send. */
+  initialValue?: string;
 }
 
 // Temporary feature flag to disable @-agent mention dropdown
@@ -130,8 +132,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
   selectedAgentChip = null,
   onSelectAgentChip,
   onCreateAgentFromComposer,
+  initialValue = "",
 }) => {
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(initialValue);
   const [showMentionList, setShowMentionList] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
   // "Custom agents" L2 flyout — opens to the right of its row on hover.
@@ -735,7 +738,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             )}
 
             {/* Selected agent chip — set from the "+" → "Add to agent" submenu.
-                The × reveals on hover; the tooltip repeats the agent name. */}
+                The × is always visible; the tooltip repeats the agent name. */}
             {selectedAgentChip && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -757,7 +760,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                       type="button"
                       onClick={() => onSelectAgentChip?.(null)}
                       aria-label={`Remove ${selectedAgentChip.name}`}
-                      className="hidden group-hover:inline-flex items-center justify-center shrink-0"
+                      className="inline-flex items-center justify-center shrink-0"
                     >
                       <X className="w-[14px] h-[14px] text-[var(--color-royal)]" />
                     </button>
