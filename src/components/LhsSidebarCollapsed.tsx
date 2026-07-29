@@ -20,7 +20,7 @@ const LhsSidebarCollapsed: React.FC<LhsSidebarCollapsedProps> = ({
     { key: 'new-chat', icon: SquarePen, label: 'New chat', onClick: onNewChat },
     { key: 'chats', icon: MessageSquare, label: 'Chats', onClick: onOpenChats },
     { key: 'bookmarks', icon: Bookmark, label: 'Bookmarks', onClick: onOpenBookmarks },
-    { key: 'scheduler', icon: CalendarClock, label: 'Scheduler', onClick: onOpenScheduler },
+    { key: 'scheduler', icon: CalendarClock, label: 'Scheduled', onClick: onOpenScheduler },
   ];
 
   return (

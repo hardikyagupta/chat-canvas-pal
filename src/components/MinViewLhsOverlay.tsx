@@ -121,7 +121,7 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
     { key: 'chats', label: 'Chats', icon: MessageSquare, onClick: onOpenChats },
     { key: 'custom-agents', label: 'Agents', icon: Bot, onClick: onOpenCustomAgents },
     { key: 'reports', label: 'Reports', icon: BarChart3, onClick: onOpenReports },
-    { key: 'scheduler', label: 'Scheduler', icon: CalendarClock, onClick: onOpenScheduler },
+    { key: 'scheduler', label: 'Scheduled', icon: CalendarClock, onClick: onOpenScheduler },
     { key: 'bookmarks', label: 'Bookmarks', icon: Bookmark, onClick: onOpenBookmarks },
   ];
 
