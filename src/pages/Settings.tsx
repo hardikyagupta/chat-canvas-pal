@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Search, Palette, SlidersHorizontal, Sparkles, UserRound,
-  Database, Blocks, Bell, ShieldCheck, Cog, Check,
+  Blocks, Bell, ShieldCheck, Cog, Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -21,8 +21,7 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   ] },
   { title: 'INTELLIGENCE', items: [
     { id: 'model', label: 'Model & behavior', icon: Sparkles },
-    { id: 'personalization', label: 'Personalization', icon: UserRound },
-    { id: 'memory', label: 'Memory', icon: Database },
+    { id: 'personalization', label: 'Memory & personalization', icon: UserRound },
   ] },
   { title: 'CAPABILITIES', items: [
     { id: 'tools', label: 'Tools & integrations', icon: Blocks },
