@@ -173,7 +173,7 @@ const SchedulerPage: React.FC<SchedulerPageProps> = ({
   initialSchedules,
   templates,
   availableReports,
-  searchPlaceholder = 'Search schedules',
+  searchPlaceholder = 'Search scheduled tasks...',
   onSelectSchedule,
   className,
   compact = false,
