@@ -415,6 +415,8 @@ interface ChatMessageProps {
   onAnimationComplete?: () => void;
   messageId?: string;
   isLastMessage?: boolean;
+  /** Hide the copy/thumbs feedback row (e.g. a lead-in line above a doc). */
+  hideFeedback?: boolean;
   showExecuteFlowCTA?: boolean;
   onExecuteFlow?: () => void;
   isContentAgent?: boolean;
@@ -479,6 +481,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   messageId,
   isExpanded = true,
   isLastMessage,
+  hideFeedback = false,
   showExecuteFlowCTA,
   onExecuteFlow,
   isContentAgent = false,
@@ -1458,7 +1461,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         })()}
             
         {/* Feedback icons at bottom-left of AI content (ChatGPT style) - only show after animation completes */}
-            {isAnimationDone && (
+            {isAnimationDone && !hideFeedback && (
               <div className="flex justify-start w-full mt-3 pt-3 border-t border-[var(--color-line)] dark:border-[var(--color-charcoal)]">
                 <div className="flex items-center gap-1 text-grey-soft">
                   <TooltipProvider delayDuration={200}>
