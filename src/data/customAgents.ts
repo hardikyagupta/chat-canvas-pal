@@ -3,6 +3,8 @@
 // prototype store — like reports.ts / defaultChats, it lives in React state only
 // (no backend / persistence), so the list resets on refresh.
 
+import { generateAgentAvatar } from '@/lib/agentAvatar';
+
 export type AgentFileKind = 'upload' | 'text' | 'github';
 
 export interface AgentFile {
@@ -24,8 +26,25 @@ export interface CustomAgent {
   files: AgentFile[];
   /** Relative "edited" time label, e.g. "2h". "now" for freshly created. */
   updatedAt: string;
+  /** Soft-gradient avatar (data URI), derived from the name. */
+  avatarSrc?: string;
+  /** Suggested first prompt, pre-filled into the composer on the agent's page. */
+  starterPrompt?: string;
 }
 
-// Seeded empty — the Custom agents page shows its empty state until the user
-// creates one.
-export const initialCustomAgents: CustomAgent[] = [];
+// Seeded with the Monthly report agent so the page has content on first load,
+// and so the scripted report-generation chat has an agent to run under.
+export const MONTHLY_REPORT_AGENT_NAME = 'Monthly report agent';
+
+export const initialCustomAgents: CustomAgent[] = [
+  {
+    id: 'default-agent',
+    name: MONTHLY_REPORT_AGENT_NAME,
+    description: "Turns last month's campaign data into a polished, executive-ready performance report.",
+    instructions: '',
+    files: [],
+    updatedAt: 'now',
+    avatarSrc: generateAgentAvatar(MONTHLY_REPORT_AGENT_NAME),
+    starterPrompt: "Generate last month's marketing performance report.",
+  },
+];
