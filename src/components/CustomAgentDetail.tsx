@@ -1,9 +1,10 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ArrowLeft, MoreHorizontal, Plus, Pencil, Trash2, X, Check,
+  ArrowLeft, MoreHorizontal, Plus, Pencil, Trash2, X,
   Paperclip, TextCursorInput, Github, FileText, Bot, MessageSquare,
 } from 'lucide-react';
+import { AgentToolsConfigPanel } from './AgentToolsConfig';
 import { cn } from '@/lib/utils';
 import type { CustomAgent, AgentFile, AgentTools } from '@/data/customAgents';
 import { DEFAULT_AGENT_TOOLS } from '@/data/customAgents';
@@ -19,6 +20,7 @@ import ChatInput from './ChatInput';
 import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
 import CreateCustomAgentModal from './CreateCustomAgentModal';
+import ReportCustomizationModal from './ReportCustomizationModal';
 
 const FONT: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
 
@@ -204,64 +206,6 @@ const AddTextContentModal: React.FC<{
 
 const TOOL_COLUMN_HEADING = 'text-[11px] font-semibold uppercase tracking-[0.6px] text-[var(--color-grey-soft)]';
 
-function ToolCheckbox({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-[8px] py-[3px]">
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={checked}
-        onClick={onChange}
-        className={cn(
-          'flex size-[16px] shrink-0 items-center justify-center rounded-[4px] border transition-colors',
-          checked
-            ? 'border-[var(--color-royal)] bg-[var(--color-royal)] text-white'
-            : 'border-[var(--color-line-input)] bg-white text-transparent'
-        )}
-      >
-        <Check className="size-[11px]" strokeWidth={3} />
-      </button>
-      <span className="text-[13px] text-[var(--color-ink)]" style={FONT}>{label}</span>
-    </label>
-  );
-}
-
-function ToolRadio({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-[8px] py-[3px]">
-      <button
-        type="button"
-        role="radio"
-        aria-checked={checked}
-        onClick={onChange}
-        className={cn(
-          'flex size-[16px] shrink-0 items-center justify-center rounded-full border transition-colors',
-          checked ? 'border-[var(--color-royal)] bg-white' : 'border-[var(--color-line-input)] bg-white'
-        )}
-      >
-        {checked ? <span className="size-[8px] rounded-full bg-[var(--color-royal)]" /> : null}
-      </button>
-      <span className="text-[13px] text-[var(--color-ink)]" style={FONT}>{label}</span>
-    </label>
-  );
-}
-
 /* ── Set tools modal ─────────────────────────────────────────────── */
 const SetToolsModal: React.FC<{
   open: boolean;
@@ -296,66 +240,7 @@ const SetToolsModal: React.FC<{
           </p>
         </div>
 
-        <div className="rounded-[12px] bg-[var(--color-surface-0)] px-[14px] py-[14px]">
-          <div className="flex flex-col gap-[16px]">
-            <div className="flex flex-col gap-[6px]">
-              <span className={TOOL_COLUMN_HEADING} style={FONT}>Domains</span>
-              <ToolCheckbox
-                label="Campaigns"
-                checked={value.domains.campaigns}
-                onChange={() => setValue((prev) => ({ ...prev, domains: { ...prev.domains, campaigns: !prev.domains.campaigns } }))}
-              />
-              <ToolCheckbox
-                label="Journeys"
-                checked={value.domains.journeys}
-                onChange={() => setValue((prev) => ({ ...prev, domains: { ...prev.domains, journeys: !prev.domains.journeys } }))}
-              />
-              <ToolCheckbox
-                label="Segments"
-                checked={value.domains.segments}
-                onChange={() => setValue((prev) => ({ ...prev, domains: { ...prev.domains, segments: !prev.domains.segments } }))}
-              />
-            </div>
-
-            <div className="flex flex-col gap-[6px]">
-              <span className={TOOL_COLUMN_HEADING} style={FONT}>Capabilities</span>
-              <ToolCheckbox
-                label="Generate reports"
-                checked={value.capabilities.generateReports}
-                onChange={() => setValue((prev) => ({ ...prev, capabilities: { ...prev.capabilities, generateReports: !prev.capabilities.generateReports } }))}
-              />
-              <ToolCheckbox
-                label="Brand Wiki"
-                checked={value.capabilities.brandWiki}
-                onChange={() => setValue((prev) => ({ ...prev, capabilities: { ...prev.capabilities, brandWiki: !prev.capabilities.brandWiki } }))}
-              />
-              <ToolCheckbox
-                label="Deep research"
-                checked={value.capabilities.deepResearch}
-                onChange={() => setValue((prev) => ({ ...prev, capabilities: { ...prev.capabilities, deepResearch: !prev.capabilities.deepResearch } }))}
-              />
-              <ToolCheckbox
-                label="Memory"
-                checked={value.capabilities.memory}
-                onChange={() => setValue((prev) => ({ ...prev, capabilities: { ...prev.capabilities, memory: !prev.capabilities.memory } }))}
-              />
-            </div>
-
-            <div className="flex flex-col gap-[6px]">
-              <span className={TOOL_COLUMN_HEADING} style={FONT}>Visibility</span>
-              <ToolRadio
-                label="Private (only me)"
-                checked={value.visibility === 'private'}
-                onChange={() => setValue((prev) => ({ ...prev, visibility: 'private' }))}
-              />
-              <ToolRadio
-                label="Workspace (whole team)"
-                checked={value.visibility === 'workspace'}
-                onChange={() => setValue((prev) => ({ ...prev, visibility: 'workspace' }))}
-              />
-            </div>
-          </div>
-        </div>
+        <AgentToolsConfigPanel value={value} onChange={setValue} />
 
         <div className="flex items-center justify-end gap-[10px]">
           <button
@@ -598,6 +483,7 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
   const [textContentOpen, setTextContentOpen] = React.useState(false);
   const [filesMenuOpen, setFilesMenuOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [reportCustomizationOpen, setReportCustomizationOpen] = React.useState(false);
   const agentTools = agent.tools ?? DEFAULT_AGENT_TOOLS;
   const starterQuestions = agent.starterQuestions ?? [];
   // Ids of files currently "uploading" — they render as skeleton rows until the
@@ -717,21 +603,34 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
               )}
             </div>
           </div>
-          <ActionMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
-            <ActionMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label="Agent options"
-                className="flex items-center justify-center size-[34px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
-              >
-                <MoreHorizontal className="size-[18px]" />
-              </button>
-            </ActionMenuTrigger>
-            <ActionMenuContent align="end" side="bottom">
-              <ActionMenuItem icon={Pencil} onSelect={() => { setMenuOpen(false); setEditOpen(true); }}>Edit details</ActionMenuItem>
-              <ActionMenuItem icon={Trash2} variant="danger" onSelect={() => { setMenuOpen(false); setDeleteOpen(true); }}>Delete</ActionMenuItem>
-            </ActionMenuContent>
-          </ActionMenu>
+          <div className="flex items-center gap-[8px] shrink-0">
+            <button
+              type="button"
+              onClick={() => setReportCustomizationOpen(true)}
+              className="flex h-[34px] items-center gap-[6px] rounded-[8px] border border-[var(--color-line)] px-[12px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
+              style={FONT}
+            >
+              <FileText className="size-[15px]" />
+              Customize reports
+            </button>
+            <ActionMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
+              <ActionMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Agent options"
+                  className="flex items-center justify-center size-[34px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                >
+                  <MoreHorizontal className="size-[18px]" />
+                </button>
+              </ActionMenuTrigger>
+              <ActionMenuContent align="end" side="bottom">
+                <ActionMenuItem icon={Pencil} onSelect={() => { setMenuOpen(false); setEditOpen(true); }}>Edit details</ActionMenuItem>
+                {!agent.isBuiltIn ? (
+                  <ActionMenuItem icon={Trash2} variant="danger" onSelect={() => { setMenuOpen(false); setDeleteOpen(true); }}>Delete</ActionMenuItem>
+                ) : null}
+              </ActionMenuContent>
+            </ActionMenu>
+          </div>
         </div>
 
         {/* Body — chat input (left) + Instructions/Files card (right).
@@ -1064,6 +963,11 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
           addFiles([{ id: genId(), title, kind: 'text', content }]);
           setTextContentOpen(false);
         }}
+      />
+
+      <ReportCustomizationModal
+        isOpen={reportCustomizationOpen}
+        onClose={() => setReportCustomizationOpen(false)}
       />
 
       <DeleteChatDialog
