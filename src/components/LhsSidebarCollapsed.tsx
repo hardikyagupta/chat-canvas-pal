@@ -56,13 +56,14 @@ const LhsSidebarCollapsed: React.FC<LhsSidebarCollapsedProps> = ({
         </div>
       </div>
 
-      {/* Bottom: settings (32x32 square) */}
+      {/* Bottom: settings (32x32 square). Early release: labeled to match
+          SettingsModalV2, which only opens the brand wiki panel. */}
       <div className="flex items-center justify-center shrink-0">
         <button
           type="button"
           onClick={onOpenSettings}
-          aria-label="Settings"
-          title="Settings"
+          aria-label="Configure brand wiki"
+          title="Configure brand wiki"
           className="flex items-center justify-center size-[40px] rounded-[8px] hover:bg-[var(--color-surface-1)] transition-colors"
         >
           <Settings className="size-[18px] text-[var(--color-charcoal)] shrink-0" />
