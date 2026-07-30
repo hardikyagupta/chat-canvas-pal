@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="74" height="74" viewBox="-5 -5 74 74" role="img">
+    <title>AI Dashboard</title>
+    <!-- Globe: @oreo-design/avatar — createAvatar({ shape: "void", palette: "peach-cream", variantId: "ai-dashboard" }), background removed for transparency, so it lands on the brand orange (#FC5E02-ish). A sparkle sits in the center (the "AI" mark), and an orbit ring — faint static track + a rotating bright arc in brand blue — wraps the edge, so the badge reads as "live/thinking" at rest, same idea as nav-decisioning.svg's twinkle. -->
+    <style>
+      @keyframes aiDashOrbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      #ai-dash-orbit-arc { transform-origin: 32px 32px; animation: aiDashOrbitSpin 4.5s linear infinite; }
+      @media (prefers-reduced-motion: reduce) { #ai-dash-orbit-arc { animation: none; } }
+    </style>
+    <defs>
+    <filter id="blur-1-oreo-1i3wyvf" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.1"/></filter>
+    <filter id="blur-3-oreo-1i3wyvf" x="-55%" y="-55%" width="210%" height="210%"><feGaussianBlur stdDeviation="3.2"/></filter>
+    <filter id="blur-5-oreo-1i3wyvf" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="5.1"/></filter>
+    <filter id="blur-6-oreo-1i3wyvf" x="-75%" y="-75%" width="250%" height="250%"><feGaussianBlur stdDeviation="5.7"/></filter>
+    <filter id="blur-8-oreo-1i3wyvf" x="-85%" y="-85%" width="270%" height="270%"><feGaussianBlur stdDeviation="8.4"/></filter>
+    <filter id="blur-10-oreo-1i3wyvf" x="-95%" y="-95%" width="290%" height="290%"><feGaussianBlur stdDeviation="10.4"/></filter>
+    <filter id="blur-14-oreo-1i3wyvf" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="13.8"/></filter><clipPath id="clip-oreo-1i3wyvf"><rect width="64" height="64" rx="32" fill="#ffffff"/></clipPath>
+    <radialGradient id="edge-oreo-1i3wyvf" gradientUnits="userSpaceOnUse" cx="32" cy="32" r="32">
+      <stop offset="98.4375%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="edge-mask-oreo-1i3wyvf" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="0" y="0" width="64" height="64" style="mask-type:alpha">
+      <rect width="64" height="64" fill="url(#edge-oreo-1i3wyvf)"/>
+    </mask></defs>
+
+    <g mask="url(#edge-mask-oreo-1i3wyvf)">
+      <g clip-path="url(#clip-oreo-1i3wyvf)">
+    <g transform="translate(32.000 32.000) rotate(-90.000)"><rect x="-37.590" y="-37.590" width="75.180" height="75.180" rx="16.250" fill="#cc4e00" opacity="1.000"/></g>
+
+    <g transform="translate(32 32) rotate(-90)" opacity="0.36">
+      <rect x="-36.390" y="-36.390" width="72.780" height="72.780" rx="15.050" fill="none" stroke="#ffffff" stroke-width="1.400" opacity="0.38" filter="url(#blur-1-oreo-1i3wyvf)"/>
+      <rect x="-35.590" y="-35.590" width="71.180" height="71.180" rx="14.250" fill="none" stroke="#71abff" stroke-width="2.400" opacity="0.24" filter="url(#blur-3-oreo-1i3wyvf)"/>
+      <rect x="-33.590" y="-33.590" width="67.180" height="67.180" rx="12.250" fill="none" stroke="#71abff" stroke-width="4.000" opacity="0.18" filter="url(#blur-5-oreo-1i3wyvf)"/>
+    </g>
+    <g transform="translate(32.000 32.110) rotate(180.000)"><rect x="-32.000" y="-18.790" width="64.000" height="37.580" rx="10.160" fill="#aec6cf" opacity="0.980" filter="url(#blur-14-oreo-1i3wyvf)"/></g>
+    <g transform="translate(31.890 31.890) rotate(180.000)"><rect x="-22.445" y="-9.130" width="44.890" height="18.260" rx="5.080" fill="#ffbe74" opacity="0.900" filter="url(#blur-5-oreo-1i3wyvf)" style="mix-blend-mode:plus-lighter"/></g></g>
+    </g>
+
+    <!-- AI sparkle mark, centered — soft glow behind a big + small sparkle pair. -->
+    <g transform="translate(32 32)">
+      <circle r="12" fill="#ffffff" opacity="0.30" filter="url(#blur-8-oreo-1i3wyvf)"/>
+      <path d="M0,-11 C1.6,-3.3 3.3,-1.6 11,0 C3.3,1.6 1.6,3.3 0,11 C-1.6,3.3 -3.3,1.6 -11,0 C-3.3,-1.6 -1.6,-3.3 0,-11 Z" fill="#ffffff"/>
+      <path transform="translate(9,-9)" d="M0,-5 C0.7,-1.5 1.5,-0.7 5,0 C1.5,0.7 0.7,1.5 0,5 C-0.7,1.5 -1.5,0.7 -5,0 C-1.5,-0.7 -0.7,-1.5 0,-5 Z" fill="#ffffff" opacity="0.9"/>
+    </g>
+
+    <!-- Orbit ring: faint static track + a rotating bright arc (round caps, brand blue) -->
+    <circle cx="32" cy="32" r="35.5" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.22"/>
+    <circle
+      id="ai-dash-orbit-arc"
+      cx="32" cy="32" r="35.5"
+      fill="none"
+      stroke="#2F68E5"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-dasharray="36 187.05"
+    />
+  </svg>

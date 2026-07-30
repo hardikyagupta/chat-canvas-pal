@@ -15,6 +15,7 @@ import {
 import DocArtifactCard, { DocArtifact } from './DocArtifactCard';
 import AgentArtifactCard from './AgentArtifactCard';
 import type { AgentArtifactCardData } from '@/data/conversations';
+import type { InsightCardContext } from '@/types/insightCard';
 import { ContentAgentResponse } from './ContentAgentResponse';
 import { ContentAgentClarification } from './ContentAgentClarification';
 import { ContentAgentQuestionChoice } from './ContentAgentQuestionChoice';
@@ -466,6 +467,7 @@ interface ChatMessageProps {
   onThumbsDown?: () => void;
   // Layout: widget (minimized) view is narrow, so the user bubble gets more width.
   isExpanded?: boolean;
+  insightCard?: InsightCardContext;
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -523,6 +525,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   onAgentArtifactAction,
   onThumbsUp,
   onThumbsDown,
+  insightCard,
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isAnimationDone, setIsAnimationDone] = useState(false);
@@ -1182,6 +1185,38 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   }, []);
 
   if (!isAI) {
+    if (insightCard) {
+      return (
+        <div className="flex justify-end w-full py-2">
+          <div
+            className={cn(
+              "bg-card border border-[var(--color-line)] rounded-[12px] p-[12px] w-fit flex flex-col gap-1.5",
+              isExpanded ? "max-w-[60%]" : "max-w-[85%]"
+            )}
+          >
+            <p className="font-manrope text-[12px] font-bold text-[#17173A]">{insightCard.sectionLabel}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {insightCard.badges.map((badge) => (
+                <span
+                  key={badge}
+                  className={cn(
+                    "rounded-[11px] px-2 py-1 font-manrope text-[10px] font-semibold uppercase tracking-wide",
+                    insightCard.badgeTone === "red"
+                      ? "bg-[#FFE9DA] text-[#F05C5C]"
+                      : "bg-[#F0F5FF] text-[#2F68E5]"
+                  )}
+                >
+                  {badge}
+                </span>
+              ))}
+            </div>
+            <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{insightCard.title}</p>
+            <p className="font-manrope text-[11px] text-[#6F6F8D]">{insightCard.sub}</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex justify-end w-full py-2">
         <div className={`bg-card border border-[var(--color-line)] rounded-[12px] p-[12px] w-fit ${isExpanded ? 'max-w-[60%]' : 'max-w-[85%]'}`}>

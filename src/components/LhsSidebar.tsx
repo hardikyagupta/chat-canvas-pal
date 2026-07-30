@@ -450,13 +450,17 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
         )}
       </div>
 
-      {/* Footer — Settings pinned to the bottom of the rail. Matches the menu-row
-          layout so the icon aligns with the logo/menu icons at 24px. */}
+      {/* Footer — pinned to the bottom of the rail. Matches the menu-row
+          layout so the icon aligns with the logo/menu icons at 24px.
+          Early release: this opens SettingsModalV2, which only contains the
+          brand wiki panel — so the button is labeled to match what it
+          actually opens, rather than a generic "Settings". Revert to
+          "Settings" once the modal covers more sections again. */}
       <div className="mt-auto flex w-full flex-col px-[12px] pb-[12px] pt-[8px] shrink-0">
         <button
           type="button"
           onClick={collapsed ? (e) => { e.stopPropagation(); onOpenSettings?.(); } : onOpenSettings}
-          aria-label="Settings"
+          aria-label="Configure brand wiki"
           className={cn(
             'group relative flex h-[32px] items-center w-full rounded-[8px] transition-colors',
             collapsed ? 'cursor-default' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
@@ -476,9 +480,9 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
             className={cn('text-[13px] text-[var(--color-charcoal)]', labelCls)}
             style={labelStyle({ fontFamily: 'Manrope, sans-serif', fontWeight: 400 })}
           >
-            Settings
+            Configure brand wiki
           </span>
-          {collapsed && <RailTooltip label="Settings" />}
+          {collapsed && <RailTooltip label="Configure brand wiki" />}
         </button>
       </div>
 

@@ -10,6 +10,8 @@ import ChatInput from './ChatInput';
 import ChatMessage from './ChatMessage';
 import { MarketingAgent, marketingAgents } from '@/data/agents';
 import { CONVERSATIONS, ConversationVariant, CAMPAIGNS_FLOW, AgentArtifactCardData } from '@/data/conversations';
+import type { InsightCardContext } from '@/types/insightCard';
+import { formatInsightContent } from '@/types/insightCard';
 import AgentSwitchDivider from './AgentSwitchDivider';
 import AgentThreadHeader from './AgentThreadHeader';
 import AvatarStack from './AvatarStack';
@@ -31,14 +33,18 @@ import {
 import { ModeSwitchConfirmation } from './ModeSwitchConfirmation';
 import LhsSidebar, { defaultChats } from './LhsSidebar';
 import type { LhsChatItem } from './LhsSidebar';
-import SettingsModal from './SettingsModal';
+// V1 (full nav rail, all sections) is kept around for when more sections are
+// ready; the early-release build below wires up V2 instead. Swap the import
+// (and the <SettingsModal .../> usage further down) back to './SettingsModal'
+// to restore the full experience.
+import SettingsModalV2 from './SettingsModalV2';
 import ChatListPage from './ChatListPage';
 import ReportsPage from './ReportsPage';
 import SchedulerPage from './SchedulerPage';
 import CustomAgentsPage from './CustomAgentsPage';
 import CustomAgentDetail from './CustomAgentDetail';
 import CreateCustomAgentModal from './CreateCustomAgentModal';
-import { initialCustomAgents, MONTHLY_REPORT_AGENT_NAME, DEFAULT_AGENT_TOOLS, type CustomAgent } from '@/data/customAgents';
+import { initialCustomAgents, STARTER_AGENTS, MONTHLY_REPORT_AGENT_NAME, DEFAULT_AGENT_TOOLS, type CustomAgent } from '@/data/customAgents';
 import { generateAgentAvatar, generateAgentOrbTheme } from '@/lib/agentAvatar';
 import type { OrbTheme } from '@/components/orb/agentOrbTheme';
 import { generatedReports } from '@/data/reports';
@@ -138,6 +144,8 @@ interface ChatMessageData {
   hideFeedback?: boolean;
   // Reply chip shown above a user turn (e.g. the plan title an edit follows up on).
   replyContext?: string;
+  // AI Dashboard insight card carried into the opening user turn.
+  insightCard?: InsightCardContext;
 }
 
 // Props for the main ChatInterface component
@@ -149,6 +157,13 @@ interface ChatInterfaceProps {
   initialExpanded?: boolean; // Start expanded (full-screen) vs. docked widget. Defaults to true.
   docked?: boolean; // When true (and not dragged), the widget fills its parent height instead of a fixed 776px.
   conversationVariant?: ConversationVariant; // Which scripted storyline to play. Defaults to 'default' (home page); '/campaigns' passes 'campaigns'.
+  /** Auto-sent once on mount against a fresh (empty) thread — as if the caller's
+   *  own composer had typed this and hit Enter. Used to carry a message typed
+   *  elsewhere (e.g. the AI Dashboard hero composer) into a freshly-opened,
+   *  full-page instance of this same scripted conversation. */
+  initialMessage?: string;
+  /** AI Dashboard insight card — auto-sent on mount as a rich first user turn. */
+  initialInsightCard?: InsightCardContext;
 }
 
 // Rotating example topics shown in the empty-state greeting slot animation
@@ -171,7 +186,7 @@ const getGreeting = () => {
   return 'Good evening';
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default' }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   // The scripted storyline this interface plays. Home (`/`) uses 'default';
@@ -557,22 +572,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // Custom agents (Claude-Projects-style) — prototype store in React state. The
   // list page shows all agents; selecting one opens its detail page.
   const [customAgents, setCustomAgents] = useState<CustomAgent[]>(initialCustomAgents);
+  const [starterAgentPatches, setStarterAgentPatches] = useState<Record<string, Partial<CustomAgent>>>({});
+  const starterAgents = React.useMemo(
+    () => STARTER_AGENTS.map((agent) => ({ ...agent, ...starterAgentPatches[agent.id] })),
+    [starterAgentPatches],
+  );
+  const allAgents = React.useMemo(() => [...starterAgents, ...customAgents], [starterAgents, customAgents]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   // Agent attached to the home composer via "+" → "Add to agent" (shows a chip).
-  const [composerAgent, setComposerAgent] = useState<{ id: string; name: string } | null>(null);
+  const [composerAgent, setComposerAgent] = useState<{ id: string; name: string; avatarSrc?: string } | null>(null);
   const [composerCreateOpen, setComposerCreateOpen] = useState(false);
   // When a chat is launched from a custom-agent's detail page, we (a) override the
   // derived chat title with the agent's name and (b) queue the launch so the
   // scripted "Switched to <agent>" intro can play once the view has reset.
   const [chatTitleOverride, setChatTitleOverride] = useState<string | null>(null);
-  const [pendingAgentChat, setPendingAgentChat] = useState<{ agent: { id: string; name: string }; message: string } | null>(null);
+  const [pendingAgentChat, setPendingAgentChat] = useState<{ agent: { id: string; name: string }; message: string; instant?: boolean } | null>(null);
   // Chats started from an agent's page, persisted so they show in Recents (global)
   // and under that agent's page as its chat history. `activeAgentChatId` is the one
   // currently open in the conversation view (so Recents doesn't double it up).
   const [agentChats, setAgentChats] = useState<LhsChatItem[]>([]);
   const [activeAgentChatId, setActiveAgentChatId] = useState<string | null>(null);
 
-  const createCustomAgent = (data: { name: string; description: string }): CustomAgent => {
+  const createCustomAgent = (data: { name: string; description: string; tools?: CustomAgent['tools'] }): CustomAgent => {
     const agent: CustomAgent = {
       id: `agent-${Date.now()}`,
       name: data.name,
@@ -581,15 +602,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       files: [],
       updatedAt: 'now',
       avatarSrc: generateAgentAvatar(data.name),
-      tools: DEFAULT_AGENT_TOOLS,
+      tools: data.tools ?? DEFAULT_AGENT_TOOLS,
       starterQuestions: [],
     };
     setCustomAgents((prev) => [agent, ...prev]);
     setSelectedAgentId(agent.id);
     return agent;
   };
-  const updateCustomAgent = (id: string, patch: Partial<CustomAgent>) =>
+  const updateAgent = (id: string, patch: Partial<CustomAgent>) => {
+    if (STARTER_AGENTS.some((a) => a.id === id)) {
+      setStarterAgentPatches((prev) => ({
+        ...prev,
+        [id]: { ...prev[id], ...patch, updatedAt: patch.updatedAt ?? 'now' },
+      }));
+      return;
+    }
     setCustomAgents((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  };
   const deleteCustomAgent = (id: string) => {
     setCustomAgents((prev) => prev.filter((a) => a.id !== id));
     setSelectedAgentId((cur) => (cur === id ? null : cur));
@@ -1029,6 +1058,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     }
   };
 
+  const handleComposerDeepResearchChange = (active: boolean) => {
+    setDeepResearchActive(active);
+    if (active) setComposerAgent(null);
+    setSelectedStarterChip(null);
+    setSelectedDeepResearchCategory(null);
+  };
+
+  const handleComposerAgentChip = (agent: { id: string; name: string; avatarSrc?: string } | null) => {
+    if (agent) {
+      setDeepResearchActive(false);
+      setSelectedStarterChip(null);
+      setSelectedDeepResearchCategory(null);
+    }
+    setComposerAgent(agent);
+  };
+
   // Resets the RHS to its default empty state so the user can start a fresh chat.
   const handleNewChat = () => {
     stopMockConversation();
@@ -1077,7 +1122,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // agent. So we map whatever was typed to the agent's clean starter prompt: its
   // own `starterPrompt` when set, otherwise one derived from its name/description.
   const senseAgentPrompt = (agentId: string, _typed: string): string => {
-    const full = customAgents.find(a => a.id === agentId);
+    const full = allAgents.find(a => a.id === agentId);
     const starter = full?.starterPrompt?.trim();
     if (starter) return starter;
     // No explicit starter: a clean, always-grammatical opener based on the name.
@@ -1088,17 +1133,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // Reset the conversation and queue a scripted "Switched to <agent>" intro for
   // the given agent + prompt. Shared by both a fresh launch from the agent's
   // page (handleStartAgentChat) and re-opening a past chat (handleOpenAgentChat).
-  const primeAgentChat = (agent: { id: string; name: string }, message: string, chatId: string) => {
+  const primeAgentChat = (agent: { id: string; name: string; avatarSrc?: string }, message: string, chatId: string, instant = false) => {
     handleNewChat();
-    setComposerAgent({ id: agent.id, name: agent.name });
+    setComposerAgent({ id: agent.id, name: agent.name, avatarSrc: agent.avatarSrc });
     setChatTitleOverride(agent.name); // header label = agent name
     setActiveAgentChatId(chatId);
-    setPendingAgentChat({ agent, message });
+    setPendingAgentChat({ agent, message, instant });
   };
 
   // Launched from a custom-agent's detail page: persist a Recents entry for this
   // agent, then prime the scripted intro chat.
-  const handleStartAgentChat = (agent: { id: string; name: string }, message: string) => {
+  const handleStartAgentChat = (agent: { id: string; name: string; avatarSrc?: string }, message: string) => {
     const chatId = `agent-chat-${Date.now()}`;
     // Map whatever the user typed into a sensible, well-formed first prompt.
     const prompt = senseAgentPrompt(agent.id, message);
@@ -1107,13 +1152,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     primeAgentChat(agent, prompt, chatId);
   };
 
-  // Re-open a persisted agent chat from a Recents / history row — replays its
-  // intro without creating a duplicate entry.
+  // Re-open a persisted agent chat from a Recents / history row — this is
+  // browsing history, not starting a new exchange, so it renders the finished
+  // conversation instantly (`instant: true`) instead of replaying the typing /
+  // hand-off / thinking animation that a fresh launch plays.
   const handleOpenAgentChat = (chat: LhsChatItem) => {
-    const agent = customAgents.find(a => a.id === chat.agentId);
+    const agent = allAgents.find(a => a.id === chat.agentId);
     if (!agent) return;
     setAgentChats(prev => [chat, ...prev.filter(c => c.id !== chat.id)]); // bump to top
-    primeAgentChat({ id: agent.id, name: agent.name }, chat.title, chat.id);
+    primeAgentChat({ id: agent.id, name: agent.name, avatarSrc: agent.avatarSrc }, chat.title, chat.id, true);
   };
 
   // Selecting any Recents / chat-list row: agent chats replay their scripted
@@ -1127,12 +1174,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // Scripted intro for an agent-launched chat: the user's prompt, a
   // "Switched to <agent>" hand-off divider, a thinking beat, then the agent's
   // reply. Mirrors the campaigns relay sequencer (switch → thinking → answer).
-  const runAgentIntroChat = (agent: { id: string; name: string }, message: string) => {
+  const runAgentIntroChat = (agent: { id: string; name: string }, message: string, instant = false) => {
     const userMessage: ChatMessageData = {
       type: 'chat', isAI: false, content: message, onAnimationComplete: () => {},
     };
     // The agent's soft-gradient avatar drives the hand-off thread header.
-    const fullAgent = customAgents.find(a => a.id === agent.id);
+    const fullAgent = allAgents.find(a => a.id === agent.id);
     const avatarSrc = fullAgent?.avatarSrc;
     const isReportAgent = agent.name.trim().toLowerCase() === MONTHLY_REPORT_AGENT_NAME.toLowerCase();
     // One-line "what it does" saying under the agent's name in the hand-off header.
@@ -1206,6 +1253,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
 
     const sequence: ChatMessageData[] = [...intro, ...body];
 
+    // Reopening a past chat is browsing history, not generating a new reply —
+    // drop the whole finished thread in as-is (switch marker pre-settled, text
+    // rendered without the typewriter effect, no thinking timers, no shimmer)
+    // instead of replaying the animation.
+    if (instant) {
+      setMessages([
+        { ...userMessage, animate: false },
+        // Drop the "thinking…" beat — by the time this is history it's already
+        // resolved into the final answer, so showing it would read as stuck.
+        ...sequence
+          .filter(m => !m.isThinkingState)
+          .map(m => ({
+            ...m,
+            animate: false,
+            ...(m.isAgentSwitch ? { switchSettled: true } : {}),
+            // Skip the report doc's own loading skeleton for the same reason.
+            ...(m.deepResearchDoc ? { deepResearchDoc: { ...m.deepResearchDoc, skeletonMs: 0 } } : {}),
+          })),
+      ]);
+      setMockChatCompleted(true);
+      return;
+    }
+
     setMessages([userMessage]);
     setIsGeneratingOutput(true);
     setInputShimmer(true);
@@ -1267,9 +1337,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // the sequence runs from a fresh, clean conversation.
   useEffect(() => {
     if (!pendingAgentChat || messages.length > 0) return;
-    const { agent, message } = pendingAgentChat;
+    const { agent, message, instant } = pendingAgentChat;
     setPendingAgentChat(null);
-    runAgentIntroChat(agent, message);
+    runAgentIntroChat(agent, message, instant);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingAgentChat, messages.length]);
 
@@ -1443,15 +1513,23 @@ The content has been updated across all channels to reflect your changes.`;
   // advances one turn: it drops a centered "Switched to <agent>" divider, plays
   // the agent's thinking, streams the answer (+ dashboard or artifact card), and
   // surfaces the single prompt that leads into the next agent. See CAMPAIGNS_FLOW.
-  const handleCampaignsSend = (message: string) => {
+  const handleCampaignsSend = (message: string, insightCard?: InsightCardContext) => {
     const turnIndex = campaignsTurnRef.current;
     const turn = CAMPAIGNS_FLOW[turnIndex];
 
-    // The turns are scripted, so we substitute the canonical prompt/label.
+    // Turn 0 keeps the caller's message (e.g. an insight card or hero composer);
+    // later scripted turns still substitute the canonical prompt.
     const userMessage: ChatMessageData = {
       type: 'chat',
       isAI: false,
-      content: turn ? turn.userPrompt : message,
+      content: turn
+        ? turnIndex === 0
+          ? insightCard
+            ? formatInsightContent(insightCard)
+            : message
+          : turn.userPrompt
+        : message,
+      insightCard: turnIndex === 0 ? insightCard : undefined,
       navLabel: turn?.navLabel,
       onAnimationComplete: () => {},
     };
@@ -1667,7 +1745,7 @@ The content has been updated across all channels to reflect your changes.`;
     // agent's scripted thread (Switched to <agent> → thinking → reply/report),
     // so an agent can be triggered from the main input, not just its own page.
     if (composerAgent && messages.length === 0) {
-      handleStartAgentChat({ id: composerAgent.id, name: composerAgent.name }, message);
+      handleStartAgentChat({ id: composerAgent.id, name: composerAgent.name, avatarSrc: composerAgent.avatarSrc }, message);
       return;
     }
     // Deep-research mode intercepts every send with the scripted research story.
@@ -2488,6 +2566,28 @@ The content has been updated across all channels to reflect your changes.`;
     }
   };
 
+  // Auto-fires once against a fresh thread when opened with `initialMessage` —
+  // mirrors typing that text into this interface's own composer and hitting
+  // Enter. Callers remount this component (key bump) per open, so this only
+  // ever runs once against an empty conversation. Guarded with a ref (not
+  // `messages.length`) because StrictMode double-invokes mount effects before
+  // a re-render can reflect the first call's setMessages — a state check sees
+  // an empty thread both times and would fire the scripted flow twice.
+  const hasAutoSentRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoSentRef.current) return;
+    if (initialInsightCard) {
+      hasAutoSentRef.current = true;
+      handleCampaignsSend('', initialInsightCard);
+      return;
+    }
+    if (initialMessage) {
+      hasAutoSentRef.current = true;
+      handleSendMessage(initialMessage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const handleAgentStatus = (event: CustomEvent<{
       name: string;
@@ -2951,8 +3051,11 @@ The content has been updated across all channels to reflect your changes.`;
           prefill={schedulePrefill}
         />
 
-        {/* Settings modal — opened from the Settings button at the bottom of the LHS rail */}
-        <SettingsModal
+        {/* Settings modal — opened from the Settings button at the bottom of the
+            LHS rail. Early release: wired to V2 (Memory & personalization only,
+            no LHS nav rail) instead of the full V1 experience — see the import
+            above. */}
+        <SettingsModalV2
           isOpen={settingsModalOpen}
           onClose={() => setSettingsModalOpen(false)}
         />
@@ -2964,7 +3067,7 @@ The content has been updated across all channels to reflect your changes.`;
           onClose={() => setComposerCreateOpen(false)}
           onSubmit={(data) => {
             const agent = createCustomAgent(data);
-            setComposerAgent({ id: agent.id, name: agent.name });
+            setComposerAgent({ id: agent.id, name: agent.name, avatarSrc: agent.avatarSrc });
             setComposerCreateOpen(false);
           }}
         />
@@ -3068,28 +3171,29 @@ The content has been updated across all channels to reflect your changes.`;
                 />
               ) : activePage === 'custom-agents' ? (
                 (() => {
-                  const selectedAgent = customAgents.find((a) => a.id === selectedAgentId) ?? null;
+                  const selectedAgent = allAgents.find((a) => a.id === selectedAgentId) ?? null;
                   return selectedAgent ? (
                     <CustomAgentDetail
                       agent={selectedAgent}
                       compact={!isExpanded}
                       onBack={() => setSelectedAgentId(null)}
-                      onEditAgent={(id, data) => updateCustomAgent(id, { ...data, updatedAt: 'now' })}
+                      onEditAgent={(id, data) => updateAgent(id, { ...data, updatedAt: 'now' })}
                       onDeleteAgent={deleteCustomAgent}
-                      onUpdateAgent={updateCustomAgent}
+                      onUpdateAgent={updateAgent}
                       onStartChat={(message) =>
-                        handleStartAgentChat({ id: selectedAgent.id, name: selectedAgent.name }, message)
+                        handleStartAgentChat({ id: selectedAgent.id, name: selectedAgent.name, avatarSrc: selectedAgent.avatarSrc }, message)
                       }
                       chats={agentChats.filter((c) => c.agentId === selectedAgent.id)}
                       onSelectChat={handleSelectChat}
                     />
                   ) : (
                     <CustomAgentsPage
-                      agents={customAgents}
+                      customAgents={customAgents}
+                      starterAgents={starterAgents}
                       compact={!isExpanded}
                       onCreate={createCustomAgent}
                       onOpenAgent={(id) => setSelectedAgentId(id)}
-                      onEditAgent={(id, data) => updateCustomAgent(id, { ...data, updatedAt: 'now' })}
+                      onEditAgent={(id, data) => updateAgent(id, { ...data, updatedAt: 'now' })}
                       onDeleteAgent={deleteCustomAgent}
                     />
                   );
@@ -3169,29 +3273,26 @@ The content has been updated across all channels to reflect your changes.`;
                               : () => setSelectedStarterChip(null)
                           }
                           onInputValueChange={setLiveInputValue}
-                          onDeepResearchChange={(active) => {
-                            setDeepResearchActive(active);
-                            // Reset selection context whenever the mode toggles so
-                            // we always start on the category pills.
-                            setSelectedStarterChip(null);
-                            setSelectedDeepResearchCategory(null);
-                          }}
-                          agents={customAgents.map((a) => ({ id: a.id, name: a.name }))}
+                          onDeepResearchChange={handleComposerDeepResearchChange}
+                          agents={allAgents.map((a) => ({ id: a.id, name: a.name, avatarSrc: a.avatarSrc }))}
                           selectedAgentChip={composerAgent}
-                          onSelectAgentChip={setComposerAgent}
+                          onSelectAgentChip={handleComposerAgentChip}
                           onCreateAgentFromComposer={() => setComposerCreateOpen(true)}
                         />
                         {/* Deep research: category pills first (like the default
                             starter pills). */}
                         {deepResearchActive && !selectedDeepResearchCategory && (
-                          <div className="flex flex-wrap gap-[8px] items-center justify-center w-full">
+                          <div
+                            key="deep-research-hints"
+                            className="composer-hints-enter flex flex-wrap gap-[8px] items-center justify-center w-full"
+                          >
                             {deepResearchPromptGroups.map((group) => {
                               const GroupIcon = deepResearchGroupIcons[group.header];
                               return (
                               <button
                                 key={group.header}
                                 type="button"
-                                className="fig-chip flex items-center justify-center gap-[6px] px-[10px] py-[6px] rounded-[8px] whitespace-nowrap shrink-0"
+                                className="fig-chip fig-chip-muted flex items-center justify-center gap-[6px] px-[10px] py-[6px] rounded-[8px] whitespace-nowrap shrink-0"
                                 onClick={() => setSelectedDeepResearchCategory(group.header)}
                               >
                                 {GroupIcon && (
@@ -3211,7 +3312,7 @@ The content has been updated across all channels to reflect your changes.`;
                         {/* Deep research: the selected category's prompts (like the
                             default selected-chip prompt list). */}
                         {deepResearchActive && selectedDeepResearchCategory && (
-                          <div className="w-full flex flex-col gap-[8px]">
+                          <div key={`dr-prompts-${selectedDeepResearchCategory}`} className="composer-hints-enter w-full flex flex-col gap-[8px]">
                             <p
                               className="px-[2px] font-semibold text-[13px] leading-[18px] text-[var(--color-grey)] tracking-[0.42px]"
                               style={{ fontFamily: "Manrope, sans-serif" }}
@@ -3270,7 +3371,10 @@ The content has been updated across all channels to reflect your changes.`;
                           </div>
                         )}
                         {!deepResearchActive && !matchedTypedTrigger && !selectedStarterChip && (
-                          <div className="flex flex-wrap gap-[8px] items-center justify-center w-full">
+                          <div
+                            key="starter-hints"
+                            className="composer-hints-enter flex flex-wrap gap-[8px] items-center justify-center w-full"
+                          >
                             {starterChips.map((chipLabel, index) => {
                               const ChipIcon = starterChipIcons[chipLabel];
                               return (
@@ -3295,7 +3399,7 @@ The content has been updated across all channels to reflect your changes.`;
                           </div>
                         )}
                         {!deepResearchActive && !matchedTypedTrigger && selectedStarterChip && (
-                          <div className="w-full flex flex-col gap-[8px]">
+                          <div key={`starter-prompts-${selectedStarterChip}`} className="composer-hints-enter w-full flex flex-col gap-[8px]">
                             <p
                               className="px-[2px] font-semibold text-[13px] leading-[18px] text-[var(--color-grey)] tracking-[0.42px]"
                               style={{ fontFamily: "Manrope, sans-serif" }}
@@ -3444,6 +3548,7 @@ The content has been updated across all channels to reflect your changes.`;
                       isExpanded={isExpanded}
                       isAI={message.isAI ?? false}
                       content={message.content}
+                      insightCard={message.insightCard}
                       agentName={message.agentName}
                       avatarSrc={message.avatarSrc}
                       avatarIcon={message.avatarIcon}
@@ -3725,9 +3830,10 @@ The content has been updated across all channels to reflect your changes.`;
                       })()}
                       selectedContextChip={null}
                       placeholder={deepResearchEditTitle ? "Follow up with questions or adjustments" : "Write a message"}
-                      agents={customAgents.map((a) => ({ id: a.id, name: a.name }))}
+                      agents={allAgents.map((a) => ({ id: a.id, name: a.name }))}
                       selectedAgentChip={composerAgent}
-                      onSelectAgentChip={setComposerAgent}
+                      onSelectAgentChip={handleComposerAgentChip}
+                      onDeepResearchChange={handleComposerDeepResearchChange}
                       onCreateAgentFromComposer={() => setComposerCreateOpen(true)}
                     />
                     {/* Footer text below input — widget view only (expanded uses card footer) */}

@@ -1,22 +1,38 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import type { CustomAgent } from '@/data/customAgents';
+import { cn } from '@/lib/utils';
+import type { AgentTools, CustomAgent } from '@/data/customAgents';
+import { DEFAULT_AGENT_TOOLS } from '@/data/customAgents';
+import { AgentToolsConfigPanel } from './AgentToolsConfig';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
+
+const fieldClass = (invalid: boolean) =>
+  cn(
+    'w-full rounded-[9px] border bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors',
+    invalid
+      ? 'border-[var(--color-danger,#e5484d)] ring-2 ring-[color-mix(in_oklch,var(--color-danger,#e5484d)_18%,transparent)] focus:border-[var(--color-danger,#e5484d)]'
+      : 'border-[var(--color-line-input)] focus:border-[var(--color-line-strong)]',
+  );
+
+export interface CreateCustomAgentData {
+  name: string;
+  description: string;
+  tools?: AgentTools;
+}
 
 interface CreateCustomAgentModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: { name: string; description: string }) => void;
+  onSubmit: (data: CreateCustomAgentData) => void;
   /** When set, the modal edits an existing agent (prefilled + "Edit details"). */
   initial?: Pick<CustomAgent, 'name' | 'description'> | null;
 }
 
 /**
- * Two-field dialog for creating a custom agent (name + description). Reused for
- * "Edit details" by passing `initial` (prefills the fields and swaps the copy).
- * Modal chrome mirrors SettingsModal's WikiEditor so all dialogs match.
+ * Dialog for creating a custom agent (name, description, and tools on create).
+ * Reused for "Edit details" by passing `initial` (name/description only).
  */
 const CreateCustomAgentModal: React.FC<CreateCustomAgentModalProps> = ({
   open,
@@ -27,14 +43,30 @@ const CreateCustomAgentModal: React.FC<CreateCustomAgentModalProps> = ({
   const isEdit = !!initial;
   const [name, setName] = React.useState('');
   const [description, setDescription] = React.useState('');
+  const [tools, setTools] = React.useState<AgentTools>(DEFAULT_AGENT_TOOLS);
+  const [nameError, setNameError] = React.useState(false);
+  const [descriptionError, setDescriptionError] = React.useState(false);
+  const nameRef = React.useRef<HTMLInputElement>(null);
+  const descriptionRef = React.useRef<HTMLTextAreaElement>(null);
+  const bodyScrollRef = React.useRef<HTMLDivElement>(null);
+  const scrollTimerRef = React.useRef<ReturnType<typeof setTimeout>>();
 
-  // Reset the fields whenever the modal (re)opens so stale input never lingers.
   React.useEffect(() => {
     if (open) {
       setName(initial?.name ?? '');
       setDescription(initial?.description ?? '');
+      setNameError(false);
+      setDescriptionError(false);
+      if (!initial) setTools(DEFAULT_AGENT_TOOLS);
     }
   }, [open, initial]);
+
+  React.useEffect(
+    () => () => {
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    },
+    [],
+  );
 
   React.useEffect(() => {
     if (!open) return;
@@ -43,27 +75,51 @@ const CreateCustomAgentModal: React.FC<CreateCustomAgentModalProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
-
-  const canSave = name.trim().length > 0;
-  const handleSubmit = () => {
-    if (!canSave) return;
-    onSubmit({ name: name.trim(), description: description.trim() });
+  const handleBodyScroll = () => {
+    const el = bodyScrollRef.current;
+    if (!el) return;
+    el.classList.add('is-scrolling');
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      el.classList.remove('is-scrolling');
+    }, 800);
   };
 
-  // Portal to <body> so the fixed backdrop covers the full viewport. Rendered
-  // inline (inside the content column, which has transformed/overflow ancestors)
-  // `position: fixed` gets scoped to that column, leaving the sidebar border
-  // visible as a stray vertical line at the backdrop's edge.
+  if (!open) return null;
+
+  const handleSubmit = () => {
+    const missingName = name.trim().length === 0;
+    const missingDescription = !isEdit && description.trim().length === 0;
+    setNameError(missingName);
+    setDescriptionError(missingDescription);
+
+    if (missingName || missingDescription) {
+      if (missingName) {
+        nameRef.current?.focus();
+        nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        descriptionRef.current?.focus();
+        descriptionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return;
+    }
+
+    onSubmit({
+      name: name.trim(),
+      description: description.trim(),
+      ...(isEdit ? {} : { tools }),
+    });
+  };
+
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-[16px]">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
-        className="relative flex w-full max-w-[560px] flex-col gap-[18px] rounded-[16px] bg-background p-[24px] shadow-[0px_20px_60px_-12px_oklch(0_0_0_/_0.32)]"
+        className="relative flex max-h-[min(90vh,820px)] w-full max-w-[560px] flex-col overflow-hidden rounded-[16px] bg-background shadow-[0px_20px_60px_-12px_oklch(0_0_0_/_0.32)]"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex shrink-0 items-center justify-between px-[24px] pt-[24px]">
           <h2 className="text-[20px] font-bold text-[var(--color-ink)]" style={FONT}>
             {isEdit ? 'Edit details' : 'Create a custom agent'}
           </h2>
@@ -77,36 +133,71 @@ const CreateCustomAgentModal: React.FC<CreateCustomAgentModalProps> = ({
           </button>
         </div>
 
-        <div className="flex flex-col gap-[8px]">
-          <label className="text-[13px] font-medium text-[var(--color-slate)]" style={FONT}>
-            What are you working on?
-          </label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Name your agent"
-            autoFocus
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
-            className="h-[40px] w-full rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
-            style={FONT}
-          />
+        <div
+          ref={bodyScrollRef}
+          onScroll={handleBodyScroll}
+          className="scroll-reveal flex min-h-0 flex-1 flex-col gap-[18px] overflow-y-auto px-[24px] py-[18px]"
+        >
+          <div className="flex flex-col gap-[8px]">
+            <label className="text-[13px] font-medium text-[var(--color-slate)]" style={FONT}>
+              What are you working on?
+            </label>
+            <input
+              ref={nameRef}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (nameError && e.target.value.trim()) setNameError(false);
+              }}
+              placeholder="Name your agent"
+              autoFocus
+              aria-invalid={nameError}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleSubmit(); }}
+              className={cn(fieldClass(nameError), 'h-[40px]')}
+              style={FONT}
+            />
+            {nameError ? (
+              <p className="text-[12px] text-[var(--color-danger,#e5484d)]" style={FONT}>
+                Enter a name for your agent
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col gap-[8px]">
+            <label className="text-[13px] font-medium text-[var(--color-slate)]" style={FONT}>
+              What are you trying to achieve?
+            </label>
+            <textarea
+              ref={descriptionRef}
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (descriptionError && e.target.value.trim()) setDescriptionError(false);
+              }}
+              rows={4}
+              placeholder="Describe your agent, goals, subject, etc…"
+              aria-invalid={descriptionError}
+              className={cn(fieldClass(descriptionError), 'resize-none py-[10px] leading-[1.5]')}
+              style={FONT}
+            />
+            {descriptionError ? (
+              <p className="text-[12px] text-[var(--color-danger,#e5484d)]" style={FONT}>
+                Describe what this agent should help with
+              </p>
+            ) : null}
+          </div>
+
+          {!isEdit ? (
+            <div className="flex flex-col gap-[8px]">
+              <label className="text-[13px] font-medium text-[var(--color-slate)]" style={FONT}>
+                Tools
+              </label>
+              <AgentToolsConfigPanel value={tools} onChange={setTools} />
+            </div>
+          ) : null}
         </div>
 
-        <div className="flex flex-col gap-[8px]">
-          <label className="text-[13px] font-medium text-[var(--color-slate)]" style={FONT}>
-            What are you trying to achieve?
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            placeholder="Describe your agent, goals, subject, etc…"
-            className="w-full resize-none rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] py-[10px] text-[13px] leading-[1.5] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
-            style={FONT}
-          />
-        </div>
-
-        <div className="flex items-center justify-end gap-[10px]">
+        <div className="flex shrink-0 items-center justify-end gap-[10px] border-t border-[var(--color-line)] bg-background px-[24px] py-[16px]">
           <button
             type="button"
             onClick={onClose}
@@ -117,9 +208,8 @@ const CreateCustomAgentModal: React.FC<CreateCustomAgentModalProps> = ({
           </button>
           <button
             type="button"
-            disabled={!canSave}
             onClick={handleSubmit}
-            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[16px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[16px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90"
             style={FONT}
           >
             {isEdit ? 'Save details' : 'Create agent'}
@@ -127,7 +217,7 @@ const CreateCustomAgentModal: React.FC<CreateCustomAgentModalProps> = ({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
 
