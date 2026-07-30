@@ -3,7 +3,7 @@ import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ArrowUp, StopCircle, X, Plus, FileVideo, FileAudio, FileText, File as FileIcon, Loader2, Paperclip, CornerDownRight, Atom, ChevronRight, Bot } from 'lucide-react';
+import { ArrowUp, StopCircle, X, Plus, FileVideo, FileAudio, FileText, File as FileIcon, Loader2, Paperclip, CornerDownRight, Atom, ChevronRight, Bot, Globe } from 'lucide-react';
 import { marketingAgents, MarketingAgent } from '@/data/agents';
 import { cn } from "@/lib/utils";
 
@@ -44,6 +44,27 @@ const formatFileSize = (bytes: number): string => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 };
+
+/** Royal blue — seasonal trends / suggested-prompt context chips only. */
+const promptChipClass =
+  "border border-[var(--color-royal)] shadow-[0px_0px_0px_2px_oklch(0.554_0.199_263.043_/_0.1)]";
+const promptChipBg =
+  "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)";
+const promptChipText = "text-[var(--color-royal)]";
+
+/** Muted violet — deep-research mode chips. */
+const deepResearchChipClass =
+  "border border-[oklch(0.78_0.06_292)] shadow-[0px_0px_0px_2px_oklch(0.55_0.12_292_/_0.08)]";
+const deepResearchChipBg =
+  "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, oklch(0.965_0.025_292) 0%, oklch(0.91_0.04_292_/_0.55) 100%)";
+const deepResearchChipText = "text-[oklch(0.48_0.11_292)]";
+
+/** Neutral grey — custom-agent chips. Deliberately colorless (no hue tint) so
+ * it reads as a quiet system chip rather than a colored category pill. */
+const agentChipClass = "border border-[var(--color-line-input)]";
+const agentChipBg =
+  "linear-gradient(180deg, var(--color-surface-1) 0%, var(--color-surface-1) 100%)";
+const agentChipText = "text-[var(--color-slate)]";
 
 // Icon + tint used for the non-image (doc/video/audio) attachment cards.
 const getDocVisual = (category: AttachmentCategory) => {
@@ -99,15 +120,25 @@ interface ChatInputProps {
   layout?: 'expanded' | 'linear';
   /** Custom agents offered under the "+" → "Add to agent" submenu. When omitted
    *  or empty, the submenu still appears with just "Create a new agent". */
-  agents?: Array<{ id: string; name: string }>;
+  agents?: Array<{ id: string; name: string; avatarSrc?: string }>;
   /** Controlled selected-agent chip (shows in the field). */
-  selectedAgentChip?: { id: string; name: string } | null;
+  selectedAgentChip?: { id: string; name: string; avatarSrc?: string } | null;
   /** Fires when the chip is set (agent picked) or cleared (chip's × clicked). */
-  onSelectAgentChip?: (agent: { id: string; name: string } | null) => void;
+  onSelectAgentChip?: (agent: { id: string; name: string; avatarSrc?: string } | null) => void;
   /** Fires when "Create a new agent" is picked from the "+" → "Add to agent" submenu. */
   onCreateAgentFromComposer?: () => void;
   /** Pre-fills the composer with a suggested prompt the user can edit or send. */
   initialValue?: string;
+  /** Hides the "+" attach/agent/deep-research button — a bare placeholder + send
+   *  field for minimal composer placements (e.g. the AI Dashboard hero input).
+   *  Defaults to true (shown) everywhere else. */
+  showAddButton?: boolean;
+  /** Fixed 12px corners at rest instead of the 'linear' layout's full pill, and
+   *  the placeholder vertically centered against the send button rather than
+   *  top-aligned. Only affects the single-row resting state — once the field
+   *  grows past one line it already switches to the two-row `expanded` shape.
+   *  Defaults to false (pill), matching existing 'linear' usage. */
+  flat?: boolean;
 }
 
 // Temporary feature flag to disable @-agent mention dropdown
@@ -133,6 +164,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onSelectAgentChip,
   onCreateAgentFromComposer,
   initialValue = "",
+  showAddButton = true,
+  flat = false,
 }) => {
   const [inputValue, setInputValue] = useState(initialValue);
   const [showMentionList, setShowMentionList] = useState(false);
@@ -273,6 +306,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
     onInputValueChange?.(inputValue);
   }, [inputValue, onInputValueChange]);
 
+  // Deep research and custom-agent chips are mutually exclusive.
+  useEffect(() => {
+    if (selectedAgentChip && deepResearchActive) {
+      setDeepResearchActive(false);
+      onDeepResearchChange?.(false);
+    }
+  }, [selectedAgentChip, deepResearchActive, onDeepResearchChange]);
+
+  useEffect(() => {
+    if (deepResearchActive && agentSubOpen) {
+      setAgentSubOpen(false);
+    }
+  }, [deepResearchActive, agentSubOpen]);
+
   const calculatePopoverPosition = (atIndex: number) => {
     if (!ALLOW_AGENT_MENTION) return {};
     if (!inputRef.current || !measurementRef.current) return {};
@@ -411,18 +458,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
     // textarea on its own row with the actions below. The 'linear' variant starts
     // as a compact single-row pill and only expands once the text wraps to
     // multiple lines or a context chip is selected.
-    const expanded = layout === 'expanded' || isMultiline || !!selectedContextChip || deepResearchActive || !!replyContext;
+    const expanded = layout === 'expanded' || isMultiline || !!selectedContextChip || !!replyContext;
     return (
       <div className="relative w-full">
         {/* Outer container — height grows smoothly when chip appears */}
         <div
           className={cn(
-            "relative overflow-hidden w-full border-[0.5px] border-[var(--color-line-input)] min-h-[56px] pt-[12px] pr-[12px] pb-[12px] pl-[12px] transition-[border-radius] duration-200",
+            "relative overflow-hidden w-full border-[0.5px] border-[var(--color-line-input)] min-h-[56px] pt-[12px] pr-[12px] pb-[12px] pl-[12px] transition-[border-radius,gap] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
             // Pill at 56px in the default single-line state (border-box absorbs the
             // 0.5px borders so it's exactly 56px). Once the field grows past one
             // line — or a context chip is selected — it relaxes to a 16px radius
             // and grows to fit (textarea handles the height, capped at 4 lines).
-            expanded ? "rounded-[18px]" : "rounded-[48px]",
+            expanded ? "rounded-[18px]" : flat ? "rounded-[12px]" : "rounded-[48px]",
             "drop-shadow-[0px_1px_1px_oklch(0.21_0.034_263.436_/_0.05)]",
             "focus-within:ring-1 focus-within:ring-[var(--color-royal)] transition-shadow",
             // Disabled (questionnaire) OR generating: greyish fill + not-allowed across the field
@@ -565,10 +612,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
               when `expanded`, the textarea takes the full width (basis-full) so it
               wraps everything else (chip, send) to a row below — text reaches the
               right edge and the send button sits bottom-right (ChatGPT-style). */}
-          <div className={cn("relative z-10 flex flex-wrap items-center gap-x-[8px]", expanded ? "gap-y-[18px]" : "gap-y-[10px]")}>
+          <div className={cn("relative z-10 flex flex-wrap items-center gap-x-[8px] transition-[gap] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]", expanded ? "gap-y-[18px]" : "gap-y-[10px]")}>
             {/* Auto-growing textarea — grows from 1 to 4 lines, then scrolls.
                 Sits on top (row 1) when expanded; otherwise shares the row. */}
-            <div className={cn("relative min-w-0", expanded ? "order-1 basis-full w-full" : "order-2 flex-1")}>
+            <div
+              className={cn(
+                "relative min-w-0",
+                expanded
+                  ? "order-1 basis-full w-full"
+                  : // Flat resting pill: fixed 32px box, flex-centered — matches the
+                    // send button's own 32px box exactly regardless of the
+                    // textarea's own (font-metric-dependent) content height.
+                    cn("order-2 flex-1", flat && "flex h-[32px] items-center")
+              )}
+            >
               <textarea
                 ref={inputRef}
                 rows={1}
@@ -577,7 +634,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder={isLoading ? "Generating response…" : placeholder}
                 disabled={isQuestionnaireActive || isLoading}
-                className="chat-input-scroll block w-full min-w-0 resize-none bg-transparent border-0 p-0 pl-[8px] pt-[8px] text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed"
+                className={cn(
+                  "chat-input-scroll block w-full min-w-0 resize-none bg-transparent border-0 p-0 pl-[8px] text-[14px] leading-[22px] text-foreground placeholder:text-[var(--color-grey)] focus:outline-none disabled:cursor-not-allowed",
+                  // Resting flat pill centers the placeholder against the send
+                  // button instead of top-anchoring it (which the shared 8px
+                  // top-pad does for the roomy 'expanded'/'linear' shapes).
+                  flat && !expanded ? "pt-0" : "pt-[8px]"
+                )}
                 style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500, maxHeight: "88px" }}
                 autoComplete="off"
               />
@@ -592,7 +655,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
             {/* + button — opens a popover with two actions: add photos & files,
                 and the deep research agent. Left edge by default, bottom-left
-                when expanded. Matches the 32×32 send-button size. */}
+                when expanded. Matches the 32×32 send-button size. Omitted
+                entirely for minimal composer placements (showAddButton=false). */}
+            {showAddButton && (
             <Popover
               open={showAddMenu}
               onOpenChange={(o) => {
@@ -639,22 +704,33 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   type="button"
                   onClick={() => {
                     setShowAddMenu(false);
+                    // Picking Deep research swaps out any custom-agent chip — the
+                    // two modes are mutually exclusive, but both stay clickable;
+                    // whichever is picked last wins and clears the other.
+                    onSelectAgentChip?.(null);
                     setDeepResearchActive(true);
                     onDeepResearch?.();
                     onDeepResearchChange?.(true);
                   }}
                   className="flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
                 >
-                  <Atom className="w-[18px] h-[18px] text-[var(--color-charcoal)] shrink-0" strokeWidth={1.75} />
+                  <Atom className="w-[18px] h-[18px] shrink-0 text-[var(--color-charcoal)]" strokeWidth={1.75} />
                   Deep research
                 </button>
                 {agentMenuEnabled && (
                   // "Custom agents" row + L2 flyout. The flyout is a descendant so
                   // hovering it keeps the row "entered"; the timeout bridges the gap.
-                  <div className="relative" onMouseEnter={openAgentSub} onMouseLeave={closeAgentSubSoon}>
+                  <div
+                    className="relative"
+                    onMouseEnter={openAgentSub}
+                    onMouseLeave={closeAgentSubSoon}
+                  >
                     <button
                       type="button"
-                      onClick={() => (agentSubOpen ? setAgentSubOpen(false) : openAgentSub())}
+                      onClick={() => {
+                        if (agentSubOpen) setAgentSubOpen(false);
+                        else openAgentSub();
+                      }}
                       className={cn(
                         "flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]",
                         agentSubOpen && "bg-[oklch(0_0_0_/_0.06)]"
@@ -677,13 +753,19 @@ const ChatInput: React.FC<ChatInputProps> = ({
                               key={a.id}
                               type="button"
                               onClick={() => {
+                                setDeepResearchActive(false);
+                                onDeepResearchChange?.(false);
                                 onSelectAgentChip?.(a);
                                 setAgentSubOpen(false);
                                 setShowAddMenu(false);
                               }}
                               className="flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
                             >
-                              <Bot className="w-[16px] h-[16px] text-[var(--color-charcoal)] shrink-0" strokeWidth={1.75} />
+                              {a.avatarSrc ? (
+                                <img src={a.avatarSrc} alt="" className="w-[16px] h-[16px] shrink-0 rounded-full object-cover" />
+                              ) : (
+                                <Bot className="w-[16px] h-[16px] text-[var(--color-charcoal)] shrink-0" strokeWidth={1.75} />
+                              )}
                               <span className="truncate">{a.name}</span>
                             </button>
                           ))}
@@ -695,10 +777,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
                         <button
                           type="button"
                           onClick={() => {
+                            if (deepResearchActive) return;
                             setAgentSubOpen(false);
                             setShowAddMenu(false);
                             onCreateAgentFromComposer?.();
                           }}
+                          disabled={deepResearchActive}
                           className="flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
                         >
                           <Plus className="w-[16px] h-[16px] text-[var(--color-charcoal)] shrink-0" />
@@ -710,6 +794,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 )}
               </PopoverContent>
             </Popover>
+            )}
 
             {/* Deep research chip — sits between the + button and the context
                 chip once "Deep research" is picked from the + popover. */}
@@ -720,20 +805,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   setDeepResearchActive(false);
                   onDeepResearchChange?.(false);
                 }}
-                className="order-3 inline-flex items-center gap-[4px] border border-[var(--color-royal)] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_oklch(0.554_0.199_263.043_/_0.1)] whitespace-nowrap animate-in fade-in duration-200"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)",
-                }}
+                className={cn(
+                  "order-3 inline-flex items-center gap-[4px] rounded-[4px] px-[6px] py-[4px] whitespace-nowrap composer-chip-enter",
+                  deepResearchChipClass
+                )}
+                style={{ backgroundImage: deepResearchChipBg }}
               >
-                <Atom className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" strokeWidth={1.75} />
+                <Atom className={cn("w-[14px] h-[14px] shrink-0", deepResearchChipText)} strokeWidth={1.75} />
                 <span
-                  className="text-[12px] leading-[16px] text-[var(--color-royal)]"
+                  className={cn("text-[12px] leading-[16px]", deepResearchChipText)}
                   style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                 >
                   Deep research
                 </span>
-                <X className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" />
+                <X className={cn("w-[14px] h-[14px] shrink-0", deepResearchChipText)} />
               </button>
             )}
 
@@ -743,15 +828,19 @@ const ChatInput: React.FC<ChatInputProps> = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className="order-3 group inline-flex items-center gap-[4px] border border-[var(--color-royal)] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_oklch(0.554_0.199_263.043_/_0.1)] whitespace-nowrap animate-in fade-in duration-200"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)",
-                    }}
+                    className={cn(
+                      "order-3 group inline-flex items-center gap-[4px] rounded-[4px] px-[6px] py-[4px] whitespace-nowrap composer-chip-enter",
+                      agentChipClass
+                    )}
+                    style={{ backgroundImage: agentChipBg }}
                   >
-                    <Bot className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" strokeWidth={1.75} />
+                    {selectedAgentChip.avatarSrc ? (
+                      <img src={selectedAgentChip.avatarSrc} alt="" className="w-[14px] h-[14px] shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <Globe className={cn("w-[14px] h-[14px] shrink-0", agentChipText)} strokeWidth={1.75} />
+                    )}
                     <span
-                      className="max-w-[140px] truncate text-[12px] leading-[16px] text-[var(--color-royal)]"
+                      className={cn("max-w-[140px] truncate text-[12px] leading-[16px]", agentChipText)}
                       style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                     >
                       {selectedAgentChip.name}
@@ -762,7 +851,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                       aria-label={`Remove ${selectedAgentChip.name}`}
                       className="inline-flex items-center justify-center shrink-0"
                     >
-                      <X className="w-[14px] h-[14px] text-[var(--color-royal)]" />
+                      <X className={cn("w-[14px] h-[14px]", agentChipText)} />
                     </button>
                   </div>
                 </TooltipTrigger>
@@ -781,19 +870,29 @@ const ChatInput: React.FC<ChatInputProps> = ({
               <button
                 type="button"
                 onClick={onClearSelectedContextChip}
-                className="order-4 inline-flex items-center gap-[4px] border border-[var(--color-royal)] rounded-[4px] px-[6px] py-[4px] shadow-[0px_0px_0px_2px_oklch(0.554_0.199_263.043_/_0.1)] whitespace-nowrap animate-in fade-in duration-200"
+                className={cn(
+                  "order-4 inline-flex items-center gap-[4px] rounded-[4px] px-[6px] py-[4px] whitespace-nowrap composer-chip-enter",
+                  deepResearchActive ? deepResearchChipClass : promptChipClass
+                )}
                 style={{
-                  backgroundImage:
-                    "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)",
+                  backgroundImage: deepResearchActive ? deepResearchChipBg : promptChipBg,
                 }}
               >
                 <span
-                  className="text-[12px] leading-[16px] text-[var(--color-royal)]"
+                  className={cn(
+                    "text-[12px] leading-[16px]",
+                    deepResearchActive ? deepResearchChipText : promptChipText
+                  )}
                   style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                 >
                   {selectedContextChip}
                 </span>
-                <X className="w-[14px] h-[14px] text-[var(--color-royal)] shrink-0" />
+                <X
+                  className={cn(
+                    "w-[14px] h-[14px] shrink-0",
+                    deepResearchActive ? deepResearchChipText : promptChipText
+                  )}
+                />
               </button>
             )}
 
