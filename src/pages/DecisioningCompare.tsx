@@ -1,9 +1,13 @@
 import {
   Calendar,
   CheckCircle2,
+  Clock,
   Download,
   Info,
+  Mail,
+  Tag,
   TrendingUp,
+  UserX,
 } from "lucide-react";
 import {
   Area,
@@ -49,6 +53,20 @@ const topCohorts = [
   { name: "High-value app users", conversions: 860, lift: 18, bar: 77 },
   { name: "Recent category browsers", conversions: 580, lift: 13, bar: 52 },
   { name: "Loyal customers at risk", conversions: 280, lift: 9, bar: 25 },
+];
+
+const treatmentMix = [
+  { label: "Different channel", pct: 42, users: "504K users", icon: Mail, color: "#2F68E5", bg: "#EEF3FF" },
+  { label: "Different offer", pct: 31, users: "372K users", icon: Tag, color: "#7C5CFF", bg: "#F0EDFF" },
+  { label: "Different timing", pct: 18, users: "216K users", icon: Clock, color: "#00A576", bg: "#E7F7F0" },
+  { label: "Suppressed (no contact)", pct: 9, users: "108K users", icon: UserX, color: "#E8870A", bg: "#FFF4E5" },
+];
+
+const topDecisions = [
+  { decision: "Switched from email to WhatsApp", customers: "84K customers", impact: "+21% Lift", positive: true },
+  { decision: "Delayed communication by 24 hours", customers: "61K customers", impact: "+14% Lift", positive: true },
+  { decision: "Used higher discount offer", customers: "46K customers", impact: "+19% Lift", positive: true },
+  { decision: "Suppressed low-intent users", customers: "39K customers", impact: "Cost saved 8%", positive: true },
 ];
 
 const experimentHealth = [
@@ -415,6 +433,73 @@ export default function DecisioningCompare() {
                 </div>
               ))}
             </dl>
+          </Panel>
+        </div>
+
+        {/* Bottom row */}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+          <Panel
+            title="How the engine treated customers differently"
+            subtitle="Treatment mix across eligible users"
+            className="xl:col-span-4"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              {treatmentMix.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label} className="flex flex-col items-center text-center">
+                    <span
+                      className="grid h-14 w-14 place-items-center rounded-full"
+                      style={{ backgroundColor: item.bg, color: item.color }}
+                    >
+                      <Icon className="h-5 w-5" strokeWidth={1.9} />
+                    </span>
+                    <div className="mt-2 font-manrope text-[20px] font-extrabold text-[#17173A]">
+                      {item.pct}%
+                    </div>
+                    <div className="mt-0.5 font-manrope text-[11px] font-medium text-[#17173A]">{item.label}</div>
+                    <div className="font-manrope text-[10px] text-[#9A9AB0]">{item.users}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </Panel>
+
+          <Panel
+            title="Top decisions and their impact"
+            subtitle="Where the engine changed the default journey"
+            className="xl:col-span-8"
+          >
+            <div className="overflow-hidden rounded-xl border border-[#EEF1F7]">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[#EEF1F7] bg-[#FAFBFE]">
+                    <th className="px-3 py-2 text-left font-manrope text-[11px] font-semibold uppercase tracking-wide text-[#9A9AB0]">
+                      Decision
+                    </th>
+                    <th className="px-3 py-2 text-left font-manrope text-[11px] font-semibold uppercase tracking-wide text-[#9A9AB0]">
+                      Customers
+                    </th>
+                    <th className="px-3 py-2 text-right font-manrope text-[11px] font-semibold uppercase tracking-wide text-[#9A9AB0]">
+                      Impact
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topDecisions.map((row) => (
+                    <tr key={row.decision} className="border-b border-[#EEF1F7] last:border-0">
+                      <td className="px-3 py-3 font-manrope text-[12px] font-medium text-[#17173A]">
+                        {row.decision}
+                      </td>
+                      <td className="px-3 py-3 font-manrope text-[12px] text-[#6F6F8D]">{row.customers}</td>
+                      <td className="px-3 py-3 text-right">
+                        <LiftBadge positive={row.positive}>{row.impact}</LiftBadge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Panel>
         </div>
       </div>
