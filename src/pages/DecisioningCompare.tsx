@@ -1,4 +1,64 @@
-import { Calendar, Download, Info, TrendingUp } from "lucide-react";
+import {
+  Calendar,
+  CheckCircle2,
+  Download,
+  Info,
+  TrendingUp,
+} from "lucide-react";
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+const BRAND = "#2F68E5";
+const CONTROL = "#B8BCC8";
+
+const tooltipStyle = {
+  borderRadius: 10,
+  border: "1px solid #E6EAF4",
+  boxShadow: "0px 8px 24px rgba(23,23,58,0.10)",
+  fontFamily: "Manrope, sans-serif",
+  fontSize: 12,
+};
+
+const cumulativeConversions = [
+  { date: "12 Aug", engine: 2800, control: 2200 },
+  { date: "15 Aug", engine: 5200, control: 4100 },
+  { date: "18 Aug", engine: 8100, control: 6400 },
+  { date: "21 Aug", engine: 11200, control: 8900 },
+  { date: "24 Aug", engine: 14800, control: 11800 },
+  { date: "27 Aug", engine: 18900, control: 15200 },
+  { date: "30 Aug", engine: 23400, control: 19100 },
+  { date: "2 Sept", engine: 28100, control: 23200 },
+  { date: "5 Sept", engine: 32800, control: 27400 },
+  { date: "8 Sept", engine: 36200, control: 31200 },
+  { date: "10 Sept", engine: 38500, control: 35660 },
+].map((row) => ({
+  ...row,
+  incremental: row.engine - row.control,
+}));
+
+const topCohorts = [
+  { name: "One-time buyers inactive 30–60 days", conversions: 1120, lift: 24, bar: 100 },
+  { name: "High-value app users", conversions: 860, lift: 18, bar: 77 },
+  { name: "Recent category browsers", conversions: 580, lift: 13, bar: 52 },
+  { name: "Loyal customers at risk", conversions: 280, lift: 9, bar: 25 },
+];
+
+const experimentHealth = [
+  { label: "Control allocation", value: "10%" },
+  { label: "Sample size", value: "120,420 users" },
+  { label: "Confidence level", value: "96%" },
+  { label: "Test duration", value: "30 days" },
+  { label: "Group balance", value: "Healthy" },
+  { label: "Contamination detected", value: "None" },
+];
 
 const metricCards = [
   {
@@ -30,6 +90,35 @@ const metricCards = [
     positive: true,
   },
 ];
+
+function Panel({
+  title,
+  subtitle,
+  action,
+  children,
+  className = "",
+}: {
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-2xl border border-[#E6EAF4] bg-white p-5 ${className}`}>
+      <div className={`mb-4 flex items-start justify-between gap-3 ${action ? "" : ""}`}>
+        <div>
+          <h3 className="font-manrope text-[15px] font-bold text-[#17173A]">{title}</h3>
+          {subtitle ? (
+            <p className="mt-0.5 font-manrope text-[12px] text-[#6F6F8D]">{subtitle}</p>
+          ) : null}
+        </div>
+        {action}
+      </div>
+      {children}
+    </div>
+  );
+}
 
 function LiftBadge({ children, positive = true }: { children: React.ReactNode; positive?: boolean }) {
   return (
@@ -80,6 +169,7 @@ export default function DecisioningCompare() {
   return (
     <div className="bg-[#F5F7FB] px-[54px] py-8">
       <div className="mx-auto w-full max-w-[1200px] space-y-4">
+        {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="font-manrope text-[22px] font-bold text-[#17173A]">Control comparison</h1>
@@ -109,6 +199,7 @@ export default function DecisioningCompare() {
           </div>
         </div>
 
+        {/* Hero summary */}
         <div className="rounded-2xl border border-[#E6EAF4] bg-white p-5">
           <div className="flex flex-wrap items-center gap-4 lg:gap-6">
             <div className="flex flex-wrap items-center gap-3">
@@ -172,10 +263,159 @@ export default function DecisioningCompare() {
           </div>
         </div>
 
+        {/* Metric cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {metricCards.map((metric) => (
             <MetricCompareCard key={metric.title} {...metric} />
           ))}
+        </div>
+
+        {/* Middle row */}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+          <Panel
+            title="Cumulative conversions over time"
+            subtitle="Decisioning Engine vs control group"
+            className="xl:col-span-6"
+            action={
+              <select className="h-8 rounded-lg border border-[#DDE2EE] bg-white px-2 font-manrope text-[12px] font-medium text-[#17173A] outline-none">
+                <option>Conversions</option>
+                <option>Revenue</option>
+              </select>
+            }
+          >
+            <div className="mb-3 flex items-center gap-4">
+              <span className="inline-flex items-center gap-1.5 font-manrope text-[11px] text-[#6F6F8D]">
+                <span className="h-2 w-2 rounded-full bg-[#2F68E5]" />
+                Decisioning Engine
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-manrope text-[11px] text-[#6F6F8D]">
+                <span className="h-2 w-2 rounded-full bg-[#B8BCC8]" />
+                Control group
+              </span>
+              <span className="inline-flex items-center gap-1.5 font-manrope text-[11px] text-[#6F6F8D]">
+                <span className="h-2 w-4 rounded-sm bg-[#D6E6FF]" />
+                Incremental gain
+              </span>
+            </div>
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={cumulativeConversions} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gainFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={BRAND} stopOpacity={0.22} />
+                      <stop offset="100%" stopColor={BRAND} stopOpacity={0.04} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="#EEF1F7" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "#9A9AB0" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "#E6EAF4" }}
+                    interval={1}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#9A9AB0" }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `${Math.round(v / 1000)}K`}
+                  />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    formatter={(value: number, name: string) => {
+                      if (name === "incremental") return [value.toLocaleString(), "Incremental gain"];
+                      if (name === "engine") return [value.toLocaleString(), "Decisioning Engine"];
+                      return [value.toLocaleString(), "Control group"];
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="control"
+                    stackId="gain"
+                    stroke="none"
+                    fill="transparent"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="incremental"
+                    stackId="gain"
+                    stroke="none"
+                    fill="url(#gainFill)"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="control"
+                    stroke={CONTROL}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="engine"
+                    stroke={BRAND}
+                    strokeWidth={2.5}
+                    dot={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 flex justify-end">
+              <span className="rounded-lg bg-[#EEF3FF] px-2.5 py-1 font-manrope text-[11px] font-semibold text-[#2F68E5]">
+                +2,840 Incremental conversions
+              </span>
+            </div>
+          </Panel>
+
+          <Panel
+            title="What drove the improvement?"
+            subtitle="Top performing cohorts"
+            className="xl:col-span-3"
+          >
+            <div className="space-y-4">
+              {topCohorts.map((cohort, index) => (
+                <div key={cohort.name}>
+                  <div className="mb-1.5 flex items-start justify-between gap-2">
+                    <span className="font-manrope text-[12px] font-medium leading-snug text-[#17173A]">
+                      {index + 1}. {cohort.name}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-[#F0F2F8]">
+                    <div
+                      className="h-full rounded-full bg-[#2F68E5]"
+                      style={{ width: `${cohort.bar}%` }}
+                    />
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="font-manrope text-[11px] font-semibold text-[#2F68E5]">
+                      +{cohort.conversions.toLocaleString()}
+                    </span>
+                    <LiftBadge>+{cohort.lift}% Lift</LiftBadge>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="mt-4 font-manrope text-[12px] font-semibold text-[#2F68E5] hover:underline"
+            >
+              View all cohorts
+            </button>
+          </Panel>
+
+          <Panel title="Experiment health" className="xl:col-span-3">
+            <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-[#E7EFEA] px-2.5 py-1 font-manrope text-[11px] font-semibold text-[#00A576]">
+              <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+              Results are reliable
+            </div>
+            <dl className="space-y-3">
+              {experimentHealth.map((item) => (
+                <div key={item.label} className="flex items-center justify-between gap-3">
+                  <dt className="font-manrope text-[12px] text-[#6F6F8D]">{item.label}</dt>
+                  <dd className="font-manrope text-[12px] font-semibold text-[#17173A]">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </Panel>
         </div>
       </div>
     </div>
