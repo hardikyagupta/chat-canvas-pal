@@ -137,8 +137,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             >
               <X className="size-[18px]" />
             </button>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <div className="w-full max-w-[720px] px-[32px] py-[40px]">
+            <div
+              className={cn(
+                'min-h-0 flex-1',
+                activeNav === 'personalization' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto',
+              )}
+            >
+              <div
+                className={cn(
+                  'w-full max-w-[720px] px-[32px]',
+                  activeNav === 'personalization'
+                    ? 'flex min-h-0 flex-1 flex-col py-[40px]'
+                    : 'py-[40px]',
+                )}
+              >
                 {activeNav === 'theme' ? (
                   <ThemePanel
                     translucent={translucent}
@@ -410,6 +422,26 @@ const PersonalizationPanel: React.FC = () => {
   const [editing, setEditing] = React.useState<WikiItem | null>(null);
   const [collapsedCategories, setCollapsedCategories] = React.useState<Set<string>>(new Set());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const wikiScrollRef = React.useRef<HTMLDivElement>(null);
+  const wikiScrollTimerRef = React.useRef<ReturnType<typeof setTimeout>>();
+
+  const handleWikiScroll = () => {
+    const el = wikiScrollRef.current;
+    if (!el) return;
+    el.classList.add('is-scrolling');
+    if (wikiScrollTimerRef.current) clearTimeout(wikiScrollTimerRef.current);
+    wikiScrollTimerRef.current = setTimeout(() => {
+      el.classList.remove('is-scrolling');
+    }, 800);
+  };
+
+  React.useEffect(
+    () => () => {
+      if (wikiScrollTimerRef.current) clearTimeout(wikiScrollTimerRef.current);
+    },
+    [],
+  );
+
   const filtered = items.filter((it) => {
     const q = query.trim().toLowerCase();
     if (!q) return true;
@@ -507,68 +539,39 @@ const PersonalizationPanel: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-[16px]">
-      <div className="flex flex-col gap-[8px]">
-        <h1 className="text-[24px] font-medium text-[var(--color-ink)]" style={FONT}>Memory &amp; personalization</h1>
-        <p className="text-[13px] text-[var(--color-grey)]" style={FONT}>
-          Manage who you are and what the assistant remembers.
-        </p>
-      </div>
-
-      <div className="flex items-center gap-[24px] border-b border-[var(--color-line)]">
-        {(['profile', 'wiki'] as PersonalizationTab[]).map((t) => {
-          const on = tab === t;
-          return (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={cn(
-                'relative -mb-px pb-[10px] text-[14px] transition-colors',
-                on ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-grey)] hover:text-[var(--color-slate)]'
-              )}
-              style={FONT}
-            >
-              {TAB_LABEL[t]}
-              {on && <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[var(--color-ink)]" />}
-            </button>
-          );
-        })}
-      </div>
-
-      {tab === 'profile' ? (
-        <div className="flex flex-col gap-[20px] pt-[4px]">
-          <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2">
-            <Field label="Nickname">
-              <TextInput value={nickname} onChange={setNickname} placeholder="Jane" />
-            </Field>
-            <Field label="Occupation">
-              <TextInput value={occupation} onChange={setOccupation} placeholder="Product designer" />
-            </Field>
-          </div>
-          <Field label="More about you">
-            <TextArea
-              value={about}
-              onChange={setAbout}
-              rows={4}
-              placeholder="I'm an Analyst based in NYC. I work mainly in React and SQL."
-            />
-            <p className="mt-[8px] text-[12px] text-[var(--color-grey-soft)]" style={FONT}>
-              This information personalizes responses across all tasks.
-            </p>
-          </Field>
-          <Field label="Custom Instructions">
-            <TextArea
-              value={instructions}
-              onChange={setInstructions}
-              rows={4}
-              placeholder="Be concise and direct. Default to Python unless I say otherwise. When writing docs, use a professional tone."
-            />
-          </Field>
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Sticky header — title, tabs, and wiki search stay fixed while list scrolls */}
+      <div className="shrink-0 flex flex-col gap-[16px] bg-[var(--color-surface-0)]">
+        <div className="flex flex-col gap-[8px]">
+          <h1 className="text-[24px] font-medium text-[var(--color-ink)]" style={FONT}>Memory &amp; personalization</h1>
+          <p className="text-[13px] text-[var(--color-grey)]" style={FONT}>
+            Manage who you are and what the assistant remembers.
+          </p>
         </div>
-      ) : (
-        <div className="flex flex-col gap-[16px] pt-[4px]">
-          <div className="flex items-center gap-[10px]">
+
+        <div className="flex items-center gap-[24px] border-b border-[var(--color-line)]">
+          {(['profile', 'wiki'] as PersonalizationTab[]).map((t) => {
+            const on = tab === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                className={cn(
+                  'relative -mb-px pb-[10px] text-[14px] transition-colors',
+                  on ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-grey)] hover:text-[var(--color-slate)]'
+                )}
+                style={FONT}
+              >
+                {TAB_LABEL[t]}
+                {on && <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[var(--color-ink)]" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {tab === 'wiki' && (
+          <div className="flex items-center gap-[10px] pb-[4px]">
             <div className="flex h-[38px] flex-1 items-center gap-[9px] rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[11px]">
               <Search className="size-[16px] text-[var(--color-grey-soft)]" />
               <input
@@ -605,7 +608,47 @@ const PersonalizationPanel: React.FC = () => {
               Upload
             </button>
           </div>
+        )}
+      </div>
 
+      {/* Scrollable body */}
+      <div
+        ref={wikiScrollRef}
+        onScroll={handleWikiScroll}
+        className="scroll-reveal min-h-0 flex-1 overflow-y-auto pt-[16px]"
+      >
+      {tab === 'profile' ? (
+        <div className="flex flex-col gap-[20px] pt-[4px]">
+          <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2">
+            <Field label="Nickname">
+              <TextInput value={nickname} onChange={setNickname} placeholder="Jane" />
+            </Field>
+            <Field label="Occupation">
+              <TextInput value={occupation} onChange={setOccupation} placeholder="Product designer" />
+            </Field>
+          </div>
+          <Field label="More about you">
+            <TextArea
+              value={about}
+              onChange={setAbout}
+              rows={4}
+              placeholder="I'm an Analyst based in NYC. I work mainly in React and SQL."
+            />
+            <p className="mt-[8px] text-[12px] text-[var(--color-grey-soft)]" style={FONT}>
+              This information personalizes responses across all tasks.
+            </p>
+          </Field>
+          <Field label="Custom Instructions">
+            <TextArea
+              value={instructions}
+              onChange={setInstructions}
+              rows={4}
+              placeholder="Be concise and direct. Default to Python unless I say otherwise. When writing docs, use a professional tone."
+            />
+          </Field>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-[10px] pt-[4px]">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-[10px] py-[72px]">
               <div className="flex size-[44px] items-center justify-center rounded-full bg-[var(--color-surface-1)]">
@@ -665,6 +708,7 @@ const PersonalizationPanel: React.FC = () => {
           )}
         </div>
       )}
+      </div>
 
       {editorOpen && (
         <WikiEditor
