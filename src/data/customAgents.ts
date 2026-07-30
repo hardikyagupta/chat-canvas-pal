@@ -17,6 +17,36 @@ export interface AgentFile {
   size?: number;
 }
 
+export type AgentVisibility = 'private' | 'workspace';
+
+export interface AgentTools {
+  domains: {
+    campaigns: boolean;
+    journeys: boolean;
+    segments: boolean;
+  };
+  capabilities: {
+    generateReports: boolean;
+    brandWiki: boolean;
+    deepResearch: boolean;
+    memory: boolean;
+  };
+  visibility: AgentVisibility;
+}
+
+export const DEFAULT_AGENT_TOOLS: AgentTools = {
+  domains: { campaigns: true, journeys: true, segments: false },
+  capabilities: { generateReports: true, brandWiki: true, deepResearch: false, memory: false },
+  visibility: 'workspace',
+};
+
+export const DEFAULT_STARTER_QUESTIONS = [
+  'Run my weekly review',
+  'What were the biggest movers last week?',
+  'How did last week compare to the week before?',
+  'Turn last weekly roll-up into a report',
+];
+
 export interface CustomAgent {
   id: string;
   name: string;
@@ -30,6 +60,10 @@ export interface CustomAgent {
   avatarSrc?: string;
   /** Suggested first prompt, pre-filled into the composer on the agent's page. */
   starterPrompt?: string;
+  /** Domains, capabilities, and visibility this agent can use. */
+  tools?: AgentTools;
+  /** Clickable prompts shown when this agent is active in chat. */
+  starterQuestions?: string[];
 }
 
 // Seeded with the Monthly report agent so the page has content on first load,
@@ -46,5 +80,7 @@ export const initialCustomAgents: CustomAgent[] = [
     updatedAt: 'now',
     avatarSrc: generateAgentAvatar(MONTHLY_REPORT_AGENT_NAME),
     starterPrompt: "Generate last month's marketing performance report.",
+    tools: DEFAULT_AGENT_TOOLS,
+    starterQuestions: DEFAULT_STARTER_QUESTIONS,
   },
 ];
