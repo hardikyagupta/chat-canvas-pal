@@ -281,6 +281,33 @@
   }
 }
 
+/* Suggestion-chip ticker (AI Dashboard) — chips drift left in a seamless loop;
+   the track renders the chip list twice and slides exactly one copy-width, so
+   the wrap-around is invisible. Paused on hover so a chip can be clicked
+   without chasing it. */
+.chip-marquee {
+  overflow: hidden;
+}
+.chip-marquee-track {
+  animation: chipMarquee 24s linear infinite;
+}
+.chip-marquee:hover .chip-marquee-track {
+  animation-play-state: paused;
+}
+@keyframes chipMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chip-marquee-track {
+    animation: none;
+  }
+}
+
 /* Chat input textarea — stays scrollable past 4 lines, but the scrollbar only
    appears on hover (modern, uncluttered). */
 .chat-input-scroll {
@@ -377,6 +404,43 @@
 .suggest-drop-in {
   animation: suggestDropIn 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   will-change: transform, opacity;
+}
+
+/* Composer mode chips (deep research, agent, context) — subtle scale+fade in. */
+@keyframes composerChipIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.composer-chip-enter {
+  animation: composerChipIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: left center;
+}
+
+/* Empty-state hint rows (starter chips ↔ deep-research categories). */
+@keyframes composerHintsIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.composer-hints-enter {
+  animation: composerHintsIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .composer-chip-enter,
+  .composer-hints-enter {
+    animation: none;
+  }
 }
 
 /* Figma shimmer palette — shared by input + welcome card shimmers */
@@ -803,6 +867,23 @@
   /* Light, subtle hover (previous grey was too dark). */
   border-color: var(--color-line-strong);
   background-color: var(--color-surface-0);
+}
+
+/* Muted violet — deep-research category pills (distinct from starter/suggested chips). */
+.fig-chip-muted {
+  border: 0.5px solid oklch(0.78 0.06 292);
+  background-color: oklch(0.965 0.025 292);
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.fig-chip-muted:hover {
+  border-color: oklch(0.7 0.08 292);
+  background-color: oklch(0.94 0.035 292);
+}
+.fig-chip-muted span {
+  color: oklch(0.48 0.11 292);
+}
+.fig-chip-muted svg {
+  color: oklch(0.55 0.1 292);
 }
 
 /* ---- Decisioning "ready" isometric illustration ---- */
