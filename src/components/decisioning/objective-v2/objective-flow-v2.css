@@ -156,7 +156,7 @@
   transition: opacity 220ms ease;
 }
 .ov2-card-bodywrap.open .ov2-card-body { opacity: 1; transition-delay: 60ms; }
-.ov2-form-section { padding-top: 22px; }
+.ov2-form-section { padding-top: 0; }
 
 /* Left-aligned "Done" action that advances to the next step, sitting at the
    bottom of each (non-preview) step card. Carries its own padding so it works

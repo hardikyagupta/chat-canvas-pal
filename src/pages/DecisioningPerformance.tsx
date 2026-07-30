@@ -34,6 +34,7 @@ import {
   useDecisioningSetup,
   type LaunchedObjective,
 } from "@/contexts/DecisioningSetupContext";
+import DecisioningCompare from "@/pages/DecisioningCompare";
 import "@/components/decisioning/config-edit.css";
 
 /**
@@ -41,14 +42,13 @@ import "@/components/decisioning/config-edit.css";
  * "View live performance" CTA on an ObjectiveCard.
  *
  * Chrome mirrors the "Edit configuration" page: the same sticky white navbar
- * (title lockup + close X), no other CTAs. Below it, two tabs — Performance
- * (metrics + charts) and Preview (the same audience/sub-cohort/channel/
- * template tree used in the objective creation flow's own Preview step,
- * rendered read-only — editable={false} disables every edit affordance,
- * leaving only the template eye/preview icons active).
+ * (title lockup + close X), no other CTAs. Below it, three tabs — Performance
+ * (metrics + charts), Preview (the same audience/sub-cohort/channel/template
+ * tree used in the objective creation flow's own Preview step, rendered
+ * read-only), and Compare (placeholder for side-by-side comparisons).
  */
 
-type Tab = "performance" | "preview";
+type Tab = "performance" | "preview" | "compare";
 
 const BRAND = "#2F68E5";
 
@@ -224,6 +224,7 @@ export default function DecisioningPerformance() {
             [
               { id: "performance", label: "Performance" },
               { id: "preview", label: "Preview" },
+              { id: "compare", label: "Compare" },
             ] as const
           ).map((t) => (
             <button
@@ -246,10 +247,12 @@ export default function DecisioningPerformance() {
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === "performance" ? (
           <PerformanceTab objective={objective} />
-        ) : (
+        ) : tab === "preview" ? (
           <div className="mx-auto w-full max-w-[1200px] px-[54px] py-8">
             <ObjectiveJourneyPreview onEdit={(_s: EditableStep) => {}} editable={false} />
           </div>
+        ) : (
+          <DecisioningCompare />
         )}
       </div>
     </div>
