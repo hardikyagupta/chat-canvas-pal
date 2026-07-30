@@ -233,7 +233,7 @@ export default function AiDashboard() {
             <div className="flex flex-col items-center gap-1 text-center">
               <p className="font-manrope text-[13px] text-[#837C8E]">Thursday, 4 June (GMT+5:30)</p>
               <p className="font-manrope text-[24px] font-bold leading-[40px] text-[#17173A]">
-                Good Afternoon, <span className="text-[#2F68E5]">Amit</span>
+                Good morning, <span className="text-[#2F68E5]">Amit</span>
               </p>
             </div>
 
