@@ -1,0 +1,483 @@
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
+import L1Nav from "@/components/campaigns/L1Nav";
+import TopNav from "@/components/campaigns/TopNav";
+import ChatInterface from "@/components/ChatInterface";
+import ChatInput from "@/components/ChatInput";
+import type { InsightCardContext } from "@/types/insightCard";
+import MarketingAgentsOverlay from "@/components/MarketingAgentsOverlay";
+import PersonalizeCoMarketerModal, {
+  type PersonalizeCoMarketerData,
+} from "@/components/PersonalizeCoMarketerModal";
+import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { marketingAgents } from "@/data/agents";
+import sparkleAi from "/campaign-assets/ic-sparkle-ai.gif";
+import sparkleNav from "/campaign-assets/ic-sparkle.gif";
+
+const suggestionChips = [
+  "Which campaigns should I optimize first?",
+  "Recommend new campaigns to create",
+  "Why did WhatsApp CTR drop this week?",
+  "Draft a win-back campaign for lapsed users",
+];
+
+const metrics = [
+  {
+    label: "Active Campaigns",
+    value: "12",
+    delta: null,
+    sub: "revenue-per-send vs 30-day average - 'Monsoon Flat 40%' email",
+  },
+  {
+    label: "Revenue",
+    value: "₹14.2L",
+    delta: { text: "↑ +18%", tone: "up" as const },
+    sub: "revenue-per-send vs 30-day average - 'Monsoon Flat 40%' email",
+  },
+  {
+    label: "Orders",
+    value: "2,883",
+    delta: { text: "↑ +12%", tone: "up" as const },
+    sub: "Lapsed buyers reactivated at 3×",
+  },
+  {
+    label: "WhatsApp CTR",
+    value: "4.7%",
+    delta: { text: "-34%", tone: "down" as const },
+    sub: "Template fatigue - sharpen drop this week",
+  },
+  {
+    label: "Avg open rate",
+    value: "31.4%",
+    delta: { text: "+2.1pts", tone: "up" as const },
+    sub: "Template fatigue - sharpen drop this week",
+  },
+];
+
+const wins = [
+  {
+    badges: ["Audience", "Journey"],
+    title: "Lapsed buyers (60+ days) reactivated at 3.2% — double last month",
+    sub: "1,140 dormant customers came back · prior month 1.2%",
+  },
+  {
+    badges: ["Content"],
+    title: "Emoji + urgency subject lines beat plain by 18% open rate",
+    sub: "1,140 dormant customers came back · prior month 1.2%",
+  },
+  {
+    badges: ["Segment"],
+    title: "\"High-intent, no purchase\" segment converts 2.4× on retarget",
+    sub: "3,400 users matched · sent via WhatsApp + email combo",
+  },
+  {
+    badges: ["Scheduling"],
+    title: "Send-time optimization lifted open rate by 9pts",
+    sub: "Rolled out across all lifecycle campaigns last week",
+  },
+];
+
+const needsAttention = [
+  {
+    badge: "Revenue",
+    title: "Cart-abandonment flow revenue down 22%",
+    sub: "Deliverability dipped on our ISP yesterday",
+  },
+  {
+    badge: "WhatsApp",
+    title: "WhatsApp CTR dropped 34% week-over-week",
+    sub: "Template fatigue — sharpen drop this week",
+  },
+  {
+    badge: "Deliverability",
+    title: "Gmail inbox placement dropped 12% since Monday",
+    sub: "Sender reputation dip on the bulk IP pool",
+  },
+  {
+    badge: "Journey",
+    title: "Onboarding journey drop-off up 15% at step 3",
+    sub: "OTP verification screen — likely a friction point",
+  },
+];
+
+/** Flat category tag — blue for wins, red/antique "error state" for
+ *  needs-attention (always rendered upper-case via CSS so source casing
+ *  never has to match). */
+function CategoryBadge({ label, tone = "blue" }: { label: string; tone?: "blue" | "red" }) {
+  return (
+    <span
+      className={cn(
+        "w-fit rounded-[11px] px-2 py-1 font-manrope text-[10px] font-semibold uppercase tracking-wide",
+        tone === "red" ? "bg-[#FFE9DA] text-[#F05C5C]" : "bg-[#F0F5FF] text-[#2F68E5]"
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+/** "Get insights" trigger — shared by both wins and needs-attention cards. */
+function GetInsightsLink({ onClick }: { onClick?: () => void }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label="Ask Co-marketer"
+          onClick={onClick}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[#F0F5FF]"
+        >
+          <img src={sparkleNav} alt="" className="h-4 w-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]"
+        style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500 }}
+      >
+        Ask Co-marketer
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+export default function AiDashboard() {
+  // Docked co-marketer chat — same mount/enter/leave choreography as the
+  // other campaigns-ecosystem pages (Campaigns, DecisioningEngine).
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMounted, setChatMounted] = useState(false);
+  const [chatIn, setChatIn] = useState(false);
+  const [chatSession, setChatSession] = useState(0);
+  const [isAgentsOverlayOpen, setIsAgentsOverlayOpen] = useState(false);
+  const [enabledAgents, setEnabledAgents] = useState<Set<string>>(new Set());
+  const [isPersonalizeOpen, setIsPersonalizeOpen] = useState(false);
+  const [isPersonalized, setIsPersonalized] = useState(false);
+  const { toast } = useToast();
+
+  // Full-page co-marketer modal — opened when the user types into (and sends
+  // from) the hero composer, as opposed to the docked side-panel opened by the
+  // suggestion chips. Remounted (session bump) per open so the scripted
+  // "campaigns" conversation always starts fresh against the typed message.
+  const [fullChatOpen, setFullChatOpen] = useState(false);
+  const [fullChatSession, setFullChatSession] = useState(0);
+  const [fullChatMessage, setFullChatMessage] = useState("");
+  const [fullChatInsight, setFullChatInsight] = useState<InsightCardContext | null>(null);
+
+  const handleHeroSend = (message: string) => {
+    setFullChatInsight(null);
+    setFullChatMessage(message);
+    setFullChatSession((n) => n + 1);
+    setFullChatOpen(true);
+  };
+
+  const handleOpenInsightChat = (insight: InsightCardContext) => {
+    setFullChatInsight(insight);
+    setFullChatMessage("");
+    setFullChatSession((n) => n + 1);
+    setFullChatOpen(true);
+  };
+
+  useEffect(() => {
+    if (chatOpen) {
+      setChatMounted(true);
+      setChatSession((n) => n + 1);
+      let raf2 = 0;
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setChatIn(true));
+      });
+      return () => {
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
+      };
+    }
+    setChatIn(false);
+    if (isAgentsOverlayOpen) setIsAgentsOverlayOpen(false);
+  }, [chatOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleToggleAgent = (agentId: string, agentName: string) => {
+    const agent = marketingAgents.find((a) => a.id === agentId);
+    if (!agent) return;
+
+    setEnabledAgents((prev) => {
+      const next = new Set(prev);
+      const isJoining = !next.has(agentId);
+      if (isJoining) next.add(agentId);
+      else next.delete(agentId);
+
+      window.dispatchEvent(
+        new CustomEvent("agentStatusChange", {
+          detail: {
+            name: agentName,
+            status: isJoining ? "join" : "leave",
+            icon: agent.icon,
+            colorClass: agent.colorClass,
+          },
+        })
+      );
+      return next;
+    });
+  };
+
+  return (
+    <div className="flex h-screen w-full overflow-hidden bg-[#F4F8FF]">
+      <L1Nav active="ai-dashboard" />
+
+      <div className="flex min-w-0 flex-1 flex-col p-2">
+        <TopNav label="AI Dashboard" showCoMarketerNudge={false} onOpenChat={() => setChatOpen(true)} />
+
+        <div className="mt-2 flex min-h-0 flex-1 gap-2">
+          <div className="scroll-slim min-w-0 flex-1 overflow-y-auto px-4 pt-6 pb-8">
+            {/* Greeting */}
+            <div className="flex flex-col items-center gap-1 text-center">
+              <p className="font-manrope text-[13px] text-[#837C8E]">Thursday, 4 June (GMT+5:30)</p>
+              <p className="font-manrope text-[24px] font-bold leading-[40px] text-[#17173A]">
+                Good Afternoon, <span className="text-[#2F68E5]">Amit</span>
+              </p>
+            </div>
+
+            {/* Composer card — suggestion chips + hero input */}
+            <div className="mt-4 flex flex-col items-center gap-4 rounded-[8px] p-4 drop-shadow-[0px_-4px_10px_rgba(177,177,177,0.2)]">
+              <div className="flex w-full flex-col items-center gap-2">
+                <p className="w-full text-center font-manrope text-[12px] font-medium text-[#17173A]">
+                  Have something else in mind? Ask Co-marketer
+                </p>
+                <div className="chip-marquee w-full">
+                  <div className="chip-marquee-track flex w-max gap-4 pb-1">
+                    {[...suggestionChips, ...suggestionChips].map((chip, i) => (
+                      <button
+                        key={`${chip}-${i}`}
+                        type="button"
+                        onClick={() => setChatOpen(true)}
+                        className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[6px] border border-[#DDE2EE] bg-white px-2 py-1.5 transition-colors hover:bg-[#F7F9FC]"
+                      >
+                        <img src={sparkleAi} alt="" className="h-5 w-5" />
+                        <span className="font-manrope text-[14px] font-semibold tracking-[0.42px] text-black">
+                          {chip}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Hero composer — same ChatInput used across the app. Typing here and
+                  sending opens the full-page co-marketer modal (below) with that
+                  message already "sent"; picking a suggestion chip above still opens
+                  the docked side panel, same as the "Ask co-marketer" entry point. */}
+              <div className="w-full max-w-[768px]">
+                <ChatInput
+                  layout="linear"
+                  showAddButton={false}
+                  flat
+                  placeholder="Ask anything — What's driving churn this month?  or  Create a win-back campaign for lapsed users"
+                  onSend={handleHeroSend}
+                />
+              </div>
+            </div>
+
+            {/* Metric cards */}
+            <div className="mt-6 flex gap-4">
+              {metrics.map((m) => (
+                <div key={m.label} className="flex flex-1 flex-col items-start rounded-[10px] bg-white px-5 py-4">
+                  <div className="flex flex-col gap-1">
+                    <p className="font-manrope text-[12px] font-medium text-[#6F6F8D]">{m.label}</p>
+                    <div className="flex items-center gap-1">
+                      <p className="font-manrope text-[32px] font-bold text-[#17173A]">{m.value}</p>
+                      {m.delta && (
+                        <span
+                          className={cn(
+                            "rounded-[11px] px-1 py-0.5 font-manrope text-[11px] font-semibold whitespace-nowrap",
+                            m.delta.tone === "up" ? "bg-[#E8F8F4] text-[#00A68C]" : "bg-[#FEEDED] text-[#F05C5C]"
+                          )}
+                        >
+                          {m.delta.text}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="mt-1 font-manrope text-[12px] leading-[17px] text-[#6F6F8D]">{m.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* More wins / Needs attention */}
+            <div className="mt-6 flex gap-4">
+              <div className="flex flex-1 flex-col overflow-hidden rounded-[8px] bg-white">
+                <div className="flex items-center py-2 pl-6 pr-2">
+                  <p className="font-manrope text-[14px] font-bold text-[#17173A]">More wins</p>
+                </div>
+                <div className="px-2 pb-2">
+                  <div className="flex flex-col gap-4 rounded-[8px] border border-[#DDE2EE] px-4 py-6">
+                    {wins.map((win) => (
+                      <div key={win.title} className="flex items-start justify-between gap-4">
+                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                          <div className="flex gap-1.5">
+                            {win.badges.map((b) => (
+                              <CategoryBadge key={b} label={b} />
+                            ))}
+                          </div>
+                          <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{win.title}</p>
+                          <p className="font-manrope text-[11px] text-[#6F6F8D]">{win.sub}</p>
+                        </div>
+                        <GetInsightsLink
+                          onClick={() =>
+                            handleOpenInsightChat({
+                              sectionLabel: "More wins",
+                              badges: win.badges,
+                              title: win.title,
+                              sub: win.sub,
+                              badgeTone: "blue",
+                            })
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-1 flex-col overflow-hidden rounded-[8px] bg-white">
+                <div className="flex items-center py-2 pl-6 pr-2">
+                  <p className="font-manrope text-[14px] font-bold text-[#17173A]">Needs attention</p>
+                </div>
+                <div className="px-2 pb-2">
+                  <div className="flex flex-col gap-4 rounded-[8px] border border-[#DDE2EE] p-4">
+                    {needsAttention.map((item) => (
+                      <div key={item.title} className="flex items-start justify-between gap-4">
+                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                          <CategoryBadge label={item.badge} tone="red" />
+                          <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{item.title}</p>
+                          <p className="font-manrope text-[11px] text-[#6F6F8D]">{item.sub}</p>
+                        </div>
+                        <GetInsightsLink
+                          onClick={() =>
+                            handleOpenInsightChat({
+                              sectionLabel: "Needs attention",
+                              badges: [item.badge],
+                              title: item.title,
+                              sub: item.sub,
+                              badgeTone: "red",
+                            })
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Discovery banner — dismissed for good once personalization is saved */}
+            {!isPersonalized && (
+              <div className="mt-6 flex items-center gap-5 rounded-[12px] border border-[#DDE2EE] bg-white py-5 pl-6 pr-5 shadow-[0px_5px_10px_0px_rgba(23,23,58,0.05)]">
+                <div className="flex shrink-0 items-center justify-center rounded-[12px] bg-[#F0F5FF] p-3.5">
+                  <img src={sparkleAi} alt="" className="h-5 w-5" />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <p className="text-[16px] font-bold leading-[22px] text-[#17173A]">
+                    Make Co-Marketer more relevant to you
+                  </p>
+                  <p className="text-[13px] leading-[19px] text-[#6F6F8D]">
+                    Tell us what you care about, and Co-Marketer will prioritize insights, recommendations, and
+                    actions around your goals.
+                  </p>
+                  <p className="text-[11px] font-medium text-[#6F6F8D]">
+                    Takes less than a minute &middot; You can update this anytime
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPersonalizeOpen(true)}
+                  className="shrink-0 rounded-[6px] bg-[#2F68E5] px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#255ad2]"
+                >
+                  Personalize Co-marketer
+                </button>
+              </div>
+            )}
+          </div>
+
+          <PersonalizeCoMarketerModal
+            open={isPersonalizeOpen}
+            onClose={() => setIsPersonalizeOpen(false)}
+            onComplete={(prefs: PersonalizeCoMarketerData) => {
+              console.log("Co-Marketer preferences saved:", prefs);
+              setIsPersonalizeOpen(false);
+              setIsPersonalized(true);
+              toast({
+                title: "Preferences saved",
+                description: "Co-Marketer will now prioritize insights around what matters to you.",
+              });
+            }}
+          />
+
+          {/* Co-marketer chat — docked column, identical to Campaigns/DecisioningEngine. */}
+          {chatMounted && (
+            <div
+              className={cn(
+                "flex h-full min-h-0 shrink-0 justify-end overflow-hidden pr-1",
+                "transition-[width,opacity] duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+                "motion-reduce:transition-none",
+                chatIn ? "w-[474px] opacity-100" : "w-0 opacity-0"
+              )}
+              onTransitionEnd={(e) => {
+                if (e.target === e.currentTarget && e.propertyName === "width" && !chatIn) {
+                  setChatMounted(false);
+                }
+              }}
+            >
+              <MarketingAgentsOverlay
+                isOpen={isAgentsOverlayOpen}
+                onOpenChange={setIsAgentsOverlayOpen}
+                enabledAgents={enabledAgents}
+                onToggleAgent={handleToggleAgent}
+              />
+              <ChatInterface
+                key={chatSession}
+                initialExpanded={false}
+                docked
+                conversationVariant="campaigns"
+                onBotIconClick={() => setIsAgentsOverlayOpen(true)}
+                enabledAgents={enabledAgents}
+                setEnabledAgents={setEnabledAgents}
+                onCloseInterface={() => setChatOpen(false)}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Full-page co-marketer modal — opened from the hero composer. Same
+          scripted "campaigns" conversation as the docked panel, just carrying
+          whatever the user typed in as the opening turn (see `initialMessage`
+          on ChatInterface). */}
+      {fullChatOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[70] flex items-start justify-center gap-2 bg-[rgba(23,23,58,0.45)] p-4">
+            <MarketingAgentsOverlay
+              isOpen={isAgentsOverlayOpen}
+              onOpenChange={setIsAgentsOverlayOpen}
+              enabledAgents={enabledAgents}
+              onToggleAgent={handleToggleAgent}
+            />
+            <ChatInterface
+              key={fullChatSession}
+              initialExpanded
+              conversationVariant="campaigns"
+              initialMessage={fullChatMessage || undefined}
+              initialInsightCard={fullChatInsight ?? undefined}
+              onBotIconClick={() => setIsAgentsOverlayOpen(true)}
+              enabledAgents={enabledAgents}
+              setEnabledAgents={setEnabledAgents}
+              onCloseInterface={() => {
+                setFullChatOpen(false);
+                setFullChatInsight(null);
+              }}
+            />
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
