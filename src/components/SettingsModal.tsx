@@ -2,13 +2,24 @@ import React from 'react';
 import {
   Search, Palette, SlidersHorizontal, Sparkles, UserRound,
   Blocks, Bell, ShieldCheck, Cog, Check, X,
-  Plus, Pencil, Trash2, MoreHorizontal, FileText, Upload,
+  Plus, Pencil, Trash2, MoreHorizontal, FileText, Upload, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAtmosphere } from '@/contexts/AtmosphereContext';
 import { useTheme } from '../../components/theme-provider';
 import ReportCustomizationPanel from './ReportCustomizationPanel';
+import {
+  BRAND_WIKI_CATEGORIES,
+  BRAND_WIKI_SEED,
+  type WikiFileStatus,
+} from '@/data/brandWikiSeed';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
 
@@ -290,7 +301,98 @@ interface WikiItem {
   enabled: boolean;
   createdAt: string; // display label, e.g. "28 Jul"
   fileName?: string; // set when the entry was created from an uploaded document
+  category?: string;
+  status?: WikiFileStatus;
 }
+
+const WIKI_STATUS_STYLES: Record<WikiFileStatus, string> = {
+  validated: 'bg-[oklch(0.94_0.04_145)] text-[oklch(0.45_0.12_145)]',
+  derived: 'bg-[oklch(0.94_0.04_250)] text-[oklch(0.45_0.12_250)]',
+  'llm-synthesised': 'bg-[oklch(0.94_0.04_65)] text-[oklch(0.48_0.12_55)]',
+  uploaded: 'bg-[oklch(0.94_0.04_145)] text-[oklch(0.45_0.12_145)]',
+};
+
+const seedToWikiItem = (seed: (typeof BRAND_WIKI_SEED)[number]): WikiItem => ({
+  id: seed.id,
+  name: seed.name,
+  useWhen: seed.useWhen ?? '',
+  content: seed.content,
+  enabled: true,
+  createdAt: '28 Jul',
+  fileName: seed.fileName,
+  category: seed.category,
+  status: seed.status,
+});
+
+const WikiStatusBadge: React.FC<{ status: WikiFileStatus }> = ({ status }) => (
+  <span
+    className={cn(
+      'shrink-0 rounded-full px-[10px] py-[3px] text-[11px] font-medium capitalize',
+      WIKI_STATUS_STYLES[status],
+    )}
+    style={FONT}
+  >
+    {status}
+  </span>
+);
+
+const WikiFileRow: React.FC<{
+  item: WikiItem;
+  onToggle: (id: string) => void;
+  onEdit: (item: WikiItem) => void;
+  onRemove: (id: string) => void;
+}> = ({ item, onToggle, onEdit, onRemove }) => (
+  <div
+    className={cn(
+      'group relative flex items-center justify-between gap-[12px] px-[14px] py-[11px] transition-opacity',
+      !item.enabled && 'opacity-50',
+    )}
+  >
+    <button
+      type="button"
+      onClick={() => onEdit(item)}
+      className="min-w-0 flex-1 truncate text-left text-[13px] text-[var(--color-ink)] transition-colors hover:text-[var(--color-slate)]"
+      style={FONT}
+    >
+      {item.fileName ?? `${item.name}.md`}
+    </button>
+    <div className="flex shrink-0 items-center gap-[10px]">
+      {item.status && <WikiStatusBadge status={item.status} />}
+      <Switch checked={item.enabled} onCheckedChange={() => onToggle(item.id)} />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label="Brand wiki options"
+            className="flex size-[26px] items-center justify-center rounded-[6px] text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)]"
+          >
+            <MoreHorizontal className="size-[16px]" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          sideOffset={6}
+          className="z-[60] w-[152px] rounded-[10px] border border-[var(--color-line)] bg-card p-[4px] shadow-[0px_12px_32px_-8px_oklch(0_0_0_/_0.22)]"
+        >
+          <DropdownMenuItem
+            onClick={() => onEdit(item)}
+            className="flex cursor-pointer items-center gap-[9px] rounded-[6px] px-[12px] py-[8px] text-[13px] text-[var(--color-slate)] focus:bg-[oklch(0_0_0_/_0.06)]"
+            style={FONT}
+          >
+            <Pencil className="size-[15px]" /> Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => onRemove(item.id)}
+            className="flex cursor-pointer items-center gap-[9px] rounded-[6px] px-[12px] py-[8px] text-[13px] text-[var(--color-danger,oklch(0.58_0.2_25))] focus:bg-[oklch(0_0_0_/_0.06)]"
+            style={FONT}
+          >
+            <Trash2 className="size-[15px]" /> Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  </div>
+);
 
 const PersonalizationPanel: React.FC = () => {
   const [tab, setTab] = React.useState<PersonalizationTab>('profile');
@@ -301,32 +403,73 @@ const PersonalizationPanel: React.FC = () => {
   const [about, setAbout] = React.useState('');
   const [instructions, setInstructions] = React.useState('');
 
-  // Brand wiki store
-  const [items, setItems] = React.useState<WikiItem[]>([]);
+  // Brand wiki store — pre-seeded with generated .md files by category
+  const [items, setItems] = React.useState<WikiItem[]>(() => BRAND_WIKI_SEED.map(seedToWikiItem));
   const [query, setQuery] = React.useState('');
   const [editorOpen, setEditorOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<WikiItem | null>(null);
-  const [menuFor, setMenuFor] = React.useState<string | null>(null);
+  const [collapsedCategories, setCollapsedCategories] = React.useState<Set<string>>(new Set());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const filtered = items.filter((it) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const haystack = [it.name, it.content, it.useWhen, it.fileName, it.category].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(q);
+  });
 
-  const filtered = items.filter((it) =>
-    (it.name + it.content + it.useWhen).toLowerCase().includes(query.trim().toLowerCase())
-  );
+  const grouped = React.useMemo(() => {
+    const byCategory = new Map<string, WikiItem[]>();
+    for (const item of filtered) {
+      const cat = item.category ?? 'uploads';
+      const list = byCategory.get(cat) ?? [];
+      list.push(item);
+      byCategory.set(cat, list);
+    }
+    const ordered = ['uploads', 'custom', ...BRAND_WIKI_CATEGORIES].filter((cat) => byCategory.has(cat));
+    for (const cat of byCategory.keys()) {
+      if (!ordered.includes(cat)) ordered.push(cat);
+    }
+    return ordered.map((category) => ({ category, items: byCategory.get(category)! }));
+  }, [filtered]);
+
+  const toggleCategory = (category: string) =>
+    setCollapsedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
 
   const openAdd = () => { setEditing(null); setEditorOpen(true); };
-  const openEdit = (it: WikiItem) => { setEditing(it); setEditorOpen(true); setMenuFor(null); };
+  const openEdit = (it: WikiItem) => { setEditing(it); setEditorOpen(true); };
 
-  const addItem = (data: { name: string; content: string; useWhen?: string; fileName?: string }) =>
+  const addItem = (data: {
+    name: string;
+    content: string;
+    useWhen?: string;
+    fileName?: string;
+    category?: string;
+    status?: WikiFileStatus;
+  }) => {
+    const category = data.category ?? (data.fileName ? 'uploads' : 'custom');
+    setCollapsedCategories((prev) => {
+      const next = new Set(prev);
+      next.delete(category);
+      return next;
+    });
     setItems((prev) => [
       {
         id: `k-${prev.length}-${prev.reduce((m, i) => Math.max(m, Number(i.id.split('-')[1]) || 0), 0) + 1}`,
         useWhen: '',
+        category,
+        status: data.fileName ? 'uploaded' : undefined,
         ...data,
         enabled: true,
         createdAt: '28 Jul',
       },
       ...prev,
     ]);
+  };
 
   // Upload a document straight into the wiki (separate from the manual "Add"
   // flow). Text files have their contents read in; other docs are attached by
@@ -361,12 +504,10 @@ const PersonalizationPanel: React.FC = () => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, enabled: !it.enabled } : it)));
   const remove = (id: string) => {
     setItems((prev) => prev.filter((it) => it.id !== id));
-    setMenuFor(null);
   };
 
   return (
     <div className="flex flex-col gap-[16px]">
-      {/* Heading */}
       <div className="flex flex-col gap-[8px]">
         <h1 className="text-[24px] font-medium text-[var(--color-ink)]" style={FONT}>Memory &amp; personalization</h1>
         <p className="text-[13px] text-[var(--color-grey)]" style={FONT}>
@@ -374,7 +515,6 @@ const PersonalizationPanel: React.FC = () => {
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-[24px] border-b border-[var(--color-line)]">
         {(['profile', 'wiki'] as PersonalizationTab[]).map((t) => {
           const on = tab === t;
@@ -428,7 +568,6 @@ const PersonalizationPanel: React.FC = () => {
         </div>
       ) : (
         <div className="flex flex-col gap-[16px] pt-[4px]">
-          {/* Search + Add */}
           <div className="flex items-center gap-[10px]">
             <div className="flex h-[38px] flex-1 items-center gap-[9px] rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[11px]">
               <Search className="size-[16px] text-[var(--color-grey-soft)]" />
@@ -473,64 +612,55 @@ const PersonalizationPanel: React.FC = () => {
                 <Search className="size-[20px] text-[var(--color-grey-soft)]" />
               </div>
               <p className="text-[13px] text-[var(--color-grey-soft)]" style={FONT}>
-                {items.length === 0 ? 'No brand wiki entries yet' : 'No matches found'}
+                No matches found
               </p>
             </div>
           ) : (
-            <div className="flex flex-col gap-[12px]">
-              {filtered.map((it) => (
-                <div
-                  key={it.id}
-                  className="relative flex flex-col gap-[6px] rounded-[12px] border border-[var(--color-line)] bg-card p-[16px]"
-                >
-                  <div className="flex items-start justify-between gap-[12px]">
-                    <p className="text-[14px] font-medium text-[var(--color-ink)]" style={FONT}>{it.name}</p>
-                    <Switch checked={it.enabled} onCheckedChange={() => toggle(it.id)} />
-                  </div>
-                  <p className="line-clamp-2 pr-[40px] text-[13px] text-[var(--color-grey)]" style={FONT}>{it.content}</p>
-                  {it.fileName && (
-                    <span className="mt-[4px] flex w-fit items-center gap-[6px] rounded-[7px] bg-[var(--color-surface-1)] px-[8px] py-[4px] text-[11px] text-[var(--color-slate)]" style={FONT}>
-                      <FileText className="size-[13px]" /> {it.fileName}
-                    </span>
-                  )}
-                  <div className="mt-[6px] flex items-center justify-between">
-                    <p className="text-[12px] text-[var(--color-grey-soft)]" style={FONT}>Created {it.createdAt}</p>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        aria-label="Brand wiki options"
-                        onClick={() => setMenuFor((cur) => (cur === it.id ? null : it.id))}
-                        className="flex size-[28px] items-center justify-center rounded-[7px] text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
-                      >
-                        <MoreHorizontal className="size-[17px]" />
-                      </button>
-                      {menuFor === it.id && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setMenuFor(null)} />
-                          <div className="absolute right-0 top-[32px] z-20 flex w-[152px] flex-col overflow-hidden rounded-[10px] border border-[var(--color-line)] bg-card py-[4px] shadow-[0px_12px_32px_-8px_oklch(0_0_0_/_0.22)]">
-                            <button
-                              type="button"
-                              onClick={() => openEdit(it)}
-                              className="flex items-center gap-[9px] px-[12px] py-[8px] text-[13px] text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
-                              style={FONT}
-                            >
-                              <Pencil className="size-[15px]" /> Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => remove(it.id)}
-                              className="flex items-center gap-[9px] px-[12px] py-[8px] text-[13px] text-[var(--color-danger,oklch(0.58_0.2_25))] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
-                              style={FONT}
-                            >
-                              <Trash2 className="size-[15px]" /> Delete
-                            </button>
-                          </div>
-                        </>
+            <div className="flex flex-col gap-[10px]">
+              {grouped.map(({ category, items: categoryItems }) => {
+                const expanded = !collapsedCategories.has(category);
+                return (
+                  <div
+                    key={category}
+                    className="overflow-hidden rounded-[12px] border border-[var(--color-line)] bg-card"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(category)}
+                      aria-expanded={expanded}
+                      className={cn(
+                        'flex w-full items-center gap-[10px] bg-[var(--color-surface-1)] px-[14px] py-[11px] text-left transition-colors hover:bg-[oklch(0_0_0_/_0.03)]',
+                        expanded && 'border-b border-[var(--color-line)]',
                       )}
-                    </div>
+                    >
+                      {expanded ? (
+                        <ChevronDown className="size-[16px] shrink-0 text-[var(--color-slate)]" />
+                      ) : (
+                        <ChevronRight className="size-[16px] shrink-0 text-[var(--color-slate)]" />
+                      )}
+                      <span className="text-[14px] font-semibold text-[var(--color-ink)]" style={FONT}>
+                        {category}
+                      </span>
+                      <span className="text-[13px] font-medium text-[var(--color-grey-soft)]" style={FONT}>
+                        ({categoryItems.length})
+                      </span>
+                    </button>
+                    {expanded && (
+                      <div className="divide-y divide-[var(--color-line)]">
+                        {categoryItems.map((it) => (
+                          <WikiFileRow
+                            key={it.id}
+                            item={it}
+                            onToggle={toggle}
+                            onEdit={openEdit}
+                            onRemove={remove}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
