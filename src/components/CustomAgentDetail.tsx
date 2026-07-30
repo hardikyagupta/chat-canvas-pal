@@ -1,11 +1,12 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ArrowLeft, MoreHorizontal, Plus, Pencil, Trash2, X,
+  ArrowLeft, MoreHorizontal, Plus, Pencil, Trash2, X, Check,
   Paperclip, TextCursorInput, Github, FileText, Bot, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CustomAgent, AgentFile } from '@/data/customAgents';
+import type { CustomAgent, AgentFile, AgentTools } from '@/data/customAgents';
+import { DEFAULT_AGENT_TOOLS } from '@/data/customAgents';
 import type { LhsChatItem } from './LhsSidebar';
 import {
   ActionMenu,
@@ -201,6 +202,382 @@ const AddTextContentModal: React.FC<{
   );
 };
 
+const TOOL_COLUMN_HEADING = 'text-[11px] font-semibold uppercase tracking-[0.6px] text-[var(--color-grey-soft)]';
+
+function ToolCheckbox({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-[8px] py-[3px]">
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={checked}
+        onClick={onChange}
+        className={cn(
+          'flex size-[16px] shrink-0 items-center justify-center rounded-[4px] border transition-colors',
+          checked
+            ? 'border-[var(--color-royal)] bg-[var(--color-royal)] text-white'
+            : 'border-[var(--color-line-input)] bg-white text-transparent'
+        )}
+      >
+        <Check className="size-[11px]" strokeWidth={3} />
+      </button>
+      <span className="text-[13px] text-[var(--color-ink)]" style={FONT}>{label}</span>
+    </label>
+  );
+}
+
+function ToolRadio({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-[8px] py-[3px]">
+      <button
+        type="button"
+        role="radio"
+        aria-checked={checked}
+        onClick={onChange}
+        className={cn(
+          'flex size-[16px] shrink-0 items-center justify-center rounded-full border transition-colors',
+          checked ? 'border-[var(--color-royal)] bg-white' : 'border-[var(--color-line-input)] bg-white'
+        )}
+      >
+        {checked ? <span className="size-[8px] rounded-full bg-[var(--color-royal)]" /> : null}
+      </button>
+      <span className="text-[13px] text-[var(--color-ink)]" style={FONT}>{label}</span>
+    </label>
+  );
+}
+
+/* ── Set tools modal ─────────────────────────────────────────────── */
+const SetToolsModal: React.FC<{
+  open: boolean;
+  initial: AgentTools;
+  onClose: () => void;
+  onSave: (value: AgentTools) => void;
+}> = ({ open, initial, onClose, onSave }) => {
+  const [value, setValue] = React.useState<AgentTools>(initial);
+
+  React.useEffect(() => { if (open) setValue(initial); }, [open, initial]);
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-[16px]">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative flex w-full max-w-[640px] flex-col gap-[18px] rounded-[16px] bg-background p-[24px] shadow-[0px_20px_60px_-12px_oklch(0_0_0_/_0.32)]"
+      >
+        <div className="flex flex-col gap-[6px]">
+          <h2 className="text-[20px] font-bold text-[var(--color-ink)]" style={FONT}>Configure agent tools</h2>
+          <p className="text-[13px] leading-[19px] text-[var(--color-grey)]" style={FONT}>
+            Choose which domains and capabilities this agent can access, and who can use it.
+          </p>
+        </div>
+
+        <div className="rounded-[12px] bg-[var(--color-surface-0)] px-[14px] py-[14px]">
+          <div className="flex flex-col gap-[16px]">
+            <div className="flex flex-col gap-[6px]">
+              <span className={TOOL_COLUMN_HEADING} style={FONT}>Domains</span>
+              <ToolCheckbox
+                label="Campaigns"
+                checked={value.domains.campaigns}
+                onChange={() => setValue((prev) => ({ ...prev, domains: { ...prev.domains, campaigns: !prev.domains.campaigns } }))}
+              />
+              <ToolCheckbox
+                label="Journeys"
+                checked={value.domains.journeys}
+                onChange={() => setValue((prev) => ({ ...prev, domains: { ...prev.domains, journeys: !prev.domains.journeys } }))}
+              />
+              <ToolCheckbox
+                label="Segments"
+                checked={value.domains.segments}
+                onChange={() => setValue((prev) => ({ ...prev, domains: { ...prev.domains, segments: !prev.domains.segments } }))}
+              />
+            </div>
+
+            <div className="flex flex-col gap-[6px]">
+              <span className={TOOL_COLUMN_HEADING} style={FONT}>Capabilities</span>
+              <ToolCheckbox
+                label="Generate reports"
+                checked={value.capabilities.generateReports}
+                onChange={() => setValue((prev) => ({ ...prev, capabilities: { ...prev.capabilities, generateReports: !prev.capabilities.generateReports } }))}
+              />
+              <ToolCheckbox
+                label="Brand Wiki"
+                checked={value.capabilities.brandWiki}
+                onChange={() => setValue((prev) => ({ ...prev, capabilities: { ...prev.capabilities, brandWiki: !prev.capabilities.brandWiki } }))}
+              />
+              <ToolCheckbox
+                label="Deep research"
+                checked={value.capabilities.deepResearch}
+                onChange={() => setValue((prev) => ({ ...prev, capabilities: { ...prev.capabilities, deepResearch: !prev.capabilities.deepResearch } }))}
+              />
+              <ToolCheckbox
+                label="Memory"
+                checked={value.capabilities.memory}
+                onChange={() => setValue((prev) => ({ ...prev, capabilities: { ...prev.capabilities, memory: !prev.capabilities.memory } }))}
+              />
+            </div>
+
+            <div className="flex flex-col gap-[6px]">
+              <span className={TOOL_COLUMN_HEADING} style={FONT}>Visibility</span>
+              <ToolRadio
+                label="Private (only me)"
+                checked={value.visibility === 'private'}
+                onChange={() => setValue((prev) => ({ ...prev, visibility: 'private' }))}
+              />
+              <ToolRadio
+                label="Workspace (whole team)"
+                checked={value.visibility === 'workspace'}
+                onChange={() => setValue((prev) => ({ ...prev, visibility: 'workspace' }))}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-[10px]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-[38px] items-center rounded-[9px] border border-[var(--color-line)] px-[16px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
+            style={FONT}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(value)}
+            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[16px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90"
+            style={FONT}
+          >
+            Save tools
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+function ToolsSummary({ tools }: { tools: AgentTools }) {
+  const domainItems = [
+    tools.domains.campaigns ? 'Campaigns' : null,
+    tools.domains.journeys ? 'Journeys' : null,
+    tools.domains.segments ? 'Segments' : null,
+  ].filter((item): item is string => !!item);
+
+  const capabilityItems = [
+    tools.capabilities.generateReports ? 'Generate reports' : null,
+    tools.capabilities.brandWiki ? 'Brand Wiki' : null,
+    tools.capabilities.deepResearch ? 'Deep research' : null,
+    tools.capabilities.memory ? 'Memory' : null,
+  ].filter((item): item is string => !!item);
+
+  const visibilityLabel =
+    tools.visibility === 'workspace' ? 'Workspace (whole team)' : 'Private (only me)';
+
+  const hasSelections = domainItems.length > 0 || capabilityItems.length > 0;
+
+  if (!hasSelections) {
+    return (
+      <p className="text-[13px] leading-[19px] text-[var(--color-grey-soft)]" style={FONT}>
+        Configure domains, capabilities, and visibility for this agent
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-[14px]">
+      {domainItems.length > 0 ? (
+        <div>
+          <span className={TOOL_COLUMN_HEADING} style={FONT}>Domains</span>
+          <ul className="mt-[6px] flex flex-col gap-[4px]">
+            {domainItems.map((item) => (
+              <li key={item} className="text-[13px] leading-[19px] text-[var(--color-charcoal)]" style={FONT}>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {capabilityItems.length > 0 ? (
+        <div>
+          <span className={TOOL_COLUMN_HEADING} style={FONT}>Capabilities</span>
+          <ul className="mt-[6px] flex flex-col gap-[4px]">
+            {capabilityItems.map((item) => (
+              <li key={item} className="text-[13px] leading-[19px] text-[var(--color-charcoal)]" style={FONT}>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div>
+        <span className={TOOL_COLUMN_HEADING} style={FONT}>Visibility</span>
+        <p className="mt-[6px] text-[13px] leading-[19px] text-[var(--color-charcoal)]" style={FONT}>
+          {visibilityLabel}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Set starter questions modal ─────────────────────────────────── */
+const SetStarterQuestionsModal: React.FC<{
+  open: boolean;
+  initial: string[];
+  onClose: () => void;
+  onSave: (value: string[]) => void;
+}> = ({ open, initial, onClose, onSave }) => {
+  const [questions, setQuestions] = React.useState<string[]>(initial);
+
+  React.useEffect(() => { if (open) setQuestions(initial.length > 0 ? initial : ['']); }, [open, initial]);
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const updateQuestion = (index: number, next: string) => {
+    setQuestions((prev) => prev.map((question, i) => (i === index ? next : question)));
+  };
+
+  const removeQuestion = (index: number) => {
+    setQuestions((prev) => (prev.length <= 1 ? [''] : prev.filter((_, i) => i !== index)));
+  };
+
+  const addQuestion = () => setQuestions((prev) => [...prev, '']);
+
+  const handleSave = () => {
+    onSave(questions.map((question) => question.trim()).filter(Boolean));
+    onClose();
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-[16px]">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative flex w-full max-w-[640px] flex-col gap-[18px] rounded-[16px] bg-background p-[24px] shadow-[0px_20px_60px_-12px_oklch(0_0_0_/_0.32)]"
+      >
+        <div className="flex flex-col gap-[6px]">
+          <h2 className="text-[20px] font-bold text-[var(--color-ink)]" style={FONT}>Starter questions</h2>
+          <p className="text-[13px] leading-[19px] text-[var(--color-grey)]" style={FONT}>
+            Shown instead of generic suggestions whenever this agent is bound to the chat, so users start with questions the agent is built for.
+          </p>
+        </div>
+
+        <div className="flex max-h-[320px] flex-col gap-[8px] overflow-y-auto pr-[2px]">
+          {questions.map((question, index) => (
+            <div key={index} className="flex items-center gap-[8px]">
+              <input
+                value={question}
+                onChange={(e) => updateQuestion(index, e.target.value)}
+                placeholder="Enter a starter question"
+                className="h-[40px] min-w-0 flex-1 rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
+                style={FONT}
+              />
+              <button
+                type="button"
+                onClick={() => removeQuestion(index)}
+                aria-label="Remove question"
+                className="flex size-[34px] shrink-0 items-center justify-center rounded-[8px] text-[var(--color-grey)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)] hover:text-[var(--color-ink)]"
+              >
+                <X className="size-[15px]" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={addQuestion}
+          className="inline-flex h-[36px] w-fit items-center gap-[6px] rounded-[9px] border border-[var(--color-line)] px-[12px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
+          style={FONT}
+        >
+          <Plus className="size-[15px]" />
+          Add question
+        </button>
+
+        <div className="flex items-center justify-end gap-[10px]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-[38px] items-center rounded-[9px] border border-[var(--color-line)] px-[16px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
+            style={FONT}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[16px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90"
+            style={FONT}
+          >
+            Save questions
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+function StarterQuestionsSummary({ questions }: { questions: string[] }) {
+  if (questions.length === 0) {
+    return (
+      <p className="text-[13px] leading-[19px] text-[var(--color-grey-soft)]" style={FONT}>
+        Add starter questions users can click to begin a conversation
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-[8px]">
+      <div className="max-h-[132px] overflow-y-auto rounded-[10px] border border-[var(--color-line-input)] bg-[var(--color-royal-pale-soft)] px-[12px] py-[10px]">
+        <ul className="flex flex-col gap-[6px]">
+          {questions.map((question, index) => (
+            <li key={`${index}-${question}`} className="text-[13px] leading-[19px] text-[var(--color-charcoal)]" style={FONT}>
+              {question}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <p className="text-[12px] leading-[17px] text-[var(--color-grey-soft)]" style={FONT}>
+        Shown instead of the generic suggestions whenever this agent is bound to the chat, so users start with questions the agent is built for.
+      </p>
+    </div>
+  );
+}
+
 /* ── Detail page ─────────────────────────────────────────────────── */
 const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
   agent,
@@ -216,9 +593,13 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
   const [instructionsOpen, setInstructionsOpen] = React.useState(false);
+  const [toolsOpen, setToolsOpen] = React.useState(false);
+  const [starterQuestionsOpen, setStarterQuestionsOpen] = React.useState(false);
   const [textContentOpen, setTextContentOpen] = React.useState(false);
   const [filesMenuOpen, setFilesMenuOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const agentTools = agent.tools ?? DEFAULT_AGENT_TOOLS;
+  const starterQuestions = agent.starterQuestions ?? [];
   // Ids of files currently "uploading" — they render as skeleton rows until the
   // simulated upload settles (mirrors ChatInput's mock upload).
   const [uploadingIds, setUploadingIds] = React.useState<Set<string>>(new Set());
@@ -458,7 +839,7 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
             )}
           </div>
 
-          {/* Instructions + Files card */}
+          {/* Instructions + Files + Tools + Starter questions card */}
           <div className="flex flex-col rounded-[16px] border border-[var(--color-line-input)] bg-card overflow-hidden">
             {/* Instructions */}
             <div className="flex flex-col border-b border-[var(--color-line)]">
@@ -479,7 +860,7 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
                 className="px-[18px] pb-[16px] text-left"
               >
                 {agent.instructions ? (
-                  <p className="line-clamp-4 text-[13px] leading-[19px] text-[var(--color-charcoal)] whitespace-pre-wrap" style={FONT}>
+                  <p className="line-clamp-3 break-words text-[13px] leading-[19px] text-[var(--color-charcoal)] whitespace-pre-wrap" style={FONT}>
                     {agent.instructions}
                   </p>
                 ) : (
@@ -596,6 +977,52 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Tools */}
+            <div className="flex flex-col border-t border-[var(--color-line)]">
+              <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
+                <span className="text-[15px] font-semibold text-[var(--color-ink)]" style={FONT}>Tools</span>
+                <button
+                  type="button"
+                  onClick={() => setToolsOpen(true)}
+                  aria-label="Edit tools"
+                  className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+                >
+                  <Pencil className="size-[15px]" />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setToolsOpen(true)}
+                className="px-[18px] pb-[16px] text-left"
+              >
+                <ToolsSummary tools={agentTools} />
+              </button>
+            </div>
+
+            {/* Starter questions */}
+            <div className="flex flex-col border-t border-[var(--color-line)]">
+              <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
+                <span className="text-[15px] font-semibold text-[var(--color-ink)]" style={FONT}>
+                  Starter questions <span className="font-medium text-[var(--color-grey-soft)]">(optional)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setStarterQuestionsOpen(true)}
+                  aria-label="Edit starter questions"
+                  className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+                >
+                  <Pencil className="size-[15px]" />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStarterQuestionsOpen(true)}
+                className="px-[18px] pb-[16px] text-left"
+              >
+                <StarterQuestionsSummary questions={starterQuestions} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -614,6 +1041,20 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
         initial={agent.instructions}
         onClose={() => setInstructionsOpen(false)}
         onSave={(value) => { onUpdateAgent(agent.id, { instructions: value, updatedAt: 'now' }); setInstructionsOpen(false); }}
+      />
+
+      <SetToolsModal
+        open={toolsOpen}
+        initial={agentTools}
+        onClose={() => setToolsOpen(false)}
+        onSave={(value) => { onUpdateAgent(agent.id, { tools: value, updatedAt: 'now' }); setToolsOpen(false); }}
+      />
+
+      <SetStarterQuestionsModal
+        open={starterQuestionsOpen}
+        initial={starterQuestions}
+        onClose={() => setStarterQuestionsOpen(false)}
+        onSave={(value) => { onUpdateAgent(agent.id, { starterQuestions: value, updatedAt: 'now' }); setStarterQuestionsOpen(false); }}
       />
 
       <AddTextContentModal

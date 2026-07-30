@@ -221,7 +221,7 @@ const SchedulerPage: React.FC<SchedulerPageProps> = ({
   };
   const openEdit = (s: ScheduleItem) => {
     setEditingId(s.id);
-    setPrefill({ reportId: s.reportId, cadence: s.cadence, cron: s.cron, recipients: s.recipients });
+    setPrefill({ reportId: s.reportId, name: s.title, cadence: s.cadence, cron: s.cron, recipients: s.recipients });
     setDialogOpen(true);
   };
 

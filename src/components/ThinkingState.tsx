@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Brain, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,25 +28,27 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
   ];
 
   const thinkingRationale = reasoningSteps || defaultReasoningSteps;
+  const completedRef = useRef(false);
 
-  // Show text after a short delay (after dots appear)
   useEffect(() => {
+    completedRef.current = false;
+    setIsThinking(true);
+    setElapsedTime(0);
+    setShowText(false);
+
     const textTimer = setTimeout(() => {
       setShowText(true);
-    }, 500); // Show text 500ms after dots
+    }, 500);
 
-    return () => clearTimeout(textTimer);
-  }, []);
-
-  useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedTime(prev => {
+      setElapsedTime((prev) => {
         const newTime = prev + 0.1;
         if (newTime >= thinkingDuration) {
           clearInterval(interval);
-          setIsThinking(false);
-          if (onComplete) {
-            onComplete();
+          if (!completedRef.current) {
+            completedRef.current = true;
+            setIsThinking(false);
+            onComplete?.();
           }
           return thinkingDuration;
         }
@@ -54,7 +56,10 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
       });
     }, 100);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(textTimer);
+      clearInterval(interval);
+    };
   }, [thinkingDuration, onComplete]);
 
   return (

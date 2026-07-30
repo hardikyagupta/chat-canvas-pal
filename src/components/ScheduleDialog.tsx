@@ -40,9 +40,13 @@ let scheduleCounter = 0;
 /** Optional starting values (e.g. from tapping a suggested schedule). */
 export interface SchedulePrefill {
   reportId?: string;
+  /** Schedule display name — pre-filled when scheduling from a generated doc. */
+  name?: string;
   cadence?: ScheduleCadence;
   cron?: string;
   recipients?: string[];
+  /** Hide the report picker when the report is already implied (e.g. from a doc). */
+  lockReport?: boolean;
 }
 
 interface ScheduleDialogProps {
@@ -60,6 +64,7 @@ interface ScheduleDialogProps {
  * (a soft hint on invalid addresses — deliberately not a raw validation dump).
  */
 const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, reports, onCreate, prefill }) => {
+  const [scheduleName, setScheduleName] = useState('');
   const [reportId, setReportId] = useState<string>('');
   const [cadence, setCadence] = useState<ScheduleCadence>('weekly');
   const [cron, setCron] = useState('');
@@ -69,6 +74,7 @@ const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, rep
   // a plain "New schedule" passes no prefill and opens with defaults.
   useEffect(() => {
     if (open) {
+      setScheduleName(prefill?.name ?? '');
       setReportId(prefill?.reportId ?? '');
       setCadence(prefill?.cadence ?? 'weekly');
       setCron(prefill?.cron ?? '');
@@ -82,9 +88,13 @@ const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, rep
 
   const cronNeeded = cadence === 'custom';
   const canCreate =
-    !!reportId && valid.length > 0 && (!cronNeeded || cron.trim().length > 0);
+    scheduleName.trim().length > 0 &&
+    !!reportId &&
+    valid.length > 0 &&
+    (!cronNeeded || cron.trim().length > 0);
 
   const reset = () => {
+    setScheduleName('');
     setReportId('');
     setCadence('weekly');
     setCron('');
@@ -106,7 +116,7 @@ const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, rep
     const item: ScheduleItem = {
       id: `s-${Date.now()}-${scheduleCounter++}`,
       reportId: report.id,
-      title: report.title,
+      title: scheduleName.trim() || report.title,
       fileType: report.fileType,
       cadence,
       cadenceLabel: cronNeeded ? `Custom — ${trimmedCron}` : option.label,
@@ -120,7 +130,7 @@ const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, rep
 
     onCreate(item);
     toast.success('Schedule created', {
-      description: `${report.title} · ${item.cadenceLabel}`,
+      description: `${item.title} · ${item.cadenceLabel}`,
     });
     handleOpenChange(false);
   };
@@ -140,7 +150,21 @@ const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, rep
         </DialogHeader>
 
         <div className="flex flex-col gap-[16px]">
+          {/* Name */}
+          <div className="flex flex-col gap-[6px]">
+            <label className={fieldLabel} style={MANROPE}>Name of the schedule</label>
+            <input
+              type="text"
+              value={scheduleName}
+              onChange={(e) => setScheduleName(e.target.value)}
+              placeholder="e.g. Weekly channel performance"
+              className="h-[40px] rounded-[10px] border border-[var(--color-line-input)] bg-white px-[14px] text-[14px] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-grey-soft)] focus:border-[var(--color-royal)] transition-colors"
+              style={MANROPE}
+            />
+          </div>
+
           {/* Report */}
+          {!prefill?.lockReport ? (
           <div className="flex flex-col gap-[6px]">
             <label className={fieldLabel} style={MANROPE}>Report</label>
             <Select value={reportId} onValueChange={setReportId}>
@@ -156,6 +180,7 @@ const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, rep
               </SelectContent>
             </Select>
           </div>
+          ) : null}
 
           {/* Cadence */}
           <div className="flex flex-col gap-[6px]">

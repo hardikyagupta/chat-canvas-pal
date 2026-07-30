@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Download, Maximize2, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Calendar, Check, Copy, Download, FileText, Maximize2, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 /**
  * DeepResearchDoc — the finished deep-research report shown inline once the
@@ -22,9 +25,13 @@ interface DeepResearchDocProps {
   onDownload?: () => void;
   /** Open the report in the RHS artifact panel. */
   onExpand?: () => void;
-  /** When provided, a thumbs feedback row shows below the revealed doc. */
+  /** Show copy + thumbs feedback below the doc (ChatGPT-style). */
+  showFeedback?: boolean;
   onThumbsUp?: () => void;
   onThumbsDown?: () => void;
+  /** Show a create-schedule CTA below the doc card. */
+  showCreateSchedule?: boolean;
+  onCreateSchedule?: () => void;
 }
 
 export const DocBody: React.FC<Pick<DeepResearchDocProps, 'title' | 'summaryHeading' | 'paragraphs'>> = ({
@@ -76,6 +83,121 @@ const DocSkeleton: React.FC = () => (
   </div>
 );
 
+function stripHtml(html: string) {
+  return html.replace(/<[^>]+>/g, '');
+}
+
+function DocFeedbackRow({
+  copyText,
+  onThumbsUp,
+  onThumbsDown,
+}: {
+  copyText: string;
+  onThumbsUp?: () => void;
+  onThumbsDown?: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [copyTipOpen, setCopyTipOpen] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(copyText);
+      setCopied(true);
+      setCopyTipOpen(true);
+      window.setTimeout(() => {
+        setCopied(false);
+        setCopyTipOpen(false);
+      }, 1600);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
+  return (
+    <div className="flex w-full justify-start border-t border-[var(--color-line)] pt-3">
+      <div className="flex items-center gap-1 text-[var(--color-grey-soft)]">
+        <TooltipProvider delayDuration={200}>
+          <Tooltip open={copyTipOpen} onOpenChange={(open) => { if (!copied) setCopyTipOpen(open); }}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto rounded-md p-2 hover:bg-muted hover:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                onClick={handleCopy}
+                aria-label={copied ? 'Copied' : 'Copy'}
+              >
+                <span className="relative inline-flex h-3.5 w-3.5 items-center justify-center">
+                  <Copy
+                    className={cn(
+                      'absolute h-3.5 w-3.5 transition-all duration-200 ease-out',
+                      copied ? 'scale-50 opacity-0' : 'scale-100 opacity-100'
+                    )}
+                  />
+                  <Check
+                    className={cn(
+                      'absolute h-3.5 w-3.5 text-[var(--color-success)] transition-all duration-200 ease-out',
+                      copied ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+                    )}
+                  />
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="border-0 bg-foreground px-[8px] py-[4px] text-background"
+              style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+            >
+              <span className="text-[12px] leading-[16px]">{copied ? 'Copied!' : 'Copy'}</span>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onThumbsUp}
+                className="h-auto rounded-md p-2 hover:bg-[color-mix(in_oklab,var(--color-success)_10%,transparent)] hover:text-[var(--color-success)] focus-visible:ring-0 focus-visible:ring-offset-0"
+                aria-label="Good response"
+              >
+                <ThumbsUp className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="border-0 bg-foreground px-[8px] py-[4px] text-[12px] leading-[16px] text-background"
+              style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+            >
+              Good response
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onThumbsDown}
+                className="h-auto rounded-md p-2 hover:bg-destructive/10 hover:text-destructive focus-visible:ring-0 focus-visible:ring-offset-0"
+                aria-label="Bad response"
+              >
+                <ThumbsDown className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="border-0 bg-foreground px-[8px] py-[4px] text-[12px] leading-[16px] text-background"
+              style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+            >
+              Bad response
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </div>
+  );
+}
+
 const DeepResearchDoc: React.FC<DeepResearchDocProps> = ({
   title,
   citations,
@@ -84,8 +206,11 @@ const DeepResearchDoc: React.FC<DeepResearchDocProps> = ({
   skeletonMs = 1200,
   onDownload,
   onExpand,
+  showFeedback = false,
   onThumbsUp,
   onThumbsDown,
+  showCreateSchedule = false,
+  onCreateSchedule,
 }) => {
   const [ready, setReady] = useState(false);
 
@@ -96,6 +221,14 @@ const DeepResearchDoc: React.FC<DeepResearchDocProps> = ({
   }, [skeletonMs]);
 
   if (!ready) return <DocSkeleton />;
+
+  const copyText = [
+    title,
+    '',
+    summaryHeading,
+    '',
+    ...paragraphs.map(stripHtml),
+  ].join('\n');
 
   return (
     <div className="flex w-full flex-col gap-[12px] animate-in fade-in duration-500">
@@ -144,27 +277,25 @@ const DeepResearchDoc: React.FC<DeepResearchDocProps> = ({
         </div>
       </div>
 
-      {/* Feedback — sits below the finished doc (ChatGPT-style thumbs). */}
-      {(onThumbsUp || onThumbsDown) && (
-        <div className="flex items-center gap-1 text-[var(--color-grey-soft)]">
-          <button
-            type="button"
-            onClick={onThumbsUp}
-            aria-label="Good response"
-            className="flex items-center justify-center p-2 rounded-md transition-colors hover:text-[var(--color-success)] hover:bg-[color-mix(in_oklab,var(--color-success)_10%,transparent)]"
-          >
-            <ThumbsUp className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onThumbsDown}
-            aria-label="Bad response"
-            className="flex items-center justify-center p-2 rounded-md transition-colors hover:text-destructive hover:bg-destructive/10"
-          >
-            <ThumbsDown className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
+      {showCreateSchedule ? (
+        <button
+          type="button"
+          onClick={onCreateSchedule}
+          className="inline-flex h-[36px] w-fit items-center gap-[8px] rounded-[8px] border border-[var(--color-line-input)] bg-card px-[12px] text-[13px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface-0)]"
+          style={MANROPE}
+        >
+          <Calendar className="size-[15px] text-[var(--color-royal)]" strokeWidth={1.75} />
+          Create schedule
+        </button>
+      ) : null}
+
+      {showFeedback ? (
+        <DocFeedbackRow
+          copyText={copyText}
+          onThumbsUp={onThumbsUp}
+          onThumbsDown={onThumbsDown}
+        />
+      ) : null}
     </div>
   );
 };
