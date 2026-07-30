@@ -406,8 +406,25 @@ const WikiFileRow: React.FC<{
   </div>
 );
 
-const PersonalizationPanel: React.FC = () => {
-  const [tab, setTab] = React.useState<PersonalizationTab>('profile');
+// Exported (not just used internally) so SettingsModalV2 — the early-release,
+// LHS-less settings surface — can reuse the exact same profile/brand-wiki panel
+// instead of duplicating this logic.
+export const PersonalizationPanel: React.FC<{
+  /** V2 renders its own title/description in a header row aligned with the
+   * modal's close button, so it hides this panel's internal copy of them to
+   * avoid showing the heading twice. V1 (nav rail + content pane) leaves it
+   * on — there, this heading is the only place the title appears. */
+  hideHeading?: boolean;
+  /** V2's early release only ships the brand wiki (no profile fields yet), so
+   * a two-item tab switcher would be one dead tab. Locks the view to the wiki
+   * and swaps the tab bar for a plain, non-interactive "Brand wiki" label. */
+  wikiOnly?: boolean;
+  /** V2's early release is browse-only — creating/uploading wiki entries isn't
+   * ready — so this hides the Add/Upload buttons above the wiki list, leaving
+   * just the search. V1 keeps both. */
+  hideWikiActions?: boolean;
+}> = ({ hideHeading = false, wikiOnly = false, hideWikiActions = false }) => {
+  const [tab, setTab] = React.useState<PersonalizationTab>(wikiOnly ? 'wiki' : 'profile');
 
   // Profile fields
   const [nickname, setNickname] = React.useState('');
@@ -540,35 +557,42 @@ const PersonalizationPanel: React.FC = () => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Sticky header — title, tabs, and wiki search stay fixed while list scrolls */}
-      <div className="shrink-0 flex flex-col gap-[16px] bg-[var(--color-surface-0)]">
-        <div className="flex flex-col gap-[8px]">
-          <h1 className="text-[24px] font-medium text-[var(--color-ink)]" style={FONT}>Memory &amp; personalization</h1>
-          <p className="text-[13px] text-[var(--color-grey)]" style={FONT}>
-            Manage who you are and what the assistant remembers.
-          </p>
-        </div>
+      {/* Sticky header — title, tabs, and wiki search stay fixed while list scrolls.
+          No explicit background: it must blend into whichever panel hosts it
+          (V1's surface-0 column, V2's plain white dialog) rather than opt into
+          its own tint, or it reads as a separate boxed-off header. */}
+      <div className="shrink-0 flex flex-col gap-[16px]">
+        {!hideHeading && (
+          <div className="flex flex-col gap-[8px]">
+            <h1 className="text-[24px] font-medium text-[var(--color-ink)]" style={FONT}>Memory &amp; personalization</h1>
+            <p className="text-[13px] text-[var(--color-grey)]" style={FONT}>
+              Manage who you are and what the assistant remembers.
+            </p>
+          </div>
+        )}
 
-        <div className="flex items-center gap-[24px] border-b border-[var(--color-line)]">
-          {(['profile', 'wiki'] as PersonalizationTab[]).map((t) => {
-            const on = tab === t;
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                className={cn(
-                  'relative -mb-px pb-[10px] text-[14px] transition-colors',
-                  on ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-grey)] hover:text-[var(--color-slate)]'
-                )}
-                style={FONT}
-              >
-                {TAB_LABEL[t]}
-                {on && <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[var(--color-ink)]" />}
-              </button>
-            );
-          })}
-        </div>
+        {!wikiOnly && (
+          <div className="flex items-center gap-[24px] border-b border-[var(--color-line)]">
+            {(['profile', 'wiki'] as PersonalizationTab[]).map((t) => {
+              const on = tab === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTab(t)}
+                  className={cn(
+                    'relative -mb-px pb-[10px] text-[14px] transition-colors',
+                    on ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-grey)] hover:text-[var(--color-slate)]'
+                  )}
+                  style={FONT}
+                >
+                  {TAB_LABEL[t]}
+                  {on && <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[var(--color-ink)]" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {tab === 'wiki' && (
           <div className="flex items-center gap-[10px] pb-[4px]">
@@ -582,31 +606,35 @@ const PersonalizationPanel: React.FC = () => {
                 style={FONT}
               />
             </div>
-            <button
-              type="button"
-              onClick={openAdd}
-              className="flex h-[38px] shrink-0 items-center gap-[6px] rounded-[9px] bg-[var(--color-ink)] px-[14px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90"
-              style={FONT}
-            >
-              <Plus className="size-[15px]" />
-              Add
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".txt,.md,.markdown,.csv,.json,.html,.htm,.rtf,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,text/*"
-              className="hidden"
-              onChange={onUpload}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex h-[38px] shrink-0 items-center gap-[6px] rounded-[9px] border border-[var(--color-line-input)] bg-card px-[14px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-              style={FONT}
-            >
-              <Upload className="size-[15px]" />
-              Upload
-            </button>
+            {!hideWikiActions && (
+              <>
+                <button
+                  type="button"
+                  onClick={openAdd}
+                  className="flex h-[38px] shrink-0 items-center gap-[6px] rounded-[9px] bg-[var(--color-ink)] px-[14px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90"
+                  style={FONT}
+                >
+                  <Plus className="size-[15px]" />
+                  Add
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".txt,.md,.markdown,.csv,.json,.html,.htm,.rtf,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,text/*"
+                  className="hidden"
+                  onChange={onUpload}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex h-[38px] shrink-0 items-center gap-[6px] rounded-[9px] border border-[var(--color-line-input)] bg-card px-[14px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
+                  style={FONT}
+                >
+                  <Upload className="size-[15px]" />
+                  Upload
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
