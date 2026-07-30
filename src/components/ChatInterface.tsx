@@ -38,7 +38,7 @@ import SchedulerPage from './SchedulerPage';
 import CustomAgentsPage from './CustomAgentsPage';
 import CustomAgentDetail from './CustomAgentDetail';
 import CreateCustomAgentModal from './CreateCustomAgentModal';
-import { initialCustomAgents, MONTHLY_REPORT_AGENT_NAME, type CustomAgent } from '@/data/customAgents';
+import { initialCustomAgents, MONTHLY_REPORT_AGENT_NAME, DEFAULT_AGENT_TOOLS, type CustomAgent } from '@/data/customAgents';
 import { generateAgentAvatar, generateAgentOrbTheme } from '@/lib/agentAvatar';
 import type { OrbTheme } from '@/components/orb/agentOrbTheme';
 import { generatedReports } from '@/data/reports';
@@ -49,6 +49,7 @@ import { GradientShimmer } from 'gradient-shimmer';
 import MinViewLhsOverlay from './MinViewLhsOverlay';
 import ArtifactPreview from './ArtifactPreview';
 import LineNav, { LineNavItem } from './LineNav';
+import ScheduleDialog, { type SchedulePrefill } from './ScheduleDialog';
 import FeedbackModal, { FeedbackSentiment } from './FeedbackModal';
 import { ThumbsUp, ThumbsDown, CheckCircle2, TrendingUp, MousePointerClick, FileText, Activity, DollarSign, Search, RefreshCw, Megaphone, Compass } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -199,6 +200,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [showFeedbackPrompt, setShowFeedbackPrompt] = useState(false);
   const [feedbackModal, setFeedbackModal] = useState<FeedbackSentiment | null>(null);
   const [showFeedbackToast, setShowFeedbackToast] = useState(false);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [schedulePrefill, setSchedulePrefill] = useState<SchedulePrefill | undefined>();
   const feedbackToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Feedback nudge/toast occupies the band just above the input; while it's up we
   // hide the scroll-to-latest button so the two don't overlap (until dismissed).
@@ -578,6 +581,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       files: [],
       updatedAt: 'now',
       avatarSrc: generateAgentAvatar(data.name),
+      tools: DEFAULT_AGENT_TOOLS,
+      starterQuestions: [],
     };
     setCustomAgents((prev) => [agent, ...prev]);
     setSelectedAgentId(agent.id);
@@ -671,6 +676,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     handleOpenArtifactPreview();
     if (opts?.fullExpanded) setArtifactFullExpanded(true);
     setArtifactFromReports(!!opts?.fromReports);
+  };
+
+  const openScheduleFromDoc = (doc: { title: string }) => {
+    const report =
+      generatedReports.find((r) => r.doc.title === doc.title || r.title === doc.title) ??
+      generatedReports[0];
+    setSchedulePrefill({
+      reportId: report.id,
+      name: doc.title,
+      lockReport: true,
+    });
+    setScheduleDialogOpen(true);
   };
 
   const handleCloseArtifactPreview = () => {
@@ -1556,8 +1573,8 @@ The content has been updated across all channels to reflect your changes.`;
   };
 
   // Deep-research story — whatever the user sends while the deep-research chip is
-  // active, we swap in the scripted WhatsApp-performance research and drop the
-  // ChatGPT-style plan card into the thread.
+  // active, we swap in the scripted WhatsApp-performance research. A thinking
+  // beat runs first, then the ChatGPT-style plan card drops into the thread.
   const addDeepResearchTurn = (userMessage: ChatMessageData) => {
     const sentMsgIndex = messages.length;
     let planAdded = false;
@@ -2926,6 +2943,14 @@ The content has been updated across all channels to reflect your changes.`;
           />
         )}
 
+        <ScheduleDialog
+          open={scheduleDialogOpen}
+          onOpenChange={setScheduleDialogOpen}
+          reports={generatedReports}
+          onCreate={() => {}}
+          prefill={schedulePrefill}
+        />
+
         {/* Settings modal — opened from the Settings button at the bottom of the LHS rail */}
         <SettingsModal
           isOpen={settingsModalOpen}
@@ -3357,8 +3382,11 @@ The content has been updated across all channels to reflect your changes.`;
                       paragraphs={message.deepResearchDoc.paragraphs}
                       skeletonMs={message.deepResearchDoc.skeletonMs}
                       onExpand={() => openDeepResearchArtifact(message.deepResearchDoc!)}
-                      onThumbsUp={message.deepResearchDoc.docFeedback ? () => setFeedbackModal('up') : undefined}
-                      onThumbsDown={message.deepResearchDoc.docFeedback ? () => setFeedbackModal('down') : undefined}
+                      showCreateSchedule
+                      onCreateSchedule={() => openScheduleFromDoc(message.deepResearchDoc!)}
+                      showFeedback={message.deepResearchDoc.docFeedback !== false}
+                      onThumbsUp={() => setFeedbackModal('up')}
+                      onThumbsDown={() => setFeedbackModal('down')}
                     />
                   ) : message.deepResearchPlan ? (
                     // Constrained width — the plan/progress card shouldn't span the
