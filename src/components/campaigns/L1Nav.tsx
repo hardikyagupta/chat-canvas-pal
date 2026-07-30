@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "/campaign-assets/netcore-logo.svg";
+import iconAiDashboard from "/campaign-assets/nav-ai-dashboard.svg";
 import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
 import iconPinned from "/campaign-assets/nav-pinned.svg";
 import iconDashboard from "/campaign-assets/nav-dashboard.svg";
@@ -26,6 +27,7 @@ import EngageL2 from "./EngageL2";
 // is embedded in the SVG file itself, so it twinkles constantly via <img>.
 const primary = [
   { key: "pinned", icon: iconPinned, label: "Pinned" },
+  { key: "ai-dashboard", icon: iconAiDashboard, label: "AI Dashboard", route: "/ai-dashboard" },
   { key: "decisioning", icon: iconDecisioning, label: "Decisioning engine", route: "/decisioning-engine" },
   { key: "dashboard", icon: iconDashboard, label: "Dashboards" },
   { key: "engage", icon: iconEngage, label: "Engage", route: "/campaigns" },
@@ -67,7 +69,7 @@ function NavButton({
               <span className="relative h-2 w-2 rounded-full bg-[#2F68E5]" />
             </span>
           )}
-          {icon === iconDecisioning ? (
+          {icon === iconDecisioning || icon === iconAiDashboard ? (
             /* Full-color animated badge — no dimming, slightly larger. */
             <img src={icon} alt="" className="h-[26px] w-[26px]" />
           ) : (
