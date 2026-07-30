@@ -269,6 +269,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     title: 'WhatsApp Channel Performance — This Quarter',
     citations: 9,
     summaryHeading: 'Executive summary',
+    docFeedback: true,
     paragraphs: [
       "This quarter WhatsApp reached more people than any other channel but <strong>delivered the least of what it sent</strong> — over 60% of published messages never landed. The gap traces back to a handful of templates and unverified sender numbers, not the audience, which means most of it is recoverable.",
       "Email and APN are quietly carrying your qualified engagement, with near-100% delivery and the steadiest click rates. WhatsApp's raw reach is being wasted at the delivery step, so the channel looks weak on outcomes despite the largest send volume.",
@@ -1559,6 +1560,8 @@ The content has been updated across all channels to reflect your changes.`;
   // ChatGPT-style plan card into the thread.
   const addDeepResearchTurn = (userMessage: ChatMessageData) => {
     const sentMsgIndex = messages.length;
+    let planAdded = false;
+
     const planMessage: ChatMessageData = {
       type: 'chat',
       isAI: true,
@@ -1568,9 +1571,47 @@ The content has been updated across all channels to reflect your changes.`;
         steps: DEEP_RESEARCH_STORY.steps,
       },
     };
-    setMessages((prev) => [...prev, userMessage, planMessage]);
 
-    // Pin the just-sent prompt near the top so the plan reveals below it.
+    setMessages((prev) => [
+      ...prev,
+      userMessage,
+      {
+        type: 'chat',
+        isAI: true,
+        content: '',
+        isThinkingState: true,
+        thinkingDuration: 3,
+        reasoningSteps: [
+          'Understanding your research question and scope',
+          'Mapping WhatsApp delivery and engagement sources to check',
+          'Drafting a research plan before running',
+        ],
+        onAnimationComplete: () => {
+          if (planAdded) return;
+          planAdded = true;
+          setMessages((prevMsgs) => {
+            let thinkingIdx = -1;
+            for (let i = prevMsgs.length - 1; i >= 0; i--) {
+              if (prevMsgs[i].isThinkingState) {
+                thinkingIdx = i;
+                break;
+              }
+            }
+            if (thinkingIdx === -1) return [...prevMsgs, planMessage];
+            return [
+              ...prevMsgs.slice(0, thinkingIdx),
+              ...prevMsgs.slice(thinkingIdx + 1),
+              planMessage,
+            ];
+          });
+          setTimeout(() => {
+            document.getElementById(`msg-${sentMsgIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 80);
+        },
+      },
+    ]);
+
+    // Pin the just-sent prompt near the top so thinking reveals below it.
     setTimeout(() => {
       document.getElementById(`msg-${sentMsgIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
@@ -3322,7 +3363,12 @@ The content has been updated across all channels to reflect your changes.`;
                   ) : message.deepResearchPlan ? (
                     // Constrained width — the plan/progress card shouldn't span the
                     // full chat column.
-                    <div className="w-full max-w-[600px]">
+                    <div
+                      className={cn(
+                        'w-full max-w-[600px]',
+                        messages[index - 1]?.isThinkingState && '!mt-[8px]',
+                      )}
+                    >
                       <DeepResearchPlan
                         title={message.deepResearchPlan.title}
                         steps={message.deepResearchPlan.steps}
