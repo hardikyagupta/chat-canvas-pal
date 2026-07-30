@@ -147,7 +147,7 @@ export default function TopNav({
         <div className="flex flex-col gap-[3px]">
           <div className="flex items-center gap-1.5">
             <span className="font-manrope text-sm font-semibold tracking-[0.42px] text-[#17173A]">
-              Nicholas Carter
+              Amit
             </span>
             <svg className="h-3 w-3 text-[#17173A]" viewBox="0 0 12 12" fill="none">
               <path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
