@@ -7,6 +7,7 @@ import { AtmosphereProvider } from "@/contexts/AtmosphereContext";
 import { ReportThemeProvider } from "@/contexts/ReportThemeContext";
 import { DecisioningSetupProvider } from "@/contexts/DecisioningSetupContext";
 import Index from "./pages/Index";
+import AiDashboard from "./pages/AiDashboard";
 import Settings from "./pages/Settings";
 import Campaigns from "./pages/Campaigns";
 import Journeys from "./pages/Journeys";
@@ -33,6 +34,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/ai-dashboard" element={<AiDashboard />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/journeys" element={<Journeys />} />
