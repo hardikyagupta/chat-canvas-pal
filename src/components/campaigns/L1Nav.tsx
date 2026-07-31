@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "/campaign-assets/netcore-logo.svg";
-import iconAiDashboard from "/campaign-assets/nav-ai-dashboard.svg";
+import iconAiDashboard from "/campaign-assets/nav-ai-dashboard.webp";
 import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
 import iconPinned from "/campaign-assets/nav-pinned.svg";
 import iconDashboard from "/campaign-assets/nav-dashboard.svg";
