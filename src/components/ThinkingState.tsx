@@ -40,20 +40,22 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
       setShowText(true);
     }, 500);
 
+    // Drive elapsed time from a local counter and keep the state updater pure —
+    // the completion side-effects (flip to "Thought" + notify the parent) run at
+    // the top level of the tick, not inside setElapsedTime. Calling
+    // setIsThinking/onComplete from within the updater made the transition
+    // unreliable (React re-invokes updaters, e.g. under StrictMode), which left
+    // the component stuck showing "Thinking…" even after the answer had streamed.
+    let elapsed = 0;
     const interval = setInterval(() => {
-      setElapsedTime((prev) => {
-        const newTime = prev + 0.1;
-        if (newTime >= thinkingDuration) {
-          clearInterval(interval);
-          if (!completedRef.current) {
-            completedRef.current = true;
-            setIsThinking(false);
-            onComplete?.();
-          }
-          return thinkingDuration;
-        }
-        return newTime;
-      });
+      elapsed = Math.min(elapsed + 0.1, thinkingDuration);
+      setElapsedTime(elapsed);
+      if (elapsed >= thinkingDuration && !completedRef.current) {
+        completedRef.current = true;
+        clearInterval(interval);
+        setIsThinking(false);
+        onComplete?.();
+      }
     }, 100);
 
     return () => {
@@ -111,7 +113,7 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
             )}
           </div>
         )}
-        
+
         {/* Completed Phase (Collapsible Summary) */}
         {!isThinking && (
           <div className={cn(isExpanded ? 'w-full' : 'w-fit')}>
@@ -146,11 +148,3 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
     </div>
   );
 };
-
-
-
-
-
-
-
-
