@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, MoreHorizontal, Search, PanelLeftClose, ArrowRightToLine, Settings } from 'lucide-react';
+import { Plus, MoreHorizontal, Search, PanelLeftClose, ArrowRightToLine, Settings, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import ChatActionsMenu from './ChatActionsMenu';
@@ -60,6 +60,8 @@ interface LhsSidebarProps {
   activeChatId?: string | null;
   // Chat that is currently generating output — shows a live "active" indicator.
   busyChatId?: string | null;
+  // Chat with a deep research still running — shows a persistent spinner until done.
+  researchingChatId?: string | null;
   onSelectChat?: (id: string) => void;
   onNewChat?: () => void;
   onOpenCustomAgents?: () => void;
@@ -117,6 +119,7 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
   chats = defaultChats,
   activeChatId = '1',
   busyChatId = null,
+  researchingChatId = null,
   onSelectChat,
   onNewChat,
   onOpenCustomAgents,
@@ -372,7 +375,8 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
             <div className="flex flex-col gap-[2px] items-start w-full">
               {chats.filter((chat) => !deletedIds.has(chat.id)).map((chat) => {
                 const isActive = chat.id === activeChatId;
-                const isBusy = chat.id === busyChatId;
+                const isResearching = chat.id === researchingChatId;
+                const isBusy = chat.id === busyChatId && !isResearching;
                 const isRenaming = chat.id === renamingId;
                 const isMenuOpen = chat.id === menuOpenId;
                 const title = titleOverrides[chat.id] ?? chat.title;
@@ -409,8 +413,15 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
                         >
                           {title}
                         </button>
-                        {/* Right slot: live "generating" dot by default (no timestamp);
-                            three-dot menu on hover or when its menu is open. */}
+                        {/* Right slot: deep-research spinner while a research is
+                            running, otherwise the live "generating" dot; the
+                            three-dot menu takes over on hover / when open. */}
+                        {isResearching && (
+                          <Loader2
+                            className="size-[14px] shrink-0 mr-[4px] animate-spin text-[var(--color-royal)] group-hover:hidden"
+                            aria-label="Deep research running"
+                          />
+                        )}
                         {isBusy && (
                           <span className="relative flex size-[8px] shrink-0 mr-[4px]" aria-label="Generating">
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-royal)] opacity-75" />

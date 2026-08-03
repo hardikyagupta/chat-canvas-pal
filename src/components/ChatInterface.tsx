@@ -9,7 +9,12 @@ import SystemMessage from './SystemMessage';
 import ChatInput from './ChatInput';
 import ChatMessage from './ChatMessage';
 import { MarketingAgent, marketingAgents } from '@/data/agents';
-import { CONVERSATIONS, ConversationVariant, CAMPAIGNS_FLOW, AgentArtifactCardData } from '@/data/conversations';
+import { CONVERSATIONS, ConversationVariant, CAMPAIGNS_FLOW, AgentArtifactCardData, DEEP_RESEARCH_TOPICS, resolveDeepResearchOpener, type DeepResearchTopic } from '@/data/conversations';
+
+// The topic the "+"-popover deep-research mode falls back to when the typed /
+// picked prompt doesn't match a specific topic.
+const DEFAULT_DEEP_RESEARCH_TOPIC =
+  DEEP_RESEARCH_TOPICS.find((t) => t.id === 'whatsapp-performance') ?? DEEP_RESEARCH_TOPICS[0];
 import type { InsightCardContext } from '@/types/insightCard';
 import { formatInsightContent } from '@/types/insightCard';
 import AgentSwitchDivider from './AgentSwitchDivider';
@@ -140,6 +145,8 @@ interface ChatMessageData {
   deepResearchDoc?: { title: string; citations: number; summaryHeading?: string; paragraphs: string[]; skeletonMs?: number; docFeedback?: boolean };
   // The doc a plan card swaps itself into once it finishes (agent report flow).
   planResultDoc?: { title: string; citations: number; summaryHeading?: string; paragraphs: string[] };
+  // Optional Co-marketer line shown above that finished doc, framing the result.
+  planResultLeadIn?: string;
   // Suppress this message's copy/thumbs feedback row (e.g. a lead-in above a doc).
   hideFeedback?: boolean;
   // Reply chip shown above a user turn (e.g. the plan title an edit follows up on).
@@ -211,6 +218,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[] | null>(null);
   // Which turn of the campaigns flow (Insights → Segment → Journey) is next.
   const campaignsTurnRef = useRef(0);
+  // Deep-research narrative step (variant-agnostic, see DEEP_RESEARCH_TOPICS):
+  // 0 = not started, 1 = insight shown / awaiting the follow-up (two-step topics
+  // only), 2 = plan card dropped (the card self-drives from there). The active
+  // topic is remembered across the two turns. Reset on new chat / mode switch.
+  const deepResearchStoryStepRef = useRef(0);
+  const deepResearchTopicRef = useRef<DeepResearchTopic | null>(null);
   // End-of-conversation feedback: floating prompt → modal (up/down) → success toast
   const [showFeedbackPrompt, setShowFeedbackPrompt] = useState(false);
   const [feedbackModal, setFeedbackModal] = useState<FeedbackSentiment | null>(null);
@@ -271,21 +284,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // Set (to the card's title) when the user taps "Edit" on a plan card — the
   // composer switches into an editable "follow up" field carrying that reply chip.
   const [deepResearchEditTitle, setDeepResearchEditTitle] = useState<string | null>(null);
-  // The scripted deep-research story reused by the initial send and every edit.
-  const DEEP_RESEARCH_STORY = {
-    title: 'WhatsApp channel performance — this quarter',
-    steps: [
-      "Pull this quarter's WhatsApp delivery, open, and click-through rates across every campaign.",
-      "Break down where messages are lost — undelivered, blocked, and opted-out — and size the leak.",
-      "Benchmark WhatsApp against Email, SMS, and APN for the same audiences and journeys.",
-      "Identify the segments, templates, and send-times driving the strongest WhatsApp engagement.",
-      "Recommend the fixes most likely to recover delivery and lift conversions next quarter.",
-    ],
-  };
-  // The finished report, shown as a full-width doc preview once the card completes.
+  // True while a deep-research plan card is actively researching (Start → done).
+  // Drives the persistent spinner on the chat's LHS list row.
+  const [deepResearchRunning, setDeepResearchRunning] = useState(false);
+  // Fallback finished report for the plan card when a flow doesn't carry its own
+  // target doc (kept for safety — every scripted flow now sets planResultDoc).
   const DEEP_RESEARCH_DOC = {
     title: 'WhatsApp Channel Performance — This Quarter',
-    citations: 9,
+    citations: 0, // citations label hidden for the deep-research report
+
     summaryHeading: 'Executive summary',
     docFeedback: true,
     paragraphs: [
@@ -415,6 +422,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       emoji: "💰",
       header: "Revenue growth",
       chips: [
+        {
+          label: "Last 30 days revenue (marketing read)",
+          prompt: "Break down our last 30 days of revenue in plain marketing terms.",
+        },
         {
           label: "A plan to grow revenue",
           prompt:
@@ -956,6 +967,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // Pulse the active chat while it is still generating output.
   const busyLhsChatId =
     messages.length > 0 && (isGeneratingOutput || isMockAgentChatActive) ? CURRENT_CHAT_ID : null;
+  // Spin the active chat in the LHS list while a deep research is running (from
+  // the "Start" tap until the report is ready), so it reads as work-in-progress.
+  const researchingLhsChatId =
+    messages.length > 0 && deepResearchRunning ? CURRENT_CHAT_ID : null;
 
   // One line-nav entry per user turn, anchored to its message div (msg-<index>).
   const navItems: LineNavItem[] = useMemo(() => {
@@ -1089,6 +1104,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     setShowSuggestions(false);
     setDynamicSuggestions(null);
     campaignsTurnRef.current = 0;
+    deepResearchStoryStepRef.current = 0;
+    deepResearchTopicRef.current = null;
+    setDeepResearchRunning(false);
     setIsChatBookmarked(false);
     resetFeedback();
     setMockChatCompleted(false);
@@ -1367,6 +1385,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       setShowSuggestions(false);
       setDynamicSuggestions(null);
       campaignsTurnRef.current = 0;
+      deepResearchStoryStepRef.current = 0;
+      deepResearchTopicRef.current = null;
+      setDeepResearchRunning(false);
       resetFeedback();
       setIsGeneratingOutput(false);
       setMockChatCompleted(false);
@@ -1650,81 +1671,269 @@ The content has been updated across all channels to reflect your changes.`;
     mockMessageTimeoutRef.current = setTimeout(() => step(0), 500);
   };
 
-  // Deep-research story — whatever the user sends while the deep-research chip is
-  // active, we swap in the scripted WhatsApp-performance research. A thinking
-  // beat runs first, then the ChatGPT-style plan card drops into the thread.
-  const addDeepResearchTurn = (userMessage: ChatMessageData) => {
+  // Deep-research narrative — a variant-agnostic story any co-marketer chat can
+  // play (see DEEP_RESEARCH_TOPICS). A two-step topic opens with the Insights
+  // agent's fast read + a "go deeper" chip, then the follow-up spins up the
+  // research; a direct topic goes straight to the research. The research turn is
+  // a Co-marketer lead-in → thinking → a ChatGPT-style plan card that self-drives
+  // from "Start" to the finished document, so this handler stops after the card.
+  //
+  // `opener` is the topic resolved from the message when starting; on the
+  // follow-up turn it's null and the active topic comes from the ref.
+  const handleDeepResearchStory = (rawMessage: string, opener: DeepResearchTopic | null) => {
+    const topic = opener ?? deepResearchTopicRef.current;
+    if (!topic) return;
+    deepResearchTopicRef.current = topic;
+
+    // Which turn are we running? A two-step topic that's just been opened plays
+    // its Insights turn first; everything else (direct openers, and the
+    // two-step follow-up) plays the research turn.
+    const isInsightTurn = opener != null && topic.mode === 'two-step';
+
+    const insightAgent = marketingAgents.find((a) => a.id === 'insight-agent');
+    const coMarketer = marketingAgents.find((a) => a.id === 'co-marketer');
+
+    // Common send scaffolding: drop the user's turn, pin it near the top, shimmer.
     const sentMsgIndex = messages.length;
-    let planAdded = false;
-
-    const planMessage: ChatMessageData = {
+    const userMessage: ChatMessageData = {
       type: 'chat',
-      isAI: true,
-      content: '',
-      deepResearchPlan: {
-        title: DEEP_RESEARCH_STORY.title,
-        steps: DEEP_RESEARCH_STORY.steps,
-      },
+      isAI: false,
+      content: rawMessage,
+      navLabel: isInsightTurn ? topic.insightNavLabel : topic.researchNavLabel,
+      onAnimationComplete: () => {},
     };
-
-    setMessages((prev) => [
-      ...prev,
-      userMessage,
-      {
-        type: 'chat',
-        isAI: true,
-        content: '',
-        isThinkingState: true,
-        thinkingDuration: 3,
-        reasoningSteps: [
-          'Understanding your research question and scope',
-          'Mapping WhatsApp delivery and engagement sources to check',
-          'Drafting a research plan before running',
-        ],
-        onAnimationComplete: () => {
-          if (planAdded) return;
-          planAdded = true;
-          setMessages((prevMsgs) => {
-            let thinkingIdx = -1;
-            for (let i = prevMsgs.length - 1; i >= 0; i--) {
-              if (prevMsgs[i].isThinkingState) {
-                thinkingIdx = i;
-                break;
-              }
-            }
-            if (thinkingIdx === -1) return [...prevMsgs, planMessage];
-            return [
-              ...prevMsgs.slice(0, thinkingIdx),
-              ...prevMsgs.slice(thinkingIdx + 1),
-              planMessage,
-            ];
-          });
-          setTimeout(() => {
-            document.getElementById(`msg-${sentMsgIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 80);
-        },
-      },
-    ]);
-
-    // Pin the just-sent prompt near the top so thinking reveals below it.
+    setMessages((prev) => [...prev, userMessage]);
+    setShowSuggestions(false);
+    setDynamicSuggestions(null);
+    resetFeedback();
+    setMockChatCompleted(false);
+    setIsGeneratingOutput(true);
     setTimeout(() => {
       document.getElementById(`msg-${sentMsgIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
+    setInputShimmer(true);
+    if (inputShimmerTimerRef.current) clearTimeout(inputShimmerTimerRef.current);
+    inputShimmerTimerRef.current = setTimeout(() => setInputShimmer(false), 30000);
+
+    // Insight turn — switch to the Insights agent, think, answer, offer to dig in.
+    // Research turn — Co-marketer lead-in, think, then the plan card takes over.
+    const sequence: ChatMessageData[] = isInsightTurn
+      ? [
+          {
+            type: 'chat', isAI: true, content: '',
+            isAgentSwitch: true,
+            switchAgentLabel: insightAgent?.name ?? 'Insight agent',
+            reasoningSteps: topic.insightReasoningSteps,
+            avatarSrc: insightAgent?.avatarSrc, avatarIcon: insightAgent?.icon, avatarBgClass: insightAgent?.colorClass,
+          },
+          {
+            type: 'chat', isAI: true, content: '',
+            isThinkingState: true, thinkingDuration: 4,
+            reasoningSteps: topic.insightReasoningSteps,
+          },
+          {
+            type: 'chat', isAI: true,
+            agentName: insightAgent?.name,
+            avatarSrc: insightAgent?.avatarSrc, avatarIcon: insightAgent?.icon, avatarBgClass: insightAgent?.colorClass,
+            content: topic.insightOutput ?? '',
+            hidePerformanceDashboard: true,
+          },
+        ]
+      : [
+          // Thinking first — the collapsed "Thought for Xs" beat renders above
+          // the lead-in, matching the monthly-report flow (thinking → lead-in →
+          // doc). The lead-in suppresses its own feedback row so the plan card
+          // sits directly beneath the text instead of below a copy/thumbs row.
+          {
+            type: 'chat', isAI: true, content: '',
+            isThinkingState: true, thinkingDuration: 3,
+            reasoningSteps: topic.planReasoningSteps,
+          },
+          {
+            type: 'chat', isAI: true,
+            agentName: coMarketer?.name,
+            avatarSrc: coMarketer?.avatarSrc, avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass,
+            content: topic.leadIn,
+            hidePerformanceDashboard: true,
+            hideFeedback: true,
+          },
+          {
+            type: 'chat', isAI: true, content: '',
+            deepResearchPlan: topic.plan,
+            planResultDoc: topic.doc,
+            planResultLeadIn: topic.resultLeadIn,
+          },
+        ];
+
+    setIsMockAgentChatActive(true);
+    isMockAgentChatActiveRef.current = true;
+    isStoryFlowActiveRef.current = true;
+
+    const finishTurn = () => {
+      setMessages((prev) => prev.map((m) => (m.isAgentSwitch && !m.switchSettled ? { ...m, switchSettled: true } : m)));
+      setIsMockAgentChatActive(false);
+      isStoryFlowActiveRef.current = false;
+      setIsGeneratingOutput(false);
+      clearInputShimmer();
+      setMockChatCompleted(true);
+      playResponseCue();
+      if (isInsightTurn) {
+        // Advance to the follow-up turn and surface the single "go deeper" chip.
+        deepResearchStoryStepRef.current = 1;
+        if (topic.followupChip) {
+          setDynamicSuggestions([topic.followupChip]);
+          setShowSuggestions(true);
+        }
+      } else {
+        // Plan card is in the thread now and self-drives to the doc — we're done.
+        deepResearchStoryStepRef.current = 2;
+      }
+      if (mockMessageTimeoutRef.current) { clearTimeout(mockMessageTimeoutRef.current); mockMessageTimeoutRef.current = null; }
+    };
+
+    const runStep = (index: number) => {
+      if (!isMockAgentChatActiveRef.current) {
+        if (mockMessageTimeoutRef.current) { clearTimeout(mockMessageTimeoutRef.current); mockMessageTimeoutRef.current = null; }
+        return;
+      }
+      if (index >= sequence.length) { finishTurn(); return; }
+      const def = sequence[index];
+      // The switch divider isn't a ChatMessage and never fires onAnimationComplete.
+      if (def.isAgentSwitch) {
+        setMessages((prev) => [...prev, def]);
+        if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+        mockMessageTimeoutRef.current = setTimeout(() => runStep(index + 1), 2600);
+        return;
+      }
+      // The plan card renders itself and isn't a streaming message — drop it and finish.
+      if (def.deepResearchPlan) {
+        setMessages((prev) => [...prev, def]);
+        finishTurn();
+        return;
+      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          ...def,
+          onAnimationComplete: () => {
+            if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+            mockMessageTimeoutRef.current = setTimeout(() => runStep(index + 1), 650);
+          },
+        },
+      ]);
+    };
+
+    if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+    mockMessageTimeoutRef.current = setTimeout(() => runStep(0), 500);
   };
 
-  const handleDeepResearchSend = () => {
-    // Leaving deep-research mode; the plan card drives the flow from here.
+  // Deep-research turn for the "+"-popover mode: the user's prompt lands, a
+  // thinking beat runs, then a short Co-marketer lead-in frames the work before
+  // the ChatGPT-style plan card drops in (so the card never appears cold). The
+  // card self-drives from "Start" to the topic's finished document.
+  const addDeepResearchTurn = (userMessage: ChatMessageData, topic: DeepResearchTopic) => {
+    const coMarketer = marketingAgents.find((a) => a.id === 'co-marketer');
+    const sentMsgIndex = messages.length;
+
+    setMessages((prev) => [...prev, userMessage]);
+    setShowSuggestions(false);
+    setDynamicSuggestions(null);
+    resetFeedback();
+    setMockChatCompleted(false);
+    setIsGeneratingOutput(true);
+    setTimeout(() => {
+      document.getElementById(`msg-${sentMsgIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    setInputShimmer(true);
+    if (inputShimmerTimerRef.current) clearTimeout(inputShimmerTimerRef.current);
+    inputShimmerTimerRef.current = setTimeout(() => setInputShimmer(false), 30000);
+
+    // thinking → Co-marketer lead-in (feedback suppressed so the card attaches
+    // straight to the text) → the plan card.
+    const sequence: ChatMessageData[] = [
+      {
+        type: 'chat', isAI: true, content: '',
+        isThinkingState: true, thinkingDuration: 3,
+        reasoningSteps: topic.planReasoningSteps,
+      },
+      {
+        type: 'chat', isAI: true,
+        agentName: coMarketer?.name,
+        avatarSrc: coMarketer?.avatarSrc, avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass,
+        content: topic.leadIn,
+        hidePerformanceDashboard: true,
+        hideFeedback: true,
+      },
+      {
+        type: 'chat', isAI: true, content: '',
+        deepResearchPlan: topic.plan,
+        planResultDoc: topic.doc,
+        planResultLeadIn: topic.resultLeadIn,
+      },
+    ];
+
+    setIsMockAgentChatActive(true);
+    isMockAgentChatActiveRef.current = true;
+    isStoryFlowActiveRef.current = true;
+
+    const finish = () => {
+      setIsMockAgentChatActive(false);
+      isStoryFlowActiveRef.current = false;
+      setIsGeneratingOutput(false);
+      clearInputShimmer();
+      setMockChatCompleted(true);
+      playResponseCue();
+      if (mockMessageTimeoutRef.current) { clearTimeout(mockMessageTimeoutRef.current); mockMessageTimeoutRef.current = null; }
+    };
+
+    const runStep = (index: number) => {
+      if (!isMockAgentChatActiveRef.current) {
+        if (mockMessageTimeoutRef.current) { clearTimeout(mockMessageTimeoutRef.current); mockMessageTimeoutRef.current = null; }
+        return;
+      }
+      if (index >= sequence.length) { finish(); return; }
+      const def = sequence[index];
+      // The plan card renders itself and isn't a streaming message — drop it and finish.
+      if (def.deepResearchPlan) {
+        setMessages((prev) => [...prev, def]);
+        finish();
+        return;
+      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          ...def,
+          onAnimationComplete: () => {
+            if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+            mockMessageTimeoutRef.current = setTimeout(() => runStep(index + 1), 650);
+          },
+        },
+      ]);
+    };
+
+    if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+    mockMessageTimeoutRef.current = setTimeout(() => runStep(0), 500);
+  };
+
+  const handleDeepResearchSend = (message: string) => {
+    // Leaving deep-research mode; the plan card drives the flow from here. The
+    // picked / typed prompt selects the topic (WhatsApp, revenue, …); anything
+    // unrecognized falls back to the default WhatsApp research.
     setDeepResearchActive(false);
     setSelectedDeepResearchCategory(null);
     setSelectedStarterChip(null);
     setShowSuggestions(false);
     setDynamicSuggestions(null);
 
-    addDeepResearchTurn({
-      type: 'chat',
-      isAI: false,
-      content: 'A deep research on my WhatsApp channel performance this quarter',
-    });
+    const topic = resolveDeepResearchOpener(message) ?? DEFAULT_DEEP_RESEARCH_TOPIC;
+    addDeepResearchTurn(
+      {
+        type: 'chat',
+        isAI: false,
+        content: message.trim() || 'A deep research on my WhatsApp channel performance this quarter',
+      },
+      topic,
+    );
   };
 
   // Submitting the "Edit" follow-up — post the tweak as a new user turn (carrying
@@ -1732,12 +1941,16 @@ The content has been updated across all channels to reflect your changes.`;
   const handleDeepResearchFollowup = (followup: string) => {
     const replyContext = deepResearchEditTitle ?? undefined;
     setDeepResearchEditTitle(null);
-    addDeepResearchTurn({
-      type: 'chat',
-      isAI: false,
-      content: followup,
-      replyContext,
-    });
+    const topic = resolveDeepResearchOpener(followup) ?? DEFAULT_DEEP_RESEARCH_TOPIC;
+    addDeepResearchTurn(
+      {
+        type: 'chat',
+        isAI: false,
+        content: followup,
+        replyContext,
+      },
+      topic,
+    );
   };
 
   const handleSendMessage = (message: string) => {
@@ -1750,12 +1963,25 @@ The content has been updated across all channels to reflect your changes.`;
     }
     // Deep-research mode intercepts every send with the scripted research story.
     if (deepResearchActive) {
-      handleDeepResearchSend();
+      handleDeepResearchSend(message);
       return;
     }
     // Follow-up submitted from the "Edit" composer.
     if (deepResearchEditTitle) {
       handleDeepResearchFollowup(message);
+      return;
+    }
+
+    // Variant-agnostic deep-research narrative — available from any co-marketer
+    // chat (see DEEP_RESEARCH_TOPICS). A recognized opener starts a topic: a
+    // two-step topic (WhatsApp) opens with an Insights read + offer, a direct
+    // topic (revenue) goes straight to research. Step 1 means a two-step insight
+    // is up and this send is the "go deeper" follow-up. Once the plan card is
+    // dropped (step 2) we stop intercepting and the card drives itself.
+    const deepResearchOpener =
+      deepResearchStoryStepRef.current === 0 ? resolveDeepResearchOpener(message) : null;
+    if (deepResearchStoryStepRef.current === 1 || deepResearchOpener) {
+      handleDeepResearchStory(message, deepResearchOpener);
       return;
     }
 
@@ -3086,6 +3312,7 @@ The content has been updated across all channels to reflect your changes.`;
               chats={lhsChats}
               activeChatId={activeLhsChatId}
               busyChatId={busyLhsChatId}
+              researchingChatId={researchingLhsChatId}
               onNewChat={handleNewChat}
               onOpenCustomAgents={openCustomAgents}
               onOpenChats={() => setActivePage('chats')}
@@ -3508,15 +3735,32 @@ The content has been updated across all channels to reflect your changes.`;
                           // Switch the composer into "follow up" edit mode.
                           setDeepResearchEditTitle(message.deepResearchPlan!.title);
                         }}
+                        onStart={() => setDeepResearchRunning(true)}
+                        onCancel={() => setDeepResearchRunning(false)}
                         onComplete={() => {
-                          // Replace this plan card with the finished doc preview.
-                          // Agent report flows carry their own target doc.
+                          // Research finished — drop the LHS running spinner and
+                          // replace this plan card with the finished doc preview.
+                          // Agent report flows carry their own target doc. When a
+                          // result lead-in is set, a short Co-marketer line lands
+                          // above the doc so the report doesn't appear cold.
+                          setDeepResearchRunning(false);
                           const resultDoc = message.planResultDoc ?? DEEP_RESEARCH_DOC;
+                          const coMarketer = marketingAgents.find((a) => a.id === 'co-marketer');
+                          const leadIn = message.planResultLeadIn
+                            ? {
+                                type: 'chat' as const, isAI: true,
+                                agentName: coMarketer?.name,
+                                avatarSrc: coMarketer?.avatarSrc, avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass,
+                                content: message.planResultLeadIn,
+                                hidePerformanceDashboard: true,
+                                hideFeedback: true,
+                                animate: false,
+                              }
+                            : null;
+                          const docMsg: ChatMessageData = { type: 'chat', isAI: true, content: '', deepResearchDoc: resultDoc };
                           setMessages((prev) =>
-                            prev.map((m, i) =>
-                              i === index
-                                ? { type: 'chat', isAI: true, content: '', deepResearchDoc: resultDoc }
-                                : m
+                            prev.flatMap((m, i) =>
+                              i === index ? (leadIn ? [leadIn, docMsg] : [docMsg]) : [m]
                             )
                           );
                         }}
