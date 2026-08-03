@@ -31,6 +31,8 @@ interface DeepResearchPlanProps {
   steps: string[];
   /** How long each research step takes, in ms. */
   stepDurationMs?: number;
+  /** Fired when "Start" is tapped — research begins running. */
+  onStart?: () => void;
   onComplete?: () => void;
   /** Fired when "Edit" is tapped — the composer takes over for a follow-up. */
   onEdit?: () => void;
@@ -67,6 +69,7 @@ const DeepResearchPlan: React.FC<DeepResearchPlanProps> = ({
   title,
   steps,
   stepDurationMs = 2600,
+  onStart,
   onComplete,
   onEdit,
   onCancel,
@@ -81,6 +84,7 @@ const DeepResearchPlan: React.FC<DeepResearchPlanProps> = ({
   const startResearch = () => {
     setPhase('researching');
     setActiveStep(0);
+    onStart?.();
   };
 
   // Researching phase — advance one step per stepDurationMs, then finish.

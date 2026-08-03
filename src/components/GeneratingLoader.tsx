@@ -5,7 +5,7 @@ export const loaderLabels = [
   'Crunching the numbers...',
   'Analyzing channels...',
   'Compiling insights...',
-  'Building your dashboard...',
+  'Connecting the dots...',
   'Almost there...',
   'Finalizing results...',
 ];

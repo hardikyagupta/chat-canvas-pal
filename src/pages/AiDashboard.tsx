@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import L1Nav from "@/components/campaigns/L1Nav";
 import TopNav from "@/components/campaigns/TopNav";
@@ -145,39 +144,43 @@ function GetInsightsLink({ onClick }: { onClick?: () => void }) {
 
 export default function AiDashboard() {
   // Docked co-marketer chat — same mount/enter/leave choreography as the
-  // other campaigns-ecosystem pages (Campaigns, DecisioningEngine).
+  // other campaigns-ecosystem pages (Campaigns, DecisioningEngine). Every
+  // entry point (hero composer, suggestion chips, Wins/Needs-attention
+  // insight links) opens this same instance so minimizing (expanded ->
+  // widget) just docks it to the RHS instead of tearing it down.
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMounted, setChatMounted] = useState(false);
   const [chatIn, setChatIn] = useState(false);
   const [chatSession, setChatSession] = useState(0);
+  const [chatInitialExpanded, setChatInitialExpanded] = useState(false);
+  const [chatInitialMessage, setChatInitialMessage] = useState("");
+  const [chatInitialInsight, setChatInitialInsight] = useState<InsightCardContext | null>(null);
   const [isAgentsOverlayOpen, setIsAgentsOverlayOpen] = useState(false);
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(new Set());
   const [isPersonalizeOpen, setIsPersonalizeOpen] = useState(false);
   const [isPersonalized, setIsPersonalized] = useState(false);
   const { toast } = useToast();
 
-  // Full-page co-marketer modal — opened when the user types into (and sends
-  // from) the hero composer, as opposed to the docked side-panel opened by the
-  // suggestion chips. Remounted (session bump) per open so the scripted
-  // "campaigns" conversation always starts fresh against the typed message.
-  const [fullChatOpen, setFullChatOpen] = useState(false);
-  const [fullChatSession, setFullChatSession] = useState(0);
-  const [fullChatMessage, setFullChatMessage] = useState("");
-  const [fullChatInsight, setFullChatInsight] = useState<InsightCardContext | null>(null);
-
-  const handleHeroSend = (message: string) => {
-    setFullChatInsight(null);
-    setFullChatMessage(message);
-    setFullChatSession((n) => n + 1);
-    setFullChatOpen(true);
+  // Opens the docked chat fresh (new session/key) with the given starting
+  // state. If the chat is already open, the mount effect below won't refire
+  // (chatOpen wouldn't change), so bump the session here to force a remount
+  // against the new context.
+  const openDockedChat = (opts: {
+    expanded: boolean;
+    message?: string;
+    insight?: InsightCardContext | null;
+  }) => {
+    setChatInitialExpanded(opts.expanded);
+    setChatInitialMessage(opts.message ?? "");
+    setChatInitialInsight(opts.insight ?? null);
+    if (chatOpen) setChatSession((n) => n + 1);
+    setChatOpen(true);
   };
 
-  const handleOpenInsightChat = (insight: InsightCardContext) => {
-    setFullChatInsight(insight);
-    setFullChatMessage("");
-    setFullChatSession((n) => n + 1);
-    setFullChatOpen(true);
-  };
+  const handleHeroSend = (message: string) => openDockedChat({ expanded: true, message });
+
+  const handleOpenInsightChat = (insight: InsightCardContext) =>
+    openDockedChat({ expanded: true, insight });
 
   useEffect(() => {
     if (chatOpen) {
@@ -225,7 +228,11 @@ export default function AiDashboard() {
       <L1Nav active="ai-dashboard" />
 
       <div className="flex min-w-0 flex-1 flex-col p-2">
-        <TopNav label="AI Dashboard" showCoMarketerNudge={false} onOpenChat={() => setChatOpen(true)} />
+        <TopNav
+          label="AI Dashboard"
+          showCoMarketerNudge={false}
+          onOpenChat={() => openDockedChat({ expanded: false })}
+        />
 
         <div className="mt-2 flex min-h-0 flex-1 gap-2">
           <div className="scroll-slim min-w-0 flex-1 overflow-y-auto px-4 pt-6 pb-8">
@@ -249,7 +256,7 @@ export default function AiDashboard() {
                       <button
                         key={`${chip}-${i}`}
                         type="button"
-                        onClick={() => setChatOpen(true)}
+                        onClick={() => openDockedChat({ expanded: false })}
                         className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[6px] border border-[#DDE2EE] bg-white px-2 py-1.5 transition-colors hover:bg-[#F7F9FC]"
                       >
                         <img src={sparkleAi} alt="" className="h-5 w-5" />
@@ -435,9 +442,11 @@ export default function AiDashboard() {
               />
               <ChatInterface
                 key={chatSession}
-                initialExpanded={false}
+                initialExpanded={chatInitialExpanded}
                 docked
                 conversationVariant="campaigns"
+                initialMessage={chatInitialMessage || undefined}
+                initialInsightCard={chatInitialInsight ?? undefined}
                 onBotIconClick={() => setIsAgentsOverlayOpen(true)}
                 enabledAgents={enabledAgents}
                 setEnabledAgents={setEnabledAgents}
@@ -447,37 +456,6 @@ export default function AiDashboard() {
           )}
         </div>
       </div>
-
-      {/* Full-page co-marketer modal — opened from the hero composer. Same
-          scripted "campaigns" conversation as the docked panel, just carrying
-          whatever the user typed in as the opening turn (see `initialMessage`
-          on ChatInterface). */}
-      {fullChatOpen &&
-        createPortal(
-          <div className="fixed inset-0 z-[70] flex items-start justify-center gap-2 bg-[rgba(23,23,58,0.45)] p-4">
-            <MarketingAgentsOverlay
-              isOpen={isAgentsOverlayOpen}
-              onOpenChange={setIsAgentsOverlayOpen}
-              enabledAgents={enabledAgents}
-              onToggleAgent={handleToggleAgent}
-            />
-            <ChatInterface
-              key={fullChatSession}
-              initialExpanded
-              conversationVariant="campaigns"
-              initialMessage={fullChatMessage || undefined}
-              initialInsightCard={fullChatInsight ?? undefined}
-              onBotIconClick={() => setIsAgentsOverlayOpen(true)}
-              enabledAgents={enabledAgents}
-              setEnabledAgents={setEnabledAgents}
-              onCloseInterface={() => {
-                setFullChatOpen(false);
-                setFullChatInsight(null);
-              }}
-            />
-          </div>,
-          document.body
-        )}
     </div>
   );
 }

@@ -306,19 +306,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
     onInputValueChange?.(inputValue);
   }, [inputValue, onInputValueChange]);
 
-  // Deep research and custom-agent chips are mutually exclusive.
+  // Deep research and custom-agent chips are mutually exclusive: selecting an
+  // agent clears deep research. The reverse (picking deep research clears any
+  // agent chip) is handled inline where deep research is selected. We must NOT
+  // force the custom-agents flyout closed while deep research is active — doing
+  // so made the agent list unreachable, so a user who'd picked deep research
+  // could never switch to an agent ("last pick wins" was broken).
   useEffect(() => {
     if (selectedAgentChip && deepResearchActive) {
       setDeepResearchActive(false);
       onDeepResearchChange?.(false);
     }
   }, [selectedAgentChip, deepResearchActive, onDeepResearchChange]);
-
-  useEffect(() => {
-    if (deepResearchActive && agentSubOpen) {
-      setAgentSubOpen(false);
-    }
-  }, [deepResearchActive, agentSubOpen]);
 
   const calculatePopoverPosition = (atIndex: number) => {
     if (!ALLOW_AGENT_MENTION) return {};
@@ -777,12 +776,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            if (deepResearchActive) return;
+                            // Creating an agent supersedes deep research too —
+                            // clear it so the two modes stay mutually exclusive.
+                            setDeepResearchActive(false);
+                            onDeepResearchChange?.(false);
                             setAgentSubOpen(false);
                             setShowAddMenu(false);
                             onCreateAgentFromComposer?.();
                           }}
-                          disabled={deepResearchActive}
                           className="flex items-center gap-[10px] w-full rounded-[8px] px-[10px] py-[8px] text-left text-[14px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)]"
                         >
                           <Plus className="w-[16px] h-[16px] text-[var(--color-charcoal)] shrink-0" />
