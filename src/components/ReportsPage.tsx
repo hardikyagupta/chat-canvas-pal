@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, MoreHorizontal, FileText, Download, Share2, Trash2 } from 'lucide-react';
+import { Search, MoreHorizontal, FileText, Download, Share2, Trash2, CalendarClock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ReportItem } from '@/data/reports';
 import {
@@ -9,6 +9,7 @@ import {
   ActionMenuItem,
 } from '@/components/ui/action-menu';
 import DeleteChatDialog from './DeleteChatDialog';
+import ScheduleDialog, { type SchedulePrefill } from './ScheduleDialog';
 
 const MANROPE: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
 
@@ -72,7 +73,8 @@ const ReportCard: React.FC<{
   onMenuOpenChange: (open: boolean) => void;
   onOpen: () => void;
   onDelete: () => void;
-}> = ({ report, menuOpen, onMenuOpenChange, onOpen, onDelete }) => {
+  onSchedule: () => void;
+}> = ({ report, menuOpen, onMenuOpenChange, onOpen, onDelete, onSchedule }) => {
   const type = typeStyles[report.fileType];
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-[16px] border border-[var(--color-line-input)] bg-card transition-shadow hover:shadow-[0px_4px_16px_-4px_oklch(0_0_0_/_0.08)]">
@@ -139,6 +141,9 @@ const ReportCard: React.FC<{
             </button>
           </ActionMenuTrigger>
           <ActionMenuContent align="end" side="bottom">
+            <ActionMenuItem icon={CalendarClock} onSelect={onSchedule}>
+              Schedule
+            </ActionMenuItem>
             <ActionMenuItem icon={Share2} onSelect={() => shareReport(report)}>
               Share
             </ActionMenuItem>
@@ -198,6 +203,14 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedulePrefill, setSchedulePrefill] = useState<SchedulePrefill | undefined>();
+
+  const openSchedule = (report: ReportItem) => {
+    setMenuOpenId(null);
+    setSchedulePrefill({ reportId: report.id, name: report.title, lockReport: true });
+    setScheduleOpen(true);
+  };
 
   const confirmDelete = () => {
     if (deleteTarget) setDeletedIds((prev) => new Set(prev).add(deleteTarget.id));
@@ -267,6 +280,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
                     setMenuOpenId(null);
                     setDeleteTarget({ id: report.id, title: report.title });
                   }}
+                  onSchedule={() => openSchedule(report)}
                 />
               ))}
             </div>
@@ -281,6 +295,14 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
         fallbackName="this report"
         chatName={deleteTarget?.title}
         onConfirm={confirmDelete}
+      />
+
+      <ScheduleDialog
+        open={scheduleOpen}
+        onOpenChange={setScheduleOpen}
+        reports={reports}
+        onCreate={() => {}}
+        prefill={schedulePrefill}
       />
     </div>
   );

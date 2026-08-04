@@ -4163,6 +4163,11 @@ The content has been updated across all channels to reflect your changes.`;
                 hideExpandToggle={artifactFromReports}
                 bare
                 doc={activeArtifact?.kind === 'deepResearch' ? activeArtifact.doc : undefined}
+                onSchedule={
+                  activeArtifact?.kind === 'deepResearch'
+                    ? () => openScheduleFromDoc(activeArtifact.doc)
+                    : undefined
+                }
               />
             </div>
           )}
