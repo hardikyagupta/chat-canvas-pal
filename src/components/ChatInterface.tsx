@@ -69,6 +69,7 @@ import { ContentAgentSegmentAccordions } from './ContentAgentSegmentAccordions';
 import GeneratingLoader from './GeneratingLoader';
 import { BorderBeam } from 'border-beam';
 import { welcomeCardBeamStyleBlock } from './welcomeCardBeamStyles';
+import DiscoveryBanners from './DiscoveryBanners';
 
 
 // Interface for individual chat message data
@@ -593,6 +594,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // Agent attached to the home composer via "+" → "Add to agent" (shows a chip).
   const [composerAgent, setComposerAgent] = useState<{ id: string; name: string; avatarSrc?: string } | null>(null);
   const [composerCreateOpen, setComposerCreateOpen] = useState(false);
+  // Seed applied to the empty-state composer when a discovery banner is tapped.
+  // Bumping `key` remounts ChatInput so it picks up the new value / deep-research
+  // state (see handleDiscoveryBanner).
+  const [composerSeed, setComposerSeed] = useState<{ key: number; value: string; deepResearch: boolean; agentMenu: boolean }>({
+    key: 0,
+    value: '',
+    deepResearch: false,
+    agentMenu: false,
+  });
   // When a chat is launched from a custom-agent's detail page, we (a) override the
   // derived chat title with the agent's name and (b) queue the launch so the
   // scripted "Switched to <agent>" intro can play once the view has reset.
@@ -1087,6 +1097,41 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       setSelectedDeepResearchCategory(null);
     }
     setComposerAgent(agent);
+  };
+
+  // Discovery banner taps — each card wires the empty-state composer to a
+  // different entry point. Keyed by the banner id from DiscoveryBanners.tsx.
+  const handleDiscoveryBanner = (bannerId: string) => {
+    switch (bannerId) {
+      case 'custom-agents': {
+        // Open the composer's "+" menu with the Custom-agents L2 flyout expanded
+        // so the user can pick any agent themselves (rather than auto-attaching one).
+        handleComposerAgentChip(null);
+        setDeepResearchActive(false);
+        setComposerSeed((s) => ({ key: s.key + 1, value: '', deepResearch: false, agentMenu: true }));
+        break;
+      }
+      case 'deep-research-reports': {
+        // Turn on deep research (parent state + remount composer into DR mode).
+        handleComposerDeepResearchChange(true);
+        setComposerSeed((s) => ({ key: s.key + 1, value: '', deepResearch: true, agentMenu: false }));
+        break;
+      }
+      case 'schedule-reports': {
+        // Jump to the Schedule tab.
+        setActivePage('scheduler');
+        break;
+      }
+      case 'multi-agent': {
+        // Pre-type a prompt that calls on both the insights and segment agents.
+        const prompt =
+          'Get insights on what changed in my campaigns this month, then have the segment agent build target audiences from those findings.';
+        handleComposerAgentChip(null);
+        setDeepResearchActive(false);
+        setComposerSeed((s) => ({ key: s.key + 1, value: prompt, deepResearch: false, agentMenu: false }));
+        break;
+      }
+    }
   };
 
   // Resets the RHS to its default empty state so the user can start a fresh chat.
@@ -3478,7 +3523,11 @@ The content has been updated across all channels to reflect your changes.`;
                 <div className={cn(
                   "flex flex-col items-start space-y-[24px] w-full",
                   isExpanded ? "max-w-[768px]" : "max-w-full",
-                  messages.length > 0 ? "pb-8" : ""
+                  messages.length > 0 ? "pb-8" : "",
+                  // Empty state: center the greeting/composer in the space above the
+                  // discovery banner (my-auto), so it stays vertically centred while
+                  // the banner sits at the bottom.
+                  messages.length === 0 ? "my-auto" : ""
                 )}>
                 {messages.length === 0 && !isGeneratingOutput && (
                   <div className="w-full flex flex-col items-center">
@@ -3489,6 +3538,10 @@ The content has been updated across all channels to reflect your changes.`;
                       </div>
                       <div className="w-full flex flex-col gap-[16px] items-center">
                         <ChatInput
+                          key={composerSeed.key}
+                          initialValue={composerSeed.value}
+                          initialDeepResearch={composerSeed.deepResearch}
+                          initialAgentMenuOpen={composerSeed.agentMenu}
                           onSend={handleSendMessage}
                           isMockAgentChatActive={isMockAgentChatActive}
                           onStopMockConversation={stopMockConversation}
@@ -3939,6 +3992,15 @@ The content has been updated across all channels to reflect your changes.`;
                 {/* Loader is shown as a floating pill above the input (both views) — see below. */}
                 <div ref={messagesEndRef} />
                 </div>
+                {/* Discovery banners — rotating "what you can do" strip, resting at
+                    the bottom of the empty-state page. The greeting/composer above
+                    uses my-auto to stay centred; this sits below it with a bottom
+                    gap. Content lives in DiscoveryBanners.tsx. */}
+                {messages.length === 0 && !isGeneratingOutput && (
+                  <div className="w-full flex justify-center pt-[32px] pb-[24px]">
+                    <DiscoveryBanners className="w-full" onActivate={handleDiscoveryBanner} />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -4080,30 +4142,13 @@ The content has been updated across all channels to reflect your changes.`;
                       onDeepResearchChange={handleComposerDeepResearchChange}
                       onCreateAgentFromComposer={() => setComposerCreateOpen(true)}
                     />
-                    {/* Footer text below input — widget view only (expanded uses card footer) */}
-                    {!isExpanded && (
-                      <div className="flex flex-col items-center gap-1 mt-2">
-                        <p className="text-[12px] text-foreground-muted text-center">
-                          Co-marketer can make mistakes. Please double check responses
-                        </p>
-                      </div>
-                    )}
+                    {/* Footer disclaimer ("Co-marketer can make mistakes…") hidden per request. */}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Persistent card footer (expanded view) — per Figma */}
-            {isExpanded && (
-              <div className="flex flex-col items-center justify-center gap-1 py-[8px] w-full shrink-0">
-                <p
-                  className="text-[12px] text-[var(--color-grey)] text-center w-full max-w-[768px] px-[28px]"
-                  style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
-                >
-                  Co-marketer can make mistakes. Please double check responses
-                </p>
-              </div>
-            )}
+            {/* Persistent card footer disclaimer ("Co-marketer can make mistakes…") hidden per request. */}
           </div>
           {/* Artifact — WIDGET view only: full-bleed take-over of the floating window.
               (Expanded view renders the artifact as a top-level third column below.) */}
