@@ -869,21 +869,21 @@
   background-color: var(--color-surface-0);
 }
 
-/* Muted violet — deep-research category pills (distinct from starter/suggested chips). */
+/* Muted grey — deep-research category pills (distinct from starter/suggested chips). */
 .fig-chip-muted {
-  border: 0.5px solid oklch(0.78 0.06 292);
-  background-color: oklch(0.965 0.025 292);
+  border: 0.5px solid oklch(0.78 0 0);
+  background-color: oklch(0.965 0 0);
   transition: background-color 150ms ease, border-color 150ms ease;
 }
 .fig-chip-muted:hover {
-  border-color: oklch(0.7 0.08 292);
-  background-color: oklch(0.94 0.035 292);
+  border-color: oklch(0.7 0 0);
+  background-color: oklch(0.94 0 0);
 }
 .fig-chip-muted span {
-  color: oklch(0.48 0.11 292);
+  color: oklch(0.48 0 0);
 }
 .fig-chip-muted svg {
-  color: oklch(0.55 0.1 292);
+  color: oklch(0.55 0 0);
 }
 
 /* ---- Decisioning "ready" isometric illustration ---- */

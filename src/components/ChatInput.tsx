@@ -54,10 +54,10 @@ const promptChipText = "text-[var(--color-royal)]";
 
 /** Muted violet — deep-research mode chips. */
 const deepResearchChipClass =
-  "border border-[oklch(0.78_0.06_292)] shadow-[0px_0px_0px_2px_oklch(0.55_0.12_292_/_0.08)]";
+  "border border-[oklch(0.78_0_0)] shadow-[0px_0px_0px_2px_oklch(0.55_0_0_/_0.08)]";
 const deepResearchChipBg =
-  "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, oklch(0.965_0.025_292) 0%, oklch(0.91_0.04_292_/_0.55) 100%)";
-const deepResearchChipText = "text-[oklch(0.48_0.11_292)]";
+  "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, oklch(0.965_0_0) 0%, oklch(0.91_0_0_/_0.55) 100%)";
+const deepResearchChipText = "text-[oklch(0.44_0_0)]";
 
 /** Neutral grey — custom-agent chips. Deliberately colorless (no hue tint) so
  * it reads as a quiet system chip rather than a colored category pill. */
@@ -129,6 +129,14 @@ interface ChatInputProps {
   onCreateAgentFromComposer?: () => void;
   /** Pre-fills the composer with a suggested prompt the user can edit or send. */
   initialValue?: string;
+  /** Seeds deep-research mode ON at mount (used when an entry point — e.g. a
+   *  discovery banner — opens the composer straight into deep research).
+   *  Remount (change the `key`) to re-apply. */
+  initialDeepResearch?: boolean;
+  /** Opens the "+" menu with the Custom-agents L2 flyout expanded at mount, so
+   *  an entry point can drop the user straight into agent selection. Remount
+   *  (change the `key`) to re-apply. */
+  initialAgentMenuOpen?: boolean;
   /** Hides the "+" attach/agent/deep-research button — a bare placeholder + send
    *  field for minimal composer placements (e.g. the AI Dashboard hero input).
    *  Defaults to true (shown) everywhere else. */
@@ -164,14 +172,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onSelectAgentChip,
   onCreateAgentFromComposer,
   initialValue = "",
+  initialDeepResearch = false,
+  initialAgentMenuOpen = false,
   showAddButton = true,
   flat = false,
 }) => {
   const [inputValue, setInputValue] = useState(initialValue);
   const [showMentionList, setShowMentionList] = useState(false);
-  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(initialAgentMenuOpen);
   // "Custom agents" L2 flyout — opens to the right of its row on hover.
-  const [agentSubOpen, setAgentSubOpen] = useState(false);
+  const [agentSubOpen, setAgentSubOpen] = useState(initialAgentMenuOpen);
   const agentSubTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const agentMenuEnabled = agents !== undefined || !!onCreateAgentFromComposer;
   const openAgentSub = () => {
@@ -184,7 +194,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     if (agentSubTimer.current) clearTimeout(agentSubTimer.current);
     agentSubTimer.current = setTimeout(() => setAgentSubOpen(false), 140);
   };
-  const [deepResearchActive, setDeepResearchActive] = useState(false);
+  const [deepResearchActive, setDeepResearchActive] = useState(initialDeepResearch);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [mentionSearch, setMentionSearch] = useState("");
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});

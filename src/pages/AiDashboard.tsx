@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ThumbsUp, ThumbsDown, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import L1Nav from "@/components/campaigns/L1Nav";
 import TopNav from "@/components/campaigns/TopNav";
@@ -142,6 +144,42 @@ function GetInsightsLink({ onClick }: { onClick?: () => void }) {
   );
 }
 
+/** Thumbs up/down feedback shown under each wins / needs-attention item.
+ *  Once either is tapped, the icons are hidden and the page-level confirmation
+ *  pill (onSubmit) is shown. */
+function ItemFeedback({ onSubmit }: { onSubmit: () => void }) {
+  const [given, setGiven] = useState(false);
+
+  const handleFeedback = () => {
+    setGiven(true);
+    onSubmit();
+  };
+
+  // After feedback, drop the icons for this item.
+  if (given) return null;
+
+  return (
+    <div className="mt-0.5 flex items-center gap-1">
+      <button
+        type="button"
+        aria-label="Helpful"
+        onClick={handleFeedback}
+        className="flex h-6 w-6 items-center justify-center rounded-md text-[#9A9AB2] transition-colors hover:bg-[#F0F5FF] hover:text-[#2F68E5]"
+      >
+        <ThumbsUp className="h-[14px] w-[14px]" strokeWidth={1.75} />
+      </button>
+      <button
+        type="button"
+        aria-label="Not helpful"
+        onClick={handleFeedback}
+        className="flex h-6 w-6 items-center justify-center rounded-md text-[#9A9AB2] transition-colors hover:bg-[#FEEDED] hover:text-[#F05C5C]"
+      >
+        <ThumbsDown className="h-[14px] w-[14px]" strokeWidth={1.75} />
+      </button>
+    </div>
+  );
+}
+
 export default function AiDashboard() {
   // Docked co-marketer chat — same mount/enter/leave choreography as the
   // other campaigns-ecosystem pages (Campaigns, DecisioningEngine). Every
@@ -160,6 +198,19 @@ export default function AiDashboard() {
   const [isPersonalizeOpen, setIsPersonalizeOpen] = useState(false);
   const [isPersonalized, setIsPersonalized] = useState(false);
   const { toast } = useToast();
+
+  // Confirmation pill shown after thumbs feedback on a wins / needs-attention
+  // item — same DSL pill used for chat feedback (feedback-nudge-in + check).
+  const [showFeedbackPill, setShowFeedbackPill] = useState(false);
+  const feedbackPillTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleItemFeedback = () => {
+    setShowFeedbackPill(true);
+    if (feedbackPillTimer.current) clearTimeout(feedbackPillTimer.current);
+    feedbackPillTimer.current = setTimeout(() => setShowFeedbackPill(false), 3000);
+  };
+  useEffect(() => () => {
+    if (feedbackPillTimer.current) clearTimeout(feedbackPillTimer.current);
+  }, []);
 
   // Opens the docked chat fresh (new session/key) with the given starting
   // state. If the chat is already open, the mount effect below won't refire
@@ -327,6 +378,7 @@ export default function AiDashboard() {
                           </div>
                           <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{win.title}</p>
                           <p className="font-manrope text-[11px] text-[#6F6F8D]">{win.sub}</p>
+                          <ItemFeedback onSubmit={handleItemFeedback} />
                         </div>
                         <GetInsightsLink
                           onClick={() =>
@@ -357,6 +409,7 @@ export default function AiDashboard() {
                           <CategoryBadge label={item.badge} tone="red" />
                           <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{item.title}</p>
                           <p className="font-manrope text-[11px] text-[#6F6F8D]">{item.sub}</p>
+                          <ItemFeedback onSubmit={handleItemFeedback} />
                         </div>
                         <GetInsightsLink
                           onClick={() =>
@@ -404,6 +457,21 @@ export default function AiDashboard() {
               </div>
             )}
           </div>
+
+          {/* Feedback confirmation — same DSL pill used for chat feedback.
+              Portaled to <body> so no ancestor stacking/overflow can hide it. */}
+          {showFeedbackPill &&
+            createPortal(
+              <div className="fixed bottom-[24px] left-1/2 -translate-x-1/2 z-[100] flex justify-center pointer-events-none">
+                <div className="feedback-nudge-in inline-flex items-center gap-[8px] rounded-full border border-[var(--color-line)] bg-card px-[14px] py-[8px] shadow-[0px_8px_20px_-6px_oklch(0.21_0.034_263.436_/_0.22)]">
+                  <CheckCircle2 className="size-[16px] text-[var(--color-success)] shrink-0" />
+                  <span className="text-[13px] text-[var(--color-ink)] whitespace-nowrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    Feedback taken
+                  </span>
+                </div>
+              </div>,
+              document.body
+            )}
 
           <PersonalizeCoMarketerModal
             open={isPersonalizeOpen}
