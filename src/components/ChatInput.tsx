@@ -129,6 +129,14 @@ interface ChatInputProps {
   onCreateAgentFromComposer?: () => void;
   /** Pre-fills the composer with a suggested prompt the user can edit or send. */
   initialValue?: string;
+  /** Seeds deep-research mode ON at mount (used when an entry point — e.g. a
+   *  discovery banner — opens the composer straight into deep research).
+   *  Remount (change the `key`) to re-apply. */
+  initialDeepResearch?: boolean;
+  /** Opens the "+" menu with the Custom-agents L2 flyout expanded at mount, so
+   *  an entry point can drop the user straight into agent selection. Remount
+   *  (change the `key`) to re-apply. */
+  initialAgentMenuOpen?: boolean;
   /** Hides the "+" attach/agent/deep-research button — a bare placeholder + send
    *  field for minimal composer placements (e.g. the AI Dashboard hero input).
    *  Defaults to true (shown) everywhere else. */
@@ -164,14 +172,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onSelectAgentChip,
   onCreateAgentFromComposer,
   initialValue = "",
+  initialDeepResearch = false,
+  initialAgentMenuOpen = false,
   showAddButton = true,
   flat = false,
 }) => {
   const [inputValue, setInputValue] = useState(initialValue);
   const [showMentionList, setShowMentionList] = useState(false);
-  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(initialAgentMenuOpen);
   // "Custom agents" L2 flyout — opens to the right of its row on hover.
-  const [agentSubOpen, setAgentSubOpen] = useState(false);
+  const [agentSubOpen, setAgentSubOpen] = useState(initialAgentMenuOpen);
   const agentSubTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const agentMenuEnabled = agents !== undefined || !!onCreateAgentFromComposer;
   const openAgentSub = () => {
@@ -184,7 +194,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     if (agentSubTimer.current) clearTimeout(agentSubTimer.current);
     agentSubTimer.current = setTimeout(() => setAgentSubOpen(false), 140);
   };
-  const [deepResearchActive, setDeepResearchActive] = useState(false);
+  const [deepResearchActive, setDeepResearchActive] = useState(initialDeepResearch);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [mentionSearch, setMentionSearch] = useState("");
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
