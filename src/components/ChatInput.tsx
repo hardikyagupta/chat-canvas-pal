@@ -54,10 +54,10 @@ const promptChipText = "text-[var(--color-royal)]";
 
 /** Muted violet — deep-research mode chips. */
 const deepResearchChipClass =
-  "border border-[oklch(0.78_0.06_292)] shadow-[0px_0px_0px_2px_oklch(0.55_0.12_292_/_0.08)]";
+  "border border-[oklch(0.78_0_0)] shadow-[0px_0px_0px_2px_oklch(0.55_0_0_/_0.08)]";
 const deepResearchChipBg =
-  "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, oklch(0.965_0.025_292) 0%, oklch(0.91_0.04_292_/_0.55) 100%)";
-const deepResearchChipText = "text-[oklch(0.48_0.11_292)]";
+  "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, oklch(0.965_0_0) 0%, oklch(0.91_0_0_/_0.55) 100%)";
+const deepResearchChipText = "text-[oklch(0.44_0_0)]";
 
 /** Neutral grey — custom-agent chips. Deliberately colorless (no hue tint) so
  * it reads as a quiet system chip rather than a colored category pill. */
