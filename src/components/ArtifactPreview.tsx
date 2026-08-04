@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, ChevronDown, X, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Copy, Check, ChevronDown, X, ChevronsLeft, ChevronsRight, CalendarClock } from 'lucide-react';
 import { ActionMenu, ActionMenuTrigger, ActionMenuContent, ActionMenuItem } from '@/components/ui/action-menu';
 import {
   PieChart, Pie, Cell,
@@ -22,6 +22,7 @@ interface ArtifactPreviewProps {
   fileName?: string;
   title?: string;
   onClose?: () => void;              // collapse the artifact panel
+  onSchedule?: () => void;           // open the Schedule dialog for this report
   onCopy?: () => void;               // copy the artifact contents
   onDownloadMarkdown?: () => void;   // Copy ▾ → Download as Markdown
   onDownloadPdf?: () => void;        // Copy ▾ → Download as PDF
@@ -112,6 +113,7 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   fileName = 'Ui launch usage readout combined · PDF',
   title = 'Highest Engagement Last Quarter',
   onClose,
+  onSchedule,
   onCopy,
   onDownloadMarkdown,
   onDownloadPdf,
@@ -159,6 +161,17 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
               {doc?.title ?? fileName}
             </p>
           </div>
+          {/* Schedule — opens the same Schedule dialog used elsewhere (before Copy) */}
+          {onSchedule && (
+            <button
+              type="button"
+              onClick={onSchedule}
+              className="flex items-center gap-[6px] px-[10px] py-[5px] rounded-[8px] border border-[var(--color-line-input)] text-[13px] font-medium text-foreground hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
+            >
+              <CalendarClock className="size-[14px] text-[var(--color-slate)]" />
+              Schedule
+            </button>
+          )}
           {/* Copy — split button: "Copy" copies; the chevron opens the download menu */}
           <div className="flex items-center rounded-[8px] border border-[var(--color-line-input)] overflow-hidden shrink-0">
             <button
