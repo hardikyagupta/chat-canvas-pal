@@ -100,19 +100,9 @@ export const AgentToolsConfigPanel: React.FC<AgentToolsConfigPanelProps> = ({ va
           onChange={() => onChange({ ...value, capabilities: { ...value.capabilities, generateReports: !value.capabilities.generateReports } })}
         />
         <ToolCheckbox
-          label="Brand Wiki"
-          checked={value.capabilities.brandWiki}
-          onChange={() => onChange({ ...value, capabilities: { ...value.capabilities, brandWiki: !value.capabilities.brandWiki } })}
-        />
-        <ToolCheckbox
           label="Deep research"
           checked={value.capabilities.deepResearch}
           onChange={() => onChange({ ...value, capabilities: { ...value.capabilities, deepResearch: !value.capabilities.deepResearch } })}
-        />
-        <ToolCheckbox
-          label="Memory"
-          checked={value.capabilities.memory}
-          onChange={() => onChange({ ...value, capabilities: { ...value.capabilities, memory: !value.capabilities.memory } })}
         />
       </div>
 

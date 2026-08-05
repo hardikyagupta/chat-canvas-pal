@@ -52,12 +52,12 @@ const promptChipBg =
   "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, var(--color-royal-pale) 0%, oklch(0.894 0.051 266.995 / 0.6) 100%)";
 const promptChipText = "text-[var(--color-royal)]";
 
-/** Muted violet — deep-research mode chips. */
-const deepResearchChipClass =
-  "border border-[oklch(0.78_0_0)] shadow-[0px_0px_0px_2px_oklch(0.55_0_0_/_0.08)]";
+/** Deep-research mode chips — neutral, matching the default starter chips
+ * (fig-chip): flat white surface, line-strong hairline, ink text. */
+const deepResearchChipClass = "border border-[var(--color-line-strong)]";
 const deepResearchChipBg =
-  "linear-gradient(180deg, var(--color-background) 0%, oklch(1 0 0 / 0) 100%), linear-gradient(180deg, oklch(0.965_0_0) 0%, oklch(0.91_0_0_/_0.55) 100%)";
-const deepResearchChipText = "text-[oklch(0.44_0_0)]";
+  "linear-gradient(180deg, var(--color-white) 0%, var(--color-white) 100%)";
+const deepResearchChipText = "text-[var(--color-ink)]";
 
 /** Neutral grey — custom-agent chips. Deliberately colorless (no hue tint) so
  * it reads as a quiet system chip rather than a colored category pill. */

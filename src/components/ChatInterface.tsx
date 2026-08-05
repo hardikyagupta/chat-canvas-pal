@@ -644,6 +644,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     setCustomAgents((prev) => prev.filter((a) => a.id !== id));
     setSelectedAgentId((cur) => (cur === id ? null : cur));
   };
+  // Duplicates any agent (starter or custom) into a new, independent custom
+  // agent the user can edit — starter agents themselves stay read-only.
+  const cloneCustomAgent = (agent: CustomAgent) => {
+    const clone: CustomAgent = {
+      ...agent,
+      id: `agent-${Date.now()}`,
+      name: `${agent.name} (copy)`,
+      updatedAt: 'now',
+      isBuiltIn: false,
+    };
+    setCustomAgents((prev) => [clone, ...prev]);
+    setSelectedAgentId(clone.id);
+  };
   const openCustomAgents = () => { setSelectedAgentId(null); setActivePage('custom-agents'); };
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   // Minimized-view LHS overlay (opened from the widget header menu icon)
@@ -1160,6 +1173,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     setAutonomousWaitingForInput(false);
     setSelectedStarterChip(null);
     setLiveInputValue("");
+    // Reset the empty-state composer seed so a fresh chat never reopens a
+    // banner-triggered state (e.g. the Custom agents popover) or a pre-typed
+    // prompt / deep-research chip. Bumping the key forces a clean remount.
+    setDeepResearchActive(false);
+    setSelectedDeepResearchCategory(null);
+    setComposerSeed((s) => ({ key: s.key + 1, value: "", deepResearch: false, agentMenu: false }));
     setShowMinOverlay(false);
     // Tear down the artifact preview split-view
     if (artifactCloseTimerRef.current) {
@@ -3465,6 +3484,7 @@ The content has been updated across all channels to reflect your changes.`;
                       compact={!isExpanded}
                       onCreate={createCustomAgent}
                       onOpenAgent={(id) => setSelectedAgentId(id)}
+                      onCloneAgent={cloneCustomAgent}
                       onEditAgent={(id, data) => updateAgent(id, { ...data, updatedAt: 'now' })}
                       onDeleteAgent={deleteCustomAgent}
                     />

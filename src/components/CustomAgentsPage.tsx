@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, MoreHorizontal, Pencil, Trash2, Bot } from 'lucide-react';
+import { Search, MoreHorizontal, Pencil, Trash2, Bot, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AgentTools, CustomAgent } from '@/data/customAgents';
 import {
@@ -20,6 +20,7 @@ interface CustomAgentsPageProps {
   searchPlaceholder?: string;
   onCreate: (data: { name: string; description: string; tools?: AgentTools }) => void;
   onOpenAgent: (id: string) => void;
+  onCloneAgent: (agent: CustomAgent) => void;
   onEditAgent: (id: string, data: { name: string; description: string }) => void;
   onDeleteAgent: (id: string) => void;
   className?: string;
@@ -44,6 +45,29 @@ const NewAgentButton: React.FC<{ onClick: () => void; label?: string }> = ({ onC
   </button>
 );
 
+/** Enabled-domain pill (e.g. "campaigns") — read-only, shown on each agent card. */
+const ToolChip: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span
+    className="shrink-0 rounded-[6px] bg-[var(--color-surface-1)] px-[8px] py-[3px] text-[11px] leading-[14px] text-[var(--color-slate)]"
+    style={{ fontFamily: 'monospace' }}
+  >
+    {children}
+  </span>
+);
+
+/** The domains an agent's tools are scoped to, lowercased for the chip row. */
+const domainChips = (agent: CustomAgent): string[] => {
+  const domains = agent.tools?.domains;
+  if (!domains) return [];
+  return (
+    [
+      domains.campaigns && 'campaign',
+      domains.journeys && 'journey',
+      domains.segments && 'segment',
+    ].filter(Boolean) as string[]
+  );
+};
+
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <h2 className="text-[15px] font-semibold text-[var(--color-ink)]" style={MANROPE}>
     {children}
@@ -55,45 +79,61 @@ const AgentCard: React.FC<{
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onOpen: () => void;
+  onClone: () => void;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ agent, menuOpen, onMenuOpenChange, onOpen, onEdit, onDelete }) => (
-  <div className="group relative flex flex-col overflow-hidden rounded-[16px] border border-[var(--color-line-input)] bg-card transition-shadow hover:shadow-[0px_4px_16px_-4px_oklch(0_0_0_/_0.08)]">
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={`Open ${agent.name}`}
-      className="flex flex-col gap-[10px] p-[18px] text-left"
-    >
-      {agent.avatarSrc ? (
-        <img
-          src={agent.avatarSrc}
-          alt=""
-          className="size-[36px] rounded-full object-cover shrink-0"
-        />
-      ) : (
-        <span className="flex size-[36px] items-center justify-center rounded-[10px] bg-[color-mix(in_oklch,var(--color-plum)_16%,transparent)] shrink-0">
-          <Bot className="size-[20px] text-[var(--color-plum)]" />
-        </span>
-      )}
-      <span className="mt-[2px] truncate text-[16px] leading-[22px] font-semibold text-[var(--color-ink)]" style={MANROPE}>
-        {agent.name}
-      </span>
-      <span
-        className="text-[13px] leading-[19px] text-[var(--color-grey)] line-clamp-2 min-h-[38px]"
-        style={MANROPE}
+}> = ({ agent, menuOpen, onMenuOpenChange, onOpen, onClone, onEdit, onDelete }) => {
+  const chips = domainChips(agent);
+  return (
+    <div className="group relative flex flex-col overflow-hidden rounded-[16px] border border-[var(--color-line-input)] bg-card transition-shadow hover:shadow-[0px_4px_16px_-4px_oklch(0_0_0_/_0.08)]">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`Open ${agent.name}`}
+        className="flex flex-col gap-[10px] p-[18px] text-left"
       >
-        {agent.description || 'No description yet.'}
-      </span>
-      {!agent.isBuiltIn ? (
-        <span className="mt-[2px] text-[12px] leading-[16px] text-[var(--color-grey-soft)]" style={MANROPE}>
-          Edited {agent.updatedAt === 'now' ? 'just now' : `${agent.updatedAt} ago`}
+        {agent.avatarSrc ? (
+          <img
+            src={agent.avatarSrc}
+            alt=""
+            className="size-[36px] rounded-full object-cover shrink-0"
+          />
+        ) : (
+          <span className="flex size-[36px] items-center justify-center rounded-[10px] bg-[color-mix(in_oklch,var(--color-plum)_16%,transparent)] shrink-0">
+            <Bot className="size-[20px] text-[var(--color-plum)]" />
+          </span>
+        )}
+        <span className="mt-[2px] truncate text-[16px] leading-[22px] font-semibold text-[var(--color-ink)]" style={MANROPE}>
+          {agent.name}
         </span>
-      ) : null}
-    </button>
+        <span
+          className="text-[13px] leading-[19px] text-[var(--color-grey)] line-clamp-2 min-h-[38px]"
+          style={MANROPE}
+        >
+          {agent.description || 'No description yet.'}
+        </span>
+        {chips.length > 0 ? (
+          <div className="flex flex-wrap gap-[6px]">
+            {chips.map((chip) => (
+              <ToolChip key={chip}>{chip}</ToolChip>
+            ))}
+          </div>
+        ) : null}
+        {!agent.isBuiltIn ? (
+          <span className="mt-[2px] text-[12px] leading-[16px] text-[var(--color-grey-soft)]" style={MANROPE}>
+            Created {agent.updatedAt === 'now' ? 'just now' : `${agent.updatedAt} ago`}
+          </span>
+        ) : null}
+      </button>
 
-    {!agent.isBuiltIn ? (
-      <div className={cn('absolute right-[10px] top-[10px]', menuOpen ? 'block' : 'hidden group-hover:block')}>
+      <div
+        className={cn(
+          'absolute right-[10px] top-[10px]',
+          // Default (starter) cards: kebab always visible. "Your agents" (custom):
+          // hover-only, as before.
+          agent.isBuiltIn || menuOpen ? 'block' : 'hidden group-hover:block',
+        )}
+      >
         <ActionMenu open={menuOpen} onOpenChange={onMenuOpenChange} modal={false}>
           <ActionMenuTrigger asChild>
             <button
@@ -105,14 +145,20 @@ const AgentCard: React.FC<{
             </button>
           </ActionMenuTrigger>
           <ActionMenuContent align="end" side="bottom">
-            <ActionMenuItem icon={Pencil} onSelect={onEdit}>Edit details</ActionMenuItem>
-            <ActionMenuItem icon={Trash2} variant="danger" onSelect={onDelete}>Delete</ActionMenuItem>
+            {agent.isBuiltIn ? (
+              <ActionMenuItem icon={Copy} onSelect={onClone}>Clone</ActionMenuItem>
+            ) : (
+              <>
+                <ActionMenuItem icon={Pencil} onSelect={onEdit}>Edit details</ActionMenuItem>
+                <ActionMenuItem icon={Trash2} variant="danger" onSelect={onDelete}>Delete</ActionMenuItem>
+              </>
+            )}
           </ActionMenuContent>
         </ActionMenu>
       </div>
-    ) : null}
-  </div>
-);
+    </div>
+  );
+};
 
 const AgentGrid: React.FC<{
   agents: CustomAgent[];
@@ -120,9 +166,10 @@ const AgentGrid: React.FC<{
   menuOpenId: string | null;
   onMenuOpenIdChange: (id: string | null) => void;
   onOpenAgent: (id: string) => void;
+  onCloneAgent: (agent: CustomAgent) => void;
   onEditAgent: (agent: CustomAgent) => void;
   onDeleteAgent: (id: string, name: string) => void;
-}> = ({ agents, compact, menuOpenId, onMenuOpenIdChange, onOpenAgent, onEditAgent, onDeleteAgent }) => (
+}> = ({ agents, compact, menuOpenId, onMenuOpenIdChange, onOpenAgent, onCloneAgent, onEditAgent, onDeleteAgent }) => (
   <div
     className={cn(
       'grid gap-[16px]',
@@ -136,6 +183,7 @@ const AgentGrid: React.FC<{
         menuOpen={menuOpenId === agent.id}
         onMenuOpenChange={(o) => onMenuOpenIdChange(o ? agent.id : null)}
         onOpen={() => onOpenAgent(agent.id)}
+        onClone={() => { onMenuOpenIdChange(null); onCloneAgent(agent); }}
         onEdit={() => { onMenuOpenIdChange(null); onEditAgent(agent); }}
         onDelete={() => { onMenuOpenIdChange(null); onDeleteAgent(agent.id, agent.name); }}
       />
@@ -150,6 +198,7 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
   searchPlaceholder = 'Search agents',
   onCreate,
   onOpenAgent,
+  onCloneAgent,
   onEditAgent,
   onDeleteAgent,
   className,
@@ -247,6 +296,7 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
                       menuOpenId={menuOpenId}
                       onMenuOpenIdChange={setMenuOpenId}
                       onOpenAgent={onOpenAgent}
+                      onCloneAgent={onCloneAgent}
                       onEditAgent={(agent) => { setEditing(agent); setCreateOpen(true); }}
                       onDeleteAgent={(id, name) => setDeleteTarget({ id, name })}
                     />
@@ -263,6 +313,7 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
                     menuOpenId={menuOpenId}
                     onMenuOpenIdChange={setMenuOpenId}
                     onOpenAgent={onOpenAgent}
+                    onCloneAgent={onCloneAgent}
                     onEditAgent={(agent) => { setEditing(agent); setCreateOpen(true); }}
                     onDeleteAgent={(id, name) => setDeleteTarget({ id, name })}
                   />
