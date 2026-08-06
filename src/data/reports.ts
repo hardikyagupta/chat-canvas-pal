@@ -10,12 +10,20 @@ export interface ReportDoc {
   paragraphs: string[];
 }
 
+/** Where a report was generated from — drives the grouping on the Reports page. */
+export type ReportSource = 'deep-research' | 'custom-agent' | 'scheduled';
+
 export interface ReportItem {
   id: string;
   title: string;
   fileType: 'PDF' | 'DOC';
   /** Relative "generated" time, e.g. "2h", "3d". */
   time: string;
+  /** Origin category — drives grouping / filtering / the source icon. */
+  source: ReportSource;
+  /** Specific origin name shown to the user, e.g. the exact agent ("Churn Risk
+   *  Agent") or schedule ("Weekly digest"); for deep research, "Deep research". */
+  sourceLabel: string;
   doc: ReportDoc;
 }
 
@@ -25,6 +33,8 @@ export const generatedReports: ReportItem[] = [
     title: 'WhatsApp Channel Performance — This Quarter',
     fileType: 'PDF',
     time: '2h',
+    source: 'deep-research',
+    sourceLabel: 'Deep research',
     doc: {
       title: 'WhatsApp Channel Performance — This Quarter',
       citations: 9,
@@ -42,6 +52,8 @@ export const generatedReports: ReportItem[] = [
     title: 'Q3 Business Review — Campaign Snapshot',
     fileType: 'DOC',
     time: '1d',
+    source: 'scheduled',
+    sourceLabel: 'Quarterly digest',
     doc: {
       title: 'Q3 Business Review — Campaign Snapshot',
       citations: 12,
@@ -58,6 +70,8 @@ export const generatedReports: ReportItem[] = [
     title: 'CTR Anomalies — Last 30 Days',
     fileType: 'PDF',
     time: '3d',
+    source: 'deep-research',
+    sourceLabel: 'Deep research',
     doc: {
       title: 'CTR Anomalies — Last 30 Days',
       citations: 6,
@@ -74,6 +88,8 @@ export const generatedReports: ReportItem[] = [
     title: 'Seasonal Engagement Trends — Trailing 12 Months',
     fileType: 'DOC',
     time: '1w',
+    source: 'custom-agent',
+    sourceLabel: 'Trends Agent',
     doc: {
       title: 'Seasonal Engagement Trends — Trailing 12 Months',
       citations: 15,
@@ -82,6 +98,42 @@ export const generatedReports: ReportItem[] = [
         "Engagement follows a clear festival-season cadence, with the two largest lifts landing in the weeks ahead of major holidays across every channel.",
         "Campaigns launched 10–14 days before a festival peak consistently outperformed same-content sends outside those windows by a wide margin.",
         "Pre-loading creative and budget against next year's calendar is the clearest planning takeaway from the trailing-year data.",
+      ],
+    },
+  },
+  {
+    id: 'r5',
+    title: 'Churn Risk Watchlist — High-Value Segment',
+    fileType: 'PDF',
+    time: '5h',
+    source: 'custom-agent',
+    sourceLabel: 'Churn Risk Agent',
+    doc: {
+      title: 'Churn Risk Watchlist — High-Value Segment',
+      citations: 7,
+      summaryHeading: 'Executive summary',
+      paragraphs: [
+        "The retention agent flagged <strong>1,940 high-value customers</strong> trending toward churn — a 22% jump over last month, concentrated in accounts that have gone quiet after a strong first quarter.",
+        "The clearest early signal is a drop in open rate paired with zero site visits over 14 days; this pair predicts churn far better than either signal alone.",
+        "A targeted win-back with a personalised incentive to the top decile is the recommended next step, with the agent estimating a 6–9% save rate on contacted accounts.",
+      ],
+    },
+  },
+  {
+    id: 'r6',
+    title: 'Weekly Deliverability Digest',
+    fileType: 'DOC',
+    time: '2d',
+    source: 'scheduled',
+    sourceLabel: 'Weekly digest',
+    doc: {
+      title: 'Weekly Deliverability Digest',
+      citations: 4,
+      summaryHeading: 'Executive summary',
+      paragraphs: [
+        "Deliverability held at <strong>98.4% across all channels</strong> this week, steady with the trailing four-week average and comfortably above the 95% target.",
+        "One sending domain dipped briefly on Wednesday after a spike in soft bounces; it self-recovered within the day and needs no action.",
+        "Inbox placement remains strong on the primary provider, so there is headroom to scale the top-performing segment without deliverability risk.",
       ],
     },
   },
