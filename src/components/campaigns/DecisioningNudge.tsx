@@ -1,29 +1,41 @@
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
+import NudgeFooter from "./NudgeFooter";
 
 /**
  * Decisioning engine discovery nudge — a small card anchored next to the
- * decisioning entry in the L1 rail, floating up into place. Shown first on
- * the Campaigns page; closing it (sequenced by that page) reveals the
- * co-marketer nudge. Thumbnail banner on top (the animated decisioning orb
- * itself), a short blurb below, and a cross to dismiss. Clicking the card
- * opens the decisioning engine.
+ * decisioning entry in the L1 rail, floating up into place. Last of the
+ * three-step discovery sequence (AI Dashboard → Co-marketer → Decisioning),
+ * sequenced by the page that renders it. Thumbnail banner on top (the
+ * animated decisioning orb itself), a short blurb below, and a cross to
+ * dismiss the whole sequence. Clicking the card opens the decisioning engine;
+ * "Back" returns to the Co-marketer nudge, "Got it" ends the sequence.
  */
-export default function DecisioningNudge({ onClose }: { onClose: () => void }) {
+export default function DecisioningNudge({
+  onClose,
+  onBack,
+  onNext,
+}: {
+  onClose: () => void;
+  onBack: () => void;
+  onNext: () => void;
+}) {
   const navigate = useNavigate();
 
   return (
     <div
-      className="fixed left-14 top-[96px] z-50 animate-in fade-in slide-in-from-bottom-4 duration-500"
+      className="fixed left-14 top-[136px] z-50 animate-in fade-in slide-in-from-bottom-4 duration-500"
       role="dialog"
       aria-label="Go beyond regular campaigns"
     >
       {/* Pointer arrow — points left at the decisioning icon in the rail.
-          Sits above the clipped card so overflow-hidden doesn't cut it. */}
+          Sits above the clipped card so overflow-hidden doesn't cut it. Its
+          fill matches the banner tone behind it (not white), so the diamond
+          reads as a continuation of the card edge rather than a cut-out. */}
       <span
         aria-hidden="true"
-        className="absolute -left-[6px] top-[24px] z-10 h-3 w-3 rotate-45 border-b border-l border-[#DDE2EE] bg-white"
+        className="absolute -left-[6px] top-[24px] z-10 h-3 w-3 rotate-45 border-b border-l border-[#DDE2EE] bg-[#FFF1E6]"
       />
       <div className="relative w-[260px] overflow-hidden rounded-[8px] border border-solid border-[#DDE2EE] bg-white shadow-[5px_5px_10px_0px_#E5E9F2]">
         {/* Dismiss */}
@@ -45,9 +57,15 @@ export default function DecisioningNudge({ onClose }: { onClose: () => void }) {
           }}
           className="block w-full text-left"
         >
-          {/* Thumbnail banner — the animated orb on a warm wash. */}
-          <div className="grid h-[120px] w-full place-items-center bg-gradient-to-b from-[#FFF4E5] to-[#FFE8D2]">
-            <img src={iconDecisioning} alt="" className="h-14 w-14" />
+          {/* Thumbnail banner — the same halo-badge treatment as the
+              Decisioning empty-state illustration (solid orange badge behind
+              the white glyph), not a pale wash — a white icon reads poorly
+              against a light background. */}
+          <div className="relative grid h-[120px] w-full place-items-center bg-[#FFF1E6]">
+            <span className="absolute h-16 w-16 rounded-full bg-[#FDCBA0]" />
+            <span className="relative grid h-14 w-14 place-items-center rounded-full bg-gradient-to-b from-[#FF8A3D] to-[#FC5E02] shadow-[0px_8px_20px_rgba(252,94,2,0.35)]">
+              <img src={iconDecisioning} alt="" className="h-7 w-7" />
+            </span>
           </div>
 
           {/* Blurb */}
@@ -60,6 +78,8 @@ export default function DecisioningNudge({ onClose }: { onClose: () => void }) {
             </p>
           </div>
         </button>
+
+        <NudgeFooter onBack={onBack} onNext={onNext} nextLabel="Got it" step={3} />
       </div>
     </div>
   );
