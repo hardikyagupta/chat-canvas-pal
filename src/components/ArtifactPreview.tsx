@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { Copy, Check, ChevronDown, X, ChevronsLeft, ChevronsRight, CalendarClock } from 'lucide-react';
-import { ActionMenu, ActionMenuTrigger, ActionMenuContent, ActionMenuItem } from '@/components/ui/action-menu';
+import React from 'react';
+import { Download, X, ChevronsLeft, ChevronsRight, CalendarClock } from 'lucide-react';
 import {
   PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -23,9 +22,7 @@ interface ArtifactPreviewProps {
   title?: string;
   onClose?: () => void;              // collapse the artifact panel
   onSchedule?: () => void;           // open the Schedule dialog for this report
-  onCopy?: () => void;               // copy the artifact contents
-  onDownloadMarkdown?: () => void;   // Copy ▾ → Download as Markdown
-  onDownloadPdf?: () => void;        // Copy ▾ → Download as PDF
+  onDownloadPdf?: () => void;        // "Download PDF" — falls back to an in-panel export when omitted
   onToggleExpand?: () => void;       // widen the artifact leftward up to the LHS nav (hiding the chat)
   isExpanded?: boolean;              // whether the artifact currently fills the chat+artifact region
   hideExpandToggle?: boolean;        // hide the split-view toggle (e.g. opened from Reports — no chat to split with)
@@ -114,8 +111,6 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   title = 'Highest Engagement Last Quarter',
   onClose,
   onSchedule,
-  onCopy,
-  onDownloadMarkdown,
   onDownloadPdf,
   onToggleExpand,
   isExpanded = false,
@@ -123,16 +118,35 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
   bare = false,
   doc,
 }) => {
-  // "Copy" flips to a "Copied" checkmark briefly after a click.
-  const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    onCopy?.();
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+  // "Download PDF" — use the caller's handler when given; otherwise export the
+  // rendered document's text as a downloadable file so the action always works.
+  const handleDownloadPdf = () => {
+    if (onDownloadPdf) {
+      onDownloadPdf();
+      return;
+    }
+    if (!doc) return;
+    const body = [
+      doc.title,
+      '',
+      doc.summaryHeading ?? 'Executive summary',
+      '',
+      ...doc.paragraphs.map((p) => p.replace(/<[^>]+>/g, '')),
+    ].join('\n\n');
+    const slug = doc.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${slug || 'report'}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
   return (
     <div className={`flex flex-col h-full w-full bg-card overflow-hidden${bare ? '' : ' border border-[var(--color-line-input)] rounded-[12px]'}`}>
-      {/* top-nav-artifact — Claude-style: title on the left; Copy / Publish / Close on the right */}
+      {/* top-nav-artifact — Claude-style: title on the left; Download / Close on the right */}
       <TooltipProvider delayDuration={200}>
         <div className="flex gap-[8px] items-center px-[16px] py-[10px] w-full shrink-0 border-b border-[var(--color-line-input)]">
           <div className="flex flex-1 min-w-0 items-center gap-[6px]">
@@ -172,41 +186,15 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
               Schedule
             </button>
           )}
-          {/* Copy — split button: "Copy" copies; the chevron opens the download menu */}
-          <div className="flex items-center rounded-[8px] border border-[var(--color-line-input)] overflow-hidden shrink-0">
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="flex items-center gap-[6px] pl-[10px] pr-[8px] py-[5px] text-[13px] font-medium text-foreground hover:bg-[var(--color-surface-1)] transition-colors"
-            >
-              {copied ? (
-                <>
-                  <Check className="size-[14px] text-success" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="size-[14px] text-[var(--color-slate)]" />
-                  Copy
-                </>
-              )}
-            </button>
-            <ActionMenu>
-              <ActionMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Download options"
-                  className="flex items-center justify-center self-stretch px-[6px] border-l border-[var(--color-line-input)] hover:bg-[var(--color-surface-1)] data-[state=open]:bg-[var(--color-surface-1)] transition-colors"
-                >
-                  <ChevronDown className="size-[14px] text-[var(--color-slate)]" />
-                </button>
-              </ActionMenuTrigger>
-              <ActionMenuContent align="end" side="bottom">
-                <ActionMenuItem onSelect={() => onDownloadMarkdown?.()}>Download as Markdown</ActionMenuItem>
-                <ActionMenuItem onSelect={() => onDownloadPdf?.()}>Download as PDF</ActionMenuItem>
-              </ActionMenuContent>
-            </ActionMenu>
-          </div>
+          {/* Download PDF — the single doc action (Copy removed per spec). */}
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            className="flex items-center gap-[6px] px-[10px] py-[5px] rounded-[8px] border border-[var(--color-line-input)] text-[13px] font-medium text-foreground hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
+          >
+            <Download className="size-[14px] text-[var(--color-slate)]" />
+            Download PDF
+          </button>
           {/* Close the artifact panel */}
           <UITooltip>
             <TooltipTrigger asChild>
