@@ -103,8 +103,14 @@ interface ChatInputProps {
   replyContext?: string | null;
   /** Clears the reply-context banner. */
   onClearReplyContext?: () => void;
-  /** Drives the input shimmer (set by parent on every send / while generating). */
+  /** Drives the input shimmer AND the disabled "generating" state (set by
+   *  parent on every send / while generating). */
   shimmer?: boolean;
+  /** Purely cosmetic border/inner shimmer — no disabled state, no placeholder
+   *  swap, field stays fully usable. Used for a brief "ready" flourish (e.g.
+   *  the AI Dashboard hero composer on page load) rather than an actual
+   *  generating state. */
+  borderShimmer?: boolean;
   /** Fired with the live textarea value on every change (typing, clear-on-send). */
   onInputValueChange?: (value: string) => void;
   /** Textarea placeholder. Defaults to the empty-state greeting prompt. */
@@ -147,6 +153,14 @@ interface ChatInputProps {
    *  grows past one line it already switches to the two-row `expanded` shape.
    *  Defaults to false (pill), matching existing 'linear' usage. */
   flat?: boolean;
+  /** Small animated icon shown before the placeholder text while the field is
+   *  empty (e.g. the AI Dashboard hero composer's "Ask anything" prompt).
+   *  Only rendered in the resting flat single-row pill (flat && !expanded). */
+  placeholderIcon?: string;
+  /** Fired the first time the field gains focus. Lets a parent settle any
+   *  "ready" flourish (e.g. the hero composer's border shimmer) exactly when
+   *  the user starts interacting rather than on a timer. */
+  onFieldFocus?: () => void;
 }
 
 // Temporary feature flag to disable @-agent mention dropdown
@@ -176,6 +190,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
   initialAgentMenuOpen = false,
   showAddButton = true,
   flat = false,
+  placeholderIcon,
+  borderShimmer = false,
+  onFieldFocus,
 }) => {
   const [inputValue, setInputValue] = useState(initialValue);
   const [showMentionList, setShowMentionList] = useState(false);
@@ -281,6 +298,32 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [isScrollable, setIsScrollable] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Placeholder icon (e.g. thinking-loader.gif) keeps looping as a quiet
+  // "ready" affordance and only freezes once the user focuses the field —
+  // captured onto a canvas and swapped in as a static image so it doesn't
+  // animate forever after the user has started interacting.
+  const placeholderIconImgRef = useRef<HTMLImageElement>(null);
+  const [frozenPlaceholderIconSrc, setFrozenPlaceholderIconSrc] = useState<string | null>(null);
+  const freezePlaceholderIcon = () => {
+    if (!placeholderIcon || frozenPlaceholderIconSrc) return;
+    const img = placeholderIconImgRef.current;
+    if (!img) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || 26;
+    canvas.height = img.naturalHeight || 26;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    setFrozenPlaceholderIconSrc(canvas.toDataURL());
+  };
+
+  // First focus settles the "ready" flourish: freeze the looping placeholder
+  // icon and let the parent drop the border shimmer.
+  const handleFieldFocus = () => {
+    freezePlaceholderIcon();
+    onFieldFocus?.();
+  };
   const measurementRef = useRef<HTMLSpanElement>(null);
   // Measured height of a single empty line (content + padding). The textarea's
   // padding makes this ~30px, not the bare 22px line-height, so we can't compare
@@ -517,6 +560,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
               <span aria-hidden="true" className="input-border-shimmer" />
             </>
           )}
+          {/* Cosmetic-only border shimmer — no inner sheen, field stays
+              interactive (not the disabled "generating" treatment above). */}
+          {!isMockAgentChatActive && !shimmer && borderShimmer && (
+            <span aria-hidden="true" className="input-border-shimmer" />
+          )}
           {/* Hidden file picker driven by the "+" → "Add files or photos" menu item. */}
           <input
             ref={fileInputRef}
@@ -655,15 +703,29 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   : // Flat resting pill: fixed 32px box, flex-centered — matches the
                     // send button's own 32px box exactly regardless of the
                     // textarea's own (font-metric-dependent) content height.
-                    cn("order-2 flex-1", flat && "flex h-[32px] items-center")
+                    cn("order-2 flex-1", flat && "flex h-[32px] items-center gap-[6px]")
               )}
             >
+              {/* Placeholder icon — kept animating continuously (e.g. the
+                  thinking-loader GIF) as a quiet "ask me anything" affordance.
+                  Hidden once there's text or the field is busy generating. */}
+              {placeholderIcon && flat && !expanded && !inputValue && !isLoading && (
+                <img
+                  ref={placeholderIconImgRef}
+                  src={frozenPlaceholderIconSrc ?? placeholderIcon}
+                  alt=""
+                  aria-hidden="true"
+                  crossOrigin="anonymous"
+                  className="w-[26px] h-[26px] shrink-0 pointer-events-none"
+                />
+              )}
               <textarea
                 ref={inputRef}
                 rows={1}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
+                onFocus={handleFieldFocus}
                 placeholder={isLoading ? "Generating response…" : placeholder}
                 disabled={isQuestionnaireActive || isLoading}
                 className={cn(
@@ -671,7 +733,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   // Resting flat pill centers the placeholder against the send
                   // button instead of top-anchoring it (which the shared 8px
                   // top-pad does for the roomy 'expanded'/'linear' shapes).
-                  flat && !expanded ? "pt-0" : "pt-[8px]"
+                  flat && !expanded ? "pt-0" : "pt-[8px]",
+                  // Sharing the row with the placeholder icon — let it size to
+                  // the remaining space instead of the full pill width.
+                  placeholderIcon && flat && !expanded && "flex-1"
                 )}
                 style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500, maxHeight: "88px" }}
                 autoComplete="off"

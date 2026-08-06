@@ -1188,30 +1188,37 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     if (insightCard) {
       return (
         <div className="flex justify-end w-full py-2">
+          {/* Insight context card — mirrors the dashboard's tinted section panel
+              wrapping a white card (Figma node 5556:6251): #F9FAFB panel + header,
+              enclosing a #DCDCDC 0.25px white card with teal/red category badges. */}
           <div
             className={cn(
-              "bg-card border border-[var(--color-line)] rounded-[12px] p-[12px] w-fit flex flex-col gap-1.5",
+              "w-fit flex flex-col gap-[6px] rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] p-[6px]",
               isExpanded ? "max-w-[60%]" : "max-w-[85%]"
             )}
           >
-            <p className="font-manrope text-[12px] font-bold text-[#17173A]">{insightCard.sectionLabel}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {insightCard.badges.map((badge) => (
-                <span
-                  key={badge}
-                  className={cn(
-                    "rounded-[11px] px-2 py-1 font-manrope text-[10px] font-semibold uppercase tracking-wide",
-                    insightCard.badgeTone === "red"
-                      ? "bg-[#FFE9DA] text-[#F05C5C]"
-                      : "bg-[#F0F5FF] text-[#2F68E5]"
-                  )}
-                >
-                  {badge}
-                </span>
-              ))}
+            <div className="flex items-center pl-[10px]">
+              <p className="flex-1 font-manrope text-[14px] font-bold text-[#17173A]">{insightCard.sectionLabel}</p>
             </div>
-            <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{insightCard.title}</p>
-            <p className="font-manrope text-[11px] text-[#6F6F8D]">{insightCard.sub}</p>
+            <div className="flex flex-col gap-1.5 rounded-[8px] border-[0.25px] border-[#DCDCDC] bg-white/50 p-[12px]">
+              <div className="flex flex-wrap gap-1.5">
+                {insightCard.badges.map((badge) => (
+                  <span
+                    key={badge}
+                    className={cn(
+                      "w-fit rounded-[11px] px-2 py-1 font-manrope text-[10px] font-semibold uppercase tracking-wide",
+                      insightCard.badgeTone === "red"
+                        ? "bg-[#FFE9DA] text-[#F05C5C]"
+                        : "bg-[#E8F8F4] text-[#00A68C]"
+                    )}
+                  >
+                    {badge}
+                  </span>
+                ))}
+              </div>
+              <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{insightCard.title}</p>
+              <p className="font-manrope text-[11px] text-[#6F6F8D]">{insightCard.sub}</p>
+            </div>
           </div>
         </div>
       );
