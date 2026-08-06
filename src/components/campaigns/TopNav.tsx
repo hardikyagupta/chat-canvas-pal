@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Search, Plus, Bell } from "lucide-react";
 import sparkle from "/campaign-assets/ic-sparkle.gif";
 import trending from "/campaign-assets/ic-trending.svg";
@@ -10,6 +10,9 @@ export default function TopNav({
   label = "Customer Engagement",
   showAskCoMarketer = true,
   showCoMarketerNudge = true,
+  onBackToAiDashboardNudge,
+  onCoMarketerNext,
+  onFinishNudgeSequence,
 }: {
   onOpenChat?: () => void;
   label?: string;
@@ -17,30 +20,30 @@ export default function TopNav({
   /** False keeps the button but skips its discovery nudge (and dot). Toggling
    *  this true later (e.g. once a preceding nudge closes) shows the nudge. */
   showCoMarketerNudge?: boolean;
+  /** "Back" on the nudge — steps back to the AI Dashboard nudge (first of the
+   *  three-step discovery sequence, so only wired where that sequence runs). */
+  onBackToAiDashboardNudge?: () => void;
+  /** "Next" on the nudge — advances to the Decisioning nudge (co-marketer is
+   *  the middle step of the three-step discovery sequence). */
+  onCoMarketerNext?: () => void;
+  /** Ends the discovery sequence — clicking the button while the nudge is up,
+   *  or clicking anywhere outside it. */
+  onFinishNudgeSequence?: () => void;
 }) {
-  // Discovery nudge shown under the Ask co-marketer button, controlled by
-  // the showCoMarketerNudge prop (which may flip true after mount if this
-  // nudge is sequenced behind another one).
-  const [showNudge, setShowNudge] = useState(showCoMarketerNudge);
   const nudgeWrapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (showCoMarketerNudge) setShowNudge(true);
-  }, [showCoMarketerNudge]);
-
   const dismissNudge = () => {
-    setShowNudge(false);
+    onFinishNudgeSequence?.();
   };
 
   // Dismiss the nudge when clicking anywhere outside it (and its button).
   useEffect(() => {
-    if (!showNudge) return;
+    if (!showCoMarketerNudge) return;
     const onDocDown = (e: MouseEvent) => {
       if (!nudgeWrapRef.current?.contains(e.target as Node)) dismissNudge();
     };
     document.addEventListener("mousedown", onDocDown);
     return () => document.removeEventListener("mousedown", onDocDown);
-  }, [showNudge]);
+  }, [showCoMarketerNudge]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <header className="flex h-14 items-center rounded-lg bg-white pl-4 pr-4 shadow-[0px_5px_10px_0px_rgba(23,23,58,0.05)]">
@@ -71,7 +74,7 @@ export default function TopNav({
           <div ref={nudgeWrapRef} className="relative">
             {/* Small royal-blue pulsing dot centered on the lower edge of the
                 button — a ping ring behind a solid dot. */}
-            {showNudge && (
+            {showCoMarketerNudge && (
               <span
                 aria-hidden="true"
                 className="pointer-events-none absolute -bottom-1 left-1/2 z-[2] grid h-2.5 w-2.5 -translate-x-1/2 place-items-center"
@@ -82,7 +85,7 @@ export default function TopNav({
             )}
             <button
               onClick={() => {
-                if (showNudge) dismissNudge();
+                if (showCoMarketerNudge) dismissNudge();
                 onOpenChat?.();
               }}
               className="relative z-[1] flex h-8 items-center gap-1.5 overflow-hidden rounded-lg bg-white px-2.5 transition-shadow hover:shadow-sm"
@@ -95,9 +98,12 @@ export default function TopNav({
             </button>
 
             {/* Discovery nudge — drops below the button, right-aligned. */}
-            {showNudge && (
+            {showCoMarketerNudge && (
               <div className="absolute right-0 top-[calc(100%+12px)] z-50 animate-in fade-in slide-in-from-top-2 duration-300">
-                <CoMarketerNudge />
+                <CoMarketerNudge
+                  onBack={() => onBackToAiDashboardNudge?.()}
+                  onNext={() => onCoMarketerNext?.()}
+                />
               </div>
             )}
           </div>
