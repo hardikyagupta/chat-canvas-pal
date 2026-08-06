@@ -459,6 +459,222 @@
   }
 }
 
+/* Personalize Co-Marketer onboarding modal — open/close and per-step motion.
+   Card rises + scales in over a fading backdrop; each step's body fades up when
+   the step changes so answers feel like they advance rather than hard-swap. */
+@keyframes personalizeBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes personalizeCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes personalizeStepIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.personalize-backdrop-in {
+  animation: personalizeBackdropIn 200ms ease-out both;
+}
+.personalize-card-in {
+  animation: personalizeCardIn 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+.personalize-step-in {
+  animation: personalizeStepIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .personalize-backdrop-in,
+  .personalize-card-in,
+  .personalize-step-in {
+    animation: none;
+  }
+}
+
+/* Personalize intro RHS illustration — continuous, looping "co-marketer at work"
+   motion: the panel drifts, data bars fill & drain like a live equalizer with a
+   shimmer gloss, trend badges pop, next-step radios tick off in sequence,
+   chevrons nudge, and focus chips bounce in a wave. Per-element delays inline. */
+@keyframes introCardIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  92% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}
+@keyframes introBarFill {
+  0% {
+    transform: scaleX(0.12);
+    opacity: 0.55;
+  }
+  45% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  70% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(0.12);
+    opacity: 0.55;
+  }
+}
+@keyframes introBarShimmer {
+  0% {
+    background-position: 180% 0;
+  }
+  100% {
+    background-position: -180% 0;
+  }
+}
+@keyframes introTrendPop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  45% {
+    transform: translateY(-2px) scale(1.18);
+  }
+}
+@keyframes introStepRing {
+  0%,
+  10% {
+    background-color: #ffffff;
+    border-color: #d5dae6;
+  }
+  22%,
+  70% {
+    background-color: #2f68e5;
+    border-color: #2f68e5;
+  }
+  82%,
+  100% {
+    background-color: #ffffff;
+    border-color: #d5dae6;
+  }
+}
+@keyframes introStepCheck {
+  0%,
+  12% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  24%,
+  68% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+@keyframes introChevronNudge {
+  0%,
+  100% {
+    transform: translateX(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateX(3px);
+    opacity: 1;
+  }
+}
+@keyframes introChipPop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    background-color: #eaf0ff;
+    color: #2f68e5;
+  }
+  50% {
+    transform: translateY(-3px) scale(1.06);
+    background-color: #d6e4ff;
+    color: #1f52c9;
+  }
+}
+.intro-card-in {
+  animation: introCardIn 6s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.intro-bar-fill {
+  transform-origin: left center;
+  background-image: linear-gradient(90deg, #dfe4f0 0%, #f2f5fc 50%, #dfe4f0 100%);
+  background-size: 200% 100%;
+  animation:
+    introBarFill 3.2s ease-in-out infinite,
+    introBarShimmer 2.2s linear infinite;
+  will-change: transform;
+}
+.intro-trend-pop {
+  animation: introTrendPop 3.2s ease-in-out infinite;
+}
+.intro-step-ring {
+  animation: introStepRing 3.6s ease-in-out infinite;
+}
+.intro-step-check {
+  animation: introStepCheck 3.6s ease-in-out infinite;
+}
+.intro-chevron-nudge {
+  animation: introChevronNudge 1.6s ease-in-out infinite;
+}
+.intro-chip-pop {
+  animation: introChipPop 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-card-in,
+  .intro-bar-fill,
+  .intro-trend-pop,
+  .intro-step-ring,
+  .intro-step-check,
+  .intro-chevron-nudge,
+  .intro-chip-pop {
+    animation: none;
+  }
+  .intro-card-in {
+    opacity: 1;
+    transform: none;
+  }
+  .intro-bar-fill {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  .intro-step-check {
+    opacity: 0;
+  }
+}
+
 /* Figma shimmer palette — shared by input + welcome card shimmers */
 :root {
   --shimmer-blue: var(--color-royal);
