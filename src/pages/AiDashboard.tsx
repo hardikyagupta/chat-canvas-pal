@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ThumbsUp, ThumbsDown, CheckCircle2 } from "lucide-react";
+import { subDays, differenceInCalendarDays } from "date-fns";
+import { ThumbsUp, ThumbsDown, CheckCircle2, SlidersHorizontal, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import L1Nav from "@/components/campaigns/L1Nav";
 import TopNav from "@/components/campaigns/TopNav";
@@ -11,6 +12,9 @@ import MarketingAgentsOverlay from "@/components/MarketingAgentsOverlay";
 import PersonalizeCoMarketerModal, {
   type PersonalizeCoMarketerData,
 } from "@/components/PersonalizeCoMarketerModal";
+import DateRangeFilter, { type AppliedDateRange } from "@/components/DateRangeFilter";
+import CustomizeCardsPanel, { type CardPref } from "@/components/CustomizeCardsPanel";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { marketingAgents } from "@/data/agents";
@@ -24,38 +28,121 @@ const suggestionChips = [
   "Draft a win-back campaign for lapsed users",
 ];
 
-const metrics = [
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+/** Metric base values + formatters. "volume" metrics (cumulative counts) scale
+ *  with the selected range length; "rate" metrics (percentages) get a small
+ *  deterministic jitter from the range length instead, since a CTR doesn't
+ *  grow just because the window got longer. */
+/** Full catalog of dashboard metric cards. The user picks which (max 5) show
+ *  and in what order via the "Customize cards" panel — the first 5 are the
+ *  default set. */
+const METRICS_BASE = [
   {
+    id: "active-campaigns",
     label: "Active Campaigns",
-    value: "12",
-    delta: null,
+    kind: "volume" as const,
+    rawValue: 12,
+    format: (v: number) => `${Math.max(1, Math.round(v))}`,
     sub: "revenue-per-send vs 30-day average - 'Monsoon Flat 40%' email",
   },
   {
+    id: "revenue",
     label: "Revenue",
-    value: "₹14.2L",
-    delta: { text: "↑ +18%", tone: "up" as const },
+    kind: "volume" as const,
+    rawValue: 14.2,
+    format: (v: number) => `₹${v.toFixed(1)}L`,
     sub: "revenue-per-send vs 30-day average - 'Monsoon Flat 40%' email",
   },
   {
+    id: "orders",
     label: "Orders",
-    value: "2,883",
-    delta: { text: "↑ +12%", tone: "up" as const },
+    kind: "volume" as const,
+    rawValue: 2883,
+    format: (v: number) => Math.round(v).toLocaleString("en-IN"),
     sub: "Lapsed buyers reactivated at 3×",
   },
   {
+    id: "whatsapp-ctr",
     label: "WhatsApp CTR",
-    value: "4.7%",
-    delta: { text: "-34%", tone: "down" as const },
+    kind: "rate" as const,
+    rawValue: 4.7,
+    format: (v: number) => `${v.toFixed(1)}%`,
     sub: "Template fatigue - sharpen drop this week",
   },
   {
+    id: "avg-open-rate",
     label: "Avg open rate",
-    value: "31.4%",
-    delta: { text: "+2.1pts", tone: "up" as const },
+    kind: "rate" as const,
+    rawValue: 31.4,
+    format: (v: number) => `${v.toFixed(1)}%`,
     sub: "Template fatigue - sharpen drop this week",
   },
+  {
+    id: "click-rate",
+    label: "Click rate",
+    kind: "rate" as const,
+    rawValue: 2.3,
+    format: (v: number) => `${v.toFixed(1)}%`,
+    sub: "Link clicks per delivered message this period",
+  },
+  {
+    id: "conversions",
+    label: "Conversions",
+    kind: "volume" as const,
+    rawValue: 642,
+    format: (v: number) => Math.round(v).toLocaleString("en-IN"),
+    sub: "Attributed purchases from campaign journeys",
+  },
+  {
+    id: "revenue-per-send",
+    label: "Revenue per send",
+    kind: "rate" as const,
+    rawValue: 4.9,
+    format: (v: number) => `₹${v.toFixed(1)}`,
+    sub: "Blended across email, WhatsApp and SMS sends",
+  },
+  {
+    id: "unsubscribes",
+    label: "Unsubscribes",
+    kind: "volume" as const,
+    rawValue: 87,
+    format: (v: number) => Math.round(v).toLocaleString("en-IN"),
+    sub: "Opt-outs across all channels this period",
+  },
 ];
+
+/** Derives metric card values for the selected range length (days), so
+ *  applying a date filter visibly changes the dashboard's data. Keyed by id. */
+function getMetricsForRange(days: number) {
+  const volumeFactor = clamp(days / 7, 0.5, 4);
+  const rateJitter = ((days * 7) % 11) / 10 - 0.5; // deterministic, ~-0.5..0.5
+
+  const out: Record<string, { id: string; label: string; sub: string; value: string }> = {};
+  for (const m of METRICS_BASE) {
+    const scaledValue = m.kind === "volume" ? m.rawValue * volumeFactor : m.rawValue + rateJitter;
+    out[m.id] = { id: m.id, label: m.label, sub: m.sub, value: m.format(scaledValue) };
+  }
+  return out;
+}
+
+/** id → label map for the customize panel. */
+const METRIC_LABELS: Record<string, string> = Object.fromEntries(
+  METRICS_BASE.map((m) => [m.id, m.label])
+);
+
+/** Default card selection — the first 5 cards enabled, in catalog order. */
+const MAX_CARDS = 5;
+const MIN_CARDS = 4;
+const DEFAULT_CARD_PREFS = METRICS_BASE.map((m, i) => ({ id: m.id, enabled: i < MAX_CARDS }));
+
+/** Rotates a list based on the selected range length so the wins /
+ *  needs-attention order visibly changes across date filters too. */
+function rotateForRange<T>(items: T[], days: number): T[] {
+  if (items.length === 0) return items;
+  const n = days % items.length;
+  return [...items.slice(n), ...items.slice(0, n)];
+}
 
 const wins = [
   {
