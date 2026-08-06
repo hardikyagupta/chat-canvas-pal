@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "/campaign-assets/netcore-logo.svg";
-import iconAiDashboard from "/campaign-assets/nav-ai-dashboard.webp";
+import iconAiDashboard from "/campaign-assets/nav-ai-dashboard.svg";
 import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
 import iconPinned from "/campaign-assets/nav-pinned.svg";
 import iconDashboard from "/campaign-assets/nav-dashboard.svg";
@@ -23,8 +23,6 @@ import EngageL2 from "./EngageL2";
  * right edge. Netcore mark at top, primary destinations in the middle, and
  * settings + profile pinned to the bottom.
  */
-// nav-decisioning.svg is the Insights-agent badge; its AI sparkle animation
-// is embedded in the SVG file itself, so it twinkles constantly via <img>.
 const primary = [
   { key: "pinned", icon: iconPinned, label: "Pinned" },
   { key: "ai-dashboard", icon: iconAiDashboard, label: "AI Dashboard", route: "/ai-dashboard" },
@@ -69,16 +67,11 @@ function NavButton({
               <span className="relative h-2 w-2 rounded-full bg-[#2F68E5]" />
             </span>
           )}
-          {icon === iconDecisioning || icon === iconAiDashboard ? (
-            /* Full-color animated badge — no dimming, slightly larger. */
-            <img src={icon} alt="" className="h-[26px] w-[26px]" />
-          ) : (
-            <img
-              src={icon}
-              alt=""
-              className={`h-4 w-4 ${active ? "opacity-100" : "opacity-70"}`}
-            />
-          )}
+          <img
+            src={icon}
+            alt=""
+            className={`h-4 w-4 object-contain ${active ? "opacity-100" : "opacity-70"}`}
+          />
         </button>
       </TooltipTrigger>
       <TooltipContent
@@ -94,13 +87,14 @@ function NavButton({
 export default function L1Nav({
   active = "engage",
   activeEngageItem = "campaigns",
-  decisioningNudge = false,
+  nudgeHighlightKey,
 }: {
   active?: string;
   /** Which Engage L2 item renders active when that menu is open. */
   activeEngageItem?: string;
-  /** Highlights the decisioning entry with the pulsing discovery dot. */
-  decisioningNudge?: boolean;
+  /** Rail entry (e.g. "decisioning", "ai-dashboard") to highlight with the
+   *  pulsing discovery dot — whichever step of the sequence is currently up. */
+  nudgeHighlightKey?: string;
 }) {
   const navigate = useNavigate();
   const [showEngageMenu, setShowEngageMenu] = useState(false);
@@ -139,7 +133,7 @@ export default function L1Nav({
                   ? () => navigate(item.route)
                   : undefined
               }
-              showDot={item.key === "decisioning" && decisioningNudge}
+              showDot={item.key === nudgeHighlightKey}
             />
           ))}
         </div>

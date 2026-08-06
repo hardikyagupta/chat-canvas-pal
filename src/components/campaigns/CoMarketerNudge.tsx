@@ -1,12 +1,22 @@
 import nudgeGif from "/campaign-assets/co-marketer-nudge.gif";
+import NudgeFooter from "./NudgeFooter";
 
 /**
  * Co-marketer discovery nudge — a 320px card that drops below the
  * "Ask co-marketer" button in the top bar. Autoplaying GIF preview on top,
  * a short capability blurb below. Specs mirror the Figma node (16492:49922):
- * white card, #DDE2EE border, 8px radius, principal drop shadow, GIF 320×293.6px.
+ * white card, Netcore-orange border, 8px radius, principal drop shadow, GIF 320×293.6px.
+ * Middle of the three-step discovery sequence (AI Dashboard → Co-marketer →
+ * Decisioning); "Back" returns to the AI Dashboard nudge, "Next" advances to
+ * the Decisioning nudge.
  */
-export default function CoMarketerNudge() {
+export default function CoMarketerNudge({
+  onBack,
+  onNext,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+}) {
   return (
     <div className="relative w-[320px]" role="dialog" aria-label="Meet co-marketer">
       {/* Pointer arrow — points up to the Ask co-marketer button. Sits above the
@@ -34,6 +44,8 @@ export default function CoMarketerNudge() {
             journeys, and more.
           </p>
         </div>
+
+        <NudgeFooter onBack={onBack} onNext={onNext} step={2} />
       </div>
     </div>
   );

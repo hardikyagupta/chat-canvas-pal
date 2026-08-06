@@ -1,56 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="74" height="74" viewBox="-5 -5 74 74" role="img">
-    <title>AI Dashboard</title>
-    <!-- Globe: @oreo-design/avatar — createAvatar({ shape: "void", palette: "peach-cream", variantId: "ai-dashboard" }), background removed for transparency, so it lands on the brand orange (#FC5E02-ish). A sparkle sits in the center (the "AI" mark), and an orbit ring — faint static track + a rotating bright arc in brand blue — wraps the edge, so the badge reads as "live/thinking" at rest, same idea as nav-decisioning.svg's twinkle. -->
-    <style>
-      @keyframes aiDashOrbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      #ai-dash-orbit-arc { transform-origin: 32px 32px; animation: aiDashOrbitSpin 4.5s linear infinite; }
-      @media (prefers-reduced-motion: reduce) { #ai-dash-orbit-arc { animation: none; } }
-    </style>
-    <defs>
-    <filter id="blur-1-oreo-1i3wyvf" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.1"/></filter>
-    <filter id="blur-3-oreo-1i3wyvf" x="-55%" y="-55%" width="210%" height="210%"><feGaussianBlur stdDeviation="3.2"/></filter>
-    <filter id="blur-5-oreo-1i3wyvf" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="5.1"/></filter>
-    <filter id="blur-6-oreo-1i3wyvf" x="-75%" y="-75%" width="250%" height="250%"><feGaussianBlur stdDeviation="5.7"/></filter>
-    <filter id="blur-8-oreo-1i3wyvf" x="-85%" y="-85%" width="270%" height="270%"><feGaussianBlur stdDeviation="8.4"/></filter>
-    <filter id="blur-10-oreo-1i3wyvf" x="-95%" y="-95%" width="290%" height="290%"><feGaussianBlur stdDeviation="10.4"/></filter>
-    <filter id="blur-14-oreo-1i3wyvf" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="13.8"/></filter><clipPath id="clip-oreo-1i3wyvf"><rect width="64" height="64" rx="32" fill="#ffffff"/></clipPath>
-    <radialGradient id="edge-oreo-1i3wyvf" gradientUnits="userSpaceOnUse" cx="32" cy="32" r="32">
-      <stop offset="98.4375%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-    </radialGradient>
-    <mask id="edge-mask-oreo-1i3wyvf" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="0" y="0" width="64" height="64" style="mask-type:alpha">
-      <rect width="64" height="64" fill="url(#edge-oreo-1i3wyvf)"/>
-    </mask></defs>
-
-    <g mask="url(#edge-mask-oreo-1i3wyvf)">
-      <g clip-path="url(#clip-oreo-1i3wyvf)">
-    <g transform="translate(32.000 32.000) rotate(-90.000)"><rect x="-37.590" y="-37.590" width="75.180" height="75.180" rx="16.250" fill="#cc4e00" opacity="1.000"/></g>
-
-    <g transform="translate(32 32) rotate(-90)" opacity="0.36">
-      <rect x="-36.390" y="-36.390" width="72.780" height="72.780" rx="15.050" fill="none" stroke="#ffffff" stroke-width="1.400" opacity="0.38" filter="url(#blur-1-oreo-1i3wyvf)"/>
-      <rect x="-35.590" y="-35.590" width="71.180" height="71.180" rx="14.250" fill="none" stroke="#71abff" stroke-width="2.400" opacity="0.24" filter="url(#blur-3-oreo-1i3wyvf)"/>
-      <rect x="-33.590" y="-33.590" width="67.180" height="67.180" rx="12.250" fill="none" stroke="#71abff" stroke-width="4.000" opacity="0.18" filter="url(#blur-5-oreo-1i3wyvf)"/>
-    </g>
-    <g transform="translate(32.000 32.110) rotate(180.000)"><rect x="-32.000" y="-18.790" width="64.000" height="37.580" rx="10.160" fill="#aec6cf" opacity="0.980" filter="url(#blur-14-oreo-1i3wyvf)"/></g>
-    <g transform="translate(31.890 31.890) rotate(180.000)"><rect x="-22.445" y="-9.130" width="44.890" height="18.260" rx="5.080" fill="#ffbe74" opacity="0.900" filter="url(#blur-5-oreo-1i3wyvf)" style="mix-blend-mode:plus-lighter"/></g></g>
-    </g>
-
-    <!-- AI sparkle mark, centered — soft glow behind a big + small sparkle pair. -->
-    <g transform="translate(32 32)">
-      <circle r="12" fill="#ffffff" opacity="0.30" filter="url(#blur-8-oreo-1i3wyvf)"/>
-      <path d="M0,-11 C1.6,-3.3 3.3,-1.6 11,0 C3.3,1.6 1.6,3.3 0,11 C-1.6,3.3 -3.3,1.6 -11,0 C-3.3,-1.6 -1.6,-3.3 0,-11 Z" fill="#ffffff"/>
-      <path transform="translate(9,-9)" d="M0,-5 C0.7,-1.5 1.5,-0.7 5,0 C1.5,0.7 0.7,1.5 0,5 C-0.7,1.5 -1.5,0.7 -5,0 C-1.5,-0.7 -0.7,-1.5 0,-5 Z" fill="#ffffff" opacity="0.9"/>
-    </g>
-
-    <!-- Orbit ring: faint static track + a rotating bright arc (round caps, brand blue) -->
-    <circle cx="32" cy="32" r="35.5" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.22"/>
-    <circle
-      id="ai-dash-orbit-arc"
-      cx="32" cy="32" r="35.5"
-      fill="none"
-      stroke="#2F68E5"
-      stroke-width="2.2"
-      stroke-linecap="round"
-      stroke-dasharray="36 187.05"
-    />
-  </svg>
+<svg width="13.2412" height="16.0008" viewBox="0 0 13.2412 16.0008" fill="none" xmlns="http://www.w3.org/2000/svg">
+<title>AI Dashboard</title>
+<style>
+  @keyframes aiDashSparkleTwinkle {
+    0%, 100% { transform: scale(0.82); opacity: 0.7; }
+    50% { transform: scale(1.18); opacity: 1; }
+  }
+  #ai-dash-sparkle { transform-origin: 6.65px 13.35px; animation: aiDashSparkleTwinkle 2.2s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    #ai-dash-sparkle { animation: none; }
+  }
+</style>
+<g id="Frame 1000010722">
+<path id="Subtract" d="M6.6211 0C6.91347 0.000115388 7.19358 0.116565 7.4004 0.323242L12.918 5.83984C13.0209 5.94204 13.1027 6.06422 13.1582 6.19824C13.2137 6.3322 13.2417 6.47611 13.2412 6.62109V13.2412C13.2412 13.3875 13.1835 13.5284 13.0801 13.6318C12.9766 13.7353 12.8358 13.793 12.6895 13.793H11V12.6895H12.1377V6.62109L6.6211 1.10352L1.10352 6.62109V12.6895H2.00001V13.793H0.551765C0.405439 13.793 0.264608 13.7353 0.16114 13.6318C0.0577563 13.5284 6.98535e-06 13.3875 6.98535e-06 13.2412V6.62109C-0.000509003 6.47613 0.0275646 6.33219 0.0830148 6.19824C0.138542 6.06422 0.220287 5.94204 0.323249 5.83984L5.84083 0.323242C6.04774 0.116462 6.32857 0 6.6211 0Z" fill="var(--fill-0, white)"/>
+<path id="ai-dash-sparkle" d="M9.29652 13.3519C9.29708 13.4419 9.26974 13.5298 9.21828 13.6036C9.16682 13.6774 9.09375 13.7334 9.00913 13.764L7.58655 14.2897L7.06252 15.7134C7.03149 15.7977 6.97535 15.8704 6.90166 15.9218C6.82798 15.9732 6.74031 16.0008 6.65047 16.0008C6.56064 16.0008 6.47297 15.9732 6.39929 15.9218C6.3256 15.8704 6.26946 15.7977 6.23843 15.7134L5.71109 14.2897L4.2874 13.7656C4.2031 13.7346 4.13034 13.6785 4.07895 13.6048C4.02756 13.5311 4 13.4434 4 13.3536C4 13.2638 4.02756 13.1761 4.07895 13.1024C4.13034 13.0287 4.2031 12.9726 4.2874 12.9416L5.71109 12.4142L6.23512 10.9905C6.26615 10.9062 6.32229 10.8335 6.39598 10.7821C6.46966 10.7307 6.55733 10.7031 6.64717 10.7031C6.737 10.7031 6.82467 10.7307 6.89835 10.7821C6.97204 10.8335 7.02818 10.9062 7.05921 10.9905L7.58655 12.4142L9.01024 12.9382C9.09491 12.9691 9.16793 13.0254 9.21921 13.0995C9.27049 13.1736 9.2975 13.2618 9.29652 13.3519Z" fill="var(--fill-0, white)"/>
+</g>
+</svg>

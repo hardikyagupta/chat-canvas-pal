@@ -9,6 +9,7 @@ import CampaignTable from "@/components/campaigns/CampaignTable";
 import Pagination from "@/components/campaigns/Pagination";
 import ChatInterface from "@/components/ChatInterface";
 import DecisioningNudge from "@/components/campaigns/DecisioningNudge";
+import AiDashboardNudge from "@/components/campaigns/AiDashboardNudge";
 import MarketingAgentsOverlay from "@/components/MarketingAgentsOverlay";
 import { marketingAgents } from "@/data/agents";
 
@@ -29,11 +30,12 @@ export default function Campaigns() {
   // previous session, even if the prior instance never fully unmounted.
   const [chatSession, setChatSession] = useState(0);
   const [isAgentsOverlayOpen, setIsAgentsOverlayOpen] = useState(false);
-  // Nudge sequencing: the decisioning-engine discovery card (and the pulsing
-  // dot on its L1 entry) shows first; the co-marketer nudge appears only
-  // after it closes.
-  const [showDecisioningNudge, setShowDecisioningNudge] = useState(true);
-  const [showCoMarketerNudge, setShowCoMarketerNudge] = useState(false);
+  // Nudge sequencing: AI Dashboard → Co-marketer → Decisioning. Each step
+  // drives the pulsing dot on its own L1/TopNav entry; "done" ends the
+  // sequence entirely (dismiss, or "Got it" on the last step).
+  const [nudgeStep, setNudgeStep] = useState<
+    "ai-dashboard" | "comarketer" | "decisioning" | "done"
+  >("ai-dashboard");
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(new Set());
 
   // Coordinate mount → enter and leave → unmount so both directions animate.
@@ -85,21 +87,36 @@ export default function Campaigns() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#F4F8FF]">
-      <L1Nav decisioningNudge={showDecisioningNudge} />
+      <L1Nav
+        nudgeHighlightKey={
+          nudgeStep === "decisioning" || nudgeStep === "ai-dashboard"
+            ? nudgeStep
+            : undefined
+        }
+      />
 
-      {showDecisioningNudge && (
+      {nudgeStep === "ai-dashboard" && (
+        <AiDashboardNudge
+          onClose={() => setNudgeStep("done")}
+          onNext={() => setNudgeStep("comarketer")}
+        />
+      )}
+
+      {nudgeStep === "decisioning" && (
         <DecisioningNudge
-          onClose={() => {
-            setShowDecisioningNudge(false);
-            setShowCoMarketerNudge(true);
-          }}
+          onClose={() => setNudgeStep("done")}
+          onBack={() => setNudgeStep("comarketer")}
+          onNext={() => setNudgeStep("done")}
         />
       )}
 
       <div className="flex min-w-0 flex-1 flex-col p-2">
         <TopNav
           onOpenChat={() => setChatOpen(true)}
-          showCoMarketerNudge={showCoMarketerNudge}
+          showCoMarketerNudge={nudgeStep === "comarketer"}
+          onBackToAiDashboardNudge={() => setNudgeStep("ai-dashboard")}
+          onCoMarketerNext={() => setNudgeStep("decisioning")}
+          onFinishNudgeSequence={() => setNudgeStep("done")}
         />
 
         <div className="mt-2 flex min-h-0 flex-1 gap-2">

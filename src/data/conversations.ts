@@ -10,17 +10,16 @@
 // CONVERSATIONS with the same ConversationScript shape.
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, Share2, GitBranch, Target } from 'lucide-react';
+import { Users, Share2 } from 'lucide-react';
 
 export type ConversationVariant = 'default' | 'campaigns';
 
 export type StatCard = { label: string; value: string; sub?: string };
 
-// --- Agent artifact card (Segment / Journey) --------------------------------
+// --- Agent artifact card (Segment) -------------------------------------------
 // A compact doc-style card an agent hands back at the end of a turn. Mirrors the
-// Figma "Segment agent card" (title · stat rows · description · review action);
-// the Journey card reuses the same shape with journey-level stats.
-export type AgentArtifactKind = 'segment' | 'journey';
+// Figma "Segment agent card" (title · stat rows · description · review action).
+export type AgentArtifactKind = 'segment';
 
 export interface AgentArtifactStat {
   icon: LucideIcon;
@@ -37,7 +36,7 @@ export interface AgentArtifactCardData {
 
 // --- Campaigns (`/campaigns`) agent-relay flow ------------------------------
 // A scripted three-turn conversation that hands off between specialist agents:
-// Insights → Segment → Journey. Each turn drops a centered "Switched to <agent>"
+// Insights → Segment → Insights. Each turn drops a centered "Switched to <agent>"
 // divider, streams the agent's answer, and (except the last) surfaces a single
 // suggested prompt that leads into the next agent.
 export interface CampaignsTurn {
@@ -109,56 +108,27 @@ export const CAMPAIGNS_FLOW: CampaignsTurn[] = [
         "Recently engaged, multi-channel users with high purchase intent and no conversion yet.",
       actionLabel: "Review segment",
     },
-    nextSuggestion: "Now create a journey for this segment.",
+    nextSuggestion: "Estimate the impact reaching this segment could have on conversions.",
   },
-  // Turn 3 — Journey agent: design the journey + hand back a journey card.
+  // Turn 3 — hands back to the Insights agent (Segment agent → Insights agent)
+  // to size the opportunity on the segment Segment agent just built.
   {
-    userPrompt: "Now create a journey for this segment.",
-    navLabel: "Create journey",
-    switchAgentId: "journey-agent",
-    switchAgentLabel: "Journey agent",
-    reasoningSteps: [
-      "Loading the High-Intent Re-Engagers segment",
-      "Sequencing channels by responsiveness",
-      "Setting entry, wait, and exit rules",
-      "Wiring the conversion goal",
-    ],
-    output:
-      "Here's a journey designed around how this segment actually behaves — it leads with the channels they respond to and stops the moment they convert.\n\n" +
-      "<strong>How it flows</strong>\n\nEntry on segment match, an Email opener, a WhatsApp nudge for non-openers after 48 hours, and an APN reminder before exit. Anyone who purchases drops out automatically, so we never over-message.",
-    artifactCard: {
-      kind: "journey",
-      title: "Re-Engagement Journey",
-      stats: [
-        { icon: Users, label: "12,133 users entering" },
-        { icon: GitBranch, label: "4 steps · 3 channels" },
-        { icon: Target, label: "Goal: first purchase" },
-      ],
-      description:
-        "A 3-channel, conversion-capped journey that leads with Email and exits on purchase.",
-      actionLabel: "Review journey",
-    },
-    nextSuggestion: "Estimate the impact this journey could have on conversions.",
-  },
-  // Turn 4 — routes the question back to the Insights agent (Journey agent →
-  // Insights agent) with the standard switch-divider hand-off.
-  {
-    userPrompt: "Estimate the impact this journey could have on conversions.",
+    userPrompt: "Estimate the impact reaching this segment could have on conversions.",
     navLabel: "Impact estimate",
     switchAgentId: "insight-agent",
     switchAgentLabel: "Insights agent",
     reasoningSteps: [
-      "Loading the journey and its 12,133-user segment",
+      "Loading the High-Intent Re-Engagers segment",
       "Applying per-channel click and conversion benchmarks",
-      "Modeling step-by-step reach through the journey",
+      "Modeling reach across Email, WhatsApp, and APN",
       "Projecting the conversion lift vs. this cycle",
     ],
     output:
-      "I ran the Re-Engagement Journey against this segment's recent behavior — here's the realistic impact if it launches as designed.\n\n" +
-      "<strong>Projected reach</strong>\n\nOf the 12,133 users entering, roughly 11,400 should receive at least one message — the Email opener lands near-100%, and the WhatsApp and APN follow-ups recover most non-openers.\n\n" +
-      "<strong>Projected conversions</strong>\n\nAt this segment's blended click and conversion rates, expect ~700–850 first purchases over the journey window — a 55–70% lift over what these users would convert at on their own.\n\n" +
-      "<strong>What moves the number</strong>\n\nThe 48-hour WhatsApp nudge is the swing factor — it re-captures about a third of Email non-openers. If WhatsApp delivery slips below ~70%, the projection falls to roughly 600 conversions, so watch it in week one.\n\n" +
-      "<strong>My read</strong>\n\nThis journey should pay for itself within the first cycle. Launch it, and ask me to compare projection vs. actuals after the first week.",
+      "I ran this segment against your recent channel benchmarks — here's the realistic impact if you target it directly.\n\n" +
+      "<strong>Projected reach</strong>\n\nOf the 12,133 users in this segment, roughly 11,400 should receive at least one message if you lead with Email and follow up on WhatsApp and APN for non-openers.\n\n" +
+      "<strong>Projected conversions</strong>\n\nAt this segment's blended click and conversion rates, expect ~700–850 first purchases — a 55–70% lift over what these users would convert at on their own.\n\n" +
+      "<strong>What moves the number</strong>\n\nA WhatsApp follow-up within 48 hours is the swing factor — it re-captures about a third of Email non-openers. If WhatsApp delivery slips below ~70%, the projection falls to roughly 600 conversions, so watch it in week one.\n\n" +
+      "<strong>My read</strong>\n\nTargeting this segment directly should pay for itself within the first cycle. Launch it, and ask me to compare projection vs. actuals after the first week.",
   },
 ];
 

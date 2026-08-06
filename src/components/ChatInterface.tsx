@@ -1594,7 +1594,7 @@ The content has been updated across all channels to reflect your changes.`;
   };
 
   // --- Campaigns agent-relay flow --------------------------------------------
-  // A scripted three-turn hand-off (Insights → Segment → Journey). Every send
+  // A scripted three-turn hand-off (Insights → Segment → Insights). Every send
   // advances one turn: it drops a centered "Switched to <agent>" divider, plays
   // the agent's thinking, streams the answer (+ dashboard or artifact card), and
   // surfaces the single prompt that leads into the next agent. See CAMPAIGNS_FLOW.
@@ -1644,7 +1644,7 @@ The content has been updated across all channels to reflect your changes.`;
         setMessages(prev => [...prev, {
           type: 'chat', isAI: true, agentName: coMarketer?.name,
           avatarSrc: coMarketer?.avatarSrc, avatarIcon: coMarketer?.icon, avatarBgClass: coMarketer?.colorClass,
-          content: "Your insights, segment, and journey are all set. Tap any card above to review, or ask me for anything else.",
+          content: "Your insights and segment are all set. Tap the card above to review, or ask me for anything else.",
           hidePerformanceDashboard: true,
           onAnimationComplete: () => {},
         }]);
@@ -4156,7 +4156,7 @@ The content has been updated across all channels to reflect your changes.`;
                       })()}
                       selectedContextChip={null}
                       placeholder={deepResearchEditTitle ? "Follow up with questions or adjustments" : "Write a message"}
-                      agents={allAgents.map((a) => ({ id: a.id, name: a.name }))}
+                      agents={allAgents.map((a) => ({ id: a.id, name: a.name, avatarSrc: a.avatarSrc }))}
                       selectedAgentChip={composerAgent}
                       onSelectAgentChip={handleComposerAgentChip}
                       onDeepResearchChange={handleComposerDeepResearchChange}
