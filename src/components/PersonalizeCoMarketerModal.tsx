@@ -300,14 +300,14 @@ function OptionButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex flex-1 items-center gap-[10px] rounded-[8px] border px-[14px] py-[12px] text-left transition-colors',
+        'flex w-full items-center gap-[10px] rounded-[8px] border px-[16px] py-[14px] text-left transition-colors motion-safe:active:scale-[0.99]',
         selected
           ? 'border-[1.5px] border-[#2F68E5] bg-[#F0F5FF]'
           : 'border-[#DDE2EE] bg-white hover:bg-[#F7F9FC]',
         disabled && !selected && 'cursor-not-allowed opacity-50 hover:bg-white'
       )}
     >
-      <OptionDot selected={selected} />
+      <OptionIndicator selected={selected} multi={multi} />
       <span
         className={cn('flex-1 text-[13px] text-[#17173A]', selected ? 'font-semibold' : 'font-medium')}
         style={FONT}
@@ -318,27 +318,102 @@ function OptionButton({
   );
 }
 
-/** Chunks options into rows of 2 (role/goals/metrics grid), or 1 for the full-width AI-preference list. */
-function chunk<T>(items: T[], size: number): T[][] {
-  const rows: T[][] = [];
-  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size));
-  return rows;
+/**
+ * Role card — single-select identity picker rendered as a tile: an icon badge,
+ * the role label, and a radio in the top-right corner (matches the onboarding
+ * card pattern). Selected = blue border + tint + filled radio.
+ */
+function RoleCard({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const Icon = ROLE_ICONS[label] ?? MoreHorizontal;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'group flex h-full w-full flex-col overflow-hidden rounded-[12px] border text-left transition-colors motion-safe:active:scale-[0.99]',
+        selected ? 'border-[1.5px] border-[#2F68E5]' : 'border-[#DDE2EE] hover:border-[#C3D2F2]'
+      )}
+    >
+      {/* Top — icon centered, radio in the top-right corner (per Figma) */}
+      <div
+        className={cn(
+          'relative flex flex-1 items-center justify-center px-[16px] py-[22px] transition-colors',
+          selected ? 'bg-[#F0F5FF]' : 'bg-white'
+        )}
+      >
+        <span
+          className={cn(
+            'absolute right-[10px] top-[10px] flex size-[18px] items-center justify-center rounded-full border-[1.5px] transition-colors',
+            selected ? 'border-[#2F68E5] bg-[#2F68E5]' : 'border-[#DDE2EE] bg-transparent'
+          )}
+        >
+          {selected && (
+            <span className="size-[7px] rounded-full bg-white motion-safe:animate-in motion-safe:zoom-in-50" />
+          )}
+        </span>
+        {/* Icon stays a single neutral grey in every state — selection is shown
+            by the card border, radio, and footer tint, not the icon color. */}
+        <span className="flex size-[46px] items-center justify-center rounded-[12px] bg-[#EEF1F8] text-[#5B6B8F]">
+          <Icon className="size-[24px]" strokeWidth={2} />
+        </span>
+      </div>
+      {/* Footer — label strip */}
+      <div
+        className={cn(
+          'w-full border-t px-[14px] py-[11px] transition-colors',
+          selected ? 'border-[#CFE0FF] bg-[#E9F0FF]' : 'border-[#EDEFF4] bg-[#F6F8FB]'
+        )}
+      >
+        <span
+          className={cn(
+            'block text-center text-[13px] leading-[17px] text-[#17173A]',
+            selected ? 'font-semibold' : 'font-medium'
+          )}
+          style={FONT}
+        >
+          {label}
+        </span>
+      </div>
+    </button>
+  );
 }
 
 /**
  * 4-step "Personalize Co-Marketer" onboarding modal (Figma node 5442:3829).
  * Skippable at any step; only the final step persists via onComplete.
  */
-const PersonalizeCoMarketerModal: React.FC<PersonalizeCoMarketerModalProps> = ({ open, onClose, onComplete }) => {
+const PersonalizeCoMarketerModal: React.FC<PersonalizeCoMarketerModalProps> = ({
+  open,
+  onClose,
+  onComplete,
+  startInSteps = false,
+  initialData = null,
+}) => {
+  // `started` gates the intro/welcome screen in front of the stepper — the flow
+  // opens on a single "what this is" page, then reveals the steps on Get started.
+  // In edit mode (startInSteps) we skip the intro and pre-fill saved answers.
+  const [started, setStarted] = React.useState(false);
   const [stepIndex, setStepIndex] = React.useState(0);
   const [data, setData] = React.useState<PersonalizeCoMarketerData>(EMPTY_DATA);
 
   React.useEffect(() => {
     if (open) {
+      setStarted(startInSteps);
       setStepIndex(0);
-      setData(EMPTY_DATA);
+      setData(initialData ?? EMPTY_DATA);
     }
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- reset only on open transition
+
+  // The modal unmounts while closed (`if (!open) return null` below), so the
+  // card/backdrop replay their CSS enter animation every time it reopens.
 
   React.useEffect(() => {
     if (!open) return;
@@ -354,6 +429,7 @@ const PersonalizeCoMarketerModal: React.FC<PersonalizeCoMarketerModalProps> = ({
   const step = STEPS[stepIndex];
   const isRoleStep = stepIndex === 0;
   const isLastStep = stepIndex === STEPS.length - 1;
+  const isMultiStep = !isRoleStep; // role = single-select radio; the rest = multi-select checkbox
   const gridSize = isLastStep ? 1 : 2;
 
   const toggleMulti = (list: string[], value: string, max?: number): string[] => {
@@ -385,7 +461,18 @@ const PersonalizeCoMarketerModal: React.FC<PersonalizeCoMarketerModalProps> = ({
     return false;
   };
 
+  // Each step needs at least one pick before you can move on — "Skip for now"
+  // is the deliberate way out, not an empty Continue.
+  const isStepValid = () => {
+    if (isRoleStep) return data.role !== null;
+    if (stepIndex === 1) return data.goals.length > 0;
+    if (stepIndex === 2) return data.metrics.length > 0;
+    return data.aiPreferences.length > 0;
+  };
+  const canContinue = isStepValid();
+
   const handleContinue = () => {
+    if (!canContinue) return;
     if (isLastStep) {
       onComplete(data);
       return;
@@ -395,97 +482,185 @@ const PersonalizeCoMarketerModal: React.FC<PersonalizeCoMarketerModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-[16px]">
-      <div className="absolute inset-0 bg-[rgba(23,23,58,0.45)]" onClick={onClose} />
+      <div className="personalize-backdrop-in absolute inset-0 bg-[rgba(23,23,58,0.45)]" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
-        className="relative flex w-full max-w-[700px] flex-col gap-[24px] rounded-[16px] bg-white px-[32px] pb-[28px] pt-[32px] shadow-[0px_20px_40px_0px_rgba(23,23,58,0.18)]"
+        className="personalize-card-in relative flex w-full max-w-[880px] flex-col gap-[28px] rounded-[18px] bg-white px-[44px] pb-[36px] pt-[40px] shadow-[0px_20px_0px_0px_rgba(23,23,58,0.18)]"
       >
-        {/* Header — progress bar, step count, title, description */}
-        <div className="flex w-full flex-col items-start gap-[16px]">
-          <div className="flex w-full items-start gap-[8px]">
-            {STEPS.map((_, i) => (
-              <div
-                key={i}
-                className={cn('h-[4px] flex-1 rounded-[2px]', i <= stepIndex ? 'bg-[#2F68E5]' : 'bg-[#DDE2EE]')}
-              />
-            ))}
-          </div>
-          <p className="whitespace-nowrap text-[11px] font-medium text-[#9097AD]" style={FONT}>
-            Step {stepIndex + 1} of {STEPS.length}
-          </p>
-          <p className="w-full text-[20px] font-semibold leading-[28px] text-[#17173A]" style={FONT}>
-            Help Co-Marketer understand you better
-          </p>
-          <p className="w-full text-[13px] leading-[20px] text-[#6F6F8D]" style={FONT}>
-            A few quick answers will help us show sharper insights and better next actions.
-          </p>
-        </div>
+        {/* Close */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-[16px] top-[16px] flex size-[32px] items-center justify-center rounded-[8px] text-[#9097AD] transition-colors hover:bg-[#F2F4F9] hover:text-[#17173A]"
+        >
+          <X className="size-[18px]" strokeWidth={2} />
+        </button>
 
-        {/* Step body — question + options grid */}
-        <div className="flex w-full flex-col gap-[4px]">
-          <p className="w-full text-[15px] font-semibold leading-[22px] text-[#17173A]" style={FONT}>
-            {step.title}
-          </p>
-          {step.hint && (
-            <p className="w-full text-[12px] text-[#9097AD]" style={FONT}>
-              {step.hint(data)}
-            </p>
-          )}
-        </div>
+        {!started ? (
+          /* Intro / welcome — states the purpose once, up front, before the
+             stepper starts. Two columns: left-aligned copy + CTAs on the left,
+             a sample illustration on the right. */
+          <div key="intro" className="personalize-step-in flex w-full items-stretch gap-[28px] py-[8px]">
+            {/* LHS — content + CTAs, left-aligned (structure per Figma) */}
+            <div className="flex flex-1 flex-col items-start justify-center gap-[20px] text-left">
+              <div className="flex flex-col items-start gap-[10px]">
+                <p className="text-[26px] font-semibold leading-[34px] text-[#17173A]" style={FONT}>
+                  Help Co-marketer understand you better
+                </p>
+                <p className="text-[14px] leading-[22px] text-[#6F6F8D]" style={FONT}>
+                  Four quick questions — your role, goals, metrics, and how you like to work —
+                  so we can show sharper insights and better next actions.
+                </p>
+              </div>
 
-        <div className="flex w-full flex-col gap-[10px]">
-          {chunk(step.options, gridSize).map((row, rowIndex) => (
-            <div key={rowIndex} className="flex w-full items-start gap-[10px]">
-              {row.map((option) => (
-                <OptionButton
-                  key={option}
-                  label={option}
-                  selected={isSelected(option)}
-                  disabled={isAtCap(option)}
-                  onClick={() => handleSelect(option)}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+              {/* Value props */}
+              <div className="flex flex-col gap-[14px]">
+                {INTRO_FEATURES.map(({ icon: Icon, title, desc }) => (
+                  <div key={title} className="flex items-start gap-[12px]">
+                    <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[9px] bg-[#EEF1FB] text-[#2F68E5]">
+                      <Icon className="size-[17px]" strokeWidth={2} />
+                    </span>
+                    <div className="flex flex-col gap-[1px] pt-[1px]">
+                      <span className="text-[13px] font-semibold text-[#17173A]" style={FONT}>
+                        {title}
+                      </span>
+                      <span className="text-[12px] leading-[17px] text-[#6F6F8D]" style={FONT}>
+                        {desc}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-        {/* Footer — skip / back / continue */}
-        <div className="flex w-full flex-col gap-[10px]">
-          <div className="flex w-full items-center justify-between">
-            <button
-              type="button"
-              onClick={onClose}
-              className="whitespace-nowrap text-[13px] font-semibold text-[#9097AD] transition-opacity hover:opacity-70"
-              style={FONT}
-            >
-              Skip for now
-            </button>
-            <div className="flex items-start gap-[10px]">
-              {!isRoleStep && (
+              <p className="text-[12px] font-medium text-[#9097AD]" style={FONT}>
+                Takes less than a minute · You can update this anytime
+              </p>
+              <div className="mt-[2px] flex items-center gap-[10px]">
                 <button
                   type="button"
-                  onClick={() => setStepIndex((i) => i - 1)}
-                  className="whitespace-nowrap rounded-[6px] border border-[#DDE2EE] bg-white px-[16px] py-[10px] text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+                  onClick={() => setStarted(true)}
+                  className="whitespace-nowrap rounded-[8px] bg-[#2F68E5] px-[18px] py-[9px] text-[13px] font-semibold text-white transition-colors hover:bg-[#255ad2] motion-safe:active:scale-[0.99]"
                   style={FONT}
                 >
-                  Back
+                  Get started
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={handleContinue}
-                className="whitespace-nowrap rounded-[6px] bg-[#2F68E5] px-[18px] py-[10px] text-[13px] font-semibold text-white transition-colors hover:bg-[#255ad2]"
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="whitespace-nowrap rounded-[8px] border border-[#DDE2EE] bg-white px-[16px] py-[9px] text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+                  style={FONT}
+                >
+                  Maybe later
+                </button>
+              </div>
+            </div>
+
+            {/* RHS — illustration rebuilt as components per Figma */}
+            <IntroIllustration />
+          </div>
+        ) : (
+          <>
+            {/* Header — step count + question title. Close X (on the card) sits
+                in this header row. */}
+            <div className="flex w-full flex-col gap-[4px] pr-[40px]">
+              <p className="whitespace-nowrap text-[12px] font-medium text-[#9097AD]" style={FONT}>
+                Step {stepIndex + 1} of {STEPS.length}
+              </p>
+              <p
+                key={stepIndex}
+                className="personalize-step-in w-full text-[20px] font-semibold leading-[28px] text-[#17173A]"
                 style={FONT}
               >
-                {step.continueLabel}
-              </button>
+                {step.title}
+              </p>
             </div>
-          </div>
-          <p className="w-full text-center text-[11px] text-[#9097AD]" style={FONT}>
-            Your preferences are only used to personalize your workspace.
-          </p>
-        </div>
+
+            {/* Progress line at the header/body boundary — full-bleed, starts at
+                the modal's left edge and fills to the current step's fraction
+                (negative margins cancel the card's horizontal padding). */}
+            <div className="-mx-[44px] h-[3px] bg-[#E7EAF2]">
+              <div
+                className="h-full bg-[#2F68E5] transition-[width] duration-300 ease-out"
+                style={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }}
+              />
+            </div>
+
+            {/* Step body — hint + options; re-keyed per step so it fades up on
+                advance/back instead of hard-swapping. */}
+            <div key={stepIndex} className="personalize-step-in flex w-full flex-col gap-[16px]">
+              <p className="w-full text-[13px] text-[#9097AD]" style={FONT}>
+                {step.hint ? step.hint(data) : 'Choose one'}
+              </p>
+
+              {isRoleStep ? (
+                <div className="grid w-full grid-cols-4 gap-[12px]">
+                  {step.options.map((option) => (
+                    <RoleCard
+                      key={option}
+                      label={option}
+                      selected={isSelected(option)}
+                      onClick={() => handleSelect(option)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                /* 2-col grid so an odd trailing option (e.g. Churn risk) sits in
+                   one column at half width instead of stretching full-bleed. */
+                <div className={cn('grid w-full gap-[12px]', gridSize === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
+                  {step.options.map((option) => (
+                    <OptionButton
+                      key={option}
+                      label={option}
+                      multi={isMultiStep}
+                      selected={isSelected(option)}
+                      disabled={isAtCap(option)}
+                      onClick={() => handleSelect(option)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer — "Skip for now" on the left, Back + Continue grouped on
+                the right (matches the Figma structure). */}
+            <div className="flex w-full items-center justify-between gap-[16px]">
+              <button
+                type="button"
+                onClick={onClose}
+                className="whitespace-nowrap text-[13px] font-semibold text-[#9097AD] transition-opacity hover:opacity-70"
+                style={FONT}
+              >
+                Skip for now
+              </button>
+              <div className="flex shrink-0 items-center gap-[10px]">
+                {!isRoleStep && (
+                  <button
+                    type="button"
+                    onClick={() => setStepIndex((i) => i - 1)}
+                    className="whitespace-nowrap rounded-[8px] border border-[#DDE2EE] bg-white px-[16px] py-[9px] text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+                    style={FONT}
+                  >
+                    Back
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  disabled={!canContinue}
+                  className={cn(
+                    'whitespace-nowrap rounded-[8px] bg-[#2F68E5] px-[20px] py-[9px] text-[13px] font-semibold text-white transition-colors motion-safe:active:scale-[0.99]',
+                    canContinue ? 'hover:bg-[#255ad2]' : 'cursor-not-allowed opacity-40'
+                  )}
+                  style={FONT}
+                >
+                  {step.continueLabel}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>,
     document.body
