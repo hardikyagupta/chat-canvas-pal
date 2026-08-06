@@ -287,6 +287,22 @@
    without chasing it. */
 .chip-marquee {
   overflow: hidden;
+  /* Soft fade at both edges so chips dissolve in/out rather than clipping
+     hard against the container sides. */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 48px,
+    #000 calc(100% - 48px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 48px,
+    #000 calc(100% - 48px),
+    transparent 100%
+  );
 }
 .chip-marquee-track {
   animation: chipMarquee 24s linear infinite;
