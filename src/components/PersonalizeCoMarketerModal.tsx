@@ -1,5 +1,25 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import {
+  Check,
+  X,
+  Mail,
+  TrendingUp,
+  RefreshCw,
+  SlidersHorizontal,
+  MousePointerClick,
+  Rocket,
+  BarChart3,
+  MoreHorizontal,
+  Lightbulb,
+  Clock,
+  ClipboardCheck,
+  Target,
+  ArrowUpRight,
+  ArrowDownRight,
+  ChevronRight,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
@@ -16,6 +36,11 @@ interface PersonalizeCoMarketerModalProps {
   onClose: () => void;
   /** Fired on "Save preferences" (final step) with everything picked so far. */
   onComplete: (data: PersonalizeCoMarketerData) => void;
+  /** Skip the intro/welcome screen and open straight on the form steps
+      (used when editing already-saved preferences). */
+  startInSteps?: boolean;
+  /** Pre-fill the form with previously saved answers (edit mode). */
+  initialData?: PersonalizeCoMarketerData | null;
 }
 
 interface StepDef {
@@ -28,15 +53,27 @@ interface StepDef {
 }
 
 const ROLE_OPTIONS = [
-  'CRM Marketer',
-  'Growth Manager',
-  'Lifecycle Marketer',
-  'Marketing Ops',
-  'Product / Web Engagement',
-  'Founder / Business Owner',
+  'CRM marketer',
+  'Growth manager',
+  'Lifecycle marketer',
+  'Marketing ops',
+  'Product engagement',
+  'Business owner',
   'Analyst',
   'Other',
 ];
+
+/** Icon shown on each role card (single-select step renders as a card grid). */
+const ROLE_ICONS: Record<string, LucideIcon> = {
+  'CRM marketer': Mail,
+  'Growth manager': TrendingUp,
+  'Lifecycle marketer': RefreshCw,
+  'Marketing ops': SlidersHorizontal,
+  'Product engagement': MousePointerClick,
+  'Business owner': Rocket,
+  Analyst: BarChart3,
+  Other: MoreHorizontal,
+};
 
 const GOAL_OPTIONS = [
   'Revenue growth',
@@ -59,7 +96,6 @@ const METRIC_OPTIONS = [
   'Repeat purchases',
   'Active users',
   'Churn risk',
-  'Funnel conversion',
 ];
 
 const AI_PREFERENCE_OPTIONS = [
@@ -71,24 +107,29 @@ const AI_PREFERENCE_OPTIONS = [
   'Alert me when something breaks',
 ];
 
+/** Capped multi-select hint — invites up front, then reflects the live count
+    (no redundant "3" repeated): "Pick up to 3" → "2 of 3 selected". */
+const capHint = (count: number, max: number) =>
+  count === 0 ? `Pick up to ${max}` : `${count} of ${max} selected`;
+
 const STEPS: StepDef[] = [
   { title: 'What best describes your role?', options: ROLE_OPTIONS, continueLabel: 'Continue' },
   {
     title: 'What are you trying to improve right now?',
-    hint: (d) => `Select up to 3  ·  ${d.goals.length} of 3 selected`,
+    hint: (d) => capHint(d.goals.length, 3),
     options: GOAL_OPTIONS,
     max: 3,
     continueLabel: 'Continue',
   },
   {
     title: 'Which metrics do you track most often?',
-    hint: (d) => `Select up to 3  ·  ${d.metrics.length} of 3 selected`,
+    hint: (d) => capHint(d.metrics.length, 3),
     options: METRIC_OPTIONS,
     max: 3,
     continueLabel: 'Continue',
   },
   {
-    title: 'How should Co-Marketer help you?',
+    title: 'How should Co-marketer help you?',
     hint: () => 'Select all that apply',
     options: AI_PREFERENCE_OPTIONS,
     continueLabel: 'Save preferences',
@@ -97,26 +138,159 @@ const STEPS: StepDef[] = [
 
 const EMPTY_DATA: PersonalizeCoMarketerData = { role: null, goals: [], metrics: [], aiPreferences: [] };
 
-/** Round selection indicator — filled royal dot when picked, grey outline otherwise. */
-function OptionDot({ selected }: { selected: boolean }) {
+/** Intro-screen value props (LHS), matching the Figma feature list. */
+const INTRO_FEATURES: { icon: LucideIcon; title: string; desc: string }[] = [
+  { icon: TrendingUp, title: 'Sharper insights', desc: 'See what matters most to your goals.' },
+  { icon: Lightbulb, title: 'Better recommendations', desc: 'Get more relevant next steps and ideas.' },
+  { icon: Clock, title: 'Less setup later', desc: "We'll tailor your workspace as you go." },
+];
+
+/** RHS illustration — a mock "Prioritized insights" panel built from components
+    (the Figma ships it as a flat image; this keeps it crisp and theme-aware). */
+function IntroIllustration() {
+  return (
+    <div className="relative hidden w-[360px] shrink-0 sm:block">
+      <div className="flex h-full flex-col justify-center gap-[14px] rounded-[16px] border border-[#E6EAF3] bg-[#F5F7FB] p-[16px]">
+        {/* Card 1 — Prioritized insights */}
+        <div className="intro-card-in rounded-[12px] border border-[#EDF0F6] bg-white p-[14px]" style={{ animationDelay: '0s' }}>
+          <div className="mb-[12px] flex items-center gap-[8px]">
+            <BarChart3 className="size-[16px] text-[#2F68E5]" strokeWidth={2.2} />
+            <span className="text-[12px] font-semibold text-[#17173A]" style={FONT}>
+              Prioritized insights
+            </span>
+          </div>
+          <div className="flex flex-col gap-[11px]">
+            {[
+              { pct: '12%', up: true },
+              { pct: '8%', up: true },
+              { pct: '4%', up: false },
+            ].map((row, i) => (
+              <div key={i} className="flex items-center gap-[10px]">
+                <span className="size-[14px] shrink-0 rounded-[4px] bg-[#E7EAF2]" />
+                <span className="h-[6px] flex-1 overflow-hidden rounded-full bg-[#EDF0F6]">
+                  <span
+                    className="intro-bar-fill block h-full w-full rounded-full"
+                    style={{ animationDelay: `${i * 0.35}s` }}
+                  />
+                </span>
+                <div
+                  className="intro-trend-pop flex w-[42px] shrink-0 items-center justify-end gap-[3px]"
+                  style={{ animationDelay: `${i * 0.35}s` }}
+                >
+                  {row.up ? (
+                    <ArrowUpRight className="size-[13px] text-[#1F9D57]" strokeWidth={2.4} />
+                  ) : (
+                    <ArrowDownRight className="size-[13px] text-[#E5484D]" strokeWidth={2.4} />
+                  )}
+                  <span
+                    className={cn('text-[11px] font-semibold', row.up ? 'text-[#1F9D57]' : 'text-[#E5484D]')}
+                    style={FONT}
+                  >
+                    {row.pct}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Card 2 — Recommended next steps */}
+        <div className="intro-card-in rounded-[12px] border border-[#EDF0F6] bg-white p-[14px]" style={{ animationDelay: '0.6s' }}>
+          <div className="mb-[12px] flex items-center gap-[8px]">
+            <ClipboardCheck className="size-[16px] text-[#2F68E5]" strokeWidth={2.2} />
+            <span className="text-[12px] font-semibold text-[#17173A]" style={FONT}>
+              Recommended next steps
+            </span>
+          </div>
+          <div className="flex flex-col gap-[12px]">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-[10px]">
+                <span
+                  className="intro-step-ring flex size-[14px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#D5DAE6]"
+                  style={{ animationDelay: `${i * 0.5}s` }}
+                >
+                  <Check
+                    className="intro-step-check size-[9px] text-white"
+                    strokeWidth={3.2}
+                    style={{ animationDelay: `${i * 0.5}s` }}
+                  />
+                </span>
+                <span className="h-[6px] flex-1 overflow-hidden rounded-full bg-[#EDF0F6]">
+                  <span
+                    className="intro-bar-fill block h-full w-full rounded-full"
+                    style={{ animationDelay: `${0.4 + i * 0.35}s` }}
+                  />
+                </span>
+                <ChevronRight
+                  className="intro-chevron-nudge size-[14px] shrink-0 text-[#C0C6D4]"
+                  strokeWidth={2.2}
+                  style={{ animationDelay: `${i * 0.25}s` }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Card 3 — Focus areas */}
+        <div className="intro-card-in rounded-[12px] border border-[#EDF0F6] bg-white p-[14px]" style={{ animationDelay: '1.2s' }}>
+          <div className="mb-[12px] flex items-center gap-[8px]">
+            <Target className="size-[16px] text-[#2F68E5]" strokeWidth={2.2} />
+            <span className="text-[12px] font-semibold text-[#17173A]" style={FONT}>
+              Focus areas
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-[8px]">
+            {['Engagement', 'Content', 'Activation'].map((chip, i) => (
+              <span
+                key={chip}
+                className="intro-chip-pop rounded-[8px] bg-[#EAF0FF] px-[12px] py-[6px] text-[11px] font-semibold text-[#2F68E5]"
+                style={{ ...FONT, animationDelay: `${i * 0.4}s` }}
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Selection indicator with shape semantics:
+ *  - multi-select steps → square checkbox with a checkmark when picked
+ *  - single-select (role) → round radio with an inner dot when picked
+ * The glyph scales in so selecting an option feels responsive.
+ */
+function OptionIndicator({ selected, multi }: { selected: boolean; multi: boolean }) {
   return (
     <span
       className={cn(
-        'block size-[18px] shrink-0 rounded-full border-[1.5px]',
+        'flex size-[18px] shrink-0 items-center justify-center border-[1.5px] transition-colors',
+        multi ? 'rounded-[5px]' : 'rounded-full',
         selected ? 'border-[#2F68E5] bg-[#2F68E5]' : 'border-[#DDE2EE] bg-transparent'
       )}
-    />
+    >
+      {selected &&
+        (multi ? (
+          <Check className="size-[12px] text-white motion-safe:animate-in motion-safe:zoom-in-50" strokeWidth={3} />
+        ) : (
+          <span className="size-[7px] rounded-full bg-white motion-safe:animate-in motion-safe:zoom-in-50" />
+        ))}
+    </span>
   );
 }
 
 function OptionButton({
   label,
   selected,
+  multi,
   disabled,
   onClick,
 }: {
   label: string;
   selected: boolean;
+  multi: boolean;
   disabled?: boolean;
   onClick: () => void;
 }) {
