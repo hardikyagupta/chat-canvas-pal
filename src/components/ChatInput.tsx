@@ -1,4 +1,4 @@
-import React, { useState, useRef, KeyboardEvent, CSSProperties, useEffect } from 'react';
+import React, { useState, useRef, KeyboardEvent, CSSProperties, useEffect, useLayoutEffect } from 'react';
 import { Command, CommandGroup, CommandItem, CommandEmpty, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -194,6 +194,29 @@ const ChatInput: React.FC<ChatInputProps> = ({
     if (agentSubTimer.current) clearTimeout(agentSubTimer.current);
     agentSubTimer.current = setTimeout(() => setAgentSubOpen(false), 140);
   };
+  // Viewport-aware placement for the flyout — it opens near the bottom-left of
+  // the screen while a response streams, so the naive "always right, always
+  // aligned to the row's top" placement can run off-screen and get clipped.
+  const agentSubRowRef = useRef<HTMLDivElement>(null);
+  const agentSubFlyoutRef = useRef<HTMLDivElement>(null);
+  const [agentSubFlyoutPos, setAgentSubFlyoutPos] = useState<{ side: 'left' | 'right'; top: number }>({ side: 'right', top: -4 });
+  useLayoutEffect(() => {
+    if (!agentSubOpen) return;
+    const row = agentSubRowRef.current;
+    const flyout = agentSubFlyoutRef.current;
+    if (!row || !flyout) return;
+    const margin = 8;
+    const rowRect = row.getBoundingClientRect();
+    const flyoutRect = flyout.getBoundingClientRect();
+    const side: 'left' | 'right' =
+      rowRect.right + 4 + flyoutRect.width + margin > window.innerWidth ? 'left' : 'right';
+    let top = -4;
+    const overflowBottom = rowRect.top + flyoutRect.height + margin - window.innerHeight;
+    if (overflowBottom > 0) {
+      top = Math.max(-4 - overflowBottom, -(rowRect.top - margin));
+    }
+    setAgentSubFlyoutPos({ side, top });
+  }, [agentSubOpen]);
   const [deepResearchActive, setDeepResearchActive] = useState(initialDeepResearch);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [mentionSearch, setMentionSearch] = useState("");
@@ -730,6 +753,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   // "Custom agents" row + L2 flyout. The flyout is a descendant so
                   // hovering it keeps the row "entered"; the timeout bridges the gap.
                   <div
+                    ref={agentSubRowRef}
                     className="relative"
                     onMouseEnter={openAgentSub}
                     onMouseLeave={closeAgentSubSoon}
@@ -752,9 +776,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
                     {agentSubOpen && (
                       <div
+                        ref={agentSubFlyoutRef}
                         onMouseEnter={openAgentSub}
                         onMouseLeave={closeAgentSubSoon}
-                        className="absolute left-full top-[-4px] z-50 ml-[4px] w-[236px] p-[4px] rounded-[12px] border border-border bg-popover shadow-[0px_8px_20px_0px_oklch(0_0_0_/_0.12)] animate-in fade-in-0 zoom-in-95 slide-in-from-left-1"
+                        style={{ top: `${agentSubFlyoutPos.top}px` }}
+                        className={cn(
+                          "absolute z-50 w-[236px] p-[4px] rounded-[12px] border border-border bg-popover shadow-[0px_8px_20px_0px_oklch(0_0_0_/_0.12)] animate-in fade-in-0 zoom-in-95",
+                          agentSubFlyoutPos.side === 'right'
+                            ? "left-full ml-[4px] slide-in-from-left-1"
+                            : "right-full mr-[4px] slide-in-from-right-1"
+                        )}
                       >
                         <div className="flex flex-col max-h-[220px] overflow-y-auto hover-scroll">
                           {(agents ?? []).map((a) => (
