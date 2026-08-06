@@ -13,7 +13,7 @@ import {
   Target,
   User,
 } from "lucide-react";
-import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
+import iconDecisioning from "/campaign-assets/nav-decisioning-orange.svg";
 import { useDecisioningSetup } from "@/contexts/DecisioningSetupContext";
 
 /* ------------------------------------------------------------------ */
