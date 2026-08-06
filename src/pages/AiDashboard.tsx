@@ -190,15 +190,15 @@ const needsAttention = [
   },
 ];
 
-/** Flat category tag — blue for wins, red/antique "error state" for
+/** Flat category tag — teal/green for wins, red/antique "error state" for
  *  needs-attention (always rendered upper-case via CSS so source casing
  *  never has to match). */
-function CategoryBadge({ label, tone = "blue" }: { label: string; tone?: "blue" | "red" }) {
+function CategoryBadge({ label, tone = "green" }: { label: string; tone?: "green" | "red" }) {
   return (
     <span
       className={cn(
         "w-fit rounded-[11px] px-2 py-1 font-manrope text-[10px] font-semibold uppercase tracking-wide",
-        tone === "red" ? "bg-[#FFE9DA] text-[#F05C5C]" : "bg-[#F0F5FF] text-[#2F68E5]"
+        tone === "red" ? "bg-[#FFE9DA] text-[#F05C5C]" : "bg-[#E8F8F4] text-[#00A68C]"
       )}
     >
       {label}
@@ -284,7 +284,69 @@ export default function AiDashboard() {
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(new Set());
   const [isPersonalizeOpen, setIsPersonalizeOpen] = useState(false);
   const [isPersonalized, setIsPersonalized] = useState(false);
+  // Edit mode opens the modal straight on the form steps (no intro) and pre-fills
+  // the previously saved answers.
+  const [isPersonalizeEditing, setIsPersonalizeEditing] = useState(false);
+  const [savedPrefs, setSavedPrefs] = useState<PersonalizeCoMarketerData | null>(null);
   const { toast } = useToast();
+
+  // Hero composer greets with a cosmetic border shimmer (and the looping left
+  // loader) that stays active until the user clicks into the field — a quiet
+  // "ready" flourish that settles the moment they start interacting. The field
+  // itself stays fully usable throughout (no disabled/generating state).
+  const [heroShimmer, setHeroShimmer] = useState(true);
+
+  const openPersonalize = () => {
+    setIsPersonalizeEditing(false);
+    setIsPersonalizeOpen(true);
+  };
+  const openPersonalizeEdit = () => {
+    setIsPersonalizeEditing(true);
+    setIsPersonalizeOpen(true);
+  };
+
+  // Date filter — top-right of the page. Picks are staged in the popover and
+  // only take effect on "Apply", which shows a brief skeleton before the
+  // (deterministically re-derived) data for that range renders.
+  const [appliedRange, setAppliedRange] = useState<AppliedDateRange>(() => {
+    const today = new Date();
+    return { from: subDays(today, 6), to: today };
+  });
+  const [rangeLabel, setRangeLabel] = useState("Last 7 days");
+  const [isDataLoading, setIsDataLoading] = useState(false);
+  const dataLoadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleApplyDateFilter = (range: AppliedDateRange, label: string) => {
+    setIsDataLoading(true);
+    if (dataLoadTimer.current) clearTimeout(dataLoadTimer.current);
+    dataLoadTimer.current = setTimeout(() => {
+      setAppliedRange(range);
+      setRangeLabel(label);
+      setIsDataLoading(false);
+    }, 700);
+  };
+  useEffect(() => () => {
+    if (dataLoadTimer.current) clearTimeout(dataLoadTimer.current);
+  }, []);
+
+  // Which metric cards show (and their order) — edited via the "Customize
+  // cards" RHS panel. Enabled cards render left→right, capped at MAX_CARDS.
+  const [cardPrefs, setCardPrefs] = useState<CardPref[]>(DEFAULT_CARD_PREFS);
+  const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+
+  const rangeDays = Math.max(1, differenceInCalendarDays(appliedRange.to, appliedRange.from) + 1);
+  const metricsById = useMemo(() => getMetricsForRange(rangeDays), [rangeDays]);
+  const visibleMetrics = useMemo(
+    () =>
+      cardPrefs
+        .filter((p) => p.enabled)
+        .slice(0, MAX_CARDS)
+        .map((p) => metricsById[p.id])
+        .filter(Boolean),
+    [cardPrefs, metricsById]
+  );
+  const visibleWins = useMemo(() => rotateForRange(wins, rangeDays), [rangeDays]);
+  const visibleNeedsAttention = useMemo(() => rotateForRange(needsAttention, rangeDays), [rangeDays]);
 
   // Confirmation pill shown after thumbs feedback on a wins / needs-attention
   // item — same DSL pill used for chat feedback (feedback-nudge-in + check).
@@ -315,10 +377,10 @@ export default function AiDashboard() {
     setChatOpen(true);
   };
 
-  const handleHeroSend = (message: string) => openDockedChat({ expanded: true, message });
+  const handleHeroSend = (message: string) => openDockedChat({ expanded: false, message });
 
   const handleOpenInsightChat = (insight: InsightCardContext) =>
-    openDockedChat({ expanded: true, insight });
+    openDockedChat({ expanded: false, insight });
 
   useEffect(() => {
     if (chatOpen) {
@@ -372,7 +434,31 @@ export default function AiDashboard() {
         />
 
         <div className="mt-2 flex min-h-0 flex-1 gap-2">
-          <div className="scroll-slim min-w-0 flex-1 overflow-y-auto px-4 pt-6 pb-8">
+          <div className="scroll-slim relative min-w-0 flex-1 overflow-y-auto px-4 pt-6 pb-8">
+            {/* Top-right controls — date range filter always shown; "Edit
+                preferences" joins it once personalization is saved (opens the
+                modal straight on the form steps, pre-filled). */}
+            <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsCustomizeOpen(true)}
+                className="flex items-center gap-1.5 rounded-[8px] border border-[#DDE2EE] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#17173A] shadow-[0px_2px_6px_rgba(23,23,58,0.04)] transition-colors hover:bg-[#F7F9FC]"
+              >
+                <LayoutGrid className="size-[14px] text-[#6F6F8D]" />
+                Customize cards
+              </button>
+              <DateRangeFilter value={appliedRange} label={rangeLabel} onApply={handleApplyDateFilter} />
+              {isPersonalized && (
+                <button
+                  type="button"
+                  onClick={openPersonalizeEdit}
+                  className="flex items-center gap-1.5 rounded-[8px] border border-[#DDE2EE] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#17173A] shadow-[0px_2px_6px_rgba(23,23,58,0.04)] transition-colors hover:bg-[#F7F9FC]"
+                >
+                  <SlidersHorizontal className="size-[14px] text-[#6F6F8D]" />
+                  Edit preferences
+                </button>
+              )}
+            </div>
             {/* Greeting */}
             <div className="flex flex-col items-center gap-1 text-center">
               <p className="font-manrope text-[13px] text-[#837C8E]">Thursday, 4 June (GMT+5:30)</p>
@@ -407,110 +493,135 @@ export default function AiDashboard() {
               </div>
 
               {/* Hero composer — same ChatInput used across the app. Typing here and
-                  sending opens the full-page co-marketer modal (below) with that
-                  message already "sent"; picking a suggestion chip above still opens
-                  the docked side panel, same as the "Ask co-marketer" entry point. */}
+                  sending opens the docked co-marketer side panel (RHS) with that
+                  message already "sent" — same as the suggestion chips and the
+                  "Ask co-marketer" entry point. The dashboard's first view stays
+                  intact; the user can still expand to full-screen from inside the
+                  panel. */}
               <div className="w-full max-w-[768px]">
                 <ChatInput
                   layout="linear"
                   showAddButton={false}
                   flat
+                  borderShimmer={heroShimmer}
+                  placeholderIcon="/thinking-loader.gif"
                   placeholder="Ask anything — What's driving churn this month?  or  Create a win-back campaign for lapsed users"
                   onSend={handleHeroSend}
+                  onFieldFocus={() => setHeroShimmer(false)}
                 />
               </div>
             </div>
 
-            {/* Metric cards */}
-            <div className="mt-6 flex gap-4">
-              {metrics.map((m) => (
-                <div key={m.label} className="flex flex-1 flex-col items-start rounded-[10px] bg-white px-5 py-4">
-                  <div className="flex flex-col gap-1">
-                    <p className="font-manrope text-[12px] font-medium text-[#6F6F8D]">{m.label}</p>
-                    <div className="flex items-center gap-1">
-                      <p className="font-manrope text-[32px] font-bold text-[#17173A]">{m.value}</p>
-                      {m.delta && (
-                        <span
-                          className={cn(
-                            "rounded-[11px] px-1 py-0.5 font-manrope text-[11px] font-semibold whitespace-nowrap",
-                            m.delta.tone === "up" ? "bg-[#E8F8F4] text-[#00A68C]" : "bg-[#FEEDED] text-[#F05C5C]"
-                          )}
-                        >
-                          {m.delta.text}
-                        </span>
-                      )}
+            {/* Metric cards — tinted panel + title header wrapping a white
+                inner card; skeleton while a newly-applied date range loads */}
+            <div className="mt-6 flex gap-6">
+              {isDataLoading
+                ? Array.from({ length: visibleMetrics.length || MAX_CARDS }).map((_, i) => (
+                    <div key={i} className="flex flex-1 flex-col overflow-hidden rounded-[8px] bg-[#ECEFF5]">
+                      <div className="flex items-center py-2 pl-4 pr-2">
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                      <div className="flex flex-1 px-1 pb-1">
+                        <div className="flex flex-1 flex-col gap-2 rounded-[8px] border-[0.25px] border-[#DCDCDC] bg-white px-3 py-4">
+                          <Skeleton className="h-8 w-16" />
+                          <Skeleton className="h-3 w-full" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <p className="mt-1 font-manrope text-[12px] leading-[17px] text-[#6F6F8D]">{m.sub}</p>
-                </div>
-              ))}
+                  ))
+                : visibleMetrics.map((m) => (
+                    <div key={m.label} className="flex flex-1 flex-col overflow-hidden rounded-[8px] bg-[#ECEFF5]">
+                      <div className="flex items-center py-2 pl-4 pr-2">
+                        <p className="font-manrope text-[14px] font-bold text-[#17173A]">{m.label}</p>
+                      </div>
+                      <div className="flex flex-1 px-1 pb-1">
+                        <div className="flex flex-1 flex-col gap-1 rounded-[8px] border-[0.25px] border-[#DCDCDC] bg-white px-3 py-4">
+                          <p className="font-manrope text-[32px] font-bold leading-none text-[#17173A]">{m.value}</p>
+                          <p className="font-manrope text-[12px] leading-[17px] text-[#6F6F8D]">{m.sub}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
             </div>
 
-            {/* More wins / Needs attention */}
-            <div className="mt-6 flex gap-4">
-              <div className="flex flex-1 flex-col overflow-hidden rounded-[8px] bg-white">
-                <div className="flex items-center py-2 pl-6 pr-2">
+            {/* More wins / Needs attention — tinted panel + header, each item
+                its own white card; same skeleton gate */}
+            <div className="mt-6 flex gap-6">
+              <div className="flex flex-1 flex-col overflow-hidden rounded-[8px] bg-[#ECEFF5]">
+                <div className="flex items-center py-2 pl-4 pr-2">
                   <p className="font-manrope text-[14px] font-bold text-[#17173A]">More wins</p>
                 </div>
-                <div className="px-2 pb-2">
-                  <div className="flex flex-col gap-4 rounded-[8px] border border-[#DDE2EE] px-4 py-6">
-                    {wins.map((win) => (
-                      <div key={win.title} className="flex items-start justify-between gap-4">
-                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                          <div className="flex gap-1.5">
-                            {win.badges.map((b) => (
-                              <CategoryBadge key={b} label={b} />
-                            ))}
-                          </div>
-                          <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{win.title}</p>
-                          <p className="font-manrope text-[11px] text-[#6F6F8D]">{win.sub}</p>
-                          <ItemFeedback onSubmit={handleItemFeedback} />
+                <div className="flex flex-col gap-1 px-1 pb-1">
+                  {isDataLoading
+                    ? Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="flex flex-col gap-1.5 rounded-[8px] border-[0.25px] border-[#DCDCDC] bg-white p-3">
+                          <Skeleton className="h-4 w-24 rounded-[11px]" />
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-3 w-1/2" />
                         </div>
-                        <GetInsightsLink
-                          onClick={() =>
-                            handleOpenInsightChat({
-                              sectionLabel: "More wins",
-                              badges: win.badges,
-                              title: win.title,
-                              sub: win.sub,
-                              badgeTone: "blue",
-                            })
-                          }
-                        />
-                      </div>
-                    ))}
-                  </div>
+                      ))
+                    : visibleWins.map((win) => (
+                        <div key={win.title} className="flex items-start justify-between gap-4 rounded-[8px] border-[0.25px] border-[#DCDCDC] bg-white p-3">
+                          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                            <div className="flex gap-1.5">
+                              {win.badges.map((b) => (
+                                <CategoryBadge key={b} label={b} />
+                              ))}
+                            </div>
+                            <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{win.title}</p>
+                            <p className="font-manrope text-[11px] text-[#6F6F8D]">{win.sub}</p>
+                            <ItemFeedback onSubmit={handleItemFeedback} />
+                          </div>
+                          <GetInsightsLink
+                            onClick={() =>
+                              handleOpenInsightChat({
+                                sectionLabel: "More wins",
+                                badges: win.badges,
+                                title: win.title,
+                                sub: win.sub,
+                                badgeTone: "blue",
+                              })
+                            }
+                          />
+                        </div>
+                      ))}
                 </div>
               </div>
 
-              <div className="flex flex-1 flex-col overflow-hidden rounded-[8px] bg-white">
-                <div className="flex items-center py-2 pl-6 pr-2">
+              <div className="flex flex-1 flex-col overflow-hidden rounded-[8px] bg-[#ECEFF5]">
+                <div className="flex items-center py-2 pl-4 pr-2">
                   <p className="font-manrope text-[14px] font-bold text-[#17173A]">Needs attention</p>
                 </div>
-                <div className="px-2 pb-2">
-                  <div className="flex flex-col gap-4 rounded-[8px] border border-[#DDE2EE] p-4">
-                    {needsAttention.map((item) => (
-                      <div key={item.title} className="flex items-start justify-between gap-4">
-                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                          <CategoryBadge label={item.badge} tone="red" />
-                          <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{item.title}</p>
-                          <p className="font-manrope text-[11px] text-[#6F6F8D]">{item.sub}</p>
-                          <ItemFeedback onSubmit={handleItemFeedback} />
+                <div className="flex flex-col gap-1 px-1 pb-1">
+                  {isDataLoading
+                    ? Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="flex flex-col gap-1.5 rounded-[8px] border-[0.25px] border-[#DCDCDC] bg-white p-3">
+                          <Skeleton className="h-4 w-20 rounded-[11px]" />
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-3 w-1/2" />
                         </div>
-                        <GetInsightsLink
-                          onClick={() =>
-                            handleOpenInsightChat({
-                              sectionLabel: "Needs attention",
-                              badges: [item.badge],
-                              title: item.title,
-                              sub: item.sub,
-                              badgeTone: "red",
-                            })
-                          }
-                        />
-                      </div>
-                    ))}
-                  </div>
+                      ))
+                    : visibleNeedsAttention.map((item) => (
+                        <div key={item.title} className="flex items-start justify-between gap-4 rounded-[8px] border-[0.25px] border-[#DCDCDC] bg-white p-3">
+                          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                            <CategoryBadge label={item.badge} tone="red" />
+                            <p className="font-manrope text-[13px] font-semibold text-[#17173A]">{item.title}</p>
+                            <p className="font-manrope text-[11px] text-[#6F6F8D]">{item.sub}</p>
+                            <ItemFeedback onSubmit={handleItemFeedback} />
+                          </div>
+                          <GetInsightsLink
+                            onClick={() =>
+                              handleOpenInsightChat({
+                                sectionLabel: "Needs attention",
+                                badges: [item.badge],
+                                title: item.title,
+                                sub: item.sub,
+                                badgeTone: "red",
+                              })
+                            }
+                          />
+                        </div>
+                      ))}
                 </div>
               </div>
             </div>
@@ -519,14 +630,14 @@ export default function AiDashboard() {
             {!isPersonalized && (
               <div className="mt-6 flex items-center gap-5 rounded-[12px] border border-[#DDE2EE] bg-white py-5 pl-6 pr-5 shadow-[0px_5px_10px_0px_rgba(23,23,58,0.05)]">
                 <div className="flex shrink-0 items-center justify-center rounded-[12px] bg-[#F0F5FF] p-3.5">
-                  <img src={sparkleAi} alt="" className="h-5 w-5" />
+                  <img src={sparkleNav} alt="" className="h-5 w-5" />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <p className="text-[16px] font-bold leading-[22px] text-[#17173A]">
-                    Make Co-Marketer more relevant to you
+                    Make Co-marketer more relevant to you
                   </p>
                   <p className="text-[13px] leading-[19px] text-[#6F6F8D]">
-                    Tell us what you care about, and Co-Marketer will prioritize insights, recommendations, and
+                    Tell us what you care about, and Co-marketer will prioritize insights, recommendations, and
                     actions around your goals.
                   </p>
                   <p className="text-[11px] font-medium text-[#6F6F8D]">
@@ -535,7 +646,7 @@ export default function AiDashboard() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsPersonalizeOpen(true)}
+                  onClick={openPersonalize}
                   className="shrink-0 rounded-[6px] bg-[#2F68E5] px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#255ad2]"
                 >
                   Personalize Co-marketer
@@ -559,16 +670,29 @@ export default function AiDashboard() {
               document.body
             )}
 
+          <CustomizeCardsPanel
+            open={isCustomizeOpen}
+            onClose={() => setIsCustomizeOpen(false)}
+            prefs={cardPrefs}
+            labels={METRIC_LABELS}
+            maxEnabled={MAX_CARDS}
+            minEnabled={MIN_CARDS}
+            onSave={setCardPrefs}
+          />
+
           <PersonalizeCoMarketerModal
             open={isPersonalizeOpen}
+            startInSteps={isPersonalizeEditing}
+            initialData={isPersonalizeEditing ? savedPrefs : null}
             onClose={() => setIsPersonalizeOpen(false)}
             onComplete={(prefs: PersonalizeCoMarketerData) => {
               console.log("Co-Marketer preferences saved:", prefs);
+              setSavedPrefs(prefs);
               setIsPersonalizeOpen(false);
               setIsPersonalized(true);
               toast({
-                title: "Preferences saved",
-                description: "Co-Marketer will now prioritize insights around what matters to you.",
+                title: isPersonalizeEditing ? "Preferences updated" : "Preferences saved",
+                description: "Co-marketer will now prioritize insights around what matters to you.",
               });
             }}
           />
