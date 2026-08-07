@@ -10,7 +10,7 @@
 // CONVERSATIONS with the same ConversationScript shape.
 
 import type { LucideIcon } from 'lucide-react';
-import { Users, Share2 } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 export type ConversationVariant = 'default' | 'campaigns';
 
@@ -102,7 +102,6 @@ export const CAMPAIGNS_FLOW: CampaignsTurn[] = [
       title: "High-Intent Re-Engagers",
       stats: [
         { icon: Users, label: "12,133 users" },
-        { icon: Share2, label: "Active on 3 channels" },
       ],
       description:
         "Recently engaged, multi-channel users with high purchase intent and no conversion yet.",

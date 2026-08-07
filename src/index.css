@@ -783,6 +783,26 @@
   100% { transform: translateX(320%) skewX(-12deg); }
 }
 
+/* Cloning-agent skeleton — a light sweep travels across the placeholder card
+   while the clone is being prepared, then the real card pops in over it. */
+@keyframes agentCloneSweep {
+  0% { transform: translateX(-140%) skewX(-14deg); }
+  100% { transform: translateX(240%) skewX(-14deg); }
+}
+.agent-clone-sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    oklch(1 0 0 / 0.55) 50%,
+    transparent 80%
+  );
+  animation: agentCloneSweep 1.25s ease-in-out infinite;
+}
+
 /* Gentle node halo — a soft breathing ring, deliberately small so it never
    reaches the connectors (unlike Tailwind's animate-ping, which scales to 2x
    and swallowed the arrows). */

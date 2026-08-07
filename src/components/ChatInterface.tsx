@@ -654,8 +654,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       updatedAt: 'now',
       isBuiltIn: false,
     };
+    // Prepend into "Your agents" and stay on the list so the CustomAgentsPage
+    // clone interaction (skeleton → pop-in → toast) can play out in place,
+    // rather than jumping straight into the new agent's detail view.
     setCustomAgents((prev) => [clone, ...prev]);
-    setSelectedAgentId(clone.id);
   };
   const openCustomAgents = () => { setSelectedAgentId(null); setActivePage('custom-agents'); };
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
