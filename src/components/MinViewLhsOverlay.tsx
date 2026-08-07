@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Plus, MessageSquare, Bookmark, BarChart3, Bot, CalendarClock, ChevronDown, MoreHorizontal, Check } from 'lucide-react';
+import { X, Plus, ChevronDown, MoreHorizontal, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LhsChatItem } from './LhsSidebar';
+import { ChatsIcon, CustomAgentsIcon, ReportsIcon, SchedulerIcon, BookmarkIcon } from './LhsSidebar';
 import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
 
@@ -118,11 +119,11 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
 
   const menuActions = [
     { key: 'new-chat', label: 'New chat', icon: Plus, onClick: onNewChat, isNewChat: true },
-    { key: 'chats', label: 'Chats', icon: MessageSquare, onClick: onOpenChats },
-    { key: 'custom-agents', label: 'Agents', icon: Bot, onClick: onOpenCustomAgents },
-    { key: 'reports', label: 'Reports', icon: BarChart3, onClick: onOpenReports },
-    { key: 'scheduler', label: 'Scheduled', icon: CalendarClock, onClick: onOpenScheduler },
-    { key: 'bookmarks', label: 'Bookmarks', icon: Bookmark, onClick: onOpenBookmarks },
+    { key: 'chats', label: 'Chats', icon: ChatsIcon, onClick: onOpenChats },
+    { key: 'custom-agents', label: 'Agents', icon: CustomAgentsIcon, onClick: onOpenCustomAgents },
+    { key: 'reports', label: 'Reports', icon: ReportsIcon, onClick: onOpenReports },
+    { key: 'scheduler', label: 'Scheduled', icon: SchedulerIcon, onClick: onOpenScheduler },
+    { key: 'bookmarks', label: 'Bookmarks', icon: BookmarkIcon, onClick: onOpenBookmarks },
   ];
 
   return (

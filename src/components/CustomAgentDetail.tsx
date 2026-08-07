@@ -33,6 +33,9 @@ const formatFileSize = (bytes: number): string => {
 interface CustomAgentDetailProps {
   agent: CustomAgent;
   compact?: boolean;
+  /** Shows a skeleton in place of the real content while the agent "loads" — used
+   *  right after a clone lands, before the real data settles in. */
+  loading?: boolean;
   onBack: () => void;
   onEditAgent: (id: string, data: { name: string; description: string }) => void;
   onDeleteAgent: (id: string) => void;
@@ -203,6 +206,45 @@ const AddTextContentModal: React.FC<{
     document.body
   );
 };
+
+/* ── Skeleton (shown briefly right after a clone lands) ─────────────── */
+const SkelBar: React.FC<{ className?: string }> = ({ className }) => (
+  <div className={cn('rounded-[6px] bg-[var(--color-surface-1)] animate-pulse', className)} />
+);
+
+const DetailSkeleton: React.FC<{ compact: boolean }> = ({ compact }) => (
+  <>
+    <div className="flex items-start justify-between gap-[12px] pt-[10px] pb-[16px] shrink-0">
+      <div className="flex min-w-0 items-start gap-[14px]">
+        <SkelBar className={cn('rounded-full shrink-0', compact ? 'size-[40px]' : 'size-[52px]')} />
+        <div className="flex min-w-0 flex-col gap-[8px] pt-[2px]">
+          <SkelBar className={cn('w-[180px]', compact ? 'h-[18px]' : 'h-[22px]')} />
+          <SkelBar className="h-[14px] w-[260px]" />
+        </div>
+      </div>
+      <SkelBar className="h-[34px] w-[34px] shrink-0" />
+    </div>
+
+    <div className={cn('flex-1 min-h-0 overflow-y-auto pt-[6px] pb-[32px] -mx-[4px] px-[4px]', compact ? 'flex flex-col gap-[16px]' : 'grid grid-cols-[minmax(0,1fr)_360px] gap-[24px] items-start')}>
+      <div className="flex flex-col gap-[10px]">
+        <SkelBar className="h-[52px] w-full rounded-[14px]" />
+      </div>
+
+      <div className="flex flex-col rounded-[16px] border border-[var(--color-line-input)] bg-card overflow-hidden">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className={cn('flex flex-col gap-[10px] px-[18px] py-[16px]', i > 0 && 'border-t border-[var(--color-line)]')}
+          >
+            <SkelBar className="h-[14px] w-[110px]" />
+            <SkelBar className="h-[11px] w-full" />
+            <SkelBar className="h-[11px] w-[70%]" />
+          </div>
+        ))}
+      </div>
+    </div>
+  </>
+);
 
 const TOOL_COLUMN_HEADING = 'text-[11px] font-semibold uppercase tracking-[0.6px] text-[var(--color-grey-soft)]';
 
@@ -467,6 +509,7 @@ function StarterQuestionsSummary({ questions }: { questions: string[] }) {
 const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
   agent,
   compact = false,
+  loading = false,
   onBack,
   onEditAgent,
   onDeleteAgent,
@@ -579,6 +622,10 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
           </button>
         </div>
 
+        {loading ? (
+          <DetailSkeleton compact={compact} />
+        ) : (
+        <>
         {/* Header — avatar + name + description, three-dot menu (no star/bookmark). */}
         <div className="flex items-start justify-between gap-[12px] pt-[10px] pb-[16px] shrink-0">
           <div className="flex min-w-0 items-start gap-[14px]">
@@ -924,6 +971,8 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
 
       <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload} />

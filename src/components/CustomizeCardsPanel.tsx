@@ -100,7 +100,7 @@ export default function CustomizeCardsPanel({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pb-4 pt-6">
-          <h2 className="font-manrope text-[22px] font-bold text-[#17173A]">Customize</h2>
+          <h2 className="font-manrope text-[22px] font-bold text-[#17173A]">Customize metrics</h2>
         </div>
 
         {/* Search */}
@@ -109,7 +109,7 @@ export default function CustomizeCardsPanel({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by header name"
+              placeholder="Search by name"
               className="w-full rounded-[8px] border border-transparent bg-[#F5F5F8] px-4 py-3 pr-10 font-manrope text-[14px] text-[#17173A] placeholder:text-[#9A9AB2] focus:border-[#DDE2EE] focus:outline-none"
             />
             <Search className="pointer-events-none absolute right-4 top-1/2 size-[18px] -translate-y-1/2 text-[#6F6F8D]" />

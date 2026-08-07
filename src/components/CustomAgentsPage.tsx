@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, MoreHorizontal, Pencil, Trash2, Bot, Copy, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Search, MoreHorizontal, Pencil, Trash2, Bot, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AgentTools, CustomAgent } from '@/data/customAgents';
 import {
@@ -75,54 +74,18 @@ const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   </h2>
 );
 
-/** Placeholder shown in "Your agents" while a clone is being prepared — echoes
- *  the card shape with pulsing bars, a travelling shine, and a "Cloning…" pill,
- *  then the real card pops in over it once the clone lands. */
-const CloningAgentCard: React.FC<{ agent: CustomAgent }> = ({ agent }) => (
-  <div className="agent-clone-sweep relative flex flex-col overflow-hidden rounded-[16px] border border-[var(--color-line-input)] bg-card shadow-[0px_4px_16px_-4px_oklch(0_0_0_/_0.08)] animate-in fade-in-0 zoom-in-95 duration-300">
-    <div className="flex flex-col gap-[10px] p-[18px]">
-      {agent.avatarSrc ? (
-        <img src={agent.avatarSrc} alt="" className="size-[36px] rounded-full object-cover shrink-0 opacity-60" />
-      ) : (
-        <span className="flex size-[36px] items-center justify-center rounded-[10px] bg-[color-mix(in_oklch,var(--color-plum)_16%,transparent)] shrink-0">
-          <Bot className="size-[20px] text-[var(--color-plum)]" />
-        </span>
-      )}
-      <div className="mt-[2px] h-[16px] w-[58%] rounded-[6px] bg-[var(--color-surface-1)] animate-pulse" />
-      <div className="flex flex-col gap-[6px] min-h-[38px]">
-        <div className="h-[11px] w-full rounded-[6px] bg-[var(--color-surface-1)] animate-pulse" />
-        <div className="h-[11px] w-[78%] rounded-[6px] bg-[var(--color-surface-1)] animate-pulse" />
-      </div>
-      <div className="h-[18px] w-[68px] rounded-[6px] bg-[var(--color-surface-1)] animate-pulse" />
-    </div>
-    <div className="absolute right-[10px] top-[10px] z-10 flex items-center gap-[6px] rounded-[8px] bg-card/90 px-[8px] py-[4px] shadow-[0px_1px_2px_0px_oklch(0_0_0_/_0.12)] backdrop-blur-sm">
-      <Loader2 className="size-[13px] animate-spin text-[var(--color-plum)]" />
-      <span className="text-[11px] leading-[14px] font-medium text-[var(--color-slate)]" style={MANROPE}>
-        Cloning…
-      </span>
-    </div>
-  </div>
-);
-
 const AgentCard: React.FC<{
   agent: CustomAgent;
   menuOpen: boolean;
-  reveal?: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onOpen: () => void;
   onClone: () => void;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ agent, menuOpen, reveal = false, onMenuOpenChange, onOpen, onClone, onEdit, onDelete }) => {
+}> = ({ agent, menuOpen, onMenuOpenChange, onOpen, onClone, onEdit, onDelete }) => {
   const chips = domainChips(agent);
   return (
-    <div
-      className={cn(
-        'group relative flex flex-col overflow-hidden rounded-[16px] border border-[var(--color-line-input)] bg-card transition-shadow hover:shadow-[0px_4px_16px_-4px_oklch(0_0_0_/_0.08)]',
-        // Fresh clone lands with a soft pop + plum ring that fades as it settles.
-        reveal && 'animate-in fade-in-0 zoom-in-95 duration-500 ring-2 ring-[var(--color-plum)]/40',
-      )}
-    >
+    <div className="group relative flex flex-col overflow-hidden rounded-[16px] border border-[var(--color-line-input)] bg-card transition-shadow hover:shadow-[0px_4px_16px_-4px_oklch(0_0_0_/_0.08)]">
       <button
         type="button"
         onClick={onOpen}
@@ -201,29 +164,23 @@ const AgentGrid: React.FC<{
   agents: CustomAgent[];
   compact: boolean;
   menuOpenId: string | null;
-  /** Placeholder card rendered first while a clone is being prepared. */
-  cloningAgent?: CustomAgent | null;
-  /** Pop-in the first card (the just-landed clone). */
-  revealFirst?: boolean;
   onMenuOpenIdChange: (id: string | null) => void;
   onOpenAgent: (id: string) => void;
   onCloneAgent: (agent: CustomAgent) => void;
   onEditAgent: (agent: CustomAgent) => void;
   onDeleteAgent: (id: string, name: string) => void;
-}> = ({ agents, compact, menuOpenId, cloningAgent = null, revealFirst = false, onMenuOpenIdChange, onOpenAgent, onCloneAgent, onEditAgent, onDeleteAgent }) => (
+}> = ({ agents, compact, menuOpenId, onMenuOpenIdChange, onOpenAgent, onCloneAgent, onEditAgent, onDeleteAgent }) => (
   <div
     className={cn(
       'grid gap-[16px]',
       compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
     )}
   >
-    {cloningAgent ? <CloningAgentCard agent={cloningAgent} /> : null}
-    {agents.map((agent, i) => (
+    {agents.map((agent) => (
       <AgentCard
         key={agent.id}
         agent={agent}
         menuOpen={menuOpenId === agent.id}
-        reveal={revealFirst && i === 0 && !cloningAgent}
         onMenuOpenChange={(o) => onMenuOpenIdChange(o ? agent.id : null)}
         onOpen={() => onOpenAgent(agent.id)}
         onClone={() => { onMenuOpenIdChange(null); onCloneAgent(agent); }}
@@ -252,25 +209,6 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<CustomAgent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-  // Clone interaction: hold the source agent while its skeleton card shows, then
-  // land the real clone with a pop-in + success toast.
-  const [cloning, setCloning] = useState<CustomAgent | null>(null);
-  const [revealClone, setRevealClone] = useState(false);
-
-  const handleClone = (agent: CustomAgent) => {
-    if (cloning) return; // one clone in flight at a time
-    setMenuOpenId(null);
-    setCloning(agent);
-    window.setTimeout(() => {
-      onCloneAgent(agent); // prepends the new "(copy)" into customAgents
-      setCloning(null);
-      setRevealClone(true);
-      toast.success('Successfully cloned the agent', {
-        description: `“${agent.name} (copy)” is ready in Your agents.`,
-      });
-      window.setTimeout(() => setRevealClone(false), 900);
-    }, 1100);
-  };
 
   const filterAgents = (list: CustomAgent[]) => {
     const q = query.trim().toLowerCase();
@@ -338,10 +276,10 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
             </div>
           ) : (
             <div className="flex flex-col gap-[28px]">
-              {(filteredCustom.length > 0 || cloning || !hasQuery) && (
+              {(filteredCustom.length > 0 || !hasQuery) && (
                 <section className="flex flex-col gap-[12px]">
                   <SectionLabel>Your agents</SectionLabel>
-                  {filteredCustom.length === 0 && !cloning ? (
+                  {filteredCustom.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-[12px] rounded-[16px] border border-dashed border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.4)] px-[24px] py-[32px] text-center">
                       <p className="text-[14px] font-medium text-[var(--color-ink)]" style={MANROPE}>
                         No custom agents yet
@@ -356,11 +294,9 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
                       agents={filteredCustom}
                       compact={compact}
                       menuOpenId={menuOpenId}
-                      cloningAgent={cloning}
-                      revealFirst={revealClone}
                       onMenuOpenIdChange={setMenuOpenId}
                       onOpenAgent={onOpenAgent}
-                      onCloneAgent={handleClone}
+                      onCloneAgent={onCloneAgent}
                       onEditAgent={(agent) => { setEditing(agent); setCreateOpen(true); }}
                       onDeleteAgent={(id, name) => setDeleteTarget({ id, name })}
                     />
@@ -377,7 +313,7 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
                     menuOpenId={menuOpenId}
                     onMenuOpenIdChange={setMenuOpenId}
                     onOpenAgent={onOpenAgent}
-                    onCloneAgent={handleClone}
+                    onCloneAgent={onCloneAgent}
                     onEditAgent={(agent) => { setEditing(agent); setCreateOpen(true); }}
                     onDeleteAgent={(id, name) => setDeleteTarget({ id, name })}
                   />

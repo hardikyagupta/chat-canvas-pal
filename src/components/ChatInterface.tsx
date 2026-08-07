@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAtmosphere } from '@/contexts/AtmosphereContext';
 // Lucide icons for various UI elements
 import { MoreHorizontal, Maximize2, Plus, X, Bot, Minimize2, Bookmark, PlusCircle, PanelLeftOpen, PanelLeftClose, Settings2, MessageSquare, CornerDownRight, Users, Trash2, Info, ChevronDown, StopCircle, MoreVertical, ArrowDown, Menu } from 'lucide-react';
@@ -591,6 +592,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   );
   const allAgents = React.useMemo(() => [...starterAgents, ...customAgents], [starterAgents, customAgents]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  // Clone transition: a brief loading overlay before the detail page opens,
+  // then the freshly-opened detail page itself shows a skeleton before settling.
+  const [cloningAgentName, setCloningAgentName] = useState<string | null>(null);
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   // Agent attached to the home composer via "+" → "Add to agent" (shows a chip).
   const [composerAgent, setComposerAgent] = useState<{ id: string; name: string; avatarSrc?: string } | null>(null);
   const [composerCreateOpen, setComposerCreateOpen] = useState(false);
@@ -654,10 +659,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       updatedAt: 'now',
       isBuiltIn: false,
     };
-    // Prepend into "Your agents" and stay on the list so the CustomAgentsPage
-    // clone interaction (skeleton → pop-in → toast) can play out in place,
-    // rather than jumping straight into the new agent's detail view.
     setCustomAgents((prev) => [clone, ...prev]);
+    // Brief loading overlay before the detail view opens, then the freshly
+    // opened page shows a skeleton before settling and confirming with a toast.
+    setCloningAgentName(agent.name);
+    window.setTimeout(() => {
+      setSelectedAgentId(clone.id);
+      setCloningAgentName(null);
+      setDetailLoadingId(clone.id);
+      window.setTimeout(() => {
+        setDetailLoadingId(null);
+        toast.success('Agent cloned successfully');
+      }, 700);
+    }, 550);
   };
   const openCustomAgents = () => { setSelectedAgentId(null); setActivePage('custom-agents'); };
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -3465,31 +3479,46 @@ The content has been updated across all channels to reflect your changes.`;
               ) : activePage === 'custom-agents' ? (
                 (() => {
                   const selectedAgent = allAgents.find((a) => a.id === selectedAgentId) ?? null;
-                  return selectedAgent ? (
-                    <CustomAgentDetail
-                      agent={selectedAgent}
-                      compact={!isExpanded}
-                      onBack={() => setSelectedAgentId(null)}
-                      onEditAgent={(id, data) => updateAgent(id, { ...data, updatedAt: 'now' })}
-                      onDeleteAgent={deleteCustomAgent}
-                      onUpdateAgent={updateAgent}
-                      onStartChat={(message) =>
-                        handleStartAgentChat({ id: selectedAgent.id, name: selectedAgent.name, avatarSrc: selectedAgent.avatarSrc }, message)
-                      }
-                      chats={agentChats.filter((c) => c.agentId === selectedAgent.id)}
-                      onSelectChat={handleSelectChat}
-                    />
-                  ) : (
-                    <CustomAgentsPage
-                      customAgents={customAgents}
-                      starterAgents={starterAgents}
-                      compact={!isExpanded}
-                      onCreate={createCustomAgent}
-                      onOpenAgent={(id) => setSelectedAgentId(id)}
-                      onCloneAgent={cloneCustomAgent}
-                      onEditAgent={(id, data) => updateAgent(id, { ...data, updatedAt: 'now' })}
-                      onDeleteAgent={deleteCustomAgent}
-                    />
+                  return (
+                    <>
+                      {selectedAgent ? (
+                        <CustomAgentDetail
+                          agent={selectedAgent}
+                          compact={!isExpanded}
+                          loading={detailLoadingId === selectedAgent.id}
+                          onBack={() => setSelectedAgentId(null)}
+                          onEditAgent={(id, data) => updateAgent(id, { ...data, updatedAt: 'now' })}
+                          onDeleteAgent={deleteCustomAgent}
+                          onUpdateAgent={updateAgent}
+                          onStartChat={(message) =>
+                            handleStartAgentChat({ id: selectedAgent.id, name: selectedAgent.name, avatarSrc: selectedAgent.avatarSrc }, message)
+                          }
+                          chats={agentChats.filter((c) => c.agentId === selectedAgent.id)}
+                          onSelectChat={handleSelectChat}
+                        />
+                      ) : (
+                        <CustomAgentsPage
+                          customAgents={customAgents}
+                          starterAgents={starterAgents}
+                          compact={!isExpanded}
+                          onCreate={createCustomAgent}
+                          onOpenAgent={(id) => setSelectedAgentId(id)}
+                          onCloneAgent={cloneCustomAgent}
+                          onEditAgent={(id, data) => updateAgent(id, { ...data, updatedAt: 'now' })}
+                          onDeleteAgent={deleteCustomAgent}
+                        />
+                      )}
+                      {cloningAgentName ? (
+                        <div className="absolute inset-0 z-30 flex items-center justify-center bg-[var(--color-surface-0)]/80 backdrop-blur-sm">
+                          <div className="flex flex-col items-center gap-[10px]">
+                            <span className="size-[22px] animate-spin rounded-full border-2 border-[var(--color-line-input)] border-t-[var(--color-plum)]" />
+                            <p className="text-[13px] font-medium text-[var(--color-grey)]" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                              Cloning “{cloningAgentName}”…
+                            </p>
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
                   );
                 })()
               ) : (

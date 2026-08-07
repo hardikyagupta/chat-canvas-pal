@@ -8,7 +8,7 @@ import SearchChatsModal from './SearchChatsModal';
 
 // Chats menu icon (Phosphor "chats" glyph). Uses currentColor so it inherits
 // the same charcoal tint as the other menu icons.
-const ChatsIcon = ({ className }: { className?: string }) => (
+export const ChatsIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 256 256" fill="currentColor" className={className} aria-hidden="true">
     <path d="M232.07,186.76a80,80,0,0,0-62.5-114.17A80,80,0,1,0,23.93,138.76l-7.27,24.71a16,16,0,0,0,19.87,19.87l24.71-7.27a80.39,80.39,0,0,0,25.18,7.35,80,80,0,0,0,108.34,40.65l24.71,7.27a16,16,0,0,0,19.87-19.86ZM62,159.5a8.28,8.28,0,0,0-2.26.32L32,168l8.17-27.76a8,8,0,0,0-.63-6,64,64,0,1,1,26.26,26.26A8,8,0,0,0,62,159.5Zm153.79,28.73L224,216l-27.76-8.17a8,8,0,0,0-6,.63,64.05,64.05,0,0,1-85.87-24.88A79.93,79.93,0,0,0,174.7,89.71a64,64,0,0,1,41.75,92.48A8,8,0,0,0,215.82,188.23Z" />
   </svg>
@@ -16,7 +16,7 @@ const ChatsIcon = ({ className }: { className?: string }) => (
 
 // Bookmark menu icon (Phosphor "bookmark-simple" glyph) — matches the ChatsIcon
 // family/weight so the two menu icons read as one set. Uses currentColor.
-const BookmarkIcon = ({ className }: { className?: string }) => (
+export const BookmarkIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 256 256" fill="currentColor" className={className} aria-hidden="true">
     <path d="M184,32H72A16,16,0,0,0,56,48V224a8,8,0,0,0,12.24,6.78L128,193.43l59.77,37.35A8,8,0,0,0,200,224V48A16,16,0,0,0,184,32Zm0,177.57-51.77-32.35a8,8,0,0,0-8.48,0L72,209.57V48H184Z" />
   </svg>
@@ -24,7 +24,7 @@ const BookmarkIcon = ({ className }: { className?: string }) => (
 
 // Reports menu icon (Phosphor "chart-bar" glyph) — same family/weight as the
 // Chats/Bookmarks glyphs so all menu icons read as one set. Uses currentColor.
-const ReportsIcon = ({ className }: { className?: string }) => (
+export const ReportsIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 256 256" fill="currentColor" className={className} aria-hidden="true">
     <path d="M224,200h-8V40a8,8,0,0,0-8-8H152a8,8,0,0,0-8,8V80H96a8,8,0,0,0-8,8v40H48a8,8,0,0,0-8,8v64H32a8,8,0,0,0,0,16H224a8,8,0,0,0,0-16ZM160,48h40V200H160ZM104,96h40V200H104ZM56,144H88v56H56Z" />
   </svg>
@@ -32,7 +32,7 @@ const ReportsIcon = ({ className }: { className?: string }) => (
 
 // Scheduler menu icon (Phosphor "calendar-check" glyph) — same family/weight as
 // the other menu glyphs so all icons read as one set. Uses currentColor.
-const SchedulerIcon = ({ className }: { className?: string }) => (
+export const SchedulerIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 256 256" fill="currentColor" className={className} aria-hidden="true">
     <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48Zm136,160H48V96H208V208Zm-30.34-90.34a8,8,0,0,1,0,11.31l-40,40a8,8,0,0,1-11.32,0l-20-20a8,8,0,0,1,11.32-11.31L132,152l34.34-34.35A8,8,0,0,1,177.66,117.66Z" />
   </svg>
@@ -40,7 +40,7 @@ const SchedulerIcon = ({ className }: { className?: string }) => (
 
 // Custom agents menu icon (Phosphor "robot" glyph) — same family/weight as the
 // Chats/Bookmarks/Reports glyphs so all menu icons read as one set. currentColor.
-const CustomAgentsIcon = ({ className }: { className?: string }) => (
+export const CustomAgentsIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 256 256" fill="currentColor" className={className} aria-hidden="true">
     <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16ZM104,140a12,12,0,1,1-12-12A12,12,0,0,1,104,140Zm72,0a12,12,0,1,1-12-12A12,12,0,0,1,176,140Zm-8,52a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,192ZM16,120a8,8,0,0,1,8,8v24a8,8,0,0,1-16,0V128A8,8,0,0,1,16,120Zm232,0a8,8,0,0,1,8,8v24a8,8,0,0,1-16,0V128A8,8,0,0,1,248,120Z" />
   </svg>
