@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { subDays, differenceInCalendarDays } from "date-fns";
-import { ThumbsUp, ThumbsDown, CheckCircle2, SlidersHorizontal, LayoutGrid } from "lucide-react";
+import { ThumbsUp, ThumbsDown, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import L1Nav from "@/components/campaigns/L1Nav";
 import TopNav from "@/components/campaigns/TopNav";
@@ -435,30 +435,6 @@ export default function AiDashboard() {
 
         <div className="mt-2 flex min-h-0 flex-1 gap-2">
           <div className="scroll-slim relative min-w-0 flex-1 overflow-y-auto px-4 pt-6 pb-8">
-            {/* Top-right controls — date range filter always shown; "Edit
-                preferences" joins it once personalization is saved (opens the
-                modal straight on the form steps, pre-filled). */}
-            <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsCustomizeOpen(true)}
-                className="flex items-center gap-1.5 rounded-[8px] border border-[#DDE2EE] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#17173A] shadow-[0px_2px_6px_rgba(23,23,58,0.04)] transition-colors hover:bg-[#F7F9FC]"
-              >
-                <LayoutGrid className="size-[14px] text-[#6F6F8D]" />
-                Customize cards
-              </button>
-              <DateRangeFilter value={appliedRange} label={rangeLabel} onApply={handleApplyDateFilter} />
-              {isPersonalized && (
-                <button
-                  type="button"
-                  onClick={openPersonalizeEdit}
-                  className="flex items-center gap-1.5 rounded-[8px] border border-[#DDE2EE] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#17173A] shadow-[0px_2px_6px_rgba(23,23,58,0.04)] transition-colors hover:bg-[#F7F9FC]"
-                >
-                  <SlidersHorizontal className="size-[14px] text-[#6F6F8D]" />
-                  Edit preferences
-                </button>
-              )}
-            </div>
             {/* Greeting */}
             <div className="flex flex-col items-center gap-1 text-center">
               <p className="font-manrope text-[13px] text-[#837C8E]">Thursday, 4 June (GMT+5:30)</p>
@@ -512,6 +488,34 @@ export default function AiDashboard() {
               </div>
             </div>
 
+            {/* Performance overview strip — title + Customize / Edit preferences /
+                Date filter actions in one row, directly above the metric cards
+                (Figma "Performance overview" header). "Edit preferences" only
+                shows once the user has actually submitted preferences — before
+                that, personalizing happens via the discovery banner below. */}
+            <div className="mt-6 flex items-center gap-6">
+              <p className="min-w-0 flex-1 font-manrope text-[20px] font-bold text-[#17173A]">Performance overview</p>
+              <div className="flex shrink-0 items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setIsCustomizeOpen(true)}
+                  className="rounded-[6px] border border-[#DDE2EE] bg-white px-4 py-2.5 font-manrope text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+                >
+                  Customize metrics
+                </button>
+                {isPersonalized && (
+                  <button
+                    type="button"
+                    onClick={openPersonalizeEdit}
+                    className="whitespace-nowrap rounded-[6px] border border-[#DDE2EE] bg-white px-4 py-2.5 font-manrope text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+                  >
+                    Edit preferences
+                  </button>
+                )}
+                <DateRangeFilter value={appliedRange} label={rangeLabel} onApply={handleApplyDateFilter} />
+              </div>
+            </div>
+
             {/* Metric cards — tinted panel + title header wrapping a white
                 inner card; skeleton while a newly-applied date range loads */}
             <div className="mt-6 flex gap-6">
@@ -549,7 +553,7 @@ export default function AiDashboard() {
             <div className="mt-6 flex gap-6">
               <div className="flex flex-1 flex-col overflow-hidden rounded-[8px] bg-[#ECEFF5]">
                 <div className="flex items-center py-2 pl-4 pr-2">
-                  <p className="font-manrope text-[14px] font-bold text-[#17173A]">More wins</p>
+                  <p className="font-manrope text-[14px] font-bold text-[#17173A]">What's working</p>
                 </div>
                 <div className="flex flex-col gap-1 px-1 pb-1">
                   {isDataLoading
@@ -575,7 +579,7 @@ export default function AiDashboard() {
                           <GetInsightsLink
                             onClick={() =>
                               handleOpenInsightChat({
-                                sectionLabel: "More wins",
+                                sectionLabel: "What's working",
                                 badges: win.badges,
                                 title: win.title,
                                 sub: win.sub,
