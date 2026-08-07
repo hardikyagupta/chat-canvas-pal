@@ -40,7 +40,7 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
 const METRICS_BASE = [
   {
     id: "active-campaigns",
-    label: "Active Campaigns",
+    label: "Active campaigns",
     kind: "volume" as const,
     rawValue: 12,
     format: (v: number) => `${Math.max(1, Math.round(v))}`,
