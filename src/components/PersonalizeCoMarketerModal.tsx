@@ -11,16 +11,12 @@ import {
   Rocket,
   BarChart3,
   MoreHorizontal,
-  Lightbulb,
-  Clock,
-  ClipboardCheck,
-  Target,
-  ArrowUpRight,
-  ArrowDownRight,
-  ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+// Imported (not /public) so Vite content-hashes the URL — the intro GIF then
+// busts cache whenever the asset changes.
+import personalizeIntroGif from '@/assets/personalize-intro.gif';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
 
@@ -137,124 +133,6 @@ const STEPS: StepDef[] = [
 ];
 
 const EMPTY_DATA: PersonalizeCoMarketerData = { role: null, goals: [], metrics: [], aiPreferences: [] };
-
-/** Intro-screen value props (LHS), matching the Figma feature list. */
-const INTRO_FEATURES: { icon: LucideIcon; title: string; desc: string }[] = [
-  { icon: TrendingUp, title: 'Sharper insights', desc: 'See what matters most to your goals.' },
-  { icon: Lightbulb, title: 'Better recommendations', desc: 'Get more relevant next steps and ideas.' },
-  { icon: Clock, title: 'Less setup later', desc: "We'll tailor your workspace as you go." },
-];
-
-/** RHS illustration — a mock "Prioritized insights" panel built from components
-    (the Figma ships it as a flat image; this keeps it crisp and theme-aware). */
-function IntroIllustration() {
-  return (
-    <div className="relative hidden w-[360px] shrink-0 sm:block">
-      <div className="flex h-full flex-col justify-center gap-[14px] rounded-[16px] border border-[#E6EAF3] bg-[#F5F7FB] p-[16px]">
-        {/* Card 1 — Prioritized insights */}
-        <div className="intro-card-in rounded-[12px] border border-[#EDF0F6] bg-white p-[14px]" style={{ animationDelay: '0s' }}>
-          <div className="mb-[12px] flex items-center gap-[8px]">
-            <BarChart3 className="size-[16px] text-[#2F68E5]" strokeWidth={2.2} />
-            <span className="text-[12px] font-semibold text-[#17173A]" style={FONT}>
-              Prioritized insights
-            </span>
-          </div>
-          <div className="flex flex-col gap-[11px]">
-            {[
-              { pct: '12%', up: true },
-              { pct: '8%', up: true },
-              { pct: '4%', up: false },
-            ].map((row, i) => (
-              <div key={i} className="flex items-center gap-[10px]">
-                <span className="size-[14px] shrink-0 rounded-[4px] bg-[#E7EAF2]" />
-                <span className="h-[6px] flex-1 overflow-hidden rounded-full bg-[#EDF0F6]">
-                  <span
-                    className="intro-bar-fill block h-full w-full rounded-full"
-                    style={{ animationDelay: `${i * 0.35}s` }}
-                  />
-                </span>
-                <div
-                  className="intro-trend-pop flex w-[42px] shrink-0 items-center justify-end gap-[3px]"
-                  style={{ animationDelay: `${i * 0.35}s` }}
-                >
-                  {row.up ? (
-                    <ArrowUpRight className="size-[13px] text-[#1F9D57]" strokeWidth={2.4} />
-                  ) : (
-                    <ArrowDownRight className="size-[13px] text-[#E5484D]" strokeWidth={2.4} />
-                  )}
-                  <span
-                    className={cn('text-[11px] font-semibold', row.up ? 'text-[#1F9D57]' : 'text-[#E5484D]')}
-                    style={FONT}
-                  >
-                    {row.pct}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Card 2 — Recommended next steps */}
-        <div className="intro-card-in rounded-[12px] border border-[#EDF0F6] bg-white p-[14px]" style={{ animationDelay: '0.6s' }}>
-          <div className="mb-[12px] flex items-center gap-[8px]">
-            <ClipboardCheck className="size-[16px] text-[#2F68E5]" strokeWidth={2.2} />
-            <span className="text-[12px] font-semibold text-[#17173A]" style={FONT}>
-              Recommended next steps
-            </span>
-          </div>
-          <div className="flex flex-col gap-[12px]">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-[10px]">
-                <span
-                  className="intro-step-ring flex size-[14px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#D5DAE6]"
-                  style={{ animationDelay: `${i * 0.5}s` }}
-                >
-                  <Check
-                    className="intro-step-check size-[9px] text-white"
-                    strokeWidth={3.2}
-                    style={{ animationDelay: `${i * 0.5}s` }}
-                  />
-                </span>
-                <span className="h-[6px] flex-1 overflow-hidden rounded-full bg-[#EDF0F6]">
-                  <span
-                    className="intro-bar-fill block h-full w-full rounded-full"
-                    style={{ animationDelay: `${0.4 + i * 0.35}s` }}
-                  />
-                </span>
-                <ChevronRight
-                  className="intro-chevron-nudge size-[14px] shrink-0 text-[#C0C6D4]"
-                  strokeWidth={2.2}
-                  style={{ animationDelay: `${i * 0.25}s` }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Card 3 — Focus areas */}
-        <div className="intro-card-in rounded-[12px] border border-[#EDF0F6] bg-white p-[14px]" style={{ animationDelay: '1.2s' }}>
-          <div className="mb-[12px] flex items-center gap-[8px]">
-            <Target className="size-[16px] text-[#2F68E5]" strokeWidth={2.2} />
-            <span className="text-[12px] font-semibold text-[#17173A]" style={FONT}>
-              Focus areas
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-[8px]">
-            {['Engagement', 'Content', 'Activation'].map((chip, i) => (
-              <span
-                key={chip}
-                className="intro-chip-pop rounded-[8px] bg-[#EAF0FF] px-[12px] py-[6px] text-[11px] font-semibold text-[#2F68E5]"
-                style={{ ...FONT, animationDelay: `${i * 0.4}s` }}
-              >
-                {chip}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Selection indicator with shape semantics:
@@ -486,26 +364,54 @@ const PersonalizeCoMarketerModal: React.FC<PersonalizeCoMarketerModalProps> = ({
       <div
         role="dialog"
         aria-modal="true"
-        className="personalize-card-in relative flex w-full max-w-[880px] flex-col gap-[28px] rounded-[18px] bg-white px-[44px] pb-[36px] pt-[40px] shadow-[0px_20px_0px_0px_rgba(23,23,58,0.18)]"
+        className={cn(
+          'personalize-card-in relative flex w-full flex-col overflow-hidden rounded-[18px] bg-white shadow-[0px_20px_40px_0px_rgba(23,23,58,0.18)]',
+          // Intro is a stacked GIF + copy card (narrower); the stepper stays wide
+          // for the 4-col role grid. Padding is applied per-branch below.
+          started ? 'max-w-[880px] gap-[28px] px-[44px] pb-[36px] pt-[40px]' : 'max-w-[560px]'
+        )}
       >
-        {/* Close */}
+        {/* Close — dark translucent chip over the GIF on the intro, light chip on
+            the white stepper background. */}
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-[16px] top-[16px] flex size-[32px] items-center justify-center rounded-[8px] text-[#9097AD] transition-colors hover:bg-[#F2F4F9] hover:text-[#17173A]"
+          className={cn(
+            'absolute right-[16px] top-[16px] z-[1] flex size-[32px] items-center justify-center rounded-full transition-colors',
+            started
+              ? 'rounded-[8px] text-[#9097AD] hover:bg-[#F2F4F9] hover:text-[#17173A]'
+              : 'bg-[rgba(23,23,58,0.35)] text-white backdrop-blur-sm hover:bg-[rgba(23,23,58,0.55)]'
+          )}
         >
           <X className="size-[18px]" strokeWidth={2} />
         </button>
 
         {!started ? (
           /* Intro / welcome — states the purpose once, up front, before the
-             stepper starts. Two columns: left-aligned copy + CTAs on the left,
-             a sample illustration on the right. */
-          <div key="intro" className="personalize-step-in flex w-full items-stretch gap-[28px] py-[8px]">
-            {/* LHS — content + CTAs, left-aligned (structure per Figma) */}
-            <div className="flex flex-1 flex-col items-start justify-center gap-[20px] text-left">
-              <div className="flex flex-col items-start gap-[10px]">
+             stepper starts. Stacked per Figma: a full-bleed GIF banner on top,
+             then the copy, then the two CTAs. */
+          <div key="intro" className="personalize-step-in flex w-full flex-col">
+            {/* GIF banner — full-bleed to the card's top/side edges, its bottom
+                edge masked so it dissolves into the white copy area below. */}
+            <div
+              className="w-full overflow-hidden bg-[#0B1020]"
+              style={{
+                maskImage: 'linear-gradient(to bottom, #000 68%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, #000 68%, transparent 100%)',
+              }}
+            >
+              <img
+                src={personalizeIntroGif}
+                alt=""
+                aria-hidden="true"
+                className="block h-[212px] w-full object-cover"
+              />
+            </div>
+
+            {/* Copy + CTAs */}
+            <div className="flex flex-col gap-[20px] px-[36px] pb-[32px] pt-[26px]">
+              <div className="flex flex-col gap-[10px]">
                 <p className="text-[26px] font-semibold leading-[34px] text-[#17173A]" style={FONT}>
                   Help Co-marketer understand you better
                 </p>
@@ -513,31 +419,12 @@ const PersonalizeCoMarketerModal: React.FC<PersonalizeCoMarketerModalProps> = ({
                   Four quick questions — your role, goals, metrics, and how you like to work —
                   so we can show sharper insights and better next actions.
                 </p>
+                <p className="mt-[2px] text-[12px] font-medium text-[#9097AD]" style={FONT}>
+                  Takes less than a minute · You can update this anytime
+                </p>
               </div>
 
-              {/* Value props */}
-              <div className="flex flex-col gap-[14px]">
-                {INTRO_FEATURES.map(({ icon: Icon, title, desc }) => (
-                  <div key={title} className="flex items-start gap-[12px]">
-                    <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[9px] bg-[#EEF1FB] text-[#2F68E5]">
-                      <Icon className="size-[17px]" strokeWidth={2} />
-                    </span>
-                    <div className="flex flex-col gap-[1px] pt-[1px]">
-                      <span className="text-[13px] font-semibold text-[#17173A]" style={FONT}>
-                        {title}
-                      </span>
-                      <span className="text-[12px] leading-[17px] text-[#6F6F8D]" style={FONT}>
-                        {desc}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <p className="text-[12px] font-medium text-[#9097AD]" style={FONT}>
-                Takes less than a minute · You can update this anytime
-              </p>
-              <div className="mt-[2px] flex items-center gap-[10px]">
+              <div className="flex items-center gap-[10px]">
                 <button
                   type="button"
                   onClick={() => setStarted(true)}
@@ -556,9 +443,6 @@ const PersonalizeCoMarketerModal: React.FC<PersonalizeCoMarketerModalProps> = ({
                 </button>
               </div>
             </div>
-
-            {/* RHS — illustration rebuilt as components per Figma */}
-            <IntroIllustration />
           </div>
         ) : (
           <>
