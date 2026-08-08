@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { subDays, differenceInCalendarDays } from "date-fns";
-import { ThumbsUp, ThumbsDown, CheckCircle2 } from "lucide-react";
+import { ThumbsUp, ThumbsDown, CheckCircle2, Settings, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import L1Nav from "@/components/campaigns/L1Nav";
 import TopNav from "@/components/campaigns/TopNav";
@@ -203,6 +203,33 @@ function CategoryBadge({ label, tone = "green" }: { label: string; tone?: "green
     >
       {label}
     </span>
+  );
+}
+
+/** Icon-only action button for the "Performance overview" strip — a tooltip
+ *  carries the label so the action stays legible without adding button text
+ *  that would otherwise repeat "Customize"/"Edit" at every glance. */
+function HeaderIconButton({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          onClick={onClick}
+          className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[6px] border border-[#DDE2EE] bg-white text-[#17173A] shadow-[0px_2px_6px_rgba(23,23,58,0.04)] transition-colors hover:bg-[#F7F9FC]"
+        >
+          <Icon className="size-[16px]" strokeWidth={1.75} />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]"
+        style={{ fontFamily: "Manrope, sans-serif", fontWeight: 500 }}
+      >
+        {label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -495,22 +522,10 @@ export default function AiDashboard() {
                 that, personalizing happens via the discovery banner below. */}
             <div className="mt-6 flex items-center gap-6">
               <p className="min-w-0 flex-1 font-manrope text-[20px] font-bold text-[#17173A]">Performance overview</p>
-              <div className="flex shrink-0 items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => setIsCustomizeOpen(true)}
-                  className="rounded-[6px] border border-[#DDE2EE] bg-white px-4 py-2.5 font-manrope text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
-                >
-                  Customize metrics
-                </button>
+              <div className="flex shrink-0 items-center gap-3">
+                <HeaderIconButton icon={Settings} label="Customize metrics" onClick={() => setIsCustomizeOpen(true)} />
                 {isPersonalized && (
-                  <button
-                    type="button"
-                    onClick={openPersonalizeEdit}
-                    className="whitespace-nowrap rounded-[6px] border border-[#DDE2EE] bg-white px-4 py-2.5 font-manrope text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
-                  >
-                    Edit preferences
-                  </button>
+                  <HeaderIconButton icon={SlidersHorizontal} label="Edit preferences" onClick={openPersonalizeEdit} />
                 )}
                 <DateRangeFilter value={appliedRange} label={rangeLabel} onApply={handleApplyDateFilter} />
               </div>

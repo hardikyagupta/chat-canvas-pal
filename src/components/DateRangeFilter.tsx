@@ -122,7 +122,7 @@ export default function DateRangeFilter({ value, label, onApply }: DateRangeFilt
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-2 whitespace-nowrap rounded-[6px] border border-[#DDE2EE] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+          className="flex h-[38px] items-center gap-2 whitespace-nowrap rounded-[6px] border border-[#DDE2EE] bg-white px-4 text-[13px] font-semibold text-[#17173A] shadow-[0px_2px_6px_rgba(23,23,58,0.04)] transition-colors hover:bg-[#F7F9FC]"
           style={FONT}
         >
           <CalendarDays className="size-[14px] text-[#6F6F8D]" />
