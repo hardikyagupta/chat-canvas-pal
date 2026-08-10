@@ -4193,13 +4193,33 @@ The content has been updated across all channels to reflect your changes.`;
                       onDeepResearchChange={handleComposerDeepResearchChange}
                       onCreateAgentFromComposer={() => setComposerCreateOpen(true)}
                     />
-                    {/* Footer disclaimer ("Co-marketer can make mistakes…") hidden per request. */}
+                    {/* Footer disclaimer — active chat only (hidden on empty-state carousel). */}
+                    {!isExpanded && (
+                      <div className="flex flex-col items-center gap-1 mt-2">
+                        <p
+                          className="text-[12px] text-[var(--color-grey)] text-center"
+                          style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
+                        >
+                          Co-marketer can make mistakes. Please double check responses
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Persistent card footer disclaimer ("Co-marketer can make mistakes…") hidden per request. */}
+            {/* Persistent card footer — active chat only (hidden on empty-state carousel). */}
+            {isExpanded && messages.length > 0 && (
+              <div className="flex flex-col items-center justify-center gap-1 py-[8px] w-full shrink-0">
+                <p
+                  className="text-[12px] text-[var(--color-grey)] text-center w-full max-w-[768px] px-[28px]"
+                  style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
+                >
+                  Co-marketer can make mistakes. Please double check responses
+                </p>
+              </div>
+            )}
           </div>
           {/* Artifact — WIDGET view only: full-bleed take-over of the floating window.
               (Expanded view renders the artifact as a top-level third column below.) */}
