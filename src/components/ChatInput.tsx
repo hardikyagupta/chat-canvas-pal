@@ -1003,42 +1003,59 @@ const ChatInput: React.FC<ChatInputProps> = ({
               </button>
             )}
 
-            {/* Send button — far right (always last in the row) */}
+            {/* Send button — far right (always last in the row). While a response
+                is generating it becomes the stop button (Figma node 16318:13144). */}
             <div className="order-5 flex shrink-0 ml-auto">
-              <button
-                type="button"
-                onClick={handleSendClick}
-                disabled={isQuestionnaireActive || isLoading}
-                className={cn(
-                  // Fixed 32×32 in every state so the field height never changes
-                  // (default field height = 56px: 32px button + 2×12px padding).
-                  "relative flex items-center justify-center overflow-hidden rounded-[6px] w-[32px] h-[32px] shrink-0 transition-all duration-200",
-                  isActive
-                    ? "border-[0.75px] border-[var(--color-royal-strong)] shadow-[0px_1px_0px_0px_oklch(0_0_0_/_0.02)]"
-                    : "border-0",
-                  isQuestionnaireActive && "opacity-50 cursor-not-allowed"
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={isLoading ? handleStopClick : handleSendClick}
+                    disabled={isQuestionnaireActive}
+                    className={cn(
+                      // Fixed 32×32 in every state so the field height never changes
+                      // (default field height = 56px: 32px button + 2×12px padding).
+                      "relative flex items-center justify-center overflow-hidden rounded-[6px] w-[32px] h-[32px] shrink-0 transition-all duration-200",
+                      isActive
+                        ? "border-[0.75px] border-[var(--color-royal-strong)] shadow-[0px_1px_0px_0px_oklch(0_0_0_/_0.02)]"
+                        : "border-0",
+                      // The field itself is not-allowed while generating, but the stop
+                      // button stays live — restore the pointer on it.
+                      isLoading && "cursor-pointer hover:brightness-95",
+                      isQuestionnaireActive && "opacity-50 cursor-not-allowed"
+                    )}
+                    style={{
+                      background: isActive
+                        ? "linear-gradient(180deg, oklch(1 0 0 / 0) 0%, oklch(1 0 0 / 0.24) 100%), linear-gradient(90deg, var(--color-royal) 0%, var(--color-royal) 100%)"
+                        : "linear-gradient(90deg, oklch(0 0 0 / 0.08) 0%, oklch(0 0 0 / 0.08) 100%), linear-gradient(180deg, oklch(1 0 0 / 0) 0%, oklch(1 0 0 / 0.24) 100%)",
+                    }}
+                    aria-label={isLoading ? "Stop co-marketer response" : "Send message"}
+                  >
+                    {/* Inner highlight for active state */}
+                    {isActive && (
+                      <span
+                        className="absolute inset-0 rounded-[6px] pointer-events-none"
+                        style={{ boxShadow: "inset 0px 1px 1px 0px oklch(1 0 0 / 0.25)" }}
+                      />
+                    )}
+                    {isLoading ? (
+                      /* Generating — grey rounded square (stop) per Figma (node 16318:13144) */
+                      <span className="block w-3 h-3 rounded-[4px] bg-[var(--color-grey)] relative z-10" />
+                    ) : (
+                      <ArrowUp className="w-4 h-4 text-white relative z-10" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                {isLoading && (
+                  <TooltipContent
+                    side="top"
+                    className="border-0 bg-foreground text-background text-[12px] leading-[16px] px-[8px] py-[4px]"
+                    style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}
+                  >
+                    Stop co-marketer response
+                  </TooltipContent>
                 )}
-                style={{
-                  background: isActive
-                    ? "linear-gradient(180deg, oklch(1 0 0 / 0) 0%, oklch(1 0 0 / 0.24) 100%), linear-gradient(90deg, var(--color-royal) 0%, var(--color-royal) 100%)"
-                    : "linear-gradient(90deg, oklch(0 0 0 / 0.08) 0%, oklch(0 0 0 / 0.08) 100%), linear-gradient(180deg, oklch(1 0 0 / 0) 0%, oklch(1 0 0 / 0.24) 100%)",
-                }}
-                aria-label={isLoading ? "Generating response" : "Send message"}
-              >
-                {/* Inner highlight for active state */}
-                {isActive && (
-                  <span
-                    className="absolute inset-0 rounded-[6px] pointer-events-none"
-                    style={{ boxShadow: "inset 0px 1px 1px 0px oklch(1 0 0 / 0.25)" }}
-                  />
-                )}
-                {isLoading ? (
-                  /* Loading/disabled state — grey rounded square per Figma (node 16318:13144) */
-                  <span className="block w-3 h-3 rounded-[4px] bg-[var(--color-grey)] relative z-10" />
-                ) : (
-                  <ArrowUp className="w-4 h-4 text-white relative z-10" />
-                )}
-              </button>
+              </Tooltip>
             </div>
           </div>
         </div>

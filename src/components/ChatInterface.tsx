@@ -113,6 +113,9 @@ interface ChatMessageData {
   onContinueSegment?: () => void;
   onRefineThis?: () => void;
   updatedContent?: any; // New field to store updated content
+  // "You stopped after Xs" notice appended when the user hits the composer's
+  // stop button mid-generation (rendered as grey text + a hairline below).
+  stoppedNotice?: { seconds: number };
   // Thinking state specific
   isThinkingState?: boolean;
   thinkingDuration?: number;
@@ -188,12 +191,9 @@ const GREETING_TOPICS = [
 // Bookmarked chats — the saved subset of the chat list
 const bookmarkedChats = defaultChats.filter((c) => ['2', '5', '8', '11', '17'].includes(c.id));
 
-const getGreeting = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-};
+// Pinned to "Good afternoon" so the greeting reads the same in every demo,
+// regardless of what time the deck is being presented.
+const getGreeting = () => 'Good afternoon';
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard }) => {
   const navigate = useNavigate();
@@ -208,6 +208,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // Briefly shimmers the input after every send (survives the empty→conversation input swap)
   const [inputShimmer, setInputShimmer] = useState(false);
   const inputShimmerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // When the current response started generating — used to label the
+  // "You stopped after Xs" notice when the user hits the stop button.
+  const generationStartedAtRef = useRef<number | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   // True once the chat has actually been scrolled down — used to reveal the top
   // fade only while scrolling (not on the resting first message).
@@ -1101,7 +1104,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     setInputShimmer(false);
   };
 
-  const stopMockConversation = () => {
+  // Track when the current response started so a user-initiated stop can say
+  // how long it ran. Cleared as soon as generation ends by any route.
+  useEffect(() => {
+    const generating = isGeneratingOutput || isMockAgentChatActive || inputShimmer;
+    if (generating) {
+      if (generationStartedAtRef.current === null) generationStartedAtRef.current = Date.now();
+    } else {
+      generationStartedAtRef.current = null;
+    }
+  }, [isGeneratingOutput, isMockAgentChatActive, inputShimmer]);
+
+  const stopMockConversation = (options?: { userInitiated?: boolean }) => {
+    if (options?.userInitiated) {
+      const startedAt = generationStartedAtRef.current;
+      const seconds = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
+      // Drop the in-flight thinking placeholder (if any) and close the turn with
+      // the "You stopped after Xs" notice.
+      setMessages(prev => {
+        const base = prev.length && prev[prev.length - 1].isThinkingState ? prev.slice(0, -1) : prev;
+        if (base.length && base[base.length - 1].stoppedNotice) return base;
+        return [...base, { type: 'chat' as const, content: '', isAI: true, stoppedNotice: { seconds } }];
+      });
+    }
     setIsMockAgentChatActive(false);
     isStoryFlowActiveRef.current = false;
     setIsGeneratingOutput(false);
@@ -3583,7 +3608,7 @@ The content has been updated across all channels to reflect your changes.`;
                 {messages.length === 0 && !isGeneratingOutput && (
                   <div className="w-full flex flex-col items-center">
                     <div className={cn("w-full flex flex-col gap-[32px] items-center", isExpanded ? "max-w-[768px]" : "max-w-full")}>
-                      {/* Greeting — single line ("Good evening, Amit"). */}
+                      {/* Greeting — single line ("Good afternoon, Amit"). */}
                       <div className="flex flex-col gap-[6px] items-center">
                         <GreetingShimmer text={`${getGreeting()}, Amit`} />
                       </div>
@@ -3595,7 +3620,7 @@ The content has been updated across all channels to reflect your changes.`;
                           initialAgentMenuOpen={composerSeed.agentMenu}
                           onSend={handleSendMessage}
                           isMockAgentChatActive={isMockAgentChatActive}
-                          onStopMockConversation={stopMockConversation}
+                          onStopMockConversation={() => stopMockConversation({ userInitiated: true })}
                           isQuestionnaireActive={false}
                           selectedContextChip={deepResearchActive ? selectedDeepResearchCategory : selectedStarterChip}
                           onClearSelectedContextChip={
@@ -3779,7 +3804,19 @@ The content has been updated across all channels to reflect your changes.`;
                       messages[index - 1]?.isThinkingState && "!mt-[8px]",
                     )}
                   >
-                  {message.isAgentSwitch ? (
+                  {message.stoppedNotice ? (
+                    // User hit stop mid-generation — a quiet line stating how long
+                    // the response ran, closed off by a hairline.
+                    <div className="w-full animate-in fade-in duration-300">
+                      <p
+                        className="text-[14px] leading-[20px] text-[var(--color-grey)] pb-[16px]"
+                        style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400 }}
+                      >
+                        You stopped after {message.stoppedNotice.seconds}s
+                      </p>
+                      <div className="h-px w-full bg-[var(--color-line)]" />
+                    </div>
+                  ) : message.isAgentSwitch ? (
                     // Per Figma (node 16530:16033): the wavy "Switched to <agent>"
                     // divider, then the avatar + name + saying header below it,
                     // stacked with a 16px gap, introducing this agent's thread.
@@ -4161,7 +4198,7 @@ The content has been updated across all channels to reflect your changes.`;
                       // "Edit" on a plan card → follow-up composer with a reply chip.
                       replyContext={deepResearchEditTitle}
                       onClearReplyContext={() => setDeepResearchEditTitle(null)}
-                      onStopMockConversation={stopMockConversation}
+                      onStopMockConversation={() => stopMockConversation({ userInitiated: true })}
                       isQuestionnaireActive={(() => {
                         const lastMessage = messages[messages.length - 1];
                         
