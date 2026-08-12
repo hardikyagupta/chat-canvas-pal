@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { subDays, differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays } from "date-fns";
 import { ThumbsUp, ThumbsDown, CheckCircle2, Settings, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import L1Nav from "@/components/campaigns/L1Nav";
@@ -12,7 +12,11 @@ import MarketingAgentsOverlay from "@/components/MarketingAgentsOverlay";
 import PersonalizeCoMarketerModal, {
   type PersonalizeCoMarketerData,
 } from "@/components/PersonalizeCoMarketerModal";
-import DateRangeFilter, { type AppliedDateRange } from "@/components/DateRangeFilter";
+import DateRangeFilter, {
+  buildDateRangePresets,
+  type AppliedDateRange,
+  type DateRangePresetKey,
+} from "@/components/DateRangeFilter";
 import CustomizeCardsPanel, { type CardPref } from "@/components/CustomizeCardsPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +44,7 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
 const METRICS_BASE = [
   {
     id: "active-campaigns",
+    deltaPct: 8,
     label: "Active campaigns",
     kind: "volume" as const,
     rawValue: 12,
@@ -48,6 +53,7 @@ const METRICS_BASE = [
   },
   {
     id: "revenue",
+    deltaPct: 18,
     label: "Revenue",
     kind: "volume" as const,
     rawValue: 14.2,
@@ -56,6 +62,7 @@ const METRICS_BASE = [
   },
   {
     id: "orders",
+    deltaPct: 12,
     label: "Orders",
     kind: "volume" as const,
     rawValue: 2883,
@@ -64,6 +71,7 @@ const METRICS_BASE = [
   },
   {
     id: "whatsapp-ctr",
+    deltaPct: -34,
     label: "WhatsApp CTR",
     kind: "rate" as const,
     rawValue: 4.7,
@@ -72,6 +80,7 @@ const METRICS_BASE = [
   },
   {
     id: "avg-open-rate",
+    deltaPct: 6,
     label: "Avg open rate",
     kind: "rate" as const,
     rawValue: 31.4,
@@ -80,6 +89,7 @@ const METRICS_BASE = [
   },
   {
     id: "click-rate",
+    deltaPct: -4,
     label: "Click rate",
     kind: "rate" as const,
     rawValue: 2.3,
@@ -88,6 +98,7 @@ const METRICS_BASE = [
   },
   {
     id: "conversions",
+    deltaPct: 15,
     label: "Conversions",
     kind: "volume" as const,
     rawValue: 642,
@@ -96,6 +107,7 @@ const METRICS_BASE = [
   },
   {
     id: "revenue-per-send",
+    deltaPct: 9,
     label: "Revenue per send",
     kind: "rate" as const,
     rawValue: 4.9,
@@ -104,6 +116,7 @@ const METRICS_BASE = [
   },
   {
     id: "unsubscribes",
+    deltaPct: -11,
     label: "Unsubscribes",
     kind: "volume" as const,
     rawValue: 87,
@@ -112,16 +125,40 @@ const METRICS_BASE = [
   },
 ];
 
+interface MetricCardData {
+  id: string;
+  label: string;
+  sub: string;
+  value: string;
+  /** Period-over-period chip shown beside the value. Null for "Today", which
+   *  has no complete prior period to compare against. */
+  delta: { text: string; tone: "up" | "down" } | null;
+}
+
 /** Derives metric card values for the selected range length (days), so
- *  applying a date filter visibly changes the dashboard's data. Keyed by id. */
-function getMetricsForRange(days: number) {
+ *  applying a date filter visibly changes the dashboard's data. Keyed by id.
+ *  `comparison` picks which prior period the delta chip is measured against —
+ *  omitted (null) when the range is a single day. */
+function getMetricsForRange(days: number, comparison: "prevWeek" | "prevMonth" | null) {
   const volumeFactor = clamp(days / 7, 0.5, 4);
   const rateJitter = ((days * 7) % 11) / 10 - 0.5; // deterministic, ~-0.5..0.5
+  // Month-over-month reads a little flatter than week-over-week — same sign,
+  // damped magnitude, so the two presets don't show identical chips.
+  const deltaFactor = comparison === "prevMonth" ? 0.6 : 1;
 
-  const out: Record<string, { id: string; label: string; sub: string; value: string }> = {};
+  const out: Record<string, MetricCardData> = {};
   for (const m of METRICS_BASE) {
     const scaledValue = m.kind === "volume" ? m.rawValue * volumeFactor : m.rawValue + rateJitter;
-    out[m.id] = { id: m.id, label: m.label, sub: m.sub, value: m.format(scaledValue) };
+    const pct = Math.round(m.deltaPct * deltaFactor);
+    out[m.id] = {
+      id: m.id,
+      label: m.label,
+      sub: m.sub,
+      value: m.format(scaledValue),
+      delta: comparison
+        ? { text: `${pct >= 0 ? "↑ +" : "↓ "}${pct}%`, tone: pct >= 0 ? "up" : "down" }
+        : null,
+    };
   }
   return out;
 }
@@ -335,20 +372,19 @@ export default function AiDashboard() {
   // Date filter — top-right of the page. Picks are staged in the popover and
   // only take effect on "Apply", which shows a brief skeleton before the
   // (deterministically re-derived) data for that range renders.
-  const [appliedRange, setAppliedRange] = useState<AppliedDateRange>(() => {
-    const today = new Date();
-    return { from: subDays(today, 6), to: today };
-  });
-  const [rangeLabel, setRangeLabel] = useState("Last 7 days");
+  const [appliedRange, setAppliedRange] = useState<AppliedDateRange>(
+    () => buildDateRangePresets().find((p) => p.key === "prevWeek")!.getRange()
+  );
+  const [presetKey, setPresetKey] = useState<DateRangePresetKey>("prevWeek");
   const [isDataLoading, setIsDataLoading] = useState(false);
   const dataLoadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleApplyDateFilter = (range: AppliedDateRange, label: string) => {
+  const handleApplyDateFilter = (range: AppliedDateRange, _label: string, key: DateRangePresetKey) => {
     setIsDataLoading(true);
     if (dataLoadTimer.current) clearTimeout(dataLoadTimer.current);
     dataLoadTimer.current = setTimeout(() => {
       setAppliedRange(range);
-      setRangeLabel(label);
+      setPresetKey(key);
       setIsDataLoading(false);
     }, 700);
   };
@@ -362,7 +398,9 @@ export default function AiDashboard() {
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
 
   const rangeDays = Math.max(1, differenceInCalendarDays(appliedRange.to, appliedRange.from) + 1);
-  const metricsById = useMemo(() => getMetricsForRange(rangeDays), [rangeDays]);
+  // "Today" has no complete prior period behind it, so its cards carry no chip.
+  const comparison = presetKey === "today" ? null : presetKey;
+  const metricsById = useMemo(() => getMetricsForRange(rangeDays, comparison), [rangeDays, comparison]);
   const visibleMetrics = useMemo(
     () =>
       cardPrefs
@@ -527,7 +565,7 @@ export default function AiDashboard() {
                 {isPersonalized && (
                   <HeaderIconButton icon={SlidersHorizontal} label="Edit preferences" onClick={openPersonalizeEdit} />
                 )}
-                <DateRangeFilter value={appliedRange} label={rangeLabel} onApply={handleApplyDateFilter} />
+                <DateRangeFilter value={presetKey} onApply={handleApplyDateFilter} />
               </div>
             </div>
 
@@ -555,7 +593,23 @@ export default function AiDashboard() {
                       </div>
                       <div className="flex flex-1 px-1 pb-1">
                         <div className="flex flex-1 flex-col gap-1 rounded-[8px] border-[0.25px] border-[#DCDCDC] bg-white px-3 py-4">
-                          <p className="font-manrope text-[32px] font-bold leading-none text-[#17173A]">{m.value}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-manrope text-[32px] font-bold leading-none text-[#17173A]">{m.value}</p>
+                            {/* Period-over-period chip — only on the two "previous
+                                period" presets, which have a prior period to beat. */}
+                            {m.delta && (
+                              <span
+                                className={cn(
+                                  "rounded-[11px] px-1 py-0.5 font-manrope text-[11px] font-semibold whitespace-nowrap",
+                                  m.delta.tone === "up"
+                                    ? "bg-[#E8F8F4] text-[#00A68C]"
+                                    : "bg-[#FEEDED] text-[#F05C5C]"
+                                )}
+                              >
+                                {m.delta.text}
+                              </span>
+                            )}
+                          </div>
                           <p className="font-manrope text-[12px] leading-[17px] text-[#6F6F8D]">{m.sub}</p>
                         </div>
                       </div>
