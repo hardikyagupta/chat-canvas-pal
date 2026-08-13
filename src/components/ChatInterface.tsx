@@ -10,7 +10,7 @@ import SystemMessage from './SystemMessage';
 import ChatInput from './ChatInput';
 import ChatMessage from './ChatMessage';
 import { MarketingAgent, marketingAgents } from '@/data/agents';
-import { CONVERSATIONS, ConversationVariant, CAMPAIGNS_FLOW, AgentArtifactCardData, DEEP_RESEARCH_TOPICS, resolveDeepResearchOpener, type DeepResearchTopic } from '@/data/conversations';
+import { CONVERSATIONS, ConversationVariant, CAMPAIGNS_FLOW, AgentArtifactCardData, DEEP_RESEARCH_TOPICS, resolveDeepResearchOpener, resolveSegmentsFlow, type CampaignsTurn, type DeepResearchTopic } from '@/data/conversations';
 
 // The topic the "+"-popover deep-research mode falls back to when the typed /
 // picked prompt doesn't match a specific topic.
@@ -176,6 +176,31 @@ interface ChatInterfaceProps {
   initialMessage?: string;
   /** AI Dashboard insight card — auto-sent on mount as a rich first user turn. */
   initialInsightCard?: InsightCardContext;
+  /** Campaign picked from the co-marketer review banner above the campaigns
+   *  table. Seeds a short review thread on mount instead of playing a scripted
+   *  flow — the user asks to review it, the co-marketer walks through it. */
+  initialReviewCampaign?: ReviewCampaignContext;
+  /** Canned prompt/answer pair seeded on mount — used by the campaign-creation
+   *  discovery points, which open the chat already on a subject. */
+  initialTopic?: SeededTopic;
+  /** "Review segment" / "Review journey" on an agent's artifact card. The host
+   *  page decides where that goes — the segments pages open the segment
+   *  creation canvas on the card's rules. */
+  onReviewArtifact?: (card: AgentArtifactCardData) => void;
+}
+
+/** A tap-to-open co-marketer thread: what the user "asked", and the answer. */
+export interface SeededTopic {
+  prompt: string;
+  reply: string;
+  navLabel?: string;
+}
+
+/** The campaign handed over by the co-marketer review banner. */
+export interface ReviewCampaignContext {
+  title: string;
+  subtitle?: string;
+  id?: string;
 }
 
 // Rotating example topics shown in the empty-state greeting slot animation
@@ -195,7 +220,7 @@ const bookmarkedChats = defaultChats.filter((c) => ['2', '5', '8', '11', '17'].i
 // regardless of what time the deck is being presented.
 const getGreeting = () => 'Good afternoon';
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialReviewCampaign, initialTopic, onReviewArtifact }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   // The scripted storyline this interface plays. Home (`/`) uses 'default';
@@ -223,6 +248,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[] | null>(null);
   // Which turn of the campaigns flow (Insights → Segment → Journey) is next.
   const campaignsTurnRef = useRef(0);
+  // Which two-turn Segment-agent thread this chat is playing — resolved from the
+  // opening prompt (i.e. the suggestion card the user tapped) and then held so
+  // later turns stay on the same thread. Only used by the 'segments' variant.
+  const segmentsFlowRef = useRef<CampaignsTurn[] | null>(null);
   // Deep-research narrative step (variant-agnostic, see DEEP_RESEARCH_TOPICS):
   // 0 = not started, 1 = insight shown / awaiting the follow-up (two-step topics
   // only), 2 = plan card dropped (the card self-drives from there). The active
@@ -1203,6 +1232,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     setShowSuggestions(false);
     setDynamicSuggestions(null);
     campaignsTurnRef.current = 0;
+    segmentsFlowRef.current = null;
     deepResearchStoryStepRef.current = 0;
     deepResearchTopicRef.current = null;
     setDeepResearchRunning(false);
@@ -1490,6 +1520,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       setShowSuggestions(false);
       setDynamicSuggestions(null);
       campaignsTurnRef.current = 0;
+      segmentsFlowRef.current = null;
       deepResearchStoryStepRef.current = 0;
       deepResearchTopicRef.current = null;
       setDeepResearchRunning(false);
@@ -1641,7 +1672,14 @@ The content has been updated across all channels to reflect your changes.`;
   // surfaces the single prompt that leads into the next agent. See CAMPAIGNS_FLOW.
   const handleCampaignsSend = (message: string, insightCard?: InsightCardContext) => {
     const turnIndex = campaignsTurnRef.current;
-    const turn = CAMPAIGNS_FLOW[turnIndex];
+    // 'segments' plays a per-card Segment-agent thread picked from the opening
+    // prompt; every other variant plays the fixed campaigns relay.
+    let flow = CAMPAIGNS_FLOW;
+    if (conversationVariant === 'segments') {
+      if (!segmentsFlowRef.current) segmentsFlowRef.current = resolveSegmentsFlow(message);
+      flow = segmentsFlowRef.current;
+    }
+    const turn = flow[turnIndex];
 
     // Turn 0 keeps the caller's message (e.g. an insight card or hero composer);
     // later scripted turns still substitute the canonical prompt.
@@ -1697,7 +1735,7 @@ The content has been updated across all channels to reflect your changes.`;
     const agent = marketingAgents.find(a => a.id === turn.switchAgentId);
     // Turn 0 has no previous agent — the orb morphs from the neutral default
     // theme, reading as "handed off from the system".
-    const prevLabel = turnIndex > 0 ? CAMPAIGNS_FLOW[turnIndex - 1].switchAgentLabel : undefined;
+    const prevLabel = turnIndex > 0 ? flow[turnIndex - 1].switchAgentLabel : undefined;
 
     // This turn's sequence: switch divider → thinking → the agent's answer.
     const sequence: ChatMessageData[] = [
@@ -2090,8 +2128,10 @@ The content has been updated across all channels to reflect your changes.`;
       return;
     }
 
-    // The /campaigns docked chat plays a bespoke agent-relay flow.
-    if (conversationVariant === 'campaigns') {
+    // The /campaigns and /audience/segments docked chats play bespoke
+    // agent-relay flows (CAMPAIGNS_FLOW / SEGMENTS_FLOWS) rather than the
+    // performance story.
+    if (conversationVariant === 'campaigns' || conversationVariant === 'segments') {
       handleCampaignsSend(message);
       return;
     }
@@ -2897,6 +2937,55 @@ The content has been updated across all channels to reflect your changes.`;
     }
   };
 
+  // Opens the docked chat on a campaign the co-marketer built and is waiting on:
+  // the user's "review this" turn, then a copy-only walkthrough from the agent.
+  // Deliberately bypasses CAMPAIGNS_FLOW — that script builds a *new* campaign,
+  // while this thread talks about one that already exists.
+  /** Drops a canned prompt/answer pair into an empty thread — copy only, no
+   *  scripted hand-offs. Shared by the review banner and the campaign-creation
+   *  discovery points, both of which open the chat already on a subject. */
+  const seedThread = (prompt: string, reply: string, navLabel?: string) => {
+    const coMarketer = marketingAgents.find(a => a.id === 'co-marketer');
+    setMessages([{
+      type: 'chat',
+      isAI: false,
+      content: prompt,
+      navLabel,
+      onAnimationComplete: () => {},
+    }]);
+    setShowSuggestions(false);
+    setIsGeneratingOutput(true);
+
+    window.setTimeout(() => {
+      setIsGeneratingOutput(false);
+      setMessages(prev => [...prev, {
+        type: 'chat',
+        isAI: true,
+        agentName: coMarketer?.name,
+        avatarSrc: coMarketer?.avatarSrc,
+        avatarIcon: coMarketer?.icon,
+        avatarBgClass: coMarketer?.colorClass,
+        content: reply,
+        hidePerformanceDashboard: true,
+        onAnimationComplete: () => setMockChatCompleted(true),
+      }]);
+    }, 700);
+  };
+
+  const seedReviewThread = (campaign: ReviewCampaignContext) => {
+    seedThread(
+      `Walk me through "${campaign.title}" before I approve it.`,
+          `Here's **${campaign.title}**${campaign.id ? ` (${campaign.id})` : ''}.\n\n` +
+          `**Why I built it** — ${campaign.subtitle ?? 'It targets an opportunity I spotted in your recent engagement data.'} ` +
+          `I found a pocket of users who match the intent signal but haven't been contacted in the last 21 days.\n\n` +
+          `**What's inside** — a single email send, subject line and body drafted in your brand voice, ` +
+          `scheduled for the 10am–12pm window where this audience opens most.\n\n` +
+          `**What I need from you** — a look at the copy and the send window. Approve it and I'll schedule it; ` +
+          `tell me what to change and I'll redraft.`,
+      'Review campaign'
+    );
+  };
+
   // Auto-fires once against a fresh thread when opened with `initialMessage` —
   // mirrors typing that text into this interface's own composer and hitting
   // Enter. Callers remount this component (key bump) per open, so this only
@@ -2907,6 +2996,16 @@ The content has been updated across all channels to reflect your changes.`;
   const hasAutoSentRef = useRef(false);
   useEffect(() => {
     if (hasAutoSentRef.current) return;
+    if (initialReviewCampaign) {
+      hasAutoSentRef.current = true;
+      seedReviewThread(initialReviewCampaign);
+      return;
+    }
+    if (initialTopic) {
+      hasAutoSentRef.current = true;
+      seedThread(initialTopic.prompt, initialTopic.reply, initialTopic.navLabel);
+      return;
+    }
     if (initialInsightCard) {
       hasAutoSentRef.current = true;
       handleCampaignsSend('', initialInsightCard);
@@ -3969,6 +4068,11 @@ The content has been updated across all channels to reflect your changes.`;
                       statCards={message.statCards}
                       miniChart={message.miniChart}
                       agentArtifactCard={message.agentArtifactCard}
+                      onAgentArtifactAction={
+                        message.agentArtifactCard && onReviewArtifact
+                          ? () => onReviewArtifact(message.agentArtifactCard!)
+                          : undefined
+                      }
                       onThumbsUp={() => setFeedbackModal('up')}
                       onThumbsDown={() => setFeedbackModal('down')}
                       onContinueSegment={() => {
