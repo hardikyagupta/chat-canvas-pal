@@ -128,13 +128,17 @@ function ConditionBlock({
               return (
                 <div
                   key={i}
-                  className="seg-rule-row flex flex-wrap items-center gap-2"
+                  className="seg-rule-row flex items-center gap-2"
                   style={{ animationDelay: "0ms" }}
                 >
-                  {row.join && <SelectChip label={row.join} />}
-                  {row.fields.map((field, fi) => (
-                    <Field key={fi} field={field} />
-                  ))}
+                  {/* Chips wrap among themselves; the actions stay pinned to the
+                      row so a long condition can't strand them on their own line. */}
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                    {row.join && <SelectChip label={row.join} />}
+                    {row.fields.map((field, fi) => (
+                      <Field key={fi} field={field} />
+                    ))}
+                  </div>
                   <RowActions />
                 </div>
               );

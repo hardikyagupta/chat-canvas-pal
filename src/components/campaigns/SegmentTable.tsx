@@ -1,5 +1,6 @@
 import { Filter, Info } from "lucide-react";
 import { segments, type Segment } from "./segments.data";
+import sparkleAi from "/campaign-assets/ic-sparkle-ai.gif";
 
 /**
  * Audience → Segments listing table. Same card shell, frozen first column and
@@ -51,7 +52,13 @@ function SegmentRow({ s }: { s: Segment }) {
     >
       {/* Segment info (frozen column — stays pinned during horizontal scroll) */}
       <div className="sticky left-0 z-10 flex h-full items-center gap-3.5 border-r border-[#EDF0F7] bg-white px-4 group-hover:bg-[#F5F8FF]">
-        <Filter className="h-[18px] w-[18px] shrink-0 text-[#6F6F8D]" strokeWidth={1.5} />
+        {/* AI-built segments carry the co-marketer's sparkle in place of the
+            plain filter glyph, so the list says where a segment came from. */}
+        {s.aiGenerated ? (
+          <img src={sparkleAi} alt="Created with AI" className="size-[18px] shrink-0 object-contain" />
+        ) : (
+          <Filter className="h-[18px] w-[18px] shrink-0 text-[#6F6F8D]" strokeWidth={1.5} />
+        )}
         <div className="min-w-0 flex-1">
           <p className="font-manrope text-[13px] font-semibold leading-[18px] tracking-[0.29px] text-[#17173A]">
             {s.name}
@@ -73,7 +80,12 @@ function SegmentRow({ s }: { s: Segment }) {
   );
 }
 
-export default function SegmentTable() {
+export default function SegmentTable({
+  /** Segments created this session — shown above the stored rows. */
+  extra = [],
+}: {
+  extra?: Segment[];
+}) {
   return (
     <div className="scroll-slim overflow-x-auto rounded-lg border border-[#DDE2EE] bg-white shadow-[0px_5px_10px_0px_rgba(23,23,58,0.05)]">
       <div className="min-w-[1180px]">
@@ -101,7 +113,7 @@ export default function SegmentTable() {
 
         {/* Body */}
         <div>
-          {segments.map((s) => (
+          {[...extra, ...segments].map((s) => (
             <SegmentRow key={s.id} s={s} />
           ))}
         </div>

@@ -26,7 +26,7 @@ export default function CampaignCreationNavbar({
   onClose?: () => void;
 }) {
   return (
-    <header className="flex h-14 shrink-0 items-center border-b border-[#DDE2EE] bg-white px-4">
+    <header className="flex h-14 shrink-0 items-center border-b border-[#DDE2EE] bg-white px-14">
       <div className="flex min-w-0 items-center gap-3">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-[#E7EDFF]">
           <Icon className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />

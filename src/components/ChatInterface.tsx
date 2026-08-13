@@ -18,6 +18,7 @@ const DEFAULT_DEEP_RESEARCH_TOPIC =
   DEEP_RESEARCH_TOPICS.find((t) => t.id === 'whatsapp-performance') ?? DEEP_RESEARCH_TOPICS[0];
 import type { InsightCardContext } from '@/types/insightCard';
 import { formatInsightContent } from '@/types/insightCard';
+import type { SetupApplyCardData } from '@/components/campaigns/campaign-creation/SetupApplyCard';
 import AgentSwitchDivider from './AgentSwitchDivider';
 import AgentThreadHeader from './AgentThreadHeader';
 import AvatarStack from './AvatarStack';
@@ -158,6 +159,7 @@ interface ChatMessageData {
   replyContext?: string;
   // AI Dashboard insight card carried into the opening user turn.
   insightCard?: InsightCardContext;
+  setupApplyCard?: SetupApplyCardData;
 }
 
 // Props for the main ChatInterface component
@@ -183,6 +185,17 @@ interface ChatInterfaceProps {
   /** Canned prompt/answer pair seeded on mount — used by the campaign-creation
    *  discovery points, which open the chat already on a subject. */
   initialTopic?: SeededTopic;
+  /**
+   * Extra canned turn to append onto an already-open thread (campaign-creation
+   * suggestion cards). `followUpSeq` must bump so the same topic can be asked
+   * more than once.
+   */
+  followUpTopic?: SeededTopic | null;
+  followUpSeq?: number;
+  /** Apply a co-marketer setup suggestion onto the campaign form. */
+  onSetupApply?: (card: SetupApplyCardData) => void;
+  /** Whether a given setup-apply card has already been plotted. */
+  isSetupApplyApplied?: (card: SetupApplyCardData) => boolean;
   /** "Review segment" / "Review journey" on an agent's artifact card. The host
    *  page decides where that goes — the segments pages open the segment
    *  creation canvas on the card's rules. */
@@ -194,6 +207,7 @@ export interface SeededTopic {
   prompt: string;
   reply: string;
   navLabel?: string;
+  setupApplyCard?: SetupApplyCardData;
 }
 
 /** The campaign handed over by the co-marketer review banner. */
@@ -220,7 +234,7 @@ const bookmarkedChats = defaultChats.filter((c) => ['2', '5', '8', '11', '17'].i
 // regardless of what time the deck is being presented.
 const getGreeting = () => 'Good afternoon';
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialReviewCampaign, initialTopic, onReviewArtifact }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialReviewCampaign, initialTopic, onReviewArtifact, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   // The scripted storyline this interface plays. Home (`/`) uses 'default';
@@ -2944,13 +2958,13 @@ The content has been updated across all channels to reflect your changes.`;
   /** Drops a canned prompt/answer pair into an empty thread — copy only, no
    *  scripted hand-offs. Shared by the review banner and the campaign-creation
    *  discovery points, both of which open the chat already on a subject. */
-  const seedThread = (prompt: string, reply: string, navLabel?: string) => {
+  const appendTopic = (topic: SeededTopic) => {
     const coMarketer = marketingAgents.find(a => a.id === 'co-marketer');
-    setMessages([{
+    setMessages(prev => [...prev, {
       type: 'chat',
       isAI: false,
-      content: prompt,
-      navLabel,
+      content: topic.prompt,
+      navLabel: topic.navLabel,
       onAnimationComplete: () => {},
     }]);
     setShowSuggestions(false);
@@ -2965,11 +2979,17 @@ The content has been updated across all channels to reflect your changes.`;
         avatarSrc: coMarketer?.avatarSrc,
         avatarIcon: coMarketer?.icon,
         avatarBgClass: coMarketer?.colorClass,
-        content: reply,
+        content: topic.reply,
         hidePerformanceDashboard: true,
+        setupApplyCard: topic.setupApplyCard,
         onAnimationComplete: () => setMockChatCompleted(true),
       }]);
     }, 700);
+  };
+
+  const seedThread = (prompt: string, reply: string, navLabel?: string, setupApplyCard?: SetupApplyCardData) => {
+    setMessages([]);
+    appendTopic({ prompt, reply, navLabel, setupApplyCard });
   };
 
   const seedReviewThread = (campaign: ReviewCampaignContext) => {
@@ -3003,7 +3023,7 @@ The content has been updated across all channels to reflect your changes.`;
     }
     if (initialTopic) {
       hasAutoSentRef.current = true;
-      seedThread(initialTopic.prompt, initialTopic.reply, initialTopic.navLabel);
+      seedThread(initialTopic.prompt, initialTopic.reply, initialTopic.navLabel, initialTopic.setupApplyCard);
       return;
     }
     if (initialInsightCard) {
@@ -3017,6 +3037,14 @@ The content has been updated across all channels to reflect your changes.`;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const consumedFollowUpSeq = useRef(0);
+  useEffect(() => {
+    if (!followUpTopic || followUpSeq <= 0 || followUpSeq === consumedFollowUpSeq.current) return;
+    consumedFollowUpSeq.current = followUpSeq;
+    appendTopic(followUpTopic);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followUpSeq, followUpTopic]);
 
   useEffect(() => {
     const handleAgentStatus = (event: CustomEvent<{
@@ -4071,6 +4099,17 @@ The content has been updated across all channels to reflect your changes.`;
                       onAgentArtifactAction={
                         message.agentArtifactCard && onReviewArtifact
                           ? () => onReviewArtifact(message.agentArtifactCard!)
+                          : undefined
+                      }
+                      setupApplyCard={message.setupApplyCard}
+                      setupApplyApplied={
+                        message.setupApplyCard
+                          ? isSetupApplyApplied?.(message.setupApplyCard) ?? false
+                          : false
+                      }
+                      onSetupApply={
+                        message.setupApplyCard
+                          ? () => onSetupApply?.(message.setupApplyCard!)
                           : undefined
                       }
                       onThumbsUp={() => setFeedbackModal('up')}

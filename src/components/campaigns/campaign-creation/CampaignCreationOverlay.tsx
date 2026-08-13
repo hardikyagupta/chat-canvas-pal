@@ -14,10 +14,19 @@ import {
 import { cn } from "@/lib/utils";
 import CampaignCreationNavbar from "./CampaignCreationNavbar";
 import CampaignCreationStepper, { type Step } from "./CampaignCreationStepper";
-import CampaignAIPanel, { type DiscoveryPoint } from "./CampaignAIPanel";
-import CampaignSetupStep, { type SetupValues } from "./CampaignSetupStep";
+import CampaignAIPanel, {
+  isPatchApplied,
+  toSetupApplyCard,
+  type CampaignSuggestion,
+} from "./CampaignAIPanel";
+import CampaignSetupStep, {
+  goalLabel,
+  mergeTags,
+  type SetupValues,
+} from "./CampaignSetupStep";
 import StepPlaceholder from "./StepPlaceholder";
-import ChatInterface from "@/components/ChatInterface";
+import ChatInterface, { type SeededTopic } from "@/components/ChatInterface";
+import "./campaign-creation.css";
 
 /**
  * Full-screen campaign creation wizard, opened from the top bar's quick-create
@@ -49,6 +58,15 @@ const STEPS: Step[] = [
   { id: "audience", label: "Audience", icon: Users },
   { id: "schedule", label: "Schedule", icon: Calendar },
 ];
+
+const EMPTY_SETUP: SetupValues = {
+  goal: "",
+  tags: "",
+  gaTracking: false,
+  conversionTracking: false,
+  conversionEvent: "",
+  audienceSuggestion: "",
+};
 
 const PLACEHOLDERS: Record<string, { title: string; description: string; note: string }> = {
   content: {
@@ -84,19 +102,17 @@ export default function CampaignCreationOverlay({
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [setup, setSetup] = useState<SetupValues>({
-    name: "",
-    tags: "",
-    gaTracking: false,
-    conversionTracking: false,
-  });
+  const [setup, setSetup] = useState<SetupValues>(EMPTY_SETUP);
   // Docked co-marketer chat, opened from the navbar CTA. `chatSession` is
   // bumped per open so the widget remounts on a fresh thread.
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSession, setChatSession] = useState(0);
-  // Discovery point the chat opens on; null when opened from the navbar CTA.
-  const [chatTopic, setChatTopic] = useState<DiscoveryPoint | null>(null);
+  const [chatTopic, setChatTopic] = useState<CampaignSuggestion | null>(null);
+  const [followUpTopic, setFollowUpTopic] = useState<SeededTopic | null>(null);
+  const [followUpSeq, setFollowUpSeq] = useState(0);
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(new Set());
+  const [aiReady, setAiReady] = useState(false);
+  const [highlight, setHighlight] = useState<Partial<Record<keyof SetupValues, boolean>>>({});
 
   useEffect(() => {
     if (open) {
@@ -107,10 +123,15 @@ export default function CampaignCreationOverlay({
     const id = setTimeout(() => {
       setMounted(false);
       setChatOpen(false);
+      setChatTopic(null);
+      setFollowUpTopic(null);
+      setFollowUpSeq(0);
       // Reset only after the panel is gone, so the exit slide doesn't show the
       // wizard snapping back to step 1.
       setActiveIndex(0);
-      setSetup({ name: "", tags: "", gaTracking: false, conversionTracking: false });
+      setSetup(EMPTY_SETUP);
+      setAiReady(false);
+      setHighlight({});
     }, SLIDE_MS);
     return () => clearTimeout(id);
   }, [open]);
@@ -132,6 +153,17 @@ export default function CampaignCreationOverlay({
     };
   }, [mounted, open]);
 
+  // Co-marketer suggestions skeleton in while the goal is new, then reveal.
+  useEffect(() => {
+    if (!setup.goal) {
+      setAiReady(false);
+      return;
+    }
+    setAiReady(false);
+    const id = setTimeout(() => setAiReady(true), 1600);
+    return () => clearTimeout(id);
+  }, [setup.goal]);
+
   // Esc closes, and the page behind shouldn't scroll while we're over it.
   useEffect(() => {
     if (!open) return;
@@ -149,10 +181,34 @@ export default function CampaignCreationOverlay({
 
   if (!mounted) return null;
 
+  const toSeeded = (point: CampaignSuggestion): SeededTopic => ({
+    prompt: point.prompt,
+    reply: point.reply,
+    navLabel: point.navLabel,
+    setupApplyCard: toSetupApplyCard(point),
+  });
+
+  const applySetup = (patch: Partial<SetupValues>) => {
+    setSetup((s) => {
+      const next = { ...s, ...patch };
+      if (patch.tags) next.tags = mergeTags(s.tags, patch.tags);
+      return next;
+    });
+    const flashed = Object.fromEntries(
+      Object.keys(patch).map((k) => [k, true])
+    ) as Partial<Record<keyof SetupValues, boolean>>;
+    setHighlight(flashed);
+    window.setTimeout(() => setHighlight({}), 1200);
+  };
+
   const Icon = CHANNEL_ICONS[channel] ?? Mail;
   const activeStep = STEPS[activeIndex];
   const isLastStep = activeIndex === STEPS.length - 1;
   const placeholder = PLACEHOLDERS[activeStep.id];
+  const goal = goalLabel(setup.goal);
+  // The right-hand suggestions stay closed until the campaign has a goal —
+  // before that there's nothing for the co-marketer to be relevant about.
+  const showAIPanel = Boolean(goal);
 
   return (
     <div
@@ -160,18 +216,20 @@ export default function CampaignCreationOverlay({
       aria-modal="true"
       aria-label={`Create ${channel} campaign`}
       className={cn(
-        "fixed inset-0 z-[60] flex flex-col bg-[#F4F8FF]",
+        "campaign-create-shell fixed inset-0 z-[60] flex flex-col bg-[#F4F8FF]",
         "transition-transform duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
         "motion-reduce:transition-none",
         shown ? "translate-y-0" : "translate-y-full"
       )}
     >
       <CampaignCreationNavbar
-        campaignName={setup.name.trim() || `Untitled ${channel} campaign`}
+        campaignName={goal ?? `Untitled ${channel} campaign`}
         icon={Icon}
         nextLabel={isLastStep ? "Launch" : "Next step"}
         onAskCoMarketer={() => {
           setChatTopic(null);
+          setFollowUpTopic(null);
+          setFollowUpSeq(0);
           setChatSession((n) => n + 1);
           setChatOpen(true);
         }}
@@ -188,11 +246,12 @@ export default function CampaignCreationOverlay({
         onStepSelect={setActiveIndex}
       />
 
-      <div className="flex min-h-0 flex-1">
-        <div className="scroll-slim min-w-0 flex-1 overflow-y-auto py-6 pl-6 pr-3">
+      <div className={cn("flex min-h-0 flex-1 gap-5 pl-14", chatOpen ? "pr-5" : "pr-14")}>
+        <div className="scroll-slim min-w-0 flex-1 overflow-y-auto py-6">
           {activeStep.id === "setup" ? (
             <CampaignSetupStep
               values={setup}
+              highlight={highlight}
               onChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
             />
           ) : (
@@ -205,29 +264,49 @@ export default function CampaignCreationOverlay({
           )}
         </div>
 
-        <CampaignAIPanel
-          stepId={activeStep.id}
-          onAsk={(point) => {
-            setChatTopic(point);
-            setChatSession((n) => n + 1);
-            setChatOpen(true);
-          }}
-        />
+        {showAIPanel && (
+          <CampaignAIPanel
+            key={setup.goal}
+            stepId={activeStep.id}
+            goal={setup.goal}
+            loading={!aiReady}
+            values={setup}
+            onAsk={(point) => {
+              setChatTopic(point);
+              if (chatOpen) {
+                setFollowUpTopic(toSeeded(point));
+                setFollowUpSeq((n) => n + 1);
+              } else {
+                setChatOpen(true);
+              }
+            }}
+          />
+        )}
 
-        {/* Co-marketer chat — docked column, same widget the campaigns list
-            uses. Opened by "Ask co-marketer" in the navbar; remounted per open
-            (key bump) so each session starts on a clean thread. */}
+        {/* Co-marketer chat — docked column. Opened from a suggestion card
+            (seeded on that prompt) or from "Ask co-marketer" in the navbar. */}
         {chatOpen && (
-          <div className="flex h-full min-h-0 w-[474px] shrink-0 justify-end overflow-hidden py-3 pr-3">
+          <div className="flex h-full min-h-0 w-[474px] shrink-0 justify-end overflow-hidden py-3">
             <ChatInterface
               key={chatSession}
               initialExpanded={false}
               docked
               conversationVariant="campaigns"
-              initialTopic={chatTopic ?? undefined}
+              initialTopic={chatTopic ? toSeeded(chatTopic) : undefined}
+              followUpTopic={followUpTopic}
+              followUpSeq={followUpSeq}
+              onSetupApply={(card) => {
+                if (card.patch) applySetup(card.patch);
+              }}
+              isSetupApplyApplied={(card) =>
+                card.patch ? isPatchApplied(card.patch, setup) : false
+              }
               enabledAgents={enabledAgents}
               setEnabledAgents={setEnabledAgents}
-              onCloseInterface={() => setChatOpen(false)}
+              onCloseInterface={() => {
+                setChatOpen(false);
+                setChatTopic(null);
+              }}
             />
           </div>
         )}

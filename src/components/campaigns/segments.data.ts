@@ -11,6 +11,8 @@ export interface Segment {
   sms: number;
   appPush: number;
   webPush: number;
+  /** Built by the co-marketer rather than hand-rolled — badged as AI in the list. */
+  aiGenerated?: boolean;
 }
 
 export const segments: Segment[] = [

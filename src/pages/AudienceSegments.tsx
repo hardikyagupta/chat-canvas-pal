@@ -12,6 +12,44 @@ import SegmentCreationOverlay, {
   type ReviewSegmentContext,
 } from "@/components/campaigns/segment-creation/SegmentCreationOverlay";
 import { marketingAgents } from "@/data/agents";
+import { segments as storedSegments, type Segment } from "@/components/campaigns/segments.data";
+import { toast } from "sonner";
+
+function formatSegmentStamp(d = new Date()) {
+  const date = d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${date} ${time}`;
+}
+
+function toTableSegment(
+  saved: { name: string; count: string; aiGenerated: boolean },
+  existing: Segment[]
+): Segment {
+  const nextId =
+    Math.max(0, ...storedSegments.map((s) => s.id), ...existing.map((s) => s.id)) + 1;
+  const users = Number(String(saved.count).replace(/,/g, "")) || 0;
+  const stamp = formatSegmentStamp();
+  return {
+    id: nextId,
+    name: saved.name,
+    createdOn: stamp,
+    refreshedOn: stamp,
+    userCount: users,
+    email: users,
+    sms: Math.round(users * 0.95),
+    appPush: 0,
+    webPush: 0,
+    aiGenerated: saved.aiGenerated,
+  };
+}
 
 /**
  * Audience → Segments listing page, reached from the Segments row of the
@@ -21,9 +59,6 @@ import { marketingAgents } from "@/data/agents";
  */
 export default function AudienceSegments() {
   const [chatOpen, setChatOpen] = useState(false);
-  // The prompt card that opened the chat — fired into the docked ChatInterface as
-  // its opening message, which picks the matching Segment-agent thread.
-  const [segmentPrompt, setSegmentPrompt] = useState<string>();
   // `chatMounted` keeps the docked column in the DOM while its exit animation
   // plays; `chatIn` drives the enter/leave transition (slide + fade + width).
   const [chatMounted, setChatMounted] = useState(false);
@@ -32,9 +67,15 @@ export default function AudienceSegments() {
   const [chatSession, setChatSession] = useState(0);
   const [isAgentsOverlayOpen, setIsAgentsOverlayOpen] = useState(false);
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(new Set());
-  // "Review segment" on the Segment agent's artifact card — opens the segment
-  // creation canvas on that card's rules. Cleared when the canvas closes.
+  // "Review segment" on the Segment agent's artifact card in the page-level chat
+  // — opens the creation canvas on that card's rules. Cleared when it closes.
   const [reviewSegment, setReviewSegment] = useState<ReviewSegmentContext | null>(null);
+  // A prompt card was tapped: we go straight to the segment creation page and
+  // hand it the ask, so the co-marketer works on it there rather than here.
+  const [creationPrompt, setCreationPrompt] = useState<string>();
+  // Segments saved from the canvas this session — they head the table, above the
+  // stored rows, so the user lands back on the thing they just made.
+  const [createdSegments, setCreatedSegments] = useState<Segment[]>([]);
 
   // Coordinate mount → enter and leave → unmount so both directions animate.
   useEffect(() => {
@@ -54,10 +95,13 @@ export default function AudienceSegments() {
     if (isAgentsOverlayOpen) setIsAgentsOverlayOpen(false);
   }, [chatOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** A prompt card was tapped — dock the chat and hand the Segment agent the ask. */
+  /**
+   * A prompt card was tapped — open the segment creation page with the ask
+   * already in front of the co-marketer there. The user lands on the canvas
+   * they're about to fill, with the agent working beside it.
+   */
   const openSegmentAgent = (prompt: string) => {
-    setSegmentPrompt(prompt);
-    setChatOpen(true);
+    setCreationPrompt(prompt);
   };
 
   const handleToggleAgent = (agentId: string, agentName: string) => {
@@ -89,14 +133,7 @@ export default function AudienceSegments() {
       <L1Nav active="audience" activeAudienceItem="segments" />
 
       <div className="flex min-w-0 flex-1 flex-col p-2">
-        <TopNav
-          // Opening from the top bar starts an empty thread, not a card's prompt.
-          onOpenChat={() => {
-            setSegmentPrompt(undefined);
-            setChatOpen(true);
-          }}
-          showCoMarketerNudge={false}
-        />
+        <TopNav onOpenChat={() => setChatOpen(true)} showCoMarketerNudge={false} />
 
         <div className="mt-2 flex min-h-0 flex-1 gap-2">
           {/* Segments content */}
@@ -116,7 +153,7 @@ export default function AudienceSegments() {
             </div>
 
             <div className="mt-4">
-              <SegmentTable />
+              <SegmentTable extra={createdSegments} />
             </div>
 
             <div className="mt-4 pb-8">
@@ -150,7 +187,6 @@ export default function AudienceSegments() {
                 initialExpanded={false}
                 docked
                 conversationVariant="segments"
-                initialMessage={segmentPrompt}
                 onBotIconClick={() => setIsAgentsOverlayOpen(true)}
                 enabledAgents={enabledAgents}
                 setEnabledAgents={setEnabledAgents}
@@ -164,12 +200,23 @@ export default function AudienceSegments() {
         </div>
       </div>
 
-      {/* Segment creation canvas — the chat stays docked underneath, so closing
-          this returns the user to the thread they came from. */}
+      {/* Segment creation page.
+          • From a prompt card: opens empty with the co-marketer docked on its
+            right, already answering — the rules land once the user reviews.
+          • From "Review segment" in the page-level chat: opens straight onto
+            that card's rules, with the thread still docked underneath. */}
       <SegmentCreationOverlay
-        open={reviewSegment !== null}
+        open={reviewSegment !== null || creationPrompt !== undefined}
         segment={reviewSegment}
-        onClose={() => setReviewSegment(null)}
+        initialPrompt={creationPrompt}
+        onSaved={(saved) => {
+          setCreatedSegments((prev) => [toTableSegment(saved, prev), ...prev]);
+          toast.success("Segment created successfully");
+        }}
+        onClose={() => {
+          setReviewSegment(null);
+          setCreationPrompt(undefined);
+        }}
       />
     </div>
   );
