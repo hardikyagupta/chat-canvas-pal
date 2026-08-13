@@ -1214,3 +1214,153 @@
 .dc-btn-secondary-blue:hover:not(:disabled) {
   background-color: var(--color-royal-pale);
 }
+
+/* "Built for you" wand — a small magic flourish on the co-marketer review
+   banner badge: the wand tips back and forth while a warm glow flickers on the
+   beat, so the badge reads as something being conjured rather than a static
+   label. Two nested elements because the wiggle (transform) and the glow
+   (filter) run on different rhythms. */
+.magic-wand {
+  display: block;
+  animation: magicWandWiggle 2.4s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  transform-origin: 70% 70%;
+}
+
+.magic-wand-glow {
+  display: block;
+  animation: magicWandGlow 2.4s ease-in-out infinite;
+}
+
+@keyframes magicWandWiggle {
+  0%, 55%, 100% { transform: rotate(0deg) scale(1); }
+  62% { transform: rotate(-16deg) scale(1.08); }
+  70% { transform: rotate(12deg) scale(1.12); }
+  78% { transform: rotate(-7deg) scale(1.06); }
+  86% { transform: rotate(3deg) scale(1.02); }
+}
+
+@keyframes magicWandGlow {
+  0%, 52%, 100% { filter: none; }
+  66% { filter: drop-shadow(0 0 3px rgba(47, 104, 229, 0.85)) brightness(1.25); }
+  74% { filter: drop-shadow(0 0 5px rgba(255, 176, 32, 0.9)) brightness(1.35); }
+  88% { filter: drop-shadow(0 0 2px rgba(47, 104, 229, 0.5)) brightness(1.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magic-wand,
+  .magic-wand-glow {
+    animation: none;
+  }
+}
+
+/* Sheen CTA — the campaign-creation "Ask co-marketer" button. Deliberately NOT
+   the snake-border ring used by the top-nav CTA: this one keeps a static hairline
+   border and passes a soft diagonal light sweep across the face instead, so the
+   two co-marketer entry points read as related without looking identical. */
+.ai-sheen-cta {
+  border: 1px solid #DDE2EE;
+}
+
+.ai-sheen-cta:hover {
+  border-color: #B9C9F5;
+}
+
+.ai-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(47, 104, 229, 0.14) 45%,
+    rgba(255, 255, 255, 0.95) 52%,
+    rgba(47, 104, 229, 0.1) 58%,
+    transparent 72%
+  );
+  animation: aiSheenSweep 3.4s cubic-bezier(0.5, 0, 0.3, 1) infinite;
+}
+
+@keyframes aiSheenSweep {
+  0%, 12% { transform: translateX(-115%); }
+  62%, 100% { transform: translateX(115%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-sheen {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* --- Segment creation canvas ------------------------------------------------
+   The co-marketer "writes" the rules it described in chat: placeholder chips
+   breathe while it thinks, then each finished rule row drops into place. Kept
+   as plain keyframes (not Tailwind's animate-in) so the row delay can be set
+   per row from the component. */
+
+/* Placeholder chip standing in for a rule that hasn't landed yet. */
+.seg-ghost-chip {
+  background: linear-gradient(90deg, #F1F4FA 0%, #E4EAF6 50%, #F1F4FA 100%);
+  background-size: 200% 100%;
+  animation: segGhostSweep 1.5s ease-in-out infinite;
+}
+
+@keyframes segGhostSweep {
+  0% { background-position: 140% 0; opacity: 0.75; }
+  50% { opacity: 1; }
+  100% { background-position: -40% 0; opacity: 0.75; }
+}
+
+/* A rule row arriving — lifts in and flashes its outline once so the eye
+   catches which row just got written. */
+.seg-rule-row {
+  animation: segRuleIn 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes segRuleIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Completed reasoning step — the tick popping in. */
+.seg-step-pop {
+  animation: segStepPop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes segStepPop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* The step currently running — a slow pulse on the label, so "working" reads
+   even at a glance. */
+.seg-step-live {
+  animation: segStepLive 1.6s ease-in-out infinite;
+}
+
+@keyframes segStepLive {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-ghost-chip,
+  .seg-rule-row,
+  .seg-step-pop,
+  .seg-step-live {
+    animation: none;
+  }
+}
