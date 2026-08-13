@@ -5,6 +5,9 @@
 // play different storylines while sharing the same flow machinery.
 //   - 'default'   → the June 8–19 performance story (home page, `/`)
 //   - 'campaigns' → a separate storyline for the /campaigns docked chat
+//   - 'segments'  → the Segment agent building a segment from a tapped prompt
+//                   card on /audience/segments (plays SEGMENTS_FLOWS, not a
+//                   ConversationScript)
 //
 // To add a new storyline: add a variant to ConversationVariant and an entry to
 // CONVERSATIONS with the same ConversationScript shape.
@@ -12,7 +15,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { Users } from 'lucide-react';
 
-export type ConversationVariant = 'default' | 'campaigns';
+export type ConversationVariant = 'default' | 'campaigns' | 'segments';
 
 export type StatCard = { label: string; value: string; sub?: string };
 
@@ -130,6 +133,228 @@ export const CAMPAIGNS_FLOW: CampaignsTurn[] = [
       "<strong>My read</strong>\n\nTargeting this segment directly should pay for itself within the first cycle. Launch it, and ask me to compare projection vs. actuals after the first week.",
   },
 ];
+
+// --- Segments (`/audience/segments`) Segment-agent flow ---------------------
+// Tapping one of the "Ask Co-marketer" prompt cards above the Segments table
+// opens the docked chat and fires that prompt. Each card has its own two-turn
+// thread — the Segment agent translates the request into rules and hands back a
+// segment card, then sizes what activating it is worth. Reuses CampaignsTurn so
+// the whole hand-off / thinking / artifact-card machinery comes for free.
+interface SegmentsFlow {
+  /** True when the opening message is this card's prompt. */
+  matches: (m: string) => boolean;
+  turns: CampaignsTurn[];
+}
+
+/** Turn 2 is the same shape for every card — size the segment, then advise. */
+const segmentImpactTurn = (
+  segmentName: string,
+  reach: string,
+  body: string
+): CampaignsTurn => ({
+  userPrompt: `What's this segment worth if I activate it?`,
+  navLabel: "Impact estimate",
+  switchAgentId: "insight-agent",
+  switchAgentLabel: "Insights agent",
+  reasoningSteps: [
+    `Loading the ${segmentName} segment`,
+    "Applying per-channel delivery and click benchmarks",
+    `Modeling reachable audience across channels`,
+    "Projecting lift against your current cycle",
+  ],
+  output:
+    `I ran ${segmentName} against your recent channel benchmarks — here's the realistic picture.\n\n` +
+    `<strong>Projected reach</strong>\n\n${reach}\n\n` +
+    `<strong>What it's worth</strong>\n\n${body}\n\n` +
+    "<strong>My read</strong>\n\nWorth activating this cycle. Launch it, then ask me to compare projection against actuals after the first week.",
+});
+
+const SEGMENTS_FLOWS: SegmentsFlow[] = [
+  // Card 1 — attribute filter (email domain) + engagement recency.
+  {
+    matches: (m) => m.includes("gmail"),
+    turns: [
+      {
+        userPrompt: "",
+        navLabel: "Gmail engagers",
+        switchAgentId: "segment-agent",
+        switchAgentLabel: "Segment agent",
+        reasoningSteps: [
+          "Parsing the email-domain condition",
+          "Resolving the 30-day click window",
+          "Joining contact attributes to email engagement",
+          "Excluding unsubscribed and bounced contacts",
+        ],
+        output:
+          "Built it — Gmail contacts who've actually engaged recently, not just anyone on a Gmail address.\n\n" +
+          "<strong>How I defined it</strong>\n\nEmail address contains “gmail.com”, AND at least one email click in the last 30 days. I've excluded unsubscribed contacts and hard bounces so the count reflects people you can genuinely reach.\n\n" +
+          "<strong>What stood out</strong>\n\nGmail is your largest single domain and it clicks about 18% above your list average — this is a healthy, responsive group rather than a long tail.",
+        artifactCard: {
+          kind: "segment",
+          title: "Gmail Engaged — Last 30 Days",
+          stats: [{ icon: Users, label: "88,420 users" }],
+          description:
+            "Contacts on gmail.com who clicked at least one email in the last 30 days, excluding unsubscribes and bounces.",
+          actionLabel: "Review segment",
+        },
+        nextSuggestion: "What's this segment worth if I activate it?",
+      },
+      segmentImpactTurn(
+        "Gmail Engaged — Last 30 Days",
+        "All 88,420 are email-reachable, and roughly 41,000 also have a valid mobile number for an SMS follow-up.",
+        "At this group's click and conversion rates, a single well-targeted email should land ~2,400–2,900 clicks and 190–240 conversions — materially above a broad send to the same volume, at the same cost."
+      ),
+    ],
+  },
+  // Card 2 — lapsed engagement (win-back).
+  {
+    matches: (m) => m.includes("not opened") || m.includes("6 months"),
+    turns: [
+      {
+        userPrompt: "",
+        navLabel: "Dormant subscribers",
+        switchAgentId: "segment-agent",
+        switchAgentLabel: "Segment agent",
+        reasoningSteps: [
+          "Resolving the 6-month inactivity window",
+          "Checking opens and clicks across all campaigns",
+          "Separating never-engaged from lapsed contacts",
+          "Filtering out already-suppressed contacts",
+        ],
+        output:
+          "Done — your dormant subscribers, scoped so you're not re-messaging people who never engaged in the first place.\n\n" +
+          "<strong>How I defined it</strong>\n\nSubscribed contacts with zero opens and zero clicks on any campaign in the last 6 months, who did engage at least once before that. Already-suppressed and unsubscribed contacts are out.\n\n" +
+          "<strong>Worth knowing</strong>\n\nThis is a win-back audience, not a growth one — keep sends low-frequency. Continuing to mail a fully dormant list is what drags your domain reputation down.",
+        artifactCard: {
+          kind: "segment",
+          title: "Dormant Subscribers — 6 Months",
+          stats: [{ icon: Users, label: "154,902 users" }],
+          description:
+            "Previously-engaged subscribers with no opens or clicks in the last 6 months, excluding suppressed contacts.",
+          actionLabel: "Review segment",
+        },
+        nextSuggestion: "What's this segment worth if I activate it?",
+      },
+      segmentImpactTurn(
+        "Dormant Subscribers — 6 Months",
+        "About 151,000 are still email-deliverable, though expect inbox placement well below your list average on the first send.",
+        "A two-step win-back typically recovers 3–6% of a list this age — call it 4,500–9,000 re-engaged contacts. The bigger prize is the clean-up: whatever stays silent after the second send should be suppressed, which should lift deliverability on every future campaign."
+      ),
+    ],
+  },
+  // Card 3 — recency-based acquisition cohort.
+  {
+    matches: (m) => m.includes("new customers") || m.includes("60 days"),
+    turns: [
+      {
+        userPrompt: "",
+        navLabel: "New customers",
+        switchAgentId: "segment-agent",
+        switchAgentLabel: "Segment agent",
+        reasoningSteps: [
+          "Resolving the 60-day join window",
+          "Reading first-purchase and signup events",
+          "De-duplicating repeat identities",
+          "Checking channel reachability",
+        ],
+        output:
+          "Built — everyone who joined inside the last 60 days, as a rolling window rather than a fixed date range.\n\n" +
+          "<strong>How I defined it</strong>\n\nFirst signup or first purchase within the last 60 days, de-duplicated across email and mobile identities. Because it's relative, the segment refreshes itself — contacts age out on day 61 without you touching it.\n\n" +
+          "<strong>Worth knowing</strong>\n\nThis is your onboarding audience. It's the highest-intent group you have right now, and also the easiest to lose — the first 60 days is where most of your churn is decided.",
+        artifactCard: {
+          kind: "segment",
+          title: "New Customers — Last 60 Days",
+          stats: [{ icon: Users, label: "21,764 users" }],
+          description:
+            "Contacts whose first signup or purchase falls inside a rolling 60-day window, de-duplicated across identities.",
+          actionLabel: "Review segment",
+        },
+        nextSuggestion: "What's this segment worth if I activate it?",
+      },
+      segmentImpactTurn(
+        "New Customers — Last 60 Days",
+        "Roughly 21,100 are email-reachable and 8,900 are app-push reachable — strong coverage for a welcome journey across both.",
+        "New cohorts convert at 3–4× your list average while intent is fresh. A three-step onboarding journey here should return 900–1,300 second purchases, and every week you delay costs you a slice of that."
+      ),
+    ],
+  },
+  // Card 4 — geography + engagement-rate threshold.
+  {
+    matches: (m) => m.includes("europe") || m.includes("engagement rate"),
+    turns: [
+      {
+        userPrompt: "",
+        navLabel: "Europe high-engagement",
+        switchAgentId: "segment-agent",
+        switchAgentLabel: "Segment agent",
+        reasoningSteps: [
+          "Resolving Europe from country and locale attributes",
+          "Computing per-contact email engagement rate",
+          "Applying the 30% threshold",
+          "Checking consent and regional opt-in status",
+        ],
+        output:
+          "Built — your strongest email engagers across Europe.\n\n" +
+          "<strong>How I defined it</strong>\n\nCountry resolves to a European market, AND email engagement rate above 30% measured over the last 90 days. I've kept only contacts with a valid marketing consent on record, so this is GDPR-safe to activate.\n\n" +
+          "<strong>What stood out</strong>\n\nEngagement is concentrated: Germany, the Netherlands and the Nordics account for most of the group and sit well above your global average, while your largest European market by volume barely clears the threshold.",
+        artifactCard: {
+          kind: "segment",
+          title: "Europe — High Email Engagement",
+          stats: [{ icon: Users, label: "34,510 users" }],
+          description:
+            "European contacts with a 90-day email engagement rate above 30% and valid marketing consent on record.",
+          actionLabel: "Review segment",
+        },
+        nextSuggestion: "What's this segment worth if I activate it?",
+      },
+      segmentImpactTurn(
+        "Europe — High Email Engagement",
+        "All 34,510 are consented and email-reachable, concentrated across six markets — comfortably enough volume to test by market rather than sending one blanket campaign.",
+        "This group clicks at roughly 2.4× your list average, so expect 1,300–1,600 clicks and 120–160 conversions per send. It's also your best audience for testing a price or positioning change before rolling it out more widely."
+      ),
+    ],
+  },
+];
+
+/** Generic fallback — a typed prompt we don't have a bespoke card flow for. */
+const SEGMENTS_FALLBACK: CampaignsTurn[] = [
+  {
+    userPrompt: "",
+    navLabel: "Create segment",
+    switchAgentId: "segment-agent",
+    switchAgentLabel: "Segment agent",
+    reasoningSteps: [
+      "Reading the conditions in your request",
+      "Mapping them to contact attributes and events",
+      "De-duplicating across channels",
+      "Estimating the reachable audience",
+    ],
+    output:
+      "I've translated your request into segment rules and built it.\n\n" +
+      "<strong>How I defined it</strong>\n\nI mapped each condition in your request onto the matching contact attribute or event, combined them with AND, and excluded unsubscribed, bounced and suppressed contacts so the count reflects people you can actually reach.\n\n" +
+      "<strong>Next</strong>\n\nOpen the card to adjust any rule — the count updates as you edit.",
+    artifactCard: {
+      kind: "segment",
+      title: "New Segment — Draft",
+      stats: [{ icon: Users, label: "18,240 users" }],
+      description:
+        "Contacts matching the conditions in your request, excluding unsubscribes, bounces and suppressed contacts.",
+      actionLabel: "Review segment",
+    },
+    nextSuggestion: "What's this segment worth if I activate it?",
+  },
+  segmentImpactTurn(
+    "this segment",
+    "About 17,600 of the 18,240 are reachable on at least one channel, with email giving the widest coverage.",
+    "At your current blended rates expect 500–650 clicks and 40–60 conversions per send — enough signal to judge the segment after one cycle and tighten the rules from there."
+  ),
+];
+
+/** Picks the two-turn thread for whichever prompt card the user tapped. */
+export function resolveSegmentsFlow(message: string): CampaignsTurn[] {
+  const m = message.toLowerCase();
+  return SEGMENTS_FLOWS.find((f) => f.matches(m))?.turns ?? SEGMENTS_FALLBACK;
+}
 
 // --- Deep-research narratives (available from ANY co-marketer chat) ---------
 // A small registry of scripted deep-research "topics" that can play from any
@@ -326,6 +551,48 @@ export interface ConversationScript {
   suggestedPrompts: string[];
 }
 
+// TODO: replace this placeholder copy with the real campaigns storyline.
+const CAMPAIGNS_PLACEHOLDER_SCRIPT: ConversationScript = {
+  storyPrompt:
+    "TODO: campaigns opening prompt — what the user asks the co-marketer from the Campaigns page.",
+  storyNavLabel: "Campaigns recap",
+  storyOutput:
+    "TODO: campaigns opening recap.\n\n" +
+    "<strong>Section one</strong>\n\nTODO: first section of the campaigns story.\n\n" +
+    "<strong>Section two</strong>\n\nTODO: second section of the campaigns story.",
+  storyReasoningSteps: [
+    "TODO: campaigns reasoning step 1",
+    "TODO: campaigns reasoning step 2",
+    "TODO: campaigns reasoning step 3",
+  ],
+  storyArtifact: {
+    intro: "TODO: campaigns artifact intro line.",
+    title: "TODO: Campaigns Artifact Title",
+    subtitle: "TODO Document",
+  },
+  followupReasoningSteps: [
+    "TODO: campaigns follow-up reasoning step 1",
+    "TODO: campaigns follow-up reasoning step 2",
+  ],
+  followups: [
+    {
+      label: "Follow-up one",
+      q: "TODO: first campaigns follow-up question (shown as the user's bubble).",
+      a: "<strong>TODO: first follow-up answer</strong>\n\nTODO: body of the first campaigns follow-up answer.",
+    },
+    {
+      label: "Follow-up two",
+      q: "TODO: second campaigns follow-up question.",
+      a: "<strong>TODO: second follow-up answer</strong>\n\nTODO: body of the second campaigns follow-up answer.",
+    },
+  ],
+  suggestedPrompts: [
+    "TODO: campaigns suggested prompt 1",
+    "TODO: campaigns suggested prompt 2",
+    "TODO: campaigns suggested prompt 3",
+  ],
+};
+
 export const CONVERSATIONS: Record<ConversationVariant, ConversationScript> = {
   // --- Home (`/`) — the June 8–19 performance story -----------------------
   default: {
@@ -411,46 +678,10 @@ export const CONVERSATIONS: Record<ConversationVariant, ConversationScript> = {
     ],
   },
 
-  // --- Campaigns (`/campaigns`) — separate storyline ----------------------
-  // TODO: replace all placeholder copy below with the real campaigns storyline.
-  campaigns: {
-    storyPrompt:
-      "TODO: campaigns opening prompt — what the user asks the co-marketer from the Campaigns page.",
-    storyNavLabel: "Campaigns recap",
-    storyOutput:
-      "TODO: campaigns opening recap.\n\n" +
-      "<strong>Section one</strong>\n\nTODO: first section of the campaigns story.\n\n" +
-      "<strong>Section two</strong>\n\nTODO: second section of the campaigns story.",
-    storyReasoningSteps: [
-      "TODO: campaigns reasoning step 1",
-      "TODO: campaigns reasoning step 2",
-      "TODO: campaigns reasoning step 3",
-    ],
-    storyArtifact: {
-      intro: "TODO: campaigns artifact intro line.",
-      title: "TODO: Campaigns Artifact Title",
-      subtitle: "TODO Document",
-    },
-    followupReasoningSteps: [
-      "TODO: campaigns follow-up reasoning step 1",
-      "TODO: campaigns follow-up reasoning step 2",
-    ],
-    followups: [
-      {
-        label: "Follow-up one",
-        q: "TODO: first campaigns follow-up question (shown as the user's bubble).",
-        a: "<strong>TODO: first follow-up answer</strong>\n\nTODO: body of the first campaigns follow-up answer.",
-      },
-      {
-        label: "Follow-up two",
-        q: "TODO: second campaigns follow-up question.",
-        a: "<strong>TODO: second follow-up answer</strong>\n\nTODO: body of the second campaigns follow-up answer.",
-      },
-    ],
-    suggestedPrompts: [
-      "TODO: campaigns suggested prompt 1",
-      "TODO: campaigns suggested prompt 2",
-      "TODO: campaigns suggested prompt 3",
-    ],
-  },
+  // --- Campaigns (`/campaigns`) + Segments — bespoke agent-relay storylines --
+  // Both variants play a flow (CAMPAIGNS_FLOW / SEGMENTS_FLOWS) rather than this
+  // script, so they share the placeholder below. The record has to stay
+  // exhaustive over ConversationVariant.
+  campaigns: CAMPAIGNS_PLACEHOLDER_SCRIPT,
+  segments: CAMPAIGNS_PLACEHOLDER_SCRIPT,
 };
