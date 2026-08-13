@@ -6,11 +6,15 @@ import PageHeader from "@/components/campaigns/PageHeader";
 import TabBar from "@/components/campaigns/TabBar";
 import TableToolbar from "@/components/campaigns/TableToolbar";
 import CampaignTable from "@/components/campaigns/CampaignTable";
+import CoMarketerReviewBanner from "@/components/campaigns/CoMarketerReviewBanner";
 import Pagination from "@/components/campaigns/Pagination";
-import ChatInterface from "@/components/ChatInterface";
+import ChatInterface, { type ReviewCampaignContext } from "@/components/ChatInterface";
 import DecisioningNudge from "@/components/campaigns/DecisioningNudge";
 import AiDashboardNudge from "@/components/campaigns/AiDashboardNudge";
 import MarketingAgentsOverlay from "@/components/MarketingAgentsOverlay";
+import SegmentCreationOverlay, {
+  type ReviewSegmentContext,
+} from "@/components/campaigns/segment-creation/SegmentCreationOverlay";
 import { marketingAgents } from "@/data/agents";
 
 /**
@@ -37,6 +41,14 @@ export default function Campaigns() {
     "ai-dashboard" | "comarketer" | "decisioning" | "done"
   >("ai-dashboard");
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(new Set());
+  // Co-marketer review banner above the table; the × in its header hides it.
+  const [reviewBannerOpen, setReviewBannerOpen] = useState(true);
+  // Set by the banner's "Review" button so the docked chat opens straight into
+  // a thread about that campaign. Cleared when the chat closes.
+  const [reviewCampaign, setReviewCampaign] = useState<ReviewCampaignContext | null>(null);
+  // "Review segment" on the Segment agent's artifact card — opens the segment
+  // creation canvas on that card's rules. Cleared when the canvas closes.
+  const [reviewSegment, setReviewSegment] = useState<ReviewSegmentContext | null>(null);
 
   // Coordinate mount → enter and leave → unmount so both directions animate.
   useEffect(() => {
@@ -57,6 +69,7 @@ export default function Campaigns() {
     }
     // Closing: play the leave transition, then unmount once it finishes.
     setChatIn(false);
+    setReviewCampaign(null);
     if (isAgentsOverlayOpen) setIsAgentsOverlayOpen(false);
   }, [chatOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -112,7 +125,12 @@ export default function Campaigns() {
 
       <div className="flex min-w-0 flex-1 flex-col p-2">
         <TopNav
-          onOpenChat={() => setChatOpen(true)}
+          onOpenChat={() => {
+            // A plain "Ask co-marketer" open starts blank, never on a campaign
+            // left over from a previous Review tap.
+            setReviewCampaign(null);
+            setChatOpen(true);
+          }}
           showCoMarketerNudge={nudgeStep === "comarketer"}
           onBackToAiDashboardNudge={() => setNudgeStep("ai-dashboard")}
           onCoMarketerNext={() => setNudgeStep("decisioning")}
@@ -124,9 +142,28 @@ export default function Campaigns() {
           <div className="scroll-slim min-w-0 flex-1 overflow-y-auto px-2 pt-4">
             <PageHeader />
 
+            {reviewBannerOpen && (
+              <div className="mt-5">
+                <CoMarketerReviewBanner
+                  onDismiss={() => setReviewBannerOpen(false)}
+                  onReview={(campaign) => {
+                    setReviewCampaign(campaign);
+                    setChatOpen(true);
+                  }}
+                />
+              </div>
+            )}
+
             {/* gap keeps the scrollable tab strip clear of the toolbar when the
-                docked chat squeezes this column; the toolbar never shrinks. */}
-            <div className="mt-5 flex items-end justify-between gap-6 border-b border-[#DDE2EE]">
+                docked chat squeezes this column; the toolbar never shrinks.
+                16px below the banner; falls back to the page-header gap when
+                the banner is dismissed. */}
+            <div
+              className={cn(
+                "flex items-end justify-between gap-6 border-b border-[#DDE2EE]",
+                reviewBannerOpen ? "mt-4" : "mt-5"
+              )}
+            >
               <TabBar compact={chatOpen} />
               <div className="shrink-0 pb-2">
                 <TableToolbar compact={chatOpen} />
@@ -176,15 +213,27 @@ export default function Campaigns() {
                 initialExpanded={false}
                 docked
                 conversationVariant="campaigns"
+                initialReviewCampaign={reviewCampaign ?? undefined}
                 onBotIconClick={() => setIsAgentsOverlayOpen(true)}
                 enabledAgents={enabledAgents}
                 setEnabledAgents={setEnabledAgents}
                 onCloseInterface={() => setChatOpen(false)}
+                onReviewArtifact={(card) =>
+                  setReviewSegment({ title: card.title, description: card.description })
+                }
               />
             </div>
           )}
         </div>
       </div>
+
+      {/* Segment creation canvas — "Review segment" on the Segment agent's card
+          in the campaigns thread lands here too, on the same rules. */}
+      <SegmentCreationOverlay
+        open={reviewSegment !== null}
+        segment={reviewSegment}
+        onClose={() => setReviewSegment(null)}
+      />
     </div>
   );
 }
