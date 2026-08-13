@@ -1,4 +1,4 @@
-import { Users, X } from "lucide-react";
+import { Filter, X } from "lucide-react";
 import sparkle from "/campaign-assets/ic-sparkle.gif";
 
 /**
@@ -9,20 +9,32 @@ import sparkle from "/campaign-assets/ic-sparkle.gif";
  */
 export default function SegmentCreationNavbar({
   segmentName,
+  showAiIcon = false,
   onAskCoMarketer,
   onSave,
   onClose,
 }: {
   segmentName: string;
+  /** After Review segment, once the canvas has the rules — swaps the default glyph. */
+  showAiIcon?: boolean;
   onAskCoMarketer?: () => void;
   onSave?: () => void;
   onClose?: () => void;
 }) {
   return (
-    <header className="flex h-14 shrink-0 items-center border-b border-[#DDE2EE] bg-white px-4">
+    <header className="flex h-14 shrink-0 items-center border-b border-[#DDE2EE] bg-white px-14">
       <div className="flex min-w-0 items-center gap-3">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-[#E7EDFF]">
-          <Users className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />
+        <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#E7EDFF]">
+          {showAiIcon ? (
+            <img
+              src="/thinking-loader.gif"
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none size-[26px] object-contain mix-blend-multiply"
+            />
+          ) : (
+            <Filter className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />
+          )}
         </span>
         <h1 className="truncate font-manrope text-base font-bold leading-[22px] text-[#17173A]">
           {segmentName}

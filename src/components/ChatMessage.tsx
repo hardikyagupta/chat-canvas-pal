@@ -15,6 +15,7 @@ import {
 import DocArtifactCard, { DocArtifact } from './DocArtifactCard';
 import AgentArtifactCard from './AgentArtifactCard';
 import type { AgentArtifactCardData } from '@/data/conversations';
+import SetupApplyCard, { type SetupApplyCardData } from '@/components/campaigns/campaign-creation/SetupApplyCard';
 import type { InsightCardContext } from '@/types/insightCard';
 import { ContentAgentResponse } from './ContentAgentResponse';
 import { ContentAgentClarification } from './ContentAgentClarification';
@@ -462,6 +463,9 @@ interface ChatMessageProps {
   // Agent-handed artifact card (segment / journey), revealed after streaming
   agentArtifactCard?: AgentArtifactCardData;
   onAgentArtifactAction?: () => void;
+  setupApplyCard?: SetupApplyCardData;
+  setupApplyApplied?: boolean;
+  onSetupApply?: () => void;
   // Feedback actions — open the matching feedback modal
   onThumbsUp?: () => void;
   onThumbsDown?: () => void;
@@ -523,6 +527,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   miniChart,
   agentArtifactCard,
   onAgentArtifactAction,
+  setupApplyCard,
+  setupApplyApplied,
+  onSetupApply,
   onThumbsUp,
   onThumbsDown,
   insightCard,
@@ -1475,6 +1482,15 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 {agentArtifactCard && isAnimationDone && (
                   <div className="py-2 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-1">
                     <AgentArtifactCard card={agentArtifactCard} onAction={onAgentArtifactAction} />
+                  </div>
+                )}
+                {setupApplyCard && isAnimationDone && (
+                  <div className="py-2 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-1">
+                    <SetupApplyCard
+                      card={setupApplyCard}
+                      applied={setupApplyApplied}
+                      onApply={onSetupApply}
+                    />
                   </div>
                 )}
                 {/* Executive Summary Content Accordion - only shown for executive summary messages */}

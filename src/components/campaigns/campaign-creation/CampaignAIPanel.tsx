@@ -1,190 +1,375 @@
-import { ArrowUpRight } from "lucide-react";
-import type { SeededTopic } from "@/components/ChatInterface";
+import {
+  BarChart3,
+  Check,
+  ChevronRight,
+  Info,
+  Tag,
+  Target,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import sparkle from "/campaign-assets/ic-sparkle-ai.gif";
+import type { SetupApplyCardData } from "./SetupApplyCard";
+import type { SetupValues } from "./CampaignSetupStep";
 
-/**
- * Right-hand co-marketer panel in the campaign creation wizard — replaces the
- * old read-only summary with things the agent can actually do at this point in
- * the setup. Each card opens the docked co-marketer already answering, so the
- * user never has to work out how to phrase the ask.
- *
- * Points are keyed to the step you're on: setup gets naming/tagging/tracking
- * help, the later steps get content, audience and send-time help.
- */
+export type SuggestionId = "tags" | "tracking" | "conversion" | "audience";
 
-export interface DiscoveryPoint extends SeededTopic {
-  /** Card headline — phrased as the outcome, not the feature. */
+export interface CampaignSuggestion {
+  id: SuggestionId;
   title: string;
-  /** One line on what the agent will actually come back with. */
-  blurb: string;
+  /** Short line on the list card (omitted when `tags` is set). */
+  blurb?: string;
+  tags?: string[];
+  icon: LucideIcon;
+  iconWrap: string;
+  iconColor: string;
+  /** What the user "asks" when they tap the card — seeds the chat thread. */
+  prompt: string;
+  navLabel: string;
+  /** Spoken reply in the thread; the apply card carries the values. */
+  reply: string;
+  applyLabel: string;
+  appliedLabel: string;
+  patch: Partial<SetupValues>;
 }
 
-const POINTS: Record<string, DiscoveryPoint[]> = {
-  setup: [
-    {
-      title: "Name this campaign for me",
-      blurb: "Follows the naming pattern your team already reports on.",
-      navLabel: "Naming help",
-      prompt: "Suggest a name for this campaign that fits how we name things.",
-      reply:
-        "Your last 40 campaigns follow `{channel}_{intent}_{audience}_{month}`, and the ones that break the " +
-        "pattern are the ones that go missing in reporting.\n\nFor this one I'd use " +
-        "**EM_Reengagement_DormantHighValue_Aug** — it slots straight into your existing dashboards. " +
-        "Want me to apply it, or shall I give you three alternatives?",
-    },
-    {
-      title: "Which tags should I apply?",
-      blurb: "Keeps this campaign groupable with the rest of the quarter.",
-      navLabel: "Tagging help",
-      prompt: "What tags should I put on this campaign?",
-      reply:
-        "Based on what you're building, I'd tag it **reengagement**, **q3-retention** and **email**.\n\n" +
-        "Those three are what your retention rollup filters on, so tagging it now means it shows up in the " +
-        "quarterly view without anyone backfilling it later. I'd skip free-text tags — you have 60-odd " +
-        "one-off tags already and none of them are queried.",
-    },
-    {
-      title: "Should tracking be on?",
-      blurb: "GA and conversion tracking, judged against this campaign's goal.",
-      navLabel: "Tracking advice",
-      prompt: "Do I need GA tracking and conversion tracking on for this one?",
-      reply:
-        "**Conversion tracking: yes.** This is a revenue campaign, and without it the attribution window " +
-        "closes and you'll only be able to report opens and clicks.\n\n**GA tracking: yes, with UTMs.** " +
-        "Your last three sends went out without them, so the traffic landed in GA as direct and the " +
-        "channel got no credit. I can generate the UTM set for you now.",
-    },
-    {
-      title: "What worked last time?",
-      blurb: "A read on your comparable sends before you commit to a setup.",
-      navLabel: "Past performance",
-      prompt: "How have similar campaigns performed for us before?",
-      reply:
-        "You've run 6 comparable re-engagement emails in the last year.\n\n**What held up:** a 2-touch " +
-        "sequence beat a single send by 34% on reactivation, and Tuesday/Wednesday mornings beat weekends " +
-        "consistently.\n\n**What didn't:** discount-led subject lines pulled clicks but the revenue per " +
-        "recipient was 18% lower — the discount was going to people who'd have converted anyway.",
-    },
-  ],
-  content: [
-    {
-      title: "Draft the subject line",
-      blurb: "Three options in your brand voice, with a predicted open rate.",
-      navLabel: "Subject lines",
-      prompt: "Draft subject lines for this campaign.",
-      reply:
-        "Three, in your voice, ranked by what your audience has actually opened:\n\n" +
-        "1. **\"You left something behind — still interested?\"** (predicted 41% open)\n" +
-        "2. **\"It's been a while. Here's what's new.\"** (predicted 38%)\n" +
-        "3. **\"A quick one, before this closes\"** (predicted 36%)\n\n" +
-        "The first one wins because your audience responds to direct questions — statement subject lines " +
-        "underperform by about 6 points here. Want me to write the body for one?",
-    },
-    {
-      title: "Write the whole email",
-      blurb: "Body copy and CTA, built from your best-performing template.",
-      navLabel: "Draft email",
-      prompt: "Write the email body for this campaign.",
-      reply:
-        "I'll build on your highest-converting re-engagement template: short opener, one clear benefit, " +
-        "single CTA above the fold.\n\nBefore I write it — should the CTA push to the category page or " +
-        "straight to their abandoned cart? Cart-direct converts about twice as well but only for the " +
-        "third of this audience that actually has one, so I'd usually split it.",
-    },
-  ],
-  audience: [
-    {
-      title: "Build the audience for me",
-      blurb: "A segment described in plain language, sized before you commit.",
-      navLabel: "Build audience",
-      prompt: "Who should receive this campaign?",
-      reply:
-        "For a re-engagement send I'd target: **opened in the last 12 months, nothing in the last 60 days, " +
-        "at least one prior purchase.** That's roughly 48,200 contacts.\n\nI'd hold back the 4,100 who are " +
-        "already in an active journey so they don't get two messages this week, which leaves 44,100. " +
-        "Say the word and I'll create the segment.",
-    },
-    {
-      title: "Who should I exclude?",
-      blurb: "Suppression checks before this collides with another send.",
-      navLabel: "Exclusions",
-      prompt: "Who should I exclude from this campaign?",
-      reply:
-        "Three suppressions I'd apply:\n\n• **Already in an active journey** (4,100) — avoids a double " +
-        "message this week.\n• **Contacted in the last 5 days** (2,300) — you're near the fatigue " +
-        "threshold where unsubscribes climb.\n• **Hard bounces and complainers** (900) — deliverability.\n\n" +
-        "That's 7,300 removed. Your sender reputation has been slipping slightly, so this one matters.",
-    },
-  ],
-  schedule: [
-    {
-      title: "Pick the best send time",
-      blurb: "Timing from when this audience actually opens, not a global rule.",
-      navLabel: "Send time",
-      prompt: "When should this campaign go out?",
-      reply:
-        "**Wednesday, 10:00–11:00 in the recipient's own timezone.**\n\nThat window carries 31% of this " +
-        "segment's opens against 12% for your current default of Monday 9am. Sunday is the worst slot for " +
-        "them, in case it comes up.\n\nIf you'd rather not stagger by timezone, 10am IST is the single best " +
-        "fixed slot — it costs you about 4 points of open rate.",
-    },
-    {
-      title: "Should I A/B test this?",
-      blurb: "Whether your volume can actually resolve a winner.",
-      navLabel: "A/B advice",
-      prompt: "Is it worth A/B testing this campaign?",
-      reply:
-        "Yes — at 44,000 recipients you have the volume to resolve a real difference.\n\nI'd test **subject " +
-        "line only**, 20% of the audience split across two variants, winner going to the remaining 80% " +
-        "after 4 hours. Testing more than one variable at this size just gives you a result you can't " +
-        "attribute to anything.",
-    },
-  ],
+export function toSetupApplyCard(s: CampaignSuggestion): SetupApplyCardData {
+  return {
+    kind: s.id,
+    title: s.title,
+    applyLabel: s.applyLabel,
+    appliedLabel: s.appliedLabel,
+    tags: s.tags,
+    conversionEvent: s.patch.conversionEvent,
+    audience: s.patch.audienceSuggestion,
+    blurb: s.blurb,
+    patch: s.patch,
+  };
+}
+
+const ICON: Record<
+  SuggestionId,
+  { icon: LucideIcon; iconWrap: string; iconColor: string }
+> = {
+  tags: { icon: Tag, iconWrap: "bg-[#E6F8F0]", iconColor: "text-[#00A86B]" },
+  tracking: { icon: BarChart3, iconWrap: "bg-[#E8F0FE]", iconColor: "text-[#2F68E5]" },
+  conversion: { icon: Target, iconWrap: "bg-[#F0E8FF]", iconColor: "text-[#7B5CFA]" },
+  audience: { icon: Users, iconWrap: "bg-[#FFF1E6]", iconColor: "text-[#E07A2F]" },
 };
 
+function tagsForGoal(goal: string): string[] {
+  switch (goal) {
+    case "promo-offer":
+      return ["sale", "promo", "limited-time"];
+    case "reengage-dormant":
+      return ["reengagement", "q3-retention", "email"];
+    case "first-purchase":
+      return ["first-purchase", "conversion", "welcome"];
+    case "repeat-purchase":
+      return ["loyalty", "repeat", "retention"];
+    case "abandoned-cart":
+      return ["cart-recovery", "checkout", "urgency"];
+    case "product-launch":
+      return ["launch", "new-product", "announcement"];
+    case "onboarding":
+      return ["onboarding", "welcome", "activation"];
+    case "winback":
+      return ["winback", "churn", "last-chance"];
+    default:
+      return ["campaign", "email"];
+  }
+}
+
+function suggestionsFor(goal: string, stepId: string): CampaignSuggestion[] {
+  const tags = tagsForGoal(goal);
+  const isPromo = goal === "promo-offer";
+  const isCart = goal === "abandoned-cart";
+
+  if (stepId === "setup") {
+    return [
+      {
+        id: "tags",
+        title: "Suggested tags",
+        tags,
+        ...ICON.tags,
+        prompt: "What tags should I put on this campaign?",
+        navLabel: "Tagging help",
+        reply:
+          "I'd use these three — they match how you already group similar campaigns, so this one lands in the quarterly rollup without anyone backfilling it later.",
+        applyLabel: "Add tags to campaign",
+        appliedLabel: "Tags added",
+        patch: { tags: tags.join(", ") },
+      },
+      {
+        id: "tracking",
+        title: "Tracking recommendation",
+        blurb: isPromo
+          ? "Enable GA tracking with sale UTMs to measure traffic and conversions accurately."
+          : "Turn on GA tracking with campaign UTMs so this send isn’t dumped into Direct.",
+        ...ICON.tracking,
+        prompt: "Do I need GA tracking on for this campaign?",
+        navLabel: "Tracking advice",
+        reply:
+          "Yes — with UTMs. Your last few sends went out without them, so the traffic landed in GA as direct and the channel got no credit. I can turn it on from here.",
+        applyLabel: "Enable GA tracking",
+        appliedLabel: "GA tracking on",
+        patch: { gaTracking: true },
+      },
+      {
+        id: "conversion",
+        title: "Conversion goal",
+        blurb: isCart
+          ? "Track Checkout completed as the primary conversion for this campaign."
+          : "Track Purchase completed as the primary conversion for this campaign.",
+        ...ICON.conversion,
+        prompt: "What conversion goal should I set for this campaign?",
+        navLabel: "Conversion goal",
+        reply:
+          "Set a primary conversion or the attribution window closes and you’ll only be able to report opens and clicks. This is the event I’d track.",
+        applyLabel: "Set conversion goal",
+        appliedLabel: "Conversion goal set",
+        patch: {
+          conversionTracking: true,
+          conversionEvent: isCart ? "Checkout completed" : "Purchase completed",
+        },
+      },
+      {
+        id: "audience",
+        title: "Audience suggestion",
+        blurb: isPromo
+          ? "Target past purchasers and engaged visitors for better response to your offer."
+          : "Target people who’ve gone quiet but still open — hold back anyone already in a journey.",
+        ...ICON.audience,
+        prompt: "Who should receive this campaign?",
+        navLabel: "Audience",
+        reply:
+          "This is the starting cut I’d use on the Audience step. Apply it and I’ll park it on setup so you don’t lose it.",
+        applyLabel: "Use this audience",
+        appliedLabel: "Audience saved",
+        patch: {
+          audienceSuggestion: isPromo
+            ? "Past purchasers and engaged visitors"
+            : "Opened in the last 12 months, inactive 60 days, at least one prior purchase — exclude active journeys",
+        },
+      },
+    ];
+  }
+
+  if (stepId === "audience") {
+    return [
+      {
+        id: "audience",
+        title: "Audience suggestion",
+        blurb: "Opened in the last 12 months, nothing in 60 days, at least one purchase.",
+        ...ICON.audience,
+        prompt: "Who should receive this campaign?",
+        navLabel: "Audience",
+        reply:
+          "That’s the cut that has actually reactivated on this goal. Hold back contacts already in a journey so they don’t get two messages this week.",
+        applyLabel: "Use this audience",
+        appliedLabel: "Audience saved",
+        patch: {
+          audienceSuggestion:
+            "Opened in the last 12 months, inactive 60 days, at least one prior purchase — exclude active journeys",
+        },
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "tags",
+      title: "Keep tagging consistent",
+      tags,
+      ...ICON.tags,
+      prompt: "What tags should I put on this campaign?",
+      navLabel: "Tagging help",
+      reply: "Same tags as setup — applying again just fills any that are still missing.",
+      applyLabel: "Add tags to campaign",
+      appliedLabel: "Tags added",
+      patch: { tags: tags.join(", ") },
+    },
+  ];
+}
+
+export function isPatchApplied(patch: Partial<SetupValues>, values: SetupValues): boolean {
+  if (patch.tags) {
+    const have = new Set(
+      values.tags
+        .split(",")
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean)
+    );
+    return patch.tags
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean)
+      .every((t) => have.has(t));
+  }
+  if (patch.gaTracking) return values.gaTracking;
+  if (patch.conversionTracking) {
+    return (
+      values.conversionTracking &&
+      (!patch.conversionEvent || values.conversionEvent === patch.conversionEvent)
+    );
+  }
+  if (patch.audienceSuggestion) {
+    return values.audienceSuggestion === patch.audienceSuggestion;
+  }
+  return false;
+}
+
+export function isApplied(suggestion: CampaignSuggestion, values: SetupValues): boolean {
+  return isPatchApplied(suggestion.patch, values);
+}
+
+function SuggestionSkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden>
+      <div className="flex items-center gap-2">
+        <span className="cmk-skel-pulse size-5 shrink-0 rounded-full bg-[#E4EAF4]" />
+        <div className="flex-1 space-y-1.5">
+          <div className="cmk-skel-pulse h-2.5 w-[70%] rounded bg-[#E4EAF4]" />
+          <div className="cmk-skel-pulse h-2.5 w-[44%] rounded bg-[#E4EAF4]" />
+        </div>
+      </div>
+      {[0, 1].map((i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 rounded-lg border border-[#E6EAF4] bg-white p-3"
+        >
+          <span className="cmk-skel-pulse size-9 shrink-0 rounded-md bg-[#E4EAF4]" />
+          <div className="flex-1 space-y-1.5">
+            <div className="cmk-skel-pulse h-2.5 w-[88%] rounded bg-[#E4EAF4]" />
+            <div className="cmk-skel-pulse h-2.5 w-[62%] rounded bg-[#E4EAF4]" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TagPills({ tags }: { tags: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="rounded-full border border-[#DDE2EE] bg-white px-2.5 py-0.5 font-manrope text-[11px] font-medium text-[#17173A]"
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Right-hand co-marketer panel. Once a goal is picked it skeletons, then
+ * surfaces suggestion cards. Tapping a card opens the docked co-marketer
+ * already answering that prompt, with a card to plot the values onto setup.
+ */
 export default function CampaignAIPanel({
   stepId,
+  goal,
+  loading,
+  values,
   onAsk,
 }: {
-  /** Active wizard step — decides which points are surfaced. */
   stepId: string;
-  /** Fired with the tapped point so the caller can open the docked chat on it. */
-  onAsk: (point: DiscoveryPoint) => void;
+  goal: string;
+  loading: boolean;
+  values: SetupValues;
+  onAsk: (point: CampaignSuggestion) => void;
 }) {
-  const points = POINTS[stepId] ?? POINTS.setup;
+  const suggestions = suggestionsFor(goal, stepId);
 
   return (
-    <aside className="scroll-slim w-[300px] shrink-0 overflow-y-auto px-5 pt-5">
+    <aside className="flex w-[320px] shrink-0 flex-col pt-5">
       <div className="flex items-center gap-1.5">
         <img src={sparkle} alt="" className="h-5 w-5 shrink-0" />
-        <h2 className="font-manrope text-base font-bold text-[#17173A]">Co-marketer can help</h2>
+        <h2 className="font-manrope text-base font-bold text-[#17173A]">Co-marketer</h2>
       </div>
       <p className="mb-4 mt-1 font-manrope text-xs text-[#6F6F8D]">
-        Tap any of these and I'll pick it up from here
+        Suggestions based on your campaign goal.
       </p>
 
-      <div className="flex flex-col gap-2 pb-6">
-        {points.map((point) => (
-          <button
-            key={point.title}
-            type="button"
-            onClick={() => onAsk(point)}
-            className="group rounded-md border border-[#DDE2EE] bg-white px-3 py-3 text-left transition-colors hover:border-[#2F68E5] hover:bg-[#F7F9FF]"
-          >
-            <span className="flex items-start justify-between gap-2">
-              <span className="font-manrope text-[13px] font-semibold leading-[18px] text-[#17173A]">
-                {point.title}
-              </span>
-              <ArrowUpRight
-                className="mt-0.5 h-4 w-4 shrink-0 text-[#6F6F8D] transition-colors group-hover:text-[#2F68E5]"
-                strokeWidth={2}
-              />
-            </span>
-            <span className="mt-1 block font-manrope text-xs leading-[16px] text-[#6F6F8D]">
-              {point.blurb}
-            </span>
-          </button>
-        ))}
+      <div className="min-h-0 flex-1 overflow-y-auto scroll-slim pb-4">
+        {loading ? (
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <img src={sparkle} alt="" className="h-4 w-4 shrink-0" />
+              <p className="font-manrope text-xs font-medium text-[#2F68E5]">
+                Preparing suggestions...
+              </p>
+            </div>
+            <SuggestionSkeleton />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {suggestions.map((s, i) => {
+              const applied = isApplied(s, values);
+              const Icon = s.icon;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => onAsk(s)}
+                  style={{ animationDelay: `${i * 50}ms` }}
+                  className={cn(
+                    "cmk-reveal group flex w-full items-center gap-3 rounded-lg border bg-white p-3 text-left",
+                    "border-[#DDE2EE] transition-colors hover:border-[#2F68E5] hover:bg-[#F7F9FF]"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid size-9 shrink-0 place-items-center rounded-md",
+                      s.iconWrap
+                    )}
+                  >
+                    <Icon className={cn("size-4", s.iconColor)} strokeWidth={2} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    {s.tags ? (
+                      <>
+                        <span className="mb-1.5 block font-manrope text-[13px] font-semibold leading-[18px] text-[#17173A]">
+                          {s.title}
+                        </span>
+                        <TagPills tags={s.tags} />
+                      </>
+                    ) : (
+                      <>
+                        <span className="block font-manrope text-[13px] font-semibold leading-[18px] text-[#17173A]">
+                          {s.title}
+                        </span>
+                        {s.blurb && (
+                          <span className="mt-0.5 block font-manrope text-[11px] leading-[16px] text-[#6F6F8D]">
+                            {s.blurb}
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {applied && (
+                      <span className="mt-1.5 inline-flex items-center gap-1 font-manrope text-[10px] font-semibold text-[#00A86B]">
+                        <Check className="size-3" strokeWidth={3} />
+                        Applied
+                      </span>
+                    )}
+                  </span>
+                  <ChevronRight
+                    className="size-4 shrink-0 text-[#A0A0B8] transition-colors group-hover:text-[#2F68E5]"
+                    strokeWidth={2}
+                  />
+                </button>
+              );
+            })}
+            <p className="mt-1 flex items-start gap-1.5 pb-5 font-manrope text-[11px] leading-[16px] text-[#8A8AA3]">
+              <Info className="mt-px size-3.5 shrink-0" strokeWidth={2} />
+              Suggestions improve as you add more campaign details.
+            </p>
+          </div>
+        )}
       </div>
     </aside>
   );

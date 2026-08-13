@@ -1356,11 +1356,49 @@
   50% { opacity: 0.55; }
 }
 
+/* Build-loading wash over the rule canvas (Figma node 13525:42044) — near-white
+   at the top, deepening to Secondary/Azure at the bottom edge. The gradient's
+   ellipse is anchored just under the top edge and reaches past the box, which is
+   what puts the blue arc along the bottom. Slowly breathes so the surface reads
+   as live while the agent works. */
+.seg-loader-wash {
+  background-color: #f4f8ff;
+  background-image: radial-gradient(
+    102.3% 102.3% at 50% 2.4%,
+    rgba(253, 254, 255, 0.1) 0%,
+    rgba(227, 242, 255, 0.6) 75%,
+    rgba(182, 222, 255, 0.3) 86.05%,
+    rgba(96, 182, 254, 0.4) 93.02%,
+    rgba(53, 163, 254, 0.45) 96.51%,
+    rgba(10, 143, 253, 0.5) 100%
+  );
+  animation: segWashBreathe 3.6s ease-in-out infinite;
+}
+
+@keyframes segWashBreathe {
+  0%, 100% { background-size: 100% 100%; }
+  50% { background-size: 108% 106%; }
+}
+
+/* Round spinner in the loader pill — the whole 20px box turns, so the azure cap
+   orbits the grey track. */
+.seg-spinner {
+  animation: segSpin 0.9s linear infinite;
+}
+
+@keyframes segSpin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .seg-ghost-chip,
   .seg-rule-row,
   .seg-step-pop,
-  .seg-step-live {
+  .seg-step-live,
+  .seg-loader-wash {
     animation: none;
+  }
+  .seg-spinner {
+    animation-duration: 2.4s;
   }
 }

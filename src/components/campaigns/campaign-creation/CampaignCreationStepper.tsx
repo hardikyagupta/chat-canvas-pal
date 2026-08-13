@@ -43,7 +43,7 @@ export default function CampaignCreationStepper({
   onStepSelect?: (index: number) => void;
 }) {
   return (
-    <div className="flex h-12 shrink-0 items-center border-b border-[#DDE2EE] bg-white px-4">
+    <div className="flex h-12 shrink-0 items-center border-b border-[#DDE2EE] bg-white px-14">
       <div className="flex items-center">
         {steps.map((step, i) => {
           const status: StepStatus =

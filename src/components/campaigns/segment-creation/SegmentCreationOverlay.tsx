@@ -2,9 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import ChatInterface from "@/components/ChatInterface";
 import SegmentCreationNavbar from "./SegmentCreationNavbar";
-import SegmentBuildBanner from "./SegmentBuildBanner";
 import SegmentRuleCanvas from "./SegmentRuleCanvas";
-import SegmentAIPanel, { type SegmentDiscoveryPoint } from "./SegmentAIPanel";
+import SegmentBuildLoader from "./SegmentBuildLoader";
 import {
   EMPTY_SEGMENT,
   resolveSegmentDefinition,
@@ -26,8 +25,9 @@ import {
 
 /** How long the slide runs; must match the duration class below. */
 const SLIDE_MS = 380;
-/** Beat between the agent's reasoning steps while it thinks. */
-const STEP_MS = 720;
+/** Beat between the agent's reasoning steps while it thinks — also how long each
+ *  line sits in the loader pill, so it has to be readable, not just quick. */
+const STEP_MS = 900;
 /** Beat between rule rows landing on the canvas. */
 const ROW_MS = 300;
 
@@ -41,11 +41,25 @@ export interface ReviewSegmentContext {
 export default function SegmentCreationOverlay({
   open,
   segment,
+  initialPrompt,
+  onSaved,
   onClose,
 }: {
   open: boolean;
   /** The segment handed over from chat; null opens a blank canvas. */
   segment: ReviewSegmentContext | null;
+  /**
+   * Ask to fire at the co-marketer as the page opens. This is the prompt-card
+   * entry point: the canvas arrives empty with the chat already docked and
+   * working, and the rules only get written when the user taps "Review segment"
+   * on the card the agent hands back.
+   */
+  initialPrompt?: string;
+  /**
+   * SAVE was pressed. Fired with what was built so the page behind can add the
+   * segment to its list and confirm it; the canvas closes either way.
+   */
+  onSaved?: (saved: { name: string; count: string; aiGenerated: boolean }) => void;
   onClose: () => void;
 }) {
   // `mounted` keeps the panel in the DOM through its exit slide; `shown` drives
@@ -57,18 +71,23 @@ export default function SegmentCreationOverlay({
   const [stepsDone, setStepsDone] = useState(0);
   const [plotted, setPlotted] = useState(0);
 
-  // Docked co-marketer chat. `chatSession` is bumped per open so the widget
-  // remounts on a fresh thread; `chatTopic` is the point it opens on.
+  // Docked co-marketer chat. Opens with the page when we were handed a prompt,
+  // otherwise from the navbar. `chatSession` is bumped per open so the widget
+  // remounts on a fresh thread.
   const [chatOpen, setChatOpen] = useState(false);
   const [chatSession, setChatSession] = useState(0);
-  const [chatTopic, setChatTopic] = useState<SegmentDiscoveryPoint | null>(null);
   const [enabledAgents, setEnabledAgents] = useState<Set<string>>(new Set());
+
+  // "Review segment" from the chat docked *here* — this is what starts the build
+  // on the canvas beside it. Callers that already reviewed elsewhere pass
+  // `segment` instead and skip straight to the build.
+  const [reviewed, setReviewed] = useState<ReviewSegmentContext | null>(null);
 
   // Held so the canvas doesn't blank out mid-exit when the caller clears its
   // review context on close.
   const lastSegment = useRef<ReviewSegmentContext | null>(null);
   if (segment) lastSegment.current = segment;
-  const active = segment ?? lastSegment.current;
+  const active = reviewed ?? segment ?? (initialPrompt ? null : lastSegment.current);
 
   const definition: SegmentDefinition = useMemo(
     () => (active ? resolveSegmentDefinition(active.title, active.description) : EMPTY_SEGMENT),
@@ -83,6 +102,12 @@ export default function SegmentCreationOverlay({
   useEffect(() => {
     if (open) {
       setMounted(true);
+      // Handed a prompt: the page opens with the co-marketer already working on
+      // it, so the user watches the answer arrive rather than asking for it.
+      if (initialPrompt) {
+        setChatSession((n) => n + 1);
+        setChatOpen(true);
+      }
       return;
     }
     setShown(false);
@@ -91,11 +116,12 @@ export default function SegmentCreationOverlay({
       setChatOpen(false);
       // Reset the build clock only once the panel is gone, so the exit slide
       // doesn't show the rules unwinding.
+      setReviewed(null);
       setStepsDone(0);
       setPlotted(0);
     }, SLIDE_MS);
     return () => clearTimeout(id);
-  }, [open]);
+  }, [open, initialPrompt]);
 
   // Flip to open only once the closed panel is actually in the DOM, so the
   // closed state gets a frame of its own and the slide actually runs.
@@ -160,6 +186,8 @@ export default function SegmentCreationOverlay({
 
   if (!mounted) return null;
 
+  const fromReview = Boolean(reviewed ?? segment);
+
   const phase: "thinking" | "plotting" | "ready" =
     totalSteps === 0 || plotted >= totalRows
       ? "ready"
@@ -167,17 +195,32 @@ export default function SegmentCreationOverlay({
         ? "thinking"
         : "plotting";
 
-  const openChat = (topic: SegmentDiscoveryPoint | null) => {
-    setChatTopic(topic);
+  /** SAVE — hand the finished segment back, then leave the canvas. */
+  const handleSave = () => {
+    onSaved?.({
+      name: definition.name,
+      count: definition.count,
+      // Anything that came out of a review was written by the agent; a canvas
+      // the user filled in by hand has no rules to review.
+      aiGenerated: active !== null,
+    });
+    onClose();
+  };
+
+  const openChat = () => {
     setChatSession((n) => n + 1);
     setChatOpen(true);
   };
+
+  // The loader's status line: a neutral opener, then this segment's own build
+  // steps, so the pill says something true about the rules being written.
+  const loaderLabels = ["Getting started...", ...definition.buildSteps.map((s) => `${s}...`)];
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Review segment"
+      aria-label="Segment creation"
       className={cn(
         "fixed inset-0 z-[60] flex flex-col bg-[#F4F8FF]",
         "transition-transform duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
@@ -187,45 +230,65 @@ export default function SegmentCreationOverlay({
     >
       <SegmentCreationNavbar
         segmentName={definition.name}
-        onAskCoMarketer={() => openChat(null)}
-        onSave={onClose}
+        showAiIcon={fromReview && phase !== "thinking"}
+        onAskCoMarketer={openChat}
+        onSave={handleSave}
         onClose={onClose}
       />
 
-      <div className="flex min-h-0 flex-1">
-        <div className="scroll-slim min-w-0 flex-1 overflow-y-auto py-6 pl-6 pr-3">
-          {totalSteps > 0 && (
-            <SegmentBuildBanner
-              segmentName={definition.name}
-              steps={definition.buildSteps}
-              stepsDone={stepsDone}
-              summary={definition.summary}
-              phase={phase}
+      <div
+        className={cn(
+          "flex min-h-0 flex-1",
+          // While the agent is writing rules the wash covers the whole canvas
+          // column — no page gutter, so the blue reaches the left edge and the chat.
+          phase === "thinking"
+            ? chatOpen
+              ? "pr-5"
+              : ""
+            : cn("pl-14", chatOpen ? "pr-5" : "pr-14")
+        )}
+      >
+        {/* Canvas column. Relative so the build loader can wash over exactly this
+            column — the chat beside it stays visible and interactive. */}
+        <div className="relative min-w-0 flex-1">
+          <div
+            className={cn(
+              "scroll-slim h-full",
+              phase === "thinking" ? "overflow-hidden" : "overflow-y-auto py-6 pr-3",
+            )}
+          >
+            <SegmentRuleCanvas
+              definition={definition}
+              plotted={plotted}
+              settled={phase === "ready"}
             />
-          )}
-          <SegmentRuleCanvas
-            definition={definition}
-            plotted={plotted}
-            settled={phase === "ready"}
+          </div>
+
+          <SegmentBuildLoader
+            active={phase === "thinking"}
+            labels={loaderLabels}
+            index={stepsDone}
           />
         </div>
-
-        <SegmentAIPanel onAsk={openChat} />
 
         {/* Co-marketer chat — docked column on the right, the same widget the
             segments list and campaign creation use. Remounted per open (key
             bump) so each session starts on a clean thread. */}
         {chatOpen && (
-          <div className="flex h-full min-h-0 w-[474px] shrink-0 justify-end overflow-hidden py-3 pr-3">
+          <div className="flex h-full min-h-0 w-[474px] shrink-0 justify-end overflow-hidden py-3">
             <ChatInterface
               key={chatSession}
               initialExpanded={false}
               docked
               conversationVariant="segments"
-              initialTopic={chatTopic ?? undefined}
+              initialMessage={initialPrompt}
               enabledAgents={enabledAgents}
               setEnabledAgents={setEnabledAgents}
               onCloseInterface={() => setChatOpen(false)}
+              // Review on the agent's card is what starts the build next door.
+              onReviewArtifact={(card) =>
+                setReviewed({ title: card.title, description: card.description })
+              }
             />
           </div>
         )}
