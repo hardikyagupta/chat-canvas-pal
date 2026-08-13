@@ -8,6 +8,7 @@ export default function PageHeader({
   subtitle = "View and manage campaigns",
   ctaLabel = "New campaign",
   showCtaChevron = true,
+  showCtaAiIcon = false,
   showAiCta = false,
   showAiNudge = false,
   onCloseAiNudge,
@@ -19,6 +20,8 @@ export default function PageHeader({
   ctaLabel?: string;
   /** Hides the chevron on the primary CTA (it doesn't open a menu everywhere). */
   showCtaChevron?: boolean;
+  /** Leads the primary CTA with an AI sparkle (e.g. Segments' "Create"). */
+  showCtaAiIcon?: boolean;
   /** Shows a secondary "Create with AI" button before the primary CTA. */
   showAiCta?: boolean;
   /** Shows the discovery nudge dropped below the Create with AI button. */
@@ -63,6 +66,15 @@ export default function PageHeader({
           onClick={onCtaClick}
           className="flex items-center gap-2 rounded bg-[#2F68E5] px-3 py-[5px] font-manrope text-sm font-semibold tracking-[0.42px] text-white shadow-[0px_5px_5px_rgba(0,0,0,0.05)] transition-colors hover:bg-[#255ad2]"
         >
+          {/* The animated AI sparkle asset. It's royal blue, which would vanish
+              against this button's royal-blue fill, so it's flattened to white. */}
+          {showCtaAiIcon && (
+            <img
+              src={sparkle}
+              alt=""
+              className="h-4 w-4 [filter:brightness(0)_invert(1)]"
+            />
+          )}
           {ctaLabel}
           {showCtaChevron && <ChevronDown className="h-4 w-4" strokeWidth={2} />}
         </button>

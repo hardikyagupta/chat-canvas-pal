@@ -17,6 +17,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import EngageL2 from "./EngageL2";
+import AudienceL2 from "./AudienceL2";
+import AnalyticsL2 from "./AnalyticsL2";
 
 /**
  * L1 left navigation rail — 48px wide, Primary/Ash (#291E30), rounded on the
@@ -70,7 +72,7 @@ function NavButton({
           <img
             src={icon}
             alt=""
-            className={`h-4 w-4 object-contain ${active ? "opacity-100" : "opacity-70"}`}
+            className={`h-5 w-5 object-contain ${active ? "opacity-100" : "opacity-70"}`}
           />
         </button>
       </TooltipTrigger>
@@ -87,35 +89,47 @@ function NavButton({
 export default function L1Nav({
   active = "engage",
   activeEngageItem = "campaigns",
+  activeAudienceItem,
+  activeAnalyticsItem,
   nudgeHighlightKey,
 }: {
   active?: string;
   /** Which Engage L2 item renders active when that menu is open. */
   activeEngageItem?: string;
+  /** Which Audience L2 item renders active when that menu is open. Undefined
+   *  (e.g. opening the drawer from a non-Audience page) highlights nothing. */
+  activeAudienceItem?: string;
+  /** Which Analytics L2 item renders active when that menu is open. Undefined
+   *  highlights nothing — none of these have pages yet. */
+  activeAnalyticsItem?: string;
   /** Rail entry (e.g. "decisioning", "ai-dashboard") to highlight with the
    *  pulsing discovery dot — whichever step of the sequence is currently up. */
   nudgeHighlightKey?: string;
 }) {
   const navigate = useNavigate();
-  const [showEngageMenu, setShowEngageMenu] = useState(false);
+  // Only one L2 drawer is ever open — opening one closes the other.
+  const [openMenu, setOpenMenu] = useState<"engage" | "audience" | "analytics" | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Dismiss the Engage L2 menu on any click outside the rail/menu.
+  // Dismiss the open L2 menu on any click outside the rail/menu.
   useEffect(() => {
-    if (!showEngageMenu) return;
+    if (!openMenu) return;
     const onDocDown = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setShowEngageMenu(false);
+      if (!containerRef.current?.contains(e.target as Node)) setOpenMenu(null);
     };
     document.addEventListener("mousedown", onDocDown);
     return () => document.removeEventListener("mousedown", onDocDown);
-  }, [showEngageMenu]);
+  }, [openMenu]);
+
+  const toggleMenu = (key: "engage" | "audience" | "analytics") =>
+    setOpenMenu((cur) => (cur === key ? null : key));
 
   return (
     <div ref={containerRef} className="contents">
       <nav className="flex h-full w-12 shrink-0 flex-col items-center rounded-r-lg bg-[#291E30]">
         {/* Brand mark */}
-        <div className="mt-6 flex h-5 w-full items-center justify-center">
-          <img src={logo} alt="Netcore" className="h-5 w-5" />
+        <div className="mt-6 flex h-6 w-full items-center justify-center">
+          <img src={logo} alt="Netcore" className="h-6 w-6" />
         </div>
 
         {/* Primary destinations */}
@@ -127,8 +141,8 @@ export default function L1Nav({
               label={item.label}
               active={item.key === active}
               onClick={
-                item.key === "engage"
-                  ? () => setShowEngageMenu((v) => !v)
+                item.key === "engage" || item.key === "audience" || item.key === "analytics"
+                  ? () => toggleMenu(item.key as "engage" | "audience" | "analytics")
                   : item.route
                   ? () => navigate(item.route)
                   : undefined
@@ -145,8 +159,16 @@ export default function L1Nav({
         </div>
       </nav>
 
-      {showEngageMenu && (
-        <EngageL2 active={activeEngageItem} onClose={() => setShowEngageMenu(false)} />
+      {openMenu === "engage" && (
+        <EngageL2 active={activeEngageItem} onClose={() => setOpenMenu(null)} />
+      )}
+
+      {openMenu === "audience" && (
+        <AudienceL2 active={activeAudienceItem} onClose={() => setOpenMenu(null)} />
+      )}
+
+      {openMenu === "analytics" && (
+        <AnalyticsL2 active={activeAnalyticsItem} onClose={() => setOpenMenu(null)} />
       )}
     </div>
   );

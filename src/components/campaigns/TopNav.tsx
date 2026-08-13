@@ -1,12 +1,29 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Search, Plus, Bell } from "lucide-react";
-import sparkle from "/campaign-assets/ic-sparkle.gif";
 import trending from "/campaign-assets/ic-trending.svg";
 import CoMarketerNudge from "./CoMarketerNudge";
+import CoMarketerButton from "./CoMarketerButton";
+import QuickCreateMenu from "./QuickCreateMenu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import CampaignCreationOverlay from "./campaign-creation/CampaignCreationOverlay";
+import SegmentCreationOverlay from "./segment-creation/SegmentCreationOverlay";
+
+/** Quick-create items that open the campaign creation wizard. */
+const CREATION_CHANNELS = new Set([
+  "Email",
+  "SMS",
+  "Whatsapp",
+  "App Push Notification",
+  "Web Push Notification",
+  "In-app Message",
+  "Web Message",
+]);
 
 /** Top application bar — 56px, white, rounded, soft card shadow. */
 export default function TopNav({
   onOpenChat,
+  onQuickCreate,
   label = "Customer Engagement",
   showAskCoMarketer = true,
   showCoMarketerNudge = true,
@@ -15,6 +32,8 @@ export default function TopNav({
   onFinishNudgeSequence,
 }: {
   onOpenChat?: () => void;
+  /** An item was picked in the quick-create menu, e.g. "Email". */
+  onQuickCreate?: (label: string) => void;
   label?: string;
   showAskCoMarketer?: boolean;
   /** False keeps the button but skips its discovery nudge (and dot). Toggling
@@ -31,6 +50,16 @@ export default function TopNav({
   onFinishNudgeSequence?: () => void;
 }) {
   const nudgeWrapRef = useRef<HTMLDivElement>(null);
+  // Controlled so picking an item can dismiss the menu before the flow opens.
+  const [createOpen, setCreateOpen] = useState(false);
+  // The campaign creation wizard lives here rather than in each page, so it
+  // works from every surface that renders this bar. `flowChannel` is kept while
+  // the overlay slides away so its navbar doesn't blank out mid-exit.
+  const [flowChannel, setFlowChannel] = useState<string | null>(null);
+  const [flowOpen, setFlowOpen] = useState(false);
+  // Segment creation shares the same treatment — quick-create → Segment opens a
+  // blank canvas, the same one "Review segment" opens with rules already on it.
+  const [segmentFlowOpen, setSegmentFlowOpen] = useState(false);
   const dismissNudge = () => {
     onFinishNudgeSequence?.();
   };
@@ -83,19 +112,13 @@ export default function TopNav({
                 <span className="relative h-2 w-2 rounded-full bg-[#2F68E5]" />
               </span>
             )}
-            <button
+            <CoMarketerButton
+              label="Ask co-marketer"
               onClick={() => {
                 if (showCoMarketerNudge) dismissNudge();
                 onOpenChat?.();
               }}
-              className="relative z-[1] flex h-8 items-center gap-1.5 overflow-hidden rounded-lg bg-white px-2.5 transition-shadow hover:shadow-sm"
-            >
-              <span aria-hidden="true" className="snake-border" />
-              <img src={sparkle} alt="" className="relative z-[1] h-5 w-5" />
-              <span className="relative z-[1] font-manrope text-xs font-semibold tracking-[0.42px] text-ash">
-                Ask co-marketer
-              </span>
-            </button>
+            />
 
             {/* Discovery nudge — drops below the button, right-aligned. */}
             {showCoMarketerNudge && (
@@ -109,13 +132,38 @@ export default function TopNav({
           </div>
         )}
 
-        {/* Create */}
-        <button
-          aria-label="Create"
-          className="grid h-8 w-8 place-items-center rounded bg-[#2F68E5] text-white transition-colors hover:bg-[#255ad2]"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.5} />
-        </button>
+        {/* Create — opens the quick-create menu, anchored under the button with
+            its right edge flush to the button's (Figma node 5636:43886). */}
+        <Popover open={createOpen} onOpenChange={setCreateOpen}>
+          <PopoverTrigger asChild>
+            <button
+              aria-label="Create"
+              className="grid h-8 w-8 place-items-center rounded bg-[#2F68E5] text-white transition-colors hover:bg-[#255ad2]"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2.5} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            sideOffset={10}
+            className="w-auto border-0 bg-transparent p-0 shadow-none"
+          >
+            <QuickCreateMenu
+              onSelect={(item) => {
+                setCreateOpen(false);
+                // Messaging channels open the wizard here; anything else
+                // (Journey, Content) is left to the host page to route.
+                if (CREATION_CHANNELS.has(item)) {
+                  setFlowChannel(item);
+                  setFlowOpen(true);
+                } else if (item === "Segment") {
+                  setSegmentFlowOpen(true);
+                }
+                onQuickCreate?.(item);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
 
         <span className="h-8 w-px bg-[#DDE2EE]" />
 
@@ -167,6 +215,26 @@ export default function TopNav({
           </div>
         </div>
       </div>
+
+      {/* Portalled to <body> so the fixed full-screen wizard can't be trapped
+          by a page's stacking or transform context. */}
+      {createPortal(
+        <CampaignCreationOverlay
+          open={flowOpen}
+          channel={flowChannel ?? "Email"}
+          onClose={() => setFlowOpen(false)}
+        />,
+        document.body
+      )}
+
+      {createPortal(
+        <SegmentCreationOverlay
+          open={segmentFlowOpen}
+          segment={null}
+          onClose={() => setSegmentFlowOpen(false)}
+        />,
+        document.body
+      )}
     </header>
   );
 }

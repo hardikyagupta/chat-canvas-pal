@@ -10,6 +10,8 @@ import Index from "./pages/Index";
 import AiDashboard from "./pages/AiDashboard";
 import Settings from "./pages/Settings";
 import Campaigns from "./pages/Campaigns";
+import AudienceSegments from "./pages/AudienceSegments";
+import AnalyticsFunnel from "./pages/AnalyticsFunnel";
 import Journeys from "./pages/Journeys";
 import JourneyBuilder from "./pages/JourneyBuilder";
 import DecisioningEngine from "./pages/DecisioningEngine";
@@ -37,6 +39,8 @@ const App = () => (
               <Route path="/ai-dashboard" element={<AiDashboard />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/campaigns" element={<Campaigns />} />
+              <Route path="/audience/segments" element={<AudienceSegments />} />
+              <Route path="/analytics/funnel" element={<AnalyticsFunnel />} />
               <Route path="/journeys" element={<Journeys />} />
               <Route path="/journeys/new" element={<JourneyBuilder />} />
               <Route path="/decisioning-engine" element={<DecisioningEngine />} />
