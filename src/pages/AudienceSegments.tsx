@@ -104,6 +104,21 @@ export default function AudienceSegments() {
     setCreationPrompt(prompt);
   };
 
+  /**
+   * SAVE on the creation canvas — the canvas closes, the user is back on this
+   * list with their new segment at the top of it, and a toast confirms it.
+   */
+  const handleSegmentSaved = (saved: {
+    name: string;
+    count: string;
+    aiGenerated: boolean;
+  }) => {
+    setCreatedSegments((prev) => [toTableSegment(saved, prev), ...prev]);
+    toast.success("Segment created successfully", {
+      description: `${saved.name} · ${saved.count} contacts`,
+    });
+  };
+
   const handleToggleAgent = (agentId: string, agentName: string) => {
     const agent = marketingAgents.find((a) => a.id === agentId);
     if (!agent) return;
@@ -209,10 +224,7 @@ export default function AudienceSegments() {
         open={reviewSegment !== null || creationPrompt !== undefined}
         segment={reviewSegment}
         initialPrompt={creationPrompt}
-        onSaved={(saved) => {
-          setCreatedSegments((prev) => [toTableSegment(saved, prev), ...prev]);
-          toast.success("Segment created successfully");
-        }}
+        onSaved={handleSegmentSaved}
         onClose={() => {
           setReviewSegment(null);
           setCreationPrompt(undefined);

@@ -212,9 +212,6 @@ export default function SegmentCreationOverlay({
     setChatOpen(true);
   };
 
-  // The loader's status line: a neutral opener, then this segment's own build
-  // steps, so the pill says something true about the rules being written.
-  const loaderLabels = ["Getting started...", ...definition.buildSteps.map((s) => `${s}...`)];
 
   return (
     <div
@@ -266,8 +263,7 @@ export default function SegmentCreationOverlay({
 
           <SegmentBuildLoader
             active={phase === "thinking"}
-            labels={loaderLabels}
-            index={stepsDone}
+            progress={totalSteps === 0 ? 0 : stepsDone / totalSteps}
           />
         </div>
 
