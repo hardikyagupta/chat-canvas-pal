@@ -465,7 +465,9 @@ interface ChatMessageProps {
   onAgentArtifactAction?: () => void;
   setupApplyCard?: SetupApplyCardData;
   setupApplyApplied?: boolean;
-  onSetupApply?: () => void;
+  /** Which cut is already plotted, when the card carries audience cohorts. */
+  appliedCohortId?: string;
+  onSetupApply?: (cohortId?: string) => void;
   // Feedback actions — open the matching feedback modal
   onThumbsUp?: () => void;
   onThumbsDown?: () => void;
@@ -530,6 +532,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   setupApplyCard,
   setupApplyApplied,
   onSetupApply,
+  appliedCohortId,
   onThumbsUp,
   onThumbsDown,
   insightCard,
@@ -1489,6 +1492,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     <SetupApplyCard
                       card={setupApplyCard}
                       applied={setupApplyApplied}
+                      appliedCohortId={appliedCohortId}
                       onApply={onSetupApply}
                     />
                   </div>

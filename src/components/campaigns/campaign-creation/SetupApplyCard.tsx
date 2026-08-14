@@ -1,8 +1,36 @@
-import { BarChart3, Check, Tag, Target, Users, type LucideIcon } from "lucide-react";
+import { useState } from "react";
+import {
+  BarChart3,
+  Check,
+  ChevronDown,
+  Clock,
+  LayoutTemplate,
+  ShieldCheck,
+  Sparkles,
+  Tag,
+  Target,
+  Type,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SetupValues } from "./CampaignSetupStep";
+import type { ContentValues } from "./CampaignContentStep";
+import type { ScheduleValues } from "./CampaignScheduleStep";
+import type { AudienceCohort } from "./audienceCohorts.data";
 
-export type SetupApplyKind = "tags" | "tracking" | "conversion" | "audience";
+export type SetupApplyKind =
+  | "tags"
+  | "tracking"
+  | "conversion"
+  | "audience"
+  | "cohorts"
+  | "subject"
+  | "preheader"
+  | "template"
+  | "sendtime"
+  | "optimize"
+  | "cap";
 
 /** Visual payload the co-marketer drops into the chat so the user can plot values onto setup. */
 export interface SetupApplyCardData {
@@ -14,8 +42,127 @@ export interface SetupApplyCardData {
   conversionEvent?: string;
   audience?: string;
   blurb?: string;
+  /** Proposed copy — subject line, pre-header, or the template's name. */
+  text?: string;
+  /** Runner-up subject lines, listed under the recommended one. */
+  alternates?: string[];
   /** Written onto the setup form when the user taps apply. */
   patch?: Partial<SetupValues>;
+  /** Written onto the content form instead, for content-step suggestions. */
+  contentPatch?: Partial<ContentValues>;
+  /** Written onto the schedule form, for schedule-step suggestions. */
+  schedulePatch?: Partial<ScheduleValues>;
+  /** Audience cuts — rendered as a stack, each plotted on its own. */
+  cohorts?: AudienceCohort[];
+  /** Goal the cuts were picked for, named in each card's "why" line. */
+  goalLabel?: string;
+}
+
+const nf = new Intl.NumberFormat("en-US");
+
+/**
+ * One proposed audience. Reach and historical conversion are the two numbers a
+ * marketer actually decides on, so they lead; everything behind the pick sits
+ * under "Rules & signals" to keep three of these scannable in a thread.
+ */
+function CohortCard({
+  cohort,
+  index,
+  goalLabel,
+  applied,
+  onApply,
+}: {
+  cohort: AudienceCohort;
+  index: number;
+  goalLabel?: string;
+  applied?: boolean;
+  onApply?: () => void;
+}) {
+  const [openSignals, setOpenSignals] = useState(false);
+
+  return (
+    <div className="w-full rounded-lg border border-[#DDE2EE] bg-white p-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="font-manrope text-sm font-bold text-[#17173A]">
+          {index}. {cohort.name}
+        </p>
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-2 py-0.5 font-manrope text-[11px] font-bold",
+            cohort.fit >= 75 ? "bg-[#E6F8F0] text-[#0B7A56]" : "bg-[#FFF1E6] text-[#B25A12]"
+          )}
+        >
+          {cohort.fit}/100 fit
+        </span>
+      </div>
+      <p className="mt-1 font-manrope text-xs leading-[18px] text-[#6F6F8D]">{cohort.rule}</p>
+
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-manrope text-xs text-[#6F6F8D]">
+        <span>
+          <span className="font-bold text-[#17173A]">{nf.format(cohort.reachable)}</span> reachable
+        </span>
+        <span>
+          <span className="font-bold text-[#17173A]">{cohort.cvr}</span> historical CVR
+        </span>
+      </div>
+
+      <p className="mt-2 font-manrope text-xs leading-[18px] text-[#6F6F8D]">
+        <span className="font-bold text-[#17173A]">
+          {goalLabel ? `Why for “${goalLabel}”:` : "Why:"}
+        </span>{" "}
+        {cohort.why}
+      </p>
+
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onApply?.()}
+          disabled={applied}
+          className={cn(
+            "inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 font-manrope text-[13px] font-semibold",
+            applied
+              ? "cursor-default bg-[#EDFBF5] text-[#0B7A56]"
+              : "bg-[#2F68E5] text-white hover:bg-[#2557C4]"
+          )}
+        >
+          {applied ? (
+            <>
+              <Check className="size-3.5" strokeWidth={3} />
+              Plotted on audience
+            </>
+          ) : (
+            "Review audience"
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpenSignals((o) => !o)}
+          className="inline-flex items-center gap-1 font-manrope text-[13px] font-semibold text-[#2F68E5]"
+        >
+          Rules &amp; signals
+          <ChevronDown
+            className={cn("size-4 transition-transform", openSignals && "rotate-180")}
+            strokeWidth={2.2}
+          />
+        </button>
+      </div>
+
+      {openSignals && (
+        <ul className="mt-3 space-y-1 border-t border-[#EEF1F7] pt-3">
+          {cohort.signals.map((sig) => (
+            <li key={sig} className="flex gap-2 font-manrope text-xs leading-[18px] text-[#6F6F8D]">
+              <span className="mt-[7px] size-1 shrink-0 rounded-full bg-[#C3CAD9]" />
+              {sig}
+            </li>
+          ))}
+          <li className="flex gap-2 font-manrope text-xs leading-[18px] text-[#6F6F8D]">
+            <span className="mt-[7px] size-1 shrink-0 rounded-full bg-[#C3CAD9]" />
+            Holds back {cohort.exclude.name.toLowerCase()}
+          </li>
+        </ul>
+      )}
+    </div>
+  );
 }
 
 const ICON: Record<SetupApplyKind, { icon: LucideIcon; wrap: string; color: string }> = {
@@ -23,17 +170,53 @@ const ICON: Record<SetupApplyKind, { icon: LucideIcon; wrap: string; color: stri
   tracking: { icon: BarChart3, wrap: "bg-[#E8F0FE]", color: "text-[#2F68E5]" },
   conversion: { icon: Target, wrap: "bg-[#F0E8FF]", color: "text-[#7B5CFA]" },
   audience: { icon: Users, wrap: "bg-[#FFF1E6]", color: "text-[#E07A2F]" },
+  cohorts: { icon: Users, wrap: "bg-[#FFF1E6]", color: "text-[#E07A2F]" },
+  subject: { icon: Type, wrap: "bg-[#E8F0FE]", color: "text-[#2F68E5]" },
+  preheader: { icon: Type, wrap: "bg-[#E6F8F0]", color: "text-[#00A86B]" },
+  template: { icon: LayoutTemplate, wrap: "bg-[#F0E8FF]", color: "text-[#7B5CFA]" },
+  sendtime: { icon: Clock, wrap: "bg-[#E8F0FE]", color: "text-[#2F68E5]" },
+  optimize: { icon: Sparkles, wrap: "bg-[#F0E8FF]", color: "text-[#7B5CFA]" },
+  cap: { icon: ShieldCheck, wrap: "bg-[#E6F8F0]", color: "text-[#00A86B]" },
+};
+
+const COPY_LABEL: Partial<Record<SetupApplyKind, string>> = {
+  subject: "Recommended subject line",
+  preheader: "Recommended pre-header",
+  template: "Recommended template",
+  sendtime: "Recommended send time",
+  optimize: "Delivery",
+  cap: "Frequency cap",
 };
 
 export default function SetupApplyCard({
   card,
   applied,
+  appliedCohortId,
   onApply,
 }: {
   card: SetupApplyCardData;
   applied?: boolean;
-  onApply?: () => void;
+  /** Which cut is already plotted, for a cohorts card. */
+  appliedCohortId?: string;
+  onApply?: (cohortId?: string) => void;
 }) {
+  if (card.cohorts) {
+    return (
+      <div className="w-full space-y-2">
+        {card.cohorts.map((c, i) => (
+          <CohortCard
+            key={c.id}
+            cohort={c}
+            index={i + 1}
+            goalLabel={card.goalLabel}
+            applied={appliedCohortId === c.id}
+            onApply={() => onApply?.(c.id)}
+          />
+        ))}
+      </div>
+    );
+  }
+
   const meta = ICON[card.kind];
   const Icon = meta.icon;
 
@@ -83,12 +266,45 @@ export default function SetupApplyCard({
             <p className="mt-1 font-manrope text-xs leading-[18px] text-[#17173A]">{card.audience}</p>
           </>
         )}
+        {COPY_LABEL[card.kind] && (
+          <>
+            <p className="font-manrope text-[11px] font-semibold uppercase tracking-wide text-[#8A8AA3]">
+              {COPY_LABEL[card.kind]}
+            </p>
+            <p className="mt-1 font-manrope text-sm font-bold leading-5 text-[#17173A]">
+              {card.text}
+            </p>
+            {card.blurb && (
+              <p className="mt-1.5 font-manrope text-xs leading-[18px] text-[#6F6F8D]">
+                {card.blurb}
+              </p>
+            )}
+            {card.alternates && card.alternates.length > 0 && (
+              <div className="mt-3 border-t border-[#EEF1F7] pt-2.5">
+                <p className="font-manrope text-[11px] font-semibold uppercase tracking-wide text-[#8A8AA3]">
+                  Also worth testing
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {card.alternates.map((alt) => (
+                    <li
+                      key={alt}
+                      className="flex gap-2 font-manrope text-xs leading-[18px] text-[#6F6F8D]"
+                    >
+                      <span className="mt-[7px] size-1 shrink-0 rounded-full bg-[#C3CAD9]" />
+                      {alt}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <div className="px-4 pb-3">
         <button
           type="button"
-          onClick={onApply}
+          onClick={() => onApply?.()}
           disabled={applied}
           className={cn(
             "flex h-9 w-full items-center justify-center gap-1.5 rounded-md font-manrope text-[13px] font-semibold",

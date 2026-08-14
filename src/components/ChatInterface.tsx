@@ -192,10 +192,13 @@ interface ChatInterfaceProps {
    */
   followUpTopic?: SeededTopic | null;
   followUpSeq?: number;
-  /** Apply a co-marketer setup suggestion onto the campaign form. */
-  onSetupApply?: (card: SetupApplyCardData) => void;
+  /** Apply a co-marketer setup suggestion onto the campaign form. For a cohorts
+   *  card, `cohortId` says which cut the user picked. */
+  onSetupApply?: (card: SetupApplyCardData, cohortId?: string) => void;
   /** Whether a given setup-apply card has already been plotted. */
   isSetupApplyApplied?: (card: SetupApplyCardData) => boolean;
+  /** Cohort already plotted from a cohorts card, if any. */
+  appliedCohortId?: string;
   /** "Review segment" / "Review journey" on an agent's artifact card. The host
    *  page decides where that goes — the segments pages open the segment
    *  creation canvas on the card's rules. */
@@ -208,6 +211,14 @@ export interface SeededTopic {
   reply: string;
   navLabel?: string;
   setupApplyCard?: SetupApplyCardData;
+  /**
+   * Hand the answer to a specialist rather than the co-marketer. When set, the
+   * thread plays the full hand-off — switch divider, then that agent thinking
+   * through `reasoningSteps` — before the reply and any card land. Used where
+   * the answer is real work (building audience cuts), not just advice.
+   */
+  agentId?: string;
+  reasoningSteps?: string[];
 }
 
 /** The campaign handed over by the co-marketer review banner. */
@@ -234,7 +245,7 @@ const bookmarkedChats = defaultChats.filter((c) => ['2', '5', '8', '11', '17'].i
 // regardless of what time the deck is being presented.
 const getGreeting = () => 'Good afternoon';
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialReviewCampaign, initialTopic, onReviewArtifact, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialReviewCampaign, initialTopic, onReviewArtifact, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   // The scripted storyline this interface plays. Home (`/`) uses 'default';
@@ -2968,6 +2979,89 @@ The content has been updated across all channels to reflect your changes.`;
       onAnimationComplete: () => {},
     }]);
     setShowSuggestions(false);
+
+    // Specialist-led topic: same switch → thinking → answer sequence the
+    // scripted campaign flows play, so a cut the Segment agent actually built
+    // arrives looking built rather than pre-canned.
+    const specialist = topic.agentId
+      ? marketingAgents.find(a => a.id === topic.agentId)
+      : undefined;
+    if (specialist) {
+      const steps = topic.reasoningSteps ?? [];
+      const sequence: ChatMessageData[] = [
+        {
+          type: 'chat', isAI: true, content: '',
+          isAgentSwitch: true,
+          switchAgentLabel: specialist.name,
+          reasoningSteps: steps,
+          avatarSrc: specialist.avatarSrc,
+          avatarIcon: specialist.icon,
+          avatarBgClass: specialist.colorClass,
+        },
+        {
+          type: 'chat', isAI: true, content: '',
+          isThinkingState: true, thinkingDuration: 4, reasoningSteps: steps,
+        },
+        {
+          type: 'chat', isAI: true,
+          agentName: specialist.name,
+          avatarSrc: specialist.avatarSrc,
+          avatarIcon: specialist.icon,
+          avatarBgClass: specialist.colorClass,
+          content: topic.reply,
+          hidePerformanceDashboard: true,
+          setupApplyCard: topic.setupApplyCard,
+        },
+      ];
+
+      setIsMockAgentChatActive(true);
+      isMockAgentChatActiveRef.current = true;
+
+      const step = (index: number) => {
+        if (!isMockAgentChatActiveRef.current) {
+          if (mockMessageTimeoutRef.current) {
+            clearTimeout(mockMessageTimeoutRef.current);
+            mockMessageTimeoutRef.current = null;
+          }
+          return;
+        }
+        if (index >= sequence.length) {
+          // Settle the divider so the orb hands over to the agent's avatar.
+          setMessages(prev => prev.map(m =>
+            m.isAgentSwitch && !m.switchSettled ? { ...m, switchSettled: true } : m
+          ));
+          setIsMockAgentChatActive(false);
+          isMockAgentChatActiveRef.current = false;
+          setIsGeneratingOutput(false);
+          setMockChatCompleted(true);
+          if (mockMessageTimeoutRef.current) {
+            clearTimeout(mockMessageTimeoutRef.current);
+            mockMessageTimeoutRef.current = null;
+          }
+          return;
+        }
+        const def = sequence[index];
+        // Dividers aren't ChatMessages and never fire onAnimationComplete.
+        if (def.isAgentSwitch) {
+          setMessages(prev => [...prev, def]);
+          if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+          mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 2600);
+          return;
+        }
+        setMessages(prev => [...prev, {
+          ...def,
+          onAnimationComplete: () => {
+            if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+            mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 650);
+          },
+        }]);
+      };
+
+      if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
+      mockMessageTimeoutRef.current = setTimeout(() => step(0), 500);
+      return;
+    }
+
     setIsGeneratingOutput(true);
 
     window.setTimeout(() => {
@@ -2990,6 +3084,12 @@ The content has been updated across all channels to reflect your changes.`;
   const seedThread = (prompt: string, reply: string, navLabel?: string, setupApplyCard?: SetupApplyCardData) => {
     setMessages([]);
     appendTopic({ prompt, reply, navLabel, setupApplyCard });
+  };
+
+  /** Same as `seedThread`, but for topics that carry richer payloads. */
+  const seedTopic = (topic: SeededTopic) => {
+    setMessages([]);
+    appendTopic(topic);
   };
 
   const seedReviewThread = (campaign: ReviewCampaignContext) => {
@@ -3023,7 +3123,7 @@ The content has been updated across all channels to reflect your changes.`;
     }
     if (initialTopic) {
       hasAutoSentRef.current = true;
-      seedThread(initialTopic.prompt, initialTopic.reply, initialTopic.navLabel, initialTopic.setupApplyCard);
+      seedTopic(initialTopic);
       return;
     }
     if (initialInsightCard) {
@@ -4101,6 +4201,7 @@ The content has been updated across all channels to reflect your changes.`;
                           ? () => onReviewArtifact(message.agentArtifactCard!)
                           : undefined
                       }
+                      appliedCohortId={appliedCohortId}
                       setupApplyCard={message.setupApplyCard}
                       setupApplyApplied={
                         message.setupApplyCard
@@ -4109,7 +4210,7 @@ The content has been updated across all channels to reflect your changes.`;
                       }
                       onSetupApply={
                         message.setupApplyCard
-                          ? () => onSetupApply?.(message.setupApplyCard!)
+                          ? (cohortId?: string) => onSetupApply?.(message.setupApplyCard!, cohortId)
                           : undefined
                       }
                       onThumbsUp={() => setFeedbackModal('up')}
