@@ -8,7 +8,7 @@ import { generatedReports } from './reports';
 
 export type ScheduleCadence = 'daily' | 'weekly' | 'monthly' | 'custom';
 
-export type ScheduleStatus = 'active' | 'paused';
+export type ScheduleStatus = 'active' | 'running' | 'paused';
 
 export interface ScheduleItem {
   id: string;
@@ -25,7 +25,7 @@ export interface ScheduleItem {
   recipients: string[];
   /** Next run label, e.g. "Mon 9:00 UTC". */
   nextRun: string;
-  /** Running vs. paused — shown as a status pill on the card. */
+  /** Idle (active) → running → paused. Drives Run now / Pause / Resume. */
   status: ScheduleStatus;
   /** Relative "created" time, e.g. "2h", "3d". */
   createdTime: string;

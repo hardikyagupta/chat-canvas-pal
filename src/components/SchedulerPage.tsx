@@ -35,6 +35,7 @@ interface SchedulerPageProps {
 
 const statusStyles: Record<ScheduleStatus, { bg: string; fg: string; dot: string; label: string }> = {
   active: { bg: 'color-mix(in oklch, var(--color-emerald, oklch(0.72 0.15 155)) 16%, transparent)', fg: 'oklch(0.5 0.13 155)', dot: 'oklch(0.62 0.15 155)', label: 'Active' },
+  running: { bg: 'color-mix(in oklch, var(--color-emerald, oklch(0.72 0.15 155)) 16%, transparent)', fg: 'oklch(0.5 0.13 155)', dot: 'oklch(0.62 0.15 155)', label: 'Running' },
   paused: { bg: 'oklch(0 0 0 / 0.06)', fg: 'var(--color-grey)', dot: 'var(--color-grey-soft)', label: 'Paused' },
 };
 
@@ -44,32 +45,31 @@ const stripHtml = (s: string) => s.replace(/<[^>]+>/g, '');
 const cadenceLabelFor = (cadence: ScheduleCadence) =>
   CADENCE_OPTIONS.find((o) => o.value === cadence)?.label ?? '';
 
-// Simulated "run now" — no backend, so this just confirms with a toast (mirrors
-// the prototype actions elsewhere).
-const runNow = (schedule: ScheduleItem) => {
-  toast.success(`Running "${schedule.title}" now`, {
-    description: schedule.cadenceLabel,
-  });
+const PRIMARY_ACTION: Record<ScheduleStatus, { label: string; icon: typeof Play }> = {
+  active: { label: 'Run now', icon: Play },
+  running: { label: 'Pause', icon: Pause },
+  paused: { label: 'Resume', icon: Play },
 };
 
 /**
  * A single created-schedule card (no thumbnail): the schedule name, a short
  * description, and a green "schedule" pill (clock + cadence label). A three-dot
- * menu (Run now / Pause · Resume / Edit / Delete) sits at the top-right.
+ * menu (Run now · Pause · Resume / Edit / Delete) sits at the top-right.
  */
 const ScheduleCard: React.FC<{
   schedule: ScheduleItem;
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onOpen: () => void;
-  onToggleStatus: () => void;
+  onCycleStatus: () => void;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ schedule, menuOpen, onMenuOpenChange, onOpen, onToggleStatus, onEdit, onDelete }) => {
+}> = ({ schedule, menuOpen, onMenuOpenChange, onOpen, onCycleStatus, onEdit, onDelete }) => {
   const isPaused = schedule.status === 'paused';
-  // Green pill when active; muted grey when paused so status still reads.
+  const primary = PRIMARY_ACTION[schedule.status];
+  // Green pill when active/running; muted grey when paused so status still reads.
   const pill = isPaused
-    ? { bg: 'oklch(0 0 0 / 0.06)', fg: 'var(--color-grey)' }
+    ? { bg: statusStyles.paused.bg, fg: statusStyles.paused.fg }
     : { bg: statusStyles.active.bg, fg: statusStyles.active.fg };
   const description = stripHtml(schedule.doc.paragraphs[0] ?? '');
   return (
@@ -111,11 +111,8 @@ const ScheduleCard: React.FC<{
             </button>
           </ActionMenuTrigger>
           <ActionMenuContent align="end" side="bottom">
-            <ActionMenuItem icon={Play} onSelect={() => runNow(schedule)}>
-              Run now
-            </ActionMenuItem>
-            <ActionMenuItem icon={isPaused ? Play : Pause} onSelect={onToggleStatus}>
-              {isPaused ? 'Resume' : 'Pause'}
+            <ActionMenuItem icon={primary.icon} onSelect={onCycleStatus}>
+              {primary.label}
             </ActionMenuItem>
             <ActionMenuItem icon={Pencil} onSelect={onEdit}>
               Edit
@@ -193,21 +190,32 @@ const SchedulerPage: React.FC<SchedulerPageProps> = ({
   };
 
   // The dialog always emits a fresh item; when editing, keep the original id/slot
-  // and swap its fields in place, otherwise prepend the new schedule.
+  // and swap its fields in place (including status so Run now / Pause / Resume
+  // is not reset), otherwise prepend the new schedule.
   const handleCreate = (item: ScheduleItem) => {
     if (editingId) {
       const id = editingId;
-      setSchedules((prev) => prev.map((s) => (s.id === id ? { ...item, id } : s)));
+      setSchedules((prev) =>
+        prev.map((s) => (s.id === id ? { ...item, id, status: s.status } : s))
+      );
     } else {
       setSchedules((prev) => [item, ...prev]);
     }
     setEditingId(null);
   };
 
-  const toggleStatus = (id: string) =>
-    setSchedules((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: s.status === 'active' ? 'paused' : 'active' } : s))
-    );
+  const cycleStatus = (schedule: ScheduleItem) => {
+    const next: ScheduleStatus =
+      schedule.status === 'active' ? 'running' : schedule.status === 'running' ? 'paused' : 'running';
+    setSchedules((prev) => prev.map((s) => (s.id === schedule.id ? { ...s, status: next } : s)));
+    if (schedule.status === 'active') {
+      toast.success(`Running "${schedule.title}" now`, { description: schedule.cadenceLabel });
+    } else if (schedule.status === 'running') {
+      toast.success(`Paused "${schedule.title}"`, { description: schedule.cadenceLabel });
+    } else {
+      toast.success(`Resumed "${schedule.title}"`, { description: schedule.cadenceLabel });
+    }
+  };
 
   const openBlank = () => {
     setEditingId(null);
@@ -296,7 +304,7 @@ const SchedulerPage: React.FC<SchedulerPageProps> = ({
                     menuOpen={menuOpenId === schedule.id}
                     onMenuOpenChange={(o) => setMenuOpenId(o ? schedule.id : null)}
                     onOpen={() => onSelectSchedule?.(schedule)}
-                    onToggleStatus={() => toggleStatus(schedule.id)}
+                    onCycleStatus={() => cycleStatus(schedule)}
                     onEdit={() => {
                       setMenuOpenId(null);
                       openEdit(schedule);
