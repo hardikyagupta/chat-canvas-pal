@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Plus, ChevronDown, MoreHorizontal, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { LhsChatItem } from './LhsSidebar';
+import type { LhsChatItem, LhsNavKey } from './LhsSidebar';
 import { ChatsIcon, CustomAgentsIcon, ReportsIcon, SchedulerIcon, BookmarkIcon } from './LhsSidebar';
 import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
 
 interface MinViewLhsOverlayProps {
   chats?: LhsChatItem[];
+  /** Which menu action is the page currently on — gets the 8% black row highlight. */
+  activeNav?: LhsNavKey | null;
   activeChatId?: string | null;
   onClose: () => void;
   onSelectChat?: (id: string) => void;
@@ -44,6 +46,7 @@ const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
  */
 const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
   chats = defaultChats,
+  activeNav = null,
   activeChatId = '1',
   onClose,
   onSelectChat,
@@ -159,13 +162,19 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
 
         {/* Menu actions — same 32px rows / icon slots / hover as the LHS. */}
         <div className="flex flex-col gap-[4px] items-start w-full px-[12px] pt-[0px] shrink-0">
-          {menuActions.map(({ key, label, icon: Icon, onClick, isNewChat }) => (
+          {menuActions.map(({ key, label, icon: Icon, onClick, isNewChat }) => {
+            const isActive = activeNav === key;
+            return (
             <button
               key={key}
               type="button"
               onClick={() => dismiss(onClick)}
               aria-label={label}
-              className="group relative flex h-[32px] items-center w-full rounded-[8px] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+              aria-current={isActive ? 'page' : undefined}
+              className={cn(
+                'group relative flex h-[32px] items-center w-full rounded-[8px] transition-colors',
+                isActive ? 'bg-[oklch(0_0_0_/_0.08)]' : 'hover:bg-[oklch(0_0_0_/_0.06)]',
+              )}
             >
               <span className="flex items-center justify-center shrink-0 w-[40px] h-[32px]">
                 {isNewChat ? (
@@ -176,11 +185,12 @@ const MinViewLhsOverlay: React.FC<MinViewLhsOverlayProps> = ({
                   <Icon className="size-[18px] text-[var(--color-charcoal)] transition-transform duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-[1.15] group-hover:-rotate-6" />
                 )}
               </span>
-              <span className="text-[13px] text-[var(--color-charcoal)] whitespace-nowrap" style={{ ...MANROPE, fontWeight: 400 }}>
+              <span className="text-[13px] text-[var(--color-charcoal)] whitespace-nowrap" style={{ ...MANROPE, fontWeight: isActive ? 500 : 400 }}>
                 {label}
               </span>
             </button>
-          ))}
+            );
+          })}
         </div>
 
         {/* Recents section + scrollable chat list (mirrors the LHS). */}

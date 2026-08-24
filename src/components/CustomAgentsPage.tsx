@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, MoreHorizontal, Pencil, Trash2, Bot, Copy } from 'lucide-react';
+import { Search, MoreHorizontal, Pencil, Trash2, Bot, Copy, LayoutGrid, Rows3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AgentTools, CustomAgent } from '@/data/customAgents';
 import {
@@ -67,6 +67,210 @@ const domainChips = (agent: CustomAgent): string[] => {
     ].filter(Boolean) as string[]
   );
 };
+
+type AgentView = 'grid' | 'list';
+
+/**
+ * Grid / list switch that sits on the page-title line, flush to the right edge
+ * next to "Create agent". The active half is a raised white pill on a muted
+ * track, so the switch reads as "changed" the moment a view is picked.
+ */
+const ViewToggle: React.FC<{ view: AgentView; onChange: (view: AgentView) => void }> = ({ view, onChange }) => {
+  const options: { id: AgentView; label: string; Icon: typeof LayoutGrid }[] = [
+    { id: 'grid', label: 'Card view', Icon: LayoutGrid },
+    { id: 'list', label: 'Table view', Icon: Rows3 },
+  ];
+  return (
+    <div
+      role="group"
+      aria-label="Agent layout"
+      className="flex items-center gap-[2px] rounded-[9px] border border-[var(--color-line-input)] bg-[var(--color-surface-1)] p-[2px] shrink-0"
+    >
+      {options.map(({ id, label, Icon }) => {
+        const active = view === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            aria-label={label}
+            aria-pressed={active}
+            title={label}
+            onClick={() => onChange(id)}
+            className={cn(
+              'flex items-center justify-center size-[28px] rounded-[7px] transition-colors',
+              active
+                ? 'bg-card text-[var(--color-ink)] shadow-[0px_1px_2px_0px_oklch(0_0_0_/_0.10)]'
+                : 'text-[var(--color-grey-soft)] hover:text-[var(--color-slate)]',
+            )}
+          >
+            <Icon className="size-[15px]" />
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+/** Small status/type pill used by the table rows. */
+const TablePill: React.FC<{ tone: 'success' | 'neutral' | 'accent'; children: React.ReactNode }> = ({ tone, children }) => (
+  <span
+    className={cn(
+      'inline-flex items-center rounded-full px-[7px] py-[1px] text-[10px] leading-[14px] font-medium whitespace-nowrap',
+      // NOTE: the `color:` prefix is required — without it tailwind-merge reads
+      // these arbitrary values as font sizes and strips the text-[10px] above.
+      tone === 'success' &&
+        'bg-[color-mix(in_oklch,var(--color-success)_14%,transparent)] text-[color:color-mix(in_oklch,var(--color-success)_75%,var(--color-ink))]',
+      tone === 'accent' &&
+        'bg-[color-mix(in_oklch,var(--color-royal)_12%,transparent)] text-[color:var(--color-royal)]',
+      tone === 'neutral' && 'bg-[var(--color-surface-2)] text-[color:var(--color-grey)]',
+    )}
+    style={MANROPE}
+  >
+    {children}
+  </span>
+);
+
+const TH: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <th
+    scope="col"
+    className={cn(
+      'px-[14px] py-[10px] text-left text-[12px] leading-[16px] font-semibold text-[var(--color-grey)] whitespace-nowrap',
+      className,
+    )}
+    style={MANROPE}
+  >
+    {children}
+  </th>
+);
+
+const AgentTable: React.FC<{
+  agents: CustomAgent[];
+  menuOpenId: string | null;
+  onMenuOpenIdChange: (id: string | null) => void;
+  onOpenAgent: (id: string) => void;
+  onCloneAgent: (agent: CustomAgent) => void;
+  onEditAgent: (agent: CustomAgent) => void;
+  onDeleteAgent: (id: string, name: string) => void;
+}> = ({ agents, menuOpenId, onMenuOpenIdChange, onOpenAgent, onCloneAgent, onEditAgent, onDeleteAgent }) => (
+  <div className="w-full overflow-x-auto rounded-[14px] border border-[var(--color-line-input)] bg-card">
+    <table className="w-full min-w-[900px] border-collapse">
+      <thead>
+        <tr className="border-b border-[var(--color-line-input)] bg-[var(--color-surface-0)]">
+          <TH className="w-[236px]">Agent name</TH>
+          <TH>Description</TH>
+          <TH className="w-[132px]">Scope</TH>
+          <TH className="w-[104px]">Visibility</TH>
+          <TH className="w-[112px]">Last executed</TH>
+          <TH className="w-[100px]">Last edited</TH>
+          <TH className="w-[52px]"><span className="sr-only">Actions</span></TH>
+        </tr>
+      </thead>
+      <tbody>
+        {agents.map((agent) => {
+          const chips = domainChips(agent);
+          const workspace = (agent.tools?.visibility ?? 'workspace') === 'workspace';
+          const menuOpen = menuOpenId === agent.id;
+          return (
+            <tr
+              key={agent.id}
+              className="group border-b border-[var(--color-line-input)] last:border-0 transition-colors hover:bg-[var(--color-surface-0)]"
+            >
+              <td className="px-[14px] py-[12px] align-middle">
+                <div className="flex items-center gap-[10px] min-w-0">
+                  {agent.avatarSrc ? (
+                    <img src={agent.avatarSrc} alt="" className="size-[26px] rounded-full object-cover shrink-0" />
+                  ) : (
+                    <span className="flex size-[26px] items-center justify-center rounded-[8px] bg-[color-mix(in_oklch,var(--color-plum)_16%,transparent)] shrink-0">
+                      <Bot className="size-[14px] text-[var(--color-plum)]" />
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onOpenAgent(agent.id)}
+                    className="min-w-0 truncate text-left text-[14px] leading-[20px] font-semibold text-[var(--color-ink)] hover:text-[var(--color-royal)] hover:underline transition-colors"
+                    style={MANROPE}
+                  >
+                    {agent.name}
+                  </button>
+                </div>
+              </td>
+              <td className="px-[14px] py-[12px] align-middle">
+                <span className="line-clamp-2 text-[13px] leading-[18px] text-[var(--color-grey)]" style={MANROPE}>
+                  {agent.description || 'No description yet.'}
+                </span>
+              </td>
+              <td className="px-[14px] py-[12px] align-middle">
+                {chips.length > 0 ? (
+                  <div className="flex flex-wrap gap-[4px]">
+                    {chips.map((chip) => (
+                      <ToolChip key={chip}>{chip}</ToolChip>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-[13px] text-[var(--color-grey-soft)]" style={MANROPE}>—</span>
+                )}
+              </td>
+              <td className="px-[14px] py-[12px] align-middle">
+                <TablePill tone={workspace ? 'success' : 'neutral'}>{workspace ? 'Workspace' : 'Private'}</TablePill>
+              </td>
+              <td className="px-[14px] py-[12px] align-middle">
+                <span
+                  className={cn(
+                    'text-[13px] leading-[18px] whitespace-nowrap',
+                    agent.lastExecutedAt ? 'text-[var(--color-grey)]' : 'text-[var(--color-grey-soft)]',
+                  )}
+                  style={MANROPE}
+                >
+                  {agent.lastExecutedAt ? `${agent.lastExecutedAt} ago` : 'N/A'}
+                </span>
+              </td>
+              <td className="px-[14px] py-[12px] align-middle">
+                <span className="text-[13px] leading-[18px] text-[var(--color-grey)] whitespace-nowrap" style={MANROPE}>
+                  {agent.updatedAt === 'now' ? 'Just now' : `${agent.updatedAt} ago`}
+                </span>
+              </td>
+              <td className="px-[14px] py-[12px] align-middle">
+                <div className={cn('flex justify-end', menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100')}>
+                  <ActionMenu open={menuOpen} onOpenChange={(o) => onMenuOpenIdChange(o ? agent.id : null)} modal={false}>
+                    <ActionMenuTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Agent options"
+                        className="flex items-center justify-center size-[26px] rounded-[7px] text-[var(--color-charcoal)] hover:bg-[var(--color-surface-1)] transition-colors"
+                      >
+                        <MoreHorizontal className="size-[16px]" />
+                      </button>
+                    </ActionMenuTrigger>
+                    <ActionMenuContent align="end" side="bottom">
+                      {agent.isBuiltIn ? (
+                        <ActionMenuItem icon={Copy} onSelect={() => { onMenuOpenIdChange(null); onCloneAgent(agent); }}>
+                          Clone
+                        </ActionMenuItem>
+                      ) : (
+                        <>
+                          <ActionMenuItem icon={Pencil} onSelect={() => { onMenuOpenIdChange(null); onEditAgent(agent); }}>
+                            Edit details
+                          </ActionMenuItem>
+                          <ActionMenuItem
+                            icon={Trash2}
+                            variant="danger"
+                            onSelect={() => { onMenuOpenIdChange(null); onDeleteAgent(agent.id, agent.name); }}
+                          >
+                            Delete
+                          </ActionMenuItem>
+                        </>
+                      )}
+                    </ActionMenuContent>
+                  </ActionMenu>
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+);
 
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <h2 className="text-[15px] font-semibold text-[var(--color-ink)]" style={MANROPE}>
@@ -205,6 +409,7 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
   compact = false,
 }) => {
   const [query, setQuery] = useState('');
+  const [view, setView] = useState<AgentView>('grid');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<CustomAgent | null>(null);
@@ -224,6 +429,32 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
   const noResults = hasQuery && filteredCustom.length === 0 && filteredStarter.length === 0;
 
   const hasCustomAgents = customAgents.length > 0;
+  // The docked widget column is too narrow for a table — always show cards there.
+  const effectiveView: AgentView = compact ? 'grid' : view;
+
+  const renderAgents = (agents: CustomAgent[]) =>
+    effectiveView === 'list' ? (
+      <AgentTable
+        agents={agents}
+        menuOpenId={menuOpenId}
+        onMenuOpenIdChange={setMenuOpenId}
+        onOpenAgent={onOpenAgent}
+        onCloneAgent={onCloneAgent}
+        onEditAgent={(agent) => { setEditing(agent); setCreateOpen(true); }}
+        onDeleteAgent={(id, name) => setDeleteTarget({ id, name })}
+      />
+    ) : (
+      <AgentGrid
+        agents={agents}
+        compact={compact}
+        menuOpenId={menuOpenId}
+        onMenuOpenIdChange={setMenuOpenId}
+        onOpenAgent={onOpenAgent}
+        onCloneAgent={onCloneAgent}
+        onEditAgent={(agent) => { setEditing(agent); setCreateOpen(true); }}
+        onDeleteAgent={(id, name) => setDeleteTarget({ id, name })}
+      />
+    );
 
   const handleModalSubmit = (data: { name: string; description: string; tools?: AgentTools }) => {
     if (editing) onEditAgent(editing.id, data);
@@ -251,7 +482,10 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
             >
               {title}
             </h1>
-            {hasCustomAgents ? <NewAgentButton onClick={openCreate} label="Create agent" /> : null}
+            <div className="flex items-center gap-[10px] shrink-0">
+              {!compact ? <ViewToggle view={view} onChange={setView} /> : null}
+              {hasCustomAgents ? <NewAgentButton onClick={openCreate} label="Create agent" /> : null}
+            </div>
           </div>
 
           <div className="flex items-center gap-[8px] h-[36px] px-[14px] w-full rounded-[10px] border border-[var(--color-line-input)] bg-white focus-within:border-[var(--color-royal)] transition-colors">
@@ -290,16 +524,7 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
                       <NewAgentButton onClick={openCreate} label="Create agent" />
                     </div>
                   ) : (
-                    <AgentGrid
-                      agents={filteredCustom}
-                      compact={compact}
-                      menuOpenId={menuOpenId}
-                      onMenuOpenIdChange={setMenuOpenId}
-                      onOpenAgent={onOpenAgent}
-                      onCloneAgent={onCloneAgent}
-                      onEditAgent={(agent) => { setEditing(agent); setCreateOpen(true); }}
-                      onDeleteAgent={(id, name) => setDeleteTarget({ id, name })}
-                    />
+                    renderAgents(filteredCustom)
                   )}
                 </section>
               )}
@@ -307,16 +532,7 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
               {filteredStarter.length > 0 && (
                 <section className="flex flex-col gap-[12px]">
                   <SectionLabel>Get started with these</SectionLabel>
-                  <AgentGrid
-                    agents={filteredStarter}
-                    compact={compact}
-                    menuOpenId={menuOpenId}
-                    onMenuOpenIdChange={setMenuOpenId}
-                    onOpenAgent={onOpenAgent}
-                    onCloneAgent={onCloneAgent}
-                    onEditAgent={(agent) => { setEditing(agent); setCreateOpen(true); }}
-                    onDeleteAgent={(id, name) => setDeleteTarget({ id, name })}
-                  />
+                  {renderAgents(filteredStarter)}
                 </section>
               )}
             </div>

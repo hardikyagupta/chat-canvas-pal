@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ModeSwitchConfirmation } from './ModeSwitchConfirmation';
 import LhsSidebar, { defaultChats } from './LhsSidebar';
-import type { LhsChatItem } from './LhsSidebar';
+import type { LhsChatItem, LhsNavKey } from './LhsSidebar';
 // V1 (full nav rail, all sections) is kept around for when more sections are
 // ready; the early-release build below wires up V2 instead. Swap the import
 // (and the <SettingsModal .../> usage further down) back to './SettingsModal'
@@ -731,6 +731,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     }, 550);
   };
   const openCustomAgents = () => { setSelectedAgentId(null); setActivePage('custom-agents'); };
+
+  // Which LHS menu row is highlighted. 'home' is the conversation view, so it
+  // only counts as "New chat" while the thread is still empty — once the user
+  // sends something they're in a chat, not on the new-chat screen.
+  const activeNav: LhsNavKey | null =
+    activePage === 'home' ? (messages.length === 0 ? 'new-chat' : null) : activePage;
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   // Minimized-view LHS overlay (opened from the widget header menu icon)
   const [showMinOverlay, setShowMinOverlay] = useState(false);
@@ -3581,6 +3587,7 @@ The content has been updated across all channels to reflect your changes.`;
         {/* Minimized-view LHS overlay — opened from the widget header menu icon */}
         {!isExpanded && showMinOverlay && (
           <MinViewLhsOverlay
+            activeNav={activeNav}
             activeChatId={null}
             onClose={() => setShowMinOverlay(false)}
             onNewChat={handleNewChat}
@@ -3642,6 +3649,7 @@ The content has been updated across all channels to reflect your changes.`;
             <LhsSidebar
               collapsed={lhsCollapsed}
               chats={lhsChats}
+              activeNav={activeNav}
               activeChatId={activeLhsChatId}
               busyChatId={busyLhsChatId}
               researchingChatId={researchingLhsChatId}

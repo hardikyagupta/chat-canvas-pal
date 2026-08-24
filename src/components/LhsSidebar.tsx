@@ -50,13 +50,22 @@ export interface LhsChatItem {
   id: string;
   title: string;
   time: string;
+  /** Who started the chat. Defaults to the signed-in user in the history list. */
+  owner?: string;
+  /** Absolute ISO timestamp. When absent, it's derived from `time`. */
+  timestamp?: string;
   /** Set when this chat was started from a custom agent's page. */
   agentId?: string;
 }
 
+/** Menu-action keys that can be highlighted as the current destination. */
+export type LhsNavKey = 'new-chat' | 'chats' | 'custom-agents' | 'reports' | 'scheduler' | 'bookmarks';
+
 interface LhsSidebarProps {
   collapsed?: boolean;
   chats?: LhsChatItem[];
+  /** Which menu action is the page currently on — gets the 8% black row highlight. */
+  activeNav?: LhsNavKey | null;
   activeChatId?: string | null;
   // Chat that is currently generating output — shows a live "active" indicator.
   busyChatId?: string | null;
@@ -75,27 +84,29 @@ interface LhsSidebarProps {
   onToggleCollapse?: () => void;
 }
 
+// `owner` is the byline shown in the chats history; rows that omit it are
+// attributed to the signed-in user (see CURRENT_USER_NAME in lib/chatMeta).
 export const defaultChats: LhsChatItem[] = [
   { id: '1', title: 'Animate thumbs feedback', time: '1h' },
-  { id: '2', title: 'Add follow-up questions scenario for onboarding edge cases', time: '2h' },
+  { id: '2', title: 'Add follow-up questions scenario for onboarding edge cases', time: '2h', owner: 'Dani Bristow' },
   { id: '3', title: 'Create reusable workflow skill', time: '2h' },
-  { id: '4', title: 'Check record workflow feature and validate the export pipeline end to end', time: '2h' },
-  { id: '5', title: 'Inspect shimmer component', time: '16h' },
+  { id: '4', title: 'Check record workflow feature and validate the export pipeline end to end', time: '2h', owner: 'Jane Guo' },
+  { id: '5', title: 'Inspect shimmer component', time: '16h', owner: 'Priya Nair' },
   { id: '6', title: 'Add teaser type icons', time: '2d' },
-  { id: '7', title: 'Inspect shimmer loading skeleton across all breakpoints', time: '2d' },
-  { id: '8', title: 'Name shimmer border component', time: '6d' },
+  { id: '7', title: 'Inspect shimmer loading skeleton across all breakpoints', time: '2d', owner: 'Marcus Lee' },
+  { id: '8', title: 'Name shimmer border component', time: '6d', owner: 'Dani Bristow' },
   { id: '9', title: 'Access Figma MCP', time: '1w' },
-  { id: '10', title: 'Refactor sidebar layout and the collapse transition behaviour', time: '1w' },
-  { id: '11', title: 'Update color palette tokens', time: '1w' },
+  { id: '10', title: 'Refactor sidebar layout and the collapse transition behaviour', time: '1w', owner: 'Rahul Menon' },
+  { id: '11', title: 'Update color palette tokens', time: '1w', owner: 'Sofia Almeida' },
   { id: '12', title: 'Fix scroll overflow in chat list', time: '2w' },
-  { id: '13', title: 'Design new onboarding flow', time: '2w' },
-  { id: '14', title: 'Integrate MCP server tools', time: '2w' },
+  { id: '13', title: 'Design new onboarding flow', time: '2w', owner: 'Jane Guo' },
+  { id: '14', title: 'Integrate MCP server tools', time: '2w', owner: 'Marcus Lee' },
   { id: '15', title: 'Build prompt chaining demo', time: '3w' },
-  { id: '16', title: 'Export design tokens to CSS custom properties for the whole system', time: '3w' },
-  { id: '17', title: 'Review Claude API rate limits', time: '1mo' },
+  { id: '16', title: 'Export design tokens to CSS custom properties for the whole system', time: '3w', owner: 'Sofia Almeida' },
+  { id: '17', title: 'Review Claude API rate limits', time: '1mo', owner: 'Rahul Menon' },
   { id: '18', title: 'Optimize token usage in chains', time: '1mo' },
-  { id: '19', title: 'Write tests for agent hooks', time: '1mo' },
-  { id: '20', title: 'Ship co-marketer v1', time: '1mo' },
+  { id: '19', title: 'Write tests for agent hooks', time: '1mo', owner: 'Priya Nair' },
+  { id: '20', title: 'Ship co-marketer v1', time: '1mo', owner: 'Dani Bristow' },
 ];
 
 // 40×40 slot that centers an icon. Matches the collapsed rail's inner width
@@ -117,6 +128,7 @@ const RailTooltip: React.FC<{ label: string }> = ({ label }) => (
 const LhsSidebar: React.FC<LhsSidebarProps> = ({
   collapsed = false,
   chats = defaultChats,
+  activeNav = null,
   activeChatId = '1',
   busyChatId = null,
   researchingChatId = null,
@@ -312,24 +324,34 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
       {/* Menu actions — icons centered in 40-wide slots (aligned with the logo),
           32px-tall rows. */}
       <div className="flex flex-col gap-[4px] items-start w-full px-[12px] pt-[8px] shrink-0">
-        {menuActions.map(({ key, label, icon: Icon, onClick, isNewChat }) => (
+        {menuActions.map(({ key, label, icon: Icon, onClick, isNewChat }) => {
+          const isActive = activeNav === key;
+          return (
           <button
             key={key}
             type="button"
             onClick={collapsed ? (e) => { e.stopPropagation(); onClick?.(); } : onClick}
             aria-label={label}
+            aria-current={isActive ? 'page' : undefined}
             className={cn(
               'group relative flex h-[32px] items-center w-full rounded-[8px] transition-colors',
               // Expanded: full-width row highlight. Collapsed: the highlight lives on
               // the inner 32×32 box instead (see icon slot), so the button itself has none.
-              collapsed ? 'cursor-default' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
+              collapsed
+                ? 'cursor-default'
+                : isActive
+                  ? 'bg-[oklch(0_0_0_/_0.08)]'
+                  : 'hover:bg-[oklch(0_0_0_/_0.06)]'
             )}
           >
             <span
               className={cn(
                 'flex items-center justify-center shrink-0 transition-colors',
                 collapsed
-                  ? 'size-[32px] mx-auto rounded-[8px] group-hover:bg-[oklch(0_0_0_/_0.06)]'
+                  ? cn(
+                      'size-[32px] mx-auto rounded-[8px]',
+                      isActive ? 'bg-[oklch(0_0_0_/_0.08)]' : 'group-hover:bg-[oklch(0_0_0_/_0.06)]',
+                    )
                   : 'w-[40px] h-[32px]'
               )}
             >
@@ -343,13 +365,14 @@ const LhsSidebar: React.FC<LhsSidebarProps> = ({
             </span>
             <span
               className={cn('text-[13px] text-[var(--color-charcoal)]', labelCls)}
-              style={labelStyle({ fontFamily: 'Manrope, sans-serif', fontWeight: 400 })}
+              style={labelStyle({ fontFamily: 'Manrope, sans-serif', fontWeight: isActive ? 500 : 400 })}
             >
               {label}
             </span>
             {collapsed && <RailTooltip label={label} />}
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {/* Chats section header + list — fades/clips away when collapsed */}
