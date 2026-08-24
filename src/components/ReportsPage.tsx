@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table';
 import DeleteChatDialog from './DeleteChatDialog';
 import ScheduleDialog, { type SchedulePrefill } from './ScheduleDialog';
+import { PAGE_COLUMN, pageHeaderPadTop } from './pageLayout';
 
 const MANROPE: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
 
@@ -394,10 +395,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
       {/* Page-level scroll — the whole panel scrolls, so the scrollbar sits at
           the panel edge rather than around an inner card box. */}
       <div className="flex-1 min-h-0 w-full overflow-y-auto hover-scroll">
-        <div className="mx-auto flex flex-col w-full max-w-[900px] px-[20px] pb-[32px]">
+        <div className={cn('mx-auto flex flex-col pb-[32px]', PAGE_COLUMN)}>
           {/* Header — title + view switch, then search, then source filters.
               Pinned (sticky) so controls stay reachable as the list grows. */}
-          <div className={cn('sticky top-0 z-10 flex flex-col gap-[12px] pb-[12px] w-full bg-[var(--color-surface-0)]', compact ? 'pt-[12px]' : 'pt-[8px]')}>
+          <div className={cn('sticky top-0 z-10 flex flex-col gap-[12px] pb-[12px] w-full bg-[var(--color-surface-0)]', pageHeaderPadTop(compact))}>
             <div className="flex items-center justify-between gap-[12px] min-h-[34px]">
               <h1
                 className={cn(
