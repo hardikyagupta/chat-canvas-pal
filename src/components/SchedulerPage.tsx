@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/action-menu';
 import DeleteChatDialog from './DeleteChatDialog';
 import ScheduleDialog, { type SchedulePrefill } from './ScheduleDialog';
+import { PAGE_COLUMN, pageHeaderPadTop } from './pageLayout';
 
 const MANROPE: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
 
@@ -242,9 +243,9 @@ const SchedulerPage: React.FC<SchedulerPageProps> = ({
 
   return (
     <div className={cn('flex flex-col h-full w-full overflow-hidden bg-[var(--color-surface-0)]', className)}>
-      <div className="mx-auto flex flex-col min-h-0 w-full max-w-[820px] flex-1 px-[20px]">
+      <div className={cn('mx-auto flex flex-col min-h-0 flex-1', PAGE_COLUMN)}>
         {/* Sticky header — title + New schedule, then search. */}
-        <div className={cn('flex flex-col gap-[16px] pb-[12px] w-full shrink-0', compact ? 'pt-[12px]' : 'pt-[8px]')}>
+        <div className={cn('flex flex-col gap-[16px] pb-[12px] w-full shrink-0', pageHeaderPadTop(compact))}>
           <div className="flex items-center justify-between gap-[12px] h-[34px]">
             <h1
               className={cn(
