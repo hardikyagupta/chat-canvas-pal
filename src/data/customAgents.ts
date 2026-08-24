@@ -56,6 +56,11 @@ export interface CustomAgent {
   files: AgentFile[];
   /** Relative "edited" time label, e.g. "2h". "now" for freshly created. */
   updatedAt: string;
+  /**
+   * Relative "last run" time label, e.g. "3d". Undefined means the agent has
+   * never been executed — the table view shows "N/A".
+   */
+  lastExecutedAt?: string;
   /** Soft-gradient avatar (data URI), derived from the name. */
   avatarSrc?: string;
   /** Suggested first prompt, pre-filled into the composer on the agent's page. */
@@ -79,6 +84,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
       'You are a marketing performance analyst. Lead with outcomes (revenue, conversions, ROI), then channel mix, then what changed vs prior period. Flag delivery issues before blaming creative. End with 3 prioritized recommendations.',
     files: [],
     updatedAt: '2d',
+    lastExecutedAt: '5h',
     avatarSrc: generateAgentAvatar(MONTHLY_REPORT_AGENT_NAME),
     starterPrompt: "Generate last month's marketing performance report.",
     tools: {
@@ -97,6 +103,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
       'You are a campaign operations lead. Break launches into timeline, audience, creative, channels, and measurement. Surface risks early (list hygiene, frequency caps, tracking). Prefer actionable checklists over long prose.',
     files: [],
     updatedAt: '2d',
+    lastExecutedAt: '1d',
     avatarSrc: generateAgentAvatar('Campaign launch coach'),
     starterPrompt: 'Help me plan the launch for our next campaign.',
     tools: {
@@ -120,6 +127,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
       'You diagnose channel performance like a lifecycle marketer. Compare delivery, open/click, and conversion rates across email, SMS, push, and WhatsApp. Call out the metric that moved first, then hypothesize root cause. Recommend one quick win and one structural fix.',
     files: [],
     updatedAt: '2d',
+    lastExecutedAt: '3d',
     avatarSrc: generateAgentAvatar('Channel health analyst'),
     starterPrompt: 'Which channels need attention this week?',
     tools: {
@@ -166,6 +174,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
       'You are a competitive intelligence analyst for marketers. Summarize what competitors are doing, what is shifting in the category, and where our positioning has room to differentiate. Cite assumptions clearly and suggest messaging hooks for the next campaign brief.',
     files: [],
     updatedAt: '2d',
+    lastExecutedAt: '6d',
     avatarSrc: generateAgentAvatar('Market pulse scout'),
     starterPrompt: 'What should we know about competitors this week?',
     tools: {

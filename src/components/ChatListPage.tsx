@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import type { LhsChatItem } from './LhsSidebar';
 import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
+import { CURRENT_USER_NAME, chatTimestamp } from '@/lib/chatMeta';
 
 const MANROPE: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
 
@@ -38,6 +39,8 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
   compact = false,
 }) => {
   const [query, setQuery] = useState('');
+  // One instant for the whole list, so derived timestamps don't drift between rows.
+  const now = useMemo(() => new Date(), []);
 
   // Local (prototype) per-row state — mirrors LhsSidebar: rename overrides,
   // deletions, bookmarks, which row's menu is open, inline-rename editing.
@@ -176,7 +179,7 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
                   <div
                     key={chat.id}
                     className={cn(
-                      'group relative flex gap-[8px] items-center h-[48px] px-[12px] w-full rounded-[8px] transition-colors',
+                      'group relative flex gap-[8px] items-center h-[58px] px-[12px] w-full rounded-[8px] transition-colors',
                       isRenaming
                         ? 'bg-[var(--color-surface-0)] ring-2 ring-inset ring-[var(--color-royal)]'
                         : isActive ? 'bg-[oklch(0_0_0_/_0.06)]' : 'hover:bg-[oklch(0_0_0_/_0.06)]'
@@ -209,25 +212,27 @@ const ChatListPage: React.FC<ChatListPageProps> = ({
                       />
                     ) : (
                       <>
+                        {/* Title over a byline — who started the chat and when. */}
                         <button
                           type="button"
                           onClick={() => onSelectChat?.(chat.id)}
-                          className="flex-1 min-w-0 text-left text-[13px] leading-[18px] text-[var(--color-ink)] whitespace-nowrap overflow-hidden text-ellipsis"
-                          style={{ ...MANROPE, fontWeight: isActive ? 500 : 400 }}
+                          className="flex flex-1 min-w-0 flex-col items-start gap-[2px] text-left"
                         >
-                          {title}
+                          <span
+                            className="w-full text-[13px] leading-[18px] text-[var(--color-ink)] whitespace-nowrap overflow-hidden text-ellipsis"
+                            style={{ ...MANROPE, fontWeight: isActive ? 500 : 400 }}
+                          >
+                            {title}
+                          </span>
+                          <span
+                            className="flex w-full items-center gap-[6px] text-[12px] leading-[16px] text-[var(--color-grey)] whitespace-nowrap overflow-hidden"
+                            style={{ ...MANROPE, fontWeight: 400 }}
+                          >
+                            <span className="truncate">{chat.owner ?? CURRENT_USER_NAME}</span>
+                            <span aria-hidden className="text-[var(--color-grey-soft)]">•</span>
+                            <span className="shrink-0">{chatTimestamp(chat, now)}</span>
+                          </span>
                         </button>
-                        {/* Timestamp by default; hides to make room for the actions
-                            menu on hover / when the menu is open (mirrors the LHS). */}
-                        <span
-                          className={cn(
-                            'text-[13px] text-[var(--color-grey)] whitespace-nowrap shrink-0',
-                            isMenuOpen ? 'hidden' : 'group-hover:hidden'
-                          )}
-                          style={{ ...MANROPE, fontWeight: 400 }}
-                        >
-                          {chat.time}
-                        </span>
                         <ChatActionsMenu
                           open={isMenuOpen}
                           onOpenChange={(o) => setMenuOpenId(o ? chat.id : null)}
