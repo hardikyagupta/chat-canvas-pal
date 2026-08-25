@@ -580,7 +580,9 @@ export default function AiDashboard() {
                       <button
                         key={`${chip}-${i}`}
                         type="button"
-                        onClick={() => openDockedChat({ expanded: false })}
+                        // The chip *is* the ask — send it, same as typing it into
+                        // the hero composer, rather than opening an empty thread.
+                        onClick={() => openDockedChat({ expanded: false, message: chip })}
                         className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[6px] border border-[#DDE2EE] bg-white px-2 py-1.5 transition-colors hover:bg-[#F7F9FC]"
                       >
                         <img src={sparkleAi} alt="" className="h-5 w-5" />
