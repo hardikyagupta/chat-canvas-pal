@@ -3912,11 +3912,19 @@ The content has been updated across all channels to reflect your changes.`;
               isExpanded && showArtifactPreview && artifactFullExpanded && "hidden"
             )}
           >
+            {/* Loading stand-in for the conversation. Replaces the messages area
+                only — the sidebar, the header, and the composer below all stay
+                live, so just the thread reads as loading. */}
+            {bootPhase && <DockedBodySkeleton variant={bootPhase} expanded={isExpanded} />}
+
             {/* Scrollable chat messages area */}
             <div
               className={cn(
                 "relative z-0 flex-1 flex flex-col overflow-y-auto hover-scroll",
-                isExpanded ? "px-[28px]" : "p-[16px]"
+                isExpanded ? "px-[28px]" : "p-[16px]",
+                // Held back for the skeleton's beat — hidden rather than unmounted
+                // so the scroll refs set themselves up exactly once.
+                bootPhase && "hidden"
               )}
               ref={chatContainerRef}
             >
