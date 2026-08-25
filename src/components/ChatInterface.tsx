@@ -23,6 +23,8 @@ import AgentSwitchDivider from './AgentSwitchDivider';
 import AgentThreadHeader from './AgentThreadHeader';
 import AvatarStack from './AvatarStack';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Classic } from '@/components/ui/classic-loader';
 import { ThemeToggle } from '../../components/theme-provider';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -244,6 +246,89 @@ const bookmarkedChats = defaultChats.filter((c) => ['2', '5', '8', '11', '17'].i
 // Pinned to "Good afternoon" so the greeting reads the same in every demo,
 // regardless of what time the deck is being presented.
 const getGreeting = () => 'Good afternoon';
+
+/**
+ * What the docked panel shows for its first beat, while the real content is still
+ * assembling. The header has already landed, so this stands in for the body only.
+ *
+ * Shapes are taken from the live layout's measured geometry so the swap doesn't
+ * shift anything: 'home' mirrors the centred greeting / composer / context chips
+ * with the discovery banner pinned at the bottom; 'thread' mirrors a reopened
+ * conversation — the user's bubble, a hand-off divider, then the agent's answer.
+ */
+const DockedBodySkeleton = ({
+  variant,
+  expanded,
+}: {
+  variant: 'home' | 'thread';
+  expanded: boolean;
+}) => {
+  // Same gutters and content width as the real messages area, so the skeleton
+  // occupies exactly the column the conversation will land in.
+  const frame = cn(
+    'flex flex-1 flex-col overflow-hidden',
+    expanded ? 'px-[28px] py-[20px]' : 'p-[16px]'
+  );
+  const column = cn('mx-auto flex w-full flex-col', expanded ? 'max-w-[768px]' : 'max-w-full');
+
+  if (variant === 'thread') {
+    // One exchange's worth of placeholders: the user's bubble, the hand-off
+    // divider, the agent's byline, its answer, and whatever it handed back.
+    const exchange = (key: string, lines: string[], card: number | null) => (
+      <div key={key} className="flex flex-col gap-[22px]">
+        <div className="flex justify-end">
+          <Skeleton className="h-[44px] w-[62%] rounded-[12px]" />
+        </div>
+        <Skeleton className="mx-auto h-[12px] w-[190px] rounded-full" />
+        <div className="flex items-center gap-[8px]">
+          <Skeleton className="size-[28px] shrink-0 rounded-full" />
+          <Skeleton className="h-[14px] w-[128px] rounded-full" />
+        </div>
+        <div className="flex flex-col gap-[10px]">
+          {lines.map((w, i) => (
+            <Skeleton key={i} className="h-[13px] rounded-full" style={{ width: w }} />
+          ))}
+        </div>
+        {card !== null && (
+          <Skeleton className="w-full rounded-[12px]" style={{ height: card }} />
+        )}
+      </div>
+    );
+
+    // The composer is deliberately absent — it stays live underneath, so only the
+    // conversation itself reads as loading.
+    return (
+      <div className={frame} aria-hidden="true">
+        <div className={cn(column, 'gap-[28px]')}>
+          {exchange('a', ['100%', '97%', '90%', '74%'], 124)}
+          {exchange('b', ['100%', '92%', '68%'], null)}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={frame} aria-hidden="true">
+      {/* Greeting + composer + chips, centred in the space above the banner —
+          the same `my-auto` behaviour the live empty state uses. */}
+      <div className={cn(column, 'flex-1 items-center justify-center gap-[32px]')}>
+        <Skeleton className="h-[30px] w-[254px] rounded-[8px]" />
+        <div className="flex w-full flex-col gap-[16px]">
+          <Skeleton className="h-[106px] w-full rounded-[12px]" />
+          <div className="flex flex-wrap justify-center gap-[8px]">
+            {[132, 133, 109, 154, 159].map((w) => (
+              <Skeleton key={w} className="h-[30px] rounded-full" style={{ width: w }} />
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* Discovery banner, pinned at the bottom */}
+      <div className={column}>
+        <Skeleton className="h-[96px] w-full shrink-0 rounded-[12px]" />
+      </div>
+    </div>
+  );
+};
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialReviewCampaign, initialTopic, onReviewArtifact, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId }) => {
   const navigate = useNavigate();
@@ -630,6 +715,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
 
   // State to manage the expanded (full-screen like) view vs. widget view
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
+
+  // Opening the docked panel straight onto a finished UI reads as a jump-cut, so
+  // the body holds a skeleton for one beat while the header lands immediately.
+  // Only for a panel opening onto its home state: when the caller seeds a prompt
+  // or a card, the thread starts right away and brings its own loading states.
+  // 'home' on a fresh docked open; 'thread' when a past chat is being reopened.
+  const [bootPhase, setBootPhase] = useState<'home' | 'thread' | null>(
+    docked &&
+      !initialExpanded &&
+      !initialMessage &&
+      !initialInsightCard &&
+      !initialTopic &&
+      !initialReviewCampaign
+      ? 'home'
+      : null
+  );
+  useEffect(() => {
+    if (!bootPhase) return;
+    const id = setTimeout(() => setBootPhase(null), bootPhase === 'home' ? 620 : 760);
+    return () => clearTimeout(id);
+  }, [bootPhase]);
+
   // State to manage which sidebar (bookmarks/history or agents) is active in expanded view
   const [activeSidebar, setActiveSidebar] = useState<'bookmarks' | 'agents' | null>('bookmarks');
   // Collapsed (icon-rail) state for the LHS sidebar in expanded view.
