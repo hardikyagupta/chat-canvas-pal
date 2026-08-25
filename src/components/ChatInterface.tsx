@@ -1454,12 +1454,57 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     primeAgentChat({ id: agent.id, name: agent.name, avatarSrc: agent.avatarSrc }, chat.title, chat.id, true);
   };
 
+  /**
+   * A seeded Recents row has no scripted agent behind it, so reopening one drops
+   * in a finished conversation built from the campaigns relay — the Insights
+   * hand-off and the segment it produced. Browsing history, so it renders as
+   * already-resolved: no typewriter, no thinking beat, switch markers settled.
+   */
+  const loadHistoryThread = (chat?: LhsChatItem) => {
+    handleNewChat();
+    const turns = CAMPAIGNS_FLOW.slice(0, 2);
+    const thread: ChatMessageData[] = [];
+    turns.forEach((turn, i) => {
+      const agent = marketingAgents.find(a => a.id === turn.switchAgentId);
+      thread.push({
+        type: 'chat', isAI: false, content: turn.userPrompt, animate: false,
+        navLabel: turn.navLabel, onAnimationComplete: () => {},
+      });
+      thread.push({
+        type: 'chat', isAI: true, content: '',
+        isAgentSwitch: true, switchSettled: true,
+        switchAgentLabel: turn.switchAgentLabel,
+        switchFromLabel: i > 0 ? turns[i - 1].switchAgentLabel : undefined,
+        reasoningSteps: turn.reasoningSteps,
+        avatarSrc: agent?.avatarSrc, avatarIcon: agent?.icon, avatarBgClass: agent?.colorClass,
+        animate: false,
+      });
+      thread.push({
+        type: 'chat', isAI: true, agentName: turn.switchAgentLabel,
+        avatarSrc: agent?.avatarSrc, avatarIcon: agent?.icon, avatarBgClass: agent?.colorClass,
+        content: turn.output,
+        hidePerformanceDashboard: !turn.showDashboard,
+        agentArtifactCard: turn.artifactCard,
+        animate: false,
+      });
+    });
+    setMessages(thread);
+    setMockChatCompleted(true);
+    // A follow-up send picks the relay up where this history left off.
+    campaignsTurnRef.current = turns.length;
+    if (chat) setChatTitleOverride(chat.title);
+  };
+
   // Selecting any Recents / chat-list row: agent chats replay their scripted
-  // intro; everything else just returns to the (current) conversation view.
+  // intro, seeded rows load the history thread above. Either way the chat area
+  // holds a thread-shaped skeleton for a beat first, so the conversation arrives
+  // rather than snapping in.
   const handleSelectChat = (id: string) => {
     const agentChat = agentChats.find(c => c.id === id);
+    setBootPhase('thread');
+    setActivePage('home');
     if (agentChat) handleOpenAgentChat(agentChat);
-    else setActivePage('home');
+    else loadHistoryThread(allRecents.find(c => c.id === id));
   };
 
   // Scripted intro for an agent-launched chat: the user's prompt, a
@@ -3695,7 +3740,13 @@ The content has been updated across all channels to reflect your changes.`;
         {!isExpanded && showMinOverlay && (
           <MinViewLhsOverlay
             activeNav={activeNav}
-            activeChatId={null}
+            activeChatId={activeLhsChatId}
+            // Recents rows were rendering off the component's own fallback list
+            // with no select handler, so tapping one did nothing. Feed it the real
+            // list and route taps through the same handler the expanded sidebar
+            // and the Chats page use.
+            chats={lhsChats}
+            onSelectChat={handleSelectChat}
             onClose={() => setShowMinOverlay(false)}
             onNewChat={handleNewChat}
             onOpenCustomAgents={openCustomAgents}
