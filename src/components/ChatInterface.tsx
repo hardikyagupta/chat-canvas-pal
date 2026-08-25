@@ -745,6 +745,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [lhsCollapsed, setLhsCollapsed] = useState(false);
   // RHS page: the default conversation view, or the full Chats / Bookmarks list page
   const [activePage, setActivePage] = useState<'home' | 'chats' | 'bookmarks' | 'reports' | 'scheduler' | 'custom-agents'>('home');
+  // Chats / Agents / Reports / Scheduled / Bookmarks come up behind a spinner
+  // rather than appearing fully-formed. Driven off `activePage` so every entry
+  // point — widget drawer, expanded sidebar, in-page links — gets it for free.
+  const [pageBooting, setPageBooting] = useState(false);
+  useEffect(() => {
+    if (activePage === 'home') {
+      setPageBooting(false);
+      return;
+    }
+    setPageBooting(true);
+    const id = setTimeout(() => setPageBooting(false), 700);
+    return () => clearTimeout(id);
+  }, [activePage]);
 
   // Custom agents (Claude-Projects-style) — prototype store in React state. The
   // list page shows all agents; selecting one opens its detail page.
@@ -3870,7 +3883,11 @@ The content has been updated across all channels to reflect your changes.`;
               Renders in both expanded and minimized (mobile) views. */}
           {activePage !== 'home' && (
             <div className="absolute inset-0 z-20 overflow-hidden bg-[var(--color-surface-0)]">
-              {activePage === 'reports' ? (
+              {pageBooting ? (
+                <div className="flex h-full w-full items-center justify-center">
+                  <Classic className="size-8 text-[var(--color-slate)]" />
+                </div>
+              ) : activePage === 'reports' ? (
                 <ReportsPage
                   reports={generatedReports}
                   compact={!isExpanded}
