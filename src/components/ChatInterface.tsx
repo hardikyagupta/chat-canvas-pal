@@ -4206,7 +4206,16 @@ The content has been updated across all channels to reflect your changes.`;
                       agentArtifactCard={message.agentArtifactCard}
                       onAgentArtifactAction={
                         message.agentArtifactCard && onReviewArtifact
-                          ? () => onReviewArtifact(message.agentArtifactCard!)
+                          ? () => {
+                              // Reviewing hands the user to a canvas that renders
+                              // *beside* this chat, so a full-screen thread has to
+                              // collapse back to the docked column first —
+                              // otherwise it covers the very canvas being built.
+                              // Collapsing (not remounting) keeps the thread that
+                              // led here — the Insights hand-off included — intact.
+                              if (isExpanded) requestExpand(false);
+                              onReviewArtifact(message.agentArtifactCard!);
+                            }
                           : undefined
                       }
                       appliedCohortId={appliedCohortId}
