@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { differenceInCalendarDays } from "date-fns";
 import { ThumbsUp, ThumbsDown, CheckCircle2, Settings, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,13 @@ import ChatInterface from "@/components/ChatInterface";
 import ChatInput from "@/components/ChatInput";
 import type { InsightCardContext } from "@/types/insightCard";
 import MarketingAgentsOverlay from "@/components/MarketingAgentsOverlay";
+import SegmentCreationNavbar from "@/components/campaigns/segment-creation/SegmentCreationNavbar";
+import SegmentCanvasColumn from "@/components/campaigns/segment-creation/SegmentCanvasColumn";
+import {
+  segmentRowPadding,
+  useSegmentBuild,
+  type ReviewSegmentContext,
+} from "@/components/campaigns/segment-creation/useSegmentBuild";
 import PersonalizeCoMarketerModal, {
   type PersonalizeCoMarketerData,
 } from "@/components/PersonalizeCoMarketerModal";
@@ -353,6 +361,32 @@ export default function AiDashboard() {
   const [isPersonalizeEditing, setIsPersonalizeEditing] = useState(false);
   const [savedPrefs, setSavedPrefs] = useState<PersonalizeCoMarketerData | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // "Review segment" on the Segment agent's artifact card in the docked chat.
+  // Rather than a full-screen overlay — which would remount the chat and lose the
+  // thread the user got here through — the canvas takes over this page's content
+  // column and the chat column stays exactly where it is: same instance, same
+  // messages, same scroll position, just narrower company.
+  const [reviewSegment, setReviewSegment] = useState<ReviewSegmentContext | null>(null);
+  // While the canvas is up this stops being the dashboard: the L1 rail and top
+  // bar step aside, and the creation navbar takes the top bar's slot so it spans
+  // the full width with the docked chat beneath it — segment creation reading as
+  // its own full-screen page, without the chat ever changing parent.
+  const onSegmentCanvas = reviewSegment !== null;
+  const segmentBuild = useSegmentBuild(reviewSegment, onSegmentCanvas);
+
+  /**
+   * Leaving the canvas — by SAVE or by closing it — hands the user over to the
+   * Segments list, which is where a segment lives once it exists. A saved
+   * segment rides along in route state so it heads that table.
+   */
+  const leaveSegmentCanvas = (
+    saved?: { name: string; count: string; aiGenerated: boolean }
+  ) => {
+    setReviewSegment(null);
+    navigate("/audience/segments", saved ? { state: { createdSegment: saved } } : undefined);
+  };
 
   // Hero composer greets with a cosmetic border shimmer (and the looping left
   // loader) that stays active until the user clicks into the field — a quiet
@@ -490,15 +524,41 @@ export default function AiDashboard() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#F4F8FF]">
-      <L1Nav active="ai-dashboard" />
+      {!onSegmentCanvas && <L1Nav active="ai-dashboard" />}
 
-      <div className="flex min-w-0 flex-1 flex-col p-2">
-        <TopNav
-          showCoMarketerNudge={false}
-          onOpenChat={() => openDockedChat({ expanded: false })}
-        />
+      <div className={cn("flex min-w-0 flex-1 flex-col", !onSegmentCanvas && "p-2")}>
+        {onSegmentCanvas ? (
+          <SegmentCreationNavbar
+            segmentName={segmentBuild.definition.name}
+            showAiIcon={segmentBuild.phase !== "thinking"}
+            // Reopen the docked chat *without* bumping the session — the thread
+            // that produced these rules is the context for editing them, so it
+            // has to survive being closed and reopened here.
+            onAskCoMarketer={() => setChatOpen(true)}
+            onSave={() => leaveSegmentCanvas(segmentBuild.saved)}
+            onClose={() => leaveSegmentCanvas()}
+          />
+        ) : (
+          <TopNav
+            showCoMarketerNudge={false}
+            onOpenChat={() => openDockedChat({ expanded: false })}
+          />
+        )}
 
-        <div className="mt-2 flex min-h-0 flex-1 gap-2">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1",
+            onSegmentCanvas
+              ? segmentRowPadding(segmentBuild.phase, chatMounted)
+              : "mt-2 gap-2"
+          )}
+        >
+          {/* Content column. "Review segment" in the chat swaps the dashboard out
+              for the segment creation canvas *here* — the chat column beside it is
+              untouched, so the thread that produced the segment stays on screen. */}
+          {onSegmentCanvas ? (
+            <SegmentCanvasColumn {...segmentBuild} />
+          ) : (
           <div className="scroll-slim relative min-w-0 flex-1 overflow-y-auto px-4 pt-6 pb-8">
             {/* Greeting */}
             <div className="flex flex-col items-center gap-1 text-center">
@@ -727,6 +787,7 @@ export default function AiDashboard() {
               </div>
             )}
           </div>
+          )}
 
           {/* Feedback confirmation — same DSL pill used for chat feedback.
               Portaled to <body> so no ancestor stacking/overflow can hide it. */}
@@ -774,7 +835,8 @@ export default function AiDashboard() {
           {chatMounted && (
             <div
               className={cn(
-                "flex h-full min-h-0 shrink-0 justify-end overflow-hidden pr-1",
+                "flex h-full min-h-0 shrink-0 justify-end overflow-hidden",
+                onSegmentCanvas ? "py-3" : "pr-1",
                 "transition-[width,opacity] duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
                 "motion-reduce:transition-none",
                 chatIn ? "w-[474px] opacity-100" : "w-0 opacity-0"
@@ -802,6 +864,9 @@ export default function AiDashboard() {
                 enabledAgents={enabledAgents}
                 setEnabledAgents={setEnabledAgents}
                 onCloseInterface={() => setChatOpen(false)}
+                onReviewArtifact={(card) =>
+                  setReviewSegment({ title: card.title, description: card.description })
+                }
               />
             </div>
           )}
