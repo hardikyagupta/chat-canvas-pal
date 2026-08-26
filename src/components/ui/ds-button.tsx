@@ -29,14 +29,14 @@ const dsButtonVariants = cva(
         // Primary carries a royal-blue-600 hairline and an inset white glow
         // (Figma node 743:1073) so the fill reads as raised, not flat.
         primary:
-          'border border-solid border-[var(--btn-primary-line)] bg-[var(--btn-primary)] text-white shadow-[var(--btn-inner-glow)] hover:bg-[image:var(--btn-hover-veil)] disabled:border-transparent disabled:bg-[var(--btn-primary-disabled)] disabled:bg-none disabled:shadow-none',
+          'border-[length:var(--btn-border)] border-solid border-[var(--btn-primary-line)] bg-[var(--btn-primary)] text-white shadow-[shadow:var(--btn-inner-glow)] hover:bg-[image:var(--btn-hover-veil)] disabled:border-transparent disabled:bg-[var(--btn-primary-disabled)] disabled:bg-none disabled:shadow-none',
         secondary:
           'border-[length:var(--btn-border)] border-solid border-[var(--btn-primary)] text-[var(--btn-primary)] hover:border-[var(--btn-primary-hover)] hover:bg-[var(--btn-primary-tint)] hover:text-[var(--btn-primary-hover)] disabled:border-[var(--btn-disabled-line)] disabled:bg-transparent disabled:text-[var(--btn-disabled-line)]',
         // Tertiary follows the dedicated DS node 738:1049: white fill, 1px
         // grey-200 hairline, grey-400 label — lighter than the thick outline
         // the other variants carry.
         tertiary:
-          'border border-solid border-[var(--btn-tertiary-border)] bg-[var(--btn-tertiary-bg)] bg-[image:var(--btn-tertiary-sheen)] text-[var(--btn-neutral)] shadow-[var(--btn-tertiary-shadow)] hover:bg-[var(--btn-neutral-tint)] disabled:border-[var(--btn-disabled-line)] disabled:bg-transparent disabled:bg-none disabled:text-[var(--btn-disabled-line)] disabled:shadow-none',
+          'border-[length:var(--btn-border)] border-solid border-[var(--btn-tertiary-border)] bg-[var(--btn-tertiary-bg)] bg-[image:var(--btn-tertiary-sheen)] text-[var(--btn-neutral)] shadow-[shadow:var(--btn-tertiary-shadow)] hover:bg-[var(--btn-neutral-tint)] disabled:border-[var(--btn-disabled-line)] disabled:bg-transparent disabled:bg-none disabled:text-[var(--btn-disabled-line)] disabled:shadow-none',
         error:
           'bg-[var(--btn-error)] text-white hover:bg-[var(--btn-error-hover)] disabled:bg-[var(--btn-error-disabled)] disabled:hover:bg-[var(--btn-error-disabled)]',
         link:

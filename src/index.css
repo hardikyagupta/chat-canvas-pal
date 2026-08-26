@@ -110,7 +110,7 @@
     --btn-radius: 8px;
     --btn-px: 12px;
     --btn-gap: 8px;
-    --btn-border: 1.5px;
+    --btn-border: 0.5px;                             /* every variant's stroke */
     --btn-font-size: 14px;
     --btn-font-weight: 500;                          /* Manrope Medium */
     --btn-tracking: 0.4px;
@@ -137,7 +137,9 @@
     --btn-tertiary-sheen:
       linear-gradient(rgb(0 0 0 / 0.01), rgb(0 0 0 / 0.01)),
       linear-gradient(180deg, rgb(255 255 255 / 0) 0%, rgb(0 0 0 / 0.015) 100%);
-    --btn-tertiary-shadow: 0 1px 8px 1px rgb(0 0 0 / 0.04);
+    /* A hard 1px lip, no blur — 5% black so it reads on any surface, not just
+       against white (Figma 743:1132). */
+    --btn-tertiary-shadow: 0 1px 0 0 rgb(0 0 0 / 0.05);
     --btn-disabled-line: #dde2ee;                    /* disabled border + label */
   }
 
@@ -226,7 +228,7 @@
     --btn-tertiary-sheen:
       linear-gradient(rgb(255 255 255 / 0.02), rgb(255 255 255 / 0.02)),
       linear-gradient(180deg, rgb(255 255 255 / 0) 0%, rgb(0 0 0 / 0.12) 100%);
-    --btn-tertiary-shadow: 0 1px 8px 1px rgb(0 0 0 / 0.2);
+    --btn-tertiary-shadow: 0 1px 0 0 rgb(0 0 0 / 0.4);
     --btn-disabled-line: #4a4a60;
     --color-royal-pale-soft: oklch(0.3 0.04 263);
 
@@ -1258,7 +1260,7 @@
 
 /* Primary — filled royal blue, white text/icon. The default action. */
 .dc-btn-primary {
-  border: 1px solid var(--btn-primary-line);
+  border: var(--btn-border) solid var(--btn-primary-line);
   background-color: var(--btn-primary);
   color: var(--color-white);
   box-shadow: var(--btn-inner-glow);
@@ -1276,7 +1278,7 @@
    grey-200 hairline, grey-400 label. Non-blue actions like "Edit
    configuration" or "Cancel". */
 .dc-btn-secondary {
-  border: 1px solid var(--btn-tertiary-border);
+  border: var(--btn-border) solid var(--btn-tertiary-border);
   background-color: var(--btn-tertiary-bg);
   background-image: var(--btn-tertiary-sheen);
   box-shadow: var(--btn-tertiary-shadow);
