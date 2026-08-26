@@ -149,13 +149,21 @@
 .cp-audience-stat { margin: 6px 0 0; color: var(--cp-muted); font-size: 13px; }
 
 .cp-template-actions { display: grid; grid-template-columns: 1fr; gap: 12px; }
+/* DS secondary (blue outline) — tokens shared with .dc-btn / DsButton. */
 .cp-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  height: 44px; border-radius: 10px; border: 1.5px solid var(--cp-brand);
-  background: #fff; color: var(--cp-brand); font-size: 14px; font-weight: 700;
-  cursor: pointer; transition: background-color 150ms ease;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--btn-gap);
+  height: var(--btn-height); border-radius: var(--btn-radius); padding: 0 var(--btn-px);
+  border: var(--btn-border) solid var(--btn-primary);
+  background: transparent; color: var(--btn-primary);
+  font-size: var(--btn-font-size); font-weight: var(--btn-font-weight);
+  letter-spacing: var(--btn-tracking);
+  cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.cp-btn:hover { background: var(--cp-brand-subtle); }
+.cp-btn:hover {
+  background: var(--btn-primary-tint);
+  border-color: var(--btn-primary-hover);
+  color: var(--btn-primary-hover);
+}
 .cp-btn svg { width: 16px; height: 16px; }
 
 /* ---- Email preview side panel (portaled — declares its own tokens) ---- */
@@ -174,16 +182,21 @@
   padding: 14px 52px 14px 20px; border-bottom: 1px solid var(--cp-line);
 }
 .cp-pp-left { display: flex; align-items: center; gap: 10px; }
+/* DS tertiary; the -primary modifier promotes it to the DS primary fill. */
 .cp-pp-btn {
-  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px;
-  border: 1px solid var(--cp-line-strong); border-radius: 8px; background: #fff;
-  color: var(--cp-ink); font-size: 12px; font-weight: 700; letter-spacing: .03em;
-  text-transform: uppercase; cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: var(--btn-gap);
+  height: var(--btn-height); padding: 0 var(--btn-px);
+  border: 1px solid var(--btn-tertiary-border); border-radius: var(--btn-radius);
+  background: var(--btn-tertiary-bg); color: var(--btn-neutral);
+  font-size: var(--btn-font-size); font-weight: var(--btn-font-weight);
+  letter-spacing: var(--btn-tracking);
+  cursor: pointer; white-space: nowrap;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.cp-pp-btn:hover { border-color: #C9D4EE; background: #FAFBFF; }
-.cp-pp-btn svg { width: 15px; height: 15px; }
-.cp-pp-btn-primary { background: #2F68E5; border-color: #2F68E5; color: #fff; }
-.cp-pp-btn-primary:hover { background: #2557c9; border-color: #2557c9; }
+.cp-pp-btn:hover { background: var(--btn-neutral-tint); }
+.cp-pp-btn svg { width: 16px; height: 16px; }
+.cp-pp-btn-primary { background: var(--btn-primary); border-color: var(--btn-primary); color: #fff; }
+.cp-pp-btn-primary:hover { background: var(--btn-primary-hover); border-color: var(--btn-primary-hover); }
 .cp-pp-devices { display: flex; align-items: center; gap: 4px; padding: 3px; border: 1px solid var(--cp-line-strong); border-radius: 8px; }
 .cp-pp-device { display: grid; place-items: center; width: 38px; height: 30px; border: 0; border-radius: 6px; background: #fff; color: var(--cp-muted); cursor: pointer; }
 .cp-pp-device:hover { background: #F1F3F8; }

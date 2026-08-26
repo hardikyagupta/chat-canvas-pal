@@ -36,8 +36,10 @@
     --muted: 0.968 0.007 247.895;
     --muted-foreground: 0.555 0.041 257.44;
 
-    --accent: 0.754 0.125 243.665;
-    --accent-foreground: 1 0 0;
+    /* Menu / list hover accent — the pale royal tint the app already uses for
+       highlighted rows, not a saturated blue fill. */
+    --accent: 0.953 0.022 260.723;
+    --accent-foreground: 0.227 0.066 279.78;
 
     --destructive: 0.637 0.208 25.326;
     --destructive-foreground: 0.984 0.003 247.858;
@@ -99,6 +101,44 @@
     --color-danger: oklch(0.576 0.209 29.482);
     --color-pink: oklch(0.832 0.12 343.407);
     --color-plum: oklch(0.257 0.038 310.318);        /* logo disc background */
+
+    /* ---- Infinity DS 3.0 button tokens ----
+       Straight from the design-system button set (Figma node 718:6337). Kept as
+       their own vars so a button never has to reach for a raw hex, and so the
+       dark theme can retune them in one place below. */
+    --btn-height: 32px;
+    --btn-radius: 8px;
+    --btn-px: 12px;
+    --btn-gap: 8px;
+    --btn-border: 1.5px;
+    --btn-font-size: 14px;
+    --btn-font-weight: 500;                          /* Manrope Medium */
+    --btn-tracking: 0.4px;
+
+    --btn-primary: #2f68e5;                          /* = --color-royal */
+    --btn-primary-hover: #2152bf;                    /* = --color-royal-strong */
+    --btn-primary-line: #0251ba;                     /* royal-blue-600 outline */
+    /* Inner glow that lifts the filled primary off the page (Figma 743:1073). */
+    --btn-inner-glow: inset 0 0 10px 2px rgb(255 255 255 / 0.12);
+    /* Primary hover is the same fill under a flat black veil (743:1156), not a
+       darker blue — so the outline and glow keep their contrast. */
+    --btn-hover-veil: linear-gradient(rgb(0 0 0 / 0.12), rgb(0 0 0 / 0.12));
+    --btn-primary-disabled: #2f68e58a;
+    --btn-primary-tint: #e7edff;                     /* secondary hover fill */
+    --btn-error: #f05c5c;
+    --btn-error-hover: #c71717;
+    --btn-error-disabled: #f05c5c8c;
+    --btn-neutral: #6f6f8d;                          /* tertiary label */
+    --btn-neutral-tint: #f8f8f8;                     /* tertiary hover fill (grey-50) */
+    --btn-tertiary-bg: #ffffff;                      /* tertiary rests on white */
+    --btn-tertiary-border: #e3e3e3;                  /* hairline (1px) */
+    /* Tertiary is not flat white: a 1% black veil plus a top-to-bottom shade
+       give it a slight dimensional lift (Figma 743:1132). */
+    --btn-tertiary-sheen:
+      linear-gradient(rgb(0 0 0 / 0.01), rgb(0 0 0 / 0.01)),
+      linear-gradient(180deg, rgb(255 255 255 / 0) 0%, rgb(0 0 0 / 0.015) 100%);
+    --btn-tertiary-shadow: 0 1px 8px 1px rgb(0 0 0 / 0.04);
+    --btn-disabled-line: #dde2ee;                    /* disabled border + label */
   }
 
   .dark {
@@ -168,6 +208,26 @@
     --color-royal: oklch(0.62 0.19 263);
     --color-royal-strong: oklch(0.7 0.16 263);       /* hover/pressed now goes lighter */
     --color-royal-pale: oklch(0.33 0.06 263);        /* dark-tinted pale background */
+
+    /* DS button tokens, retuned for the dark surface: fills lighten on hover and
+       the neutral/disabled lines pull down so they read as recessive, not white. */
+    --btn-primary: #4c82f0;
+    --btn-primary-hover: #75a1f5;
+    --btn-primary-line: #2a63c8;
+    --btn-primary-disabled: #4c82f08a;
+    --btn-primary-tint: #23304d;
+    --btn-error: #f26d6d;
+    --btn-error-hover: #f79292;
+    --btn-error-disabled: #f26d6d8c;
+    --btn-neutral: #9a9ab5;
+    --btn-neutral-tint: #32324a;
+    --btn-tertiary-bg: #2c2c40;
+    --btn-tertiary-border: #4a4a60;
+    --btn-tertiary-sheen:
+      linear-gradient(rgb(255 255 255 / 0.02), rgb(255 255 255 / 0.02)),
+      linear-gradient(180deg, rgb(255 255 255 / 0) 0%, rgb(0 0 0 / 0.12) 100%);
+    --btn-tertiary-shadow: 0 1px 8px 1px rgb(0 0 0 / 0.2);
+    --btn-disabled-line: #4a4a60;
     --color-royal-pale-soft: oklch(0.3 0.04 263);
 
     /* Navy / cobalt — brand secondary (lifted) */
@@ -1152,25 +1212,38 @@
    Not applied to buttons with a different intentional scale/role (hero CTAs,
    bevelled card CTAs, buttons height-locked to a sibling input).
    ========================================================================= */
+/* Focused field — royal-blue border plus a soft accent ring, the Tailwind
+   focus-ring idiom rendered with the DS primary. Applies to the element itself
+   (input / textarea) and to wrapper rows that hold a bare input, hence the
+   :focus-within arm. */
+.ds-field {
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.ds-field:focus,
+.ds-field:focus-visible,
+.ds-field:focus-within {
+  border-color: var(--btn-primary);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--btn-primary) 18%, transparent);
+  outline: none;
+}
+
 .dc-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 8px;
+  gap: var(--btn-gap);
+  height: var(--btn-height);
+  padding: 0 var(--btn-px);
+  border-radius: var(--btn-radius);
   font-family: 'Manrope', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+  letter-spacing: var(--btn-tracking);
   white-space: nowrap;
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 .dc-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
 }
 .dc-btn svg {
   width: 16px;
@@ -1178,41 +1251,82 @@
   flex-shrink: 0;
 }
 
+/* The three .dc-* variants map onto the Infinity DS 3.0 button types:
+   primary → primary, secondary → tertiary (neutral outline), secondary-blue →
+   secondary (blue outline). Disabled states use the DS translucent fills and
+   the grey-200 line rather than a blanket opacity. */
+
 /* Primary — filled royal blue, white text/icon. The default action. */
 .dc-btn-primary {
-  border: 1.5px solid var(--color-royal);
-  background-color: var(--color-royal);
+  border: 1px solid var(--btn-primary-line);
+  background-color: var(--btn-primary);
   color: var(--color-white);
+  box-shadow: var(--btn-inner-glow);
 }
 .dc-btn-primary:hover:not(:disabled) {
-  background-color: var(--color-royal-strong);
-  border-color: var(--color-royal-strong);
+  background-image: var(--btn-hover-veil);
+}
+.dc-btn-primary:disabled {
+  background-color: var(--btn-primary-disabled);
+  border-color: transparent;
+  box-shadow: none;
 }
 
-/* Secondary (neutral) — white bg, grey border, dark text. Non-blue actions
-   like "Edit configuration" or "Cancel". */
+/* Secondary (neutral) = DS tertiary (Figma node 738:1049) — white fill, 1px
+   grey-200 hairline, grey-400 label. Non-blue actions like "Edit
+   configuration" or "Cancel". */
 .dc-btn-secondary {
-  border: 1px solid var(--color-line);
-  background-color: var(--color-white);
-  color: var(--color-ink);
+  border: 1px solid var(--btn-tertiary-border);
+  background-color: var(--btn-tertiary-bg);
+  background-image: var(--btn-tertiary-sheen);
+  box-shadow: var(--btn-tertiary-shadow);
+  color: var(--btn-neutral);
 }
 .dc-btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-royal-pale-soft);
+  background-color: var(--btn-neutral-tint);
 }
 .dc-btn-secondary svg {
-  color: var(--color-grey);
+  color: currentColor;
+}
+.dc-btn-secondary:disabled {
+  border-color: var(--btn-disabled-line);
+  background-image: none;
+  box-shadow: none;
+  color: var(--btn-disabled-line);
 }
 
-/* Secondary (royal blue) — white bg, royal-blue border/text. For blue-emphasis
-   actions that sit next to a neutral secondary and shouldn't read as filled,
-   e.g. "Create objective" next to "Edit configuration". */
+/* Secondary (royal blue) = DS secondary — blue outline/label, pale blue on
+   hover. For blue-emphasis actions sitting next to a neutral secondary. */
 .dc-btn-secondary-blue {
-  border: 1.5px solid var(--color-royal);
-  background-color: var(--color-white);
-  color: var(--color-royal);
+  border: var(--btn-border) solid var(--btn-primary);
+  background-color: transparent;
+  color: var(--btn-primary);
 }
 .dc-btn-secondary-blue:hover:not(:disabled) {
-  background-color: var(--color-royal-pale);
+  background-color: var(--btn-primary-tint);
+  border-color: var(--btn-primary-hover);
+  color: var(--btn-primary-hover);
+}
+.dc-btn-secondary-blue:disabled {
+  border-color: var(--btn-disabled-line);
+  color: var(--btn-disabled-line);
+}
+
+/* Link — DS "Link" type: blue label, no chrome, underline on hover. Sits at
+   the same rhythm as the other .dc-btn variants but carries no box. */
+.dc-btn-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  height: auto;
+  color: var(--btn-primary);
+}
+.dc-btn-link:hover:not(:disabled) {
+  color: var(--btn-primary-hover);
+  text-decoration: underline;
+}
+.dc-btn-link:disabled {
+  color: var(--btn-disabled-line);
 }
 
 /* "Built for you" wand — a small magic flourish on the co-marketer review
