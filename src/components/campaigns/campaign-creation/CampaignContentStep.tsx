@@ -443,7 +443,7 @@ export default function CampaignContentStep({
             )}
             <button
               type="button"
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-[#DDE2EE] bg-white px-3 font-manrope text-[12px] font-bold uppercase tracking-[0.4px] text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+              className="dc-btn dc-btn-secondary h-10"
             >
               <SlidersHorizontal className="size-4" strokeWidth={2} />
               Filters

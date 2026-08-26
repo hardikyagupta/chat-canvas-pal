@@ -271,7 +271,7 @@ export default function JourneyAIModal({
           <div className="border-t border-[#EBEBF5] px-8 py-5">
             <button
               onClick={handleGenerate}
-              className="flex w-full items-center justify-center gap-2 rounded bg-[#143F93] px-5 py-3 font-manrope text-sm font-semibold uppercase tracking-[0.42px] text-white transition-colors hover:bg-[#0f3277]"
+              className="dc-btn dc-btn-primary w-full"
             >
               <img src={sparkle} alt="" className="h-4 w-4" />
               Generate journey

@@ -34,7 +34,7 @@ export default function NudgeFooter({
               e.stopPropagation();
               onBack();
             }}
-            className="rounded-[6px] border border-[#DDE2EE] px-3 py-1.5 font-manrope text-[12px] font-semibold text-[#17173A] transition-colors hover:bg-[#F4F8FF]"
+            className="dc-btn dc-btn-secondary"
           >
             Back
           </button>
@@ -44,7 +44,7 @@ export default function NudgeFooter({
             e.stopPropagation();
             onNext();
           }}
-          className="rounded-[6px] bg-[#2F68E5] px-3 py-1.5 font-manrope text-[12px] font-semibold text-white transition-colors hover:bg-[#255ad2]"
+          className="dc-btn dc-btn-primary"
         >
           {nextLabel}
         </button>

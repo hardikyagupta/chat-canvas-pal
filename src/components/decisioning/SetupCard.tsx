@@ -56,14 +56,14 @@ export default function SetupCard({
       {configured ? (
         <button
           onClick={onConfigure}
-          className="shrink-0 rounded border border-[#DDE2EE] bg-white px-4 py-1.5 font-manrope text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F4F8FF]"
+          className="dc-btn dc-btn-secondary shrink-0"
         >
           Edit
         </button>
       ) : (
         <button
           onClick={onConfigure}
-          className="shrink-0 rounded bg-[#2F68E5] px-4 py-1.5 font-manrope text-[13px] font-semibold tracking-[0.42px] text-white transition-colors hover:bg-[#255ad2]"
+          className="dc-btn dc-btn-primary shrink-0"
         >
           Configure
         </button>

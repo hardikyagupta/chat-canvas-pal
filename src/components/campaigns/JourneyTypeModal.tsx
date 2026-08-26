@@ -223,7 +223,7 @@ export default function JourneyTypeModal({
         <div className="px-10 py-6">
           <button
             onClick={() => onProceed(selected)}
-            className="rounded bg-[#143F93] px-5 py-2.5 font-manrope text-sm font-semibold uppercase tracking-[0.42px] text-white transition-colors hover:bg-[#0f3277]"
+            className="dc-btn dc-btn-primary"
           >
             Proceed
           </button>

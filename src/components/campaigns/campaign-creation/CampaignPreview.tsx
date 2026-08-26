@@ -47,7 +47,7 @@ function PreviewCard({
           <button
             type="button"
             onClick={onEdit}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#DDE2EE] bg-white px-3 font-manrope text-[12px] font-bold uppercase tracking-[0.4px] text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+            className="dc-btn dc-btn-secondary"
           >
             <Pencil className="size-3.5" strokeWidth={2} />
             Edit
@@ -223,7 +223,7 @@ export default function CampaignPreview({
         <button
           type="button"
           onClick={onPublish}
-          className="h-9 rounded bg-[#2F68E5] px-5 font-manrope text-xs font-semibold uppercase tracking-[0.42px] text-white transition-colors hover:bg-[#255ad2]"
+          className="dc-btn dc-btn-primary"
         >
           Save &amp; publish
         </button>
@@ -374,7 +374,7 @@ export default function CampaignPreview({
                   />
                   <button
                     type="button"
-                    className="h-11 shrink-0 rounded bg-[#2F68E5] px-5 font-manrope text-xs font-semibold uppercase tracking-[0.42px] text-white transition-colors hover:bg-[#255ad2]"
+                    className="dc-btn dc-btn-primary h-11 shrink-0"
                   >
                     Fetch details
                   </button>

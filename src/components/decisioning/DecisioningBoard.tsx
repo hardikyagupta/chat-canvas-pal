@@ -215,7 +215,7 @@ export default function DecisioningBoard() {
               </p>
               <button
                 onClick={handleStartPreparation}
-                className="mt-4 flex w-fit items-center gap-2 rounded-lg bg-[#2F68E5] px-5 py-3 font-manrope text-[14px] font-semibold uppercase tracking-[0.5px] text-white transition-colors hover:bg-[#255ad2]"
+                className="dc-btn dc-btn-primary mt-4 w-fit"
               >
                 Launch
               </button>
