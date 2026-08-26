@@ -186,7 +186,7 @@
 .cp-pp-btn {
   display: inline-flex; align-items: center; gap: var(--btn-gap);
   height: var(--btn-height); padding: 0 var(--btn-px);
-  border: 1px solid var(--btn-tertiary-border); border-radius: var(--btn-radius);
+  border: var(--btn-border) solid var(--btn-tertiary-border); border-radius: var(--btn-radius);
   background: var(--btn-tertiary-bg); color: var(--btn-neutral);
   font-size: var(--btn-font-size); font-weight: var(--btn-font-weight);
   letter-spacing: var(--btn-tracking);
