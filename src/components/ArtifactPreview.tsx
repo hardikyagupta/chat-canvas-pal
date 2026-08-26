@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { DocBody } from './DeepResearchDoc';
+import { DsButton } from '@/components/ui/ds-button';
 
 const MANROPE = 'Manrope, sans-serif';
 const chartTick = { fontSize: 11, fill: 'var(--color-grey)', fontFamily: MANROPE };
@@ -175,26 +176,20 @@ const ArtifactPreview: React.FC<ArtifactPreviewProps> = ({
               {doc?.title ?? fileName}
             </p>
           </div>
-          {/* Schedule — opens the same Schedule dialog used elsewhere (before Copy) */}
-          {onSchedule && (
-            <button
-              type="button"
-              onClick={onSchedule}
-              className="flex items-center gap-[6px] px-[10px] py-[5px] rounded-[8px] border border-[var(--color-line-input)] text-[13px] font-medium text-foreground hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-            >
-              <CalendarClock className="size-[14px] text-[var(--color-slate)]" />
-              Schedule
-            </button>
-          )}
-          {/* Download PDF — the single doc action (Copy removed per spec). */}
-          <button
-            type="button"
-            onClick={handleDownloadPdf}
-            className="flex items-center gap-[6px] px-[10px] py-[5px] rounded-[8px] border border-[var(--color-line-input)] text-[13px] font-medium text-foreground hover:bg-[var(--color-surface-1)] transition-colors shrink-0"
-          >
-            <Download className="size-[14px] text-[var(--color-slate)]" />
-            Download PDF
-          </button>
+          {/* Doc actions — Download PDF, then Schedule. Their own gap so the two
+              tertiary buttons don't read as one segmented control. */}
+          <div className="flex items-center gap-[12px]">
+            <DsButton variant="tertiary" onClick={handleDownloadPdf}>
+              <Download />
+              Download PDF
+            </DsButton>
+            {onSchedule && (
+              <DsButton variant="tertiary" onClick={onSchedule}>
+                <CalendarClock />
+                Schedule
+              </DsButton>
+            )}
+          </div>
           {/* Close the artifact panel */}
           <UITooltip>
             <TooltipTrigger asChild>

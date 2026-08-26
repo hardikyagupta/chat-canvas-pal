@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { DsButton } from '@/components/ui/ds-button';
 
 interface ModeSwitchConfirmationProps {
   isOpen: boolean;
@@ -47,24 +48,8 @@ export const ModeSwitchConfirmation: React.FC<ModeSwitchConfirmationProps> = ({
             
             {/* Buttons */}
             <div className="flex flex-row gap-5 justify-end">
-              {/* Cancel Button */}
-              <Button
-                onClick={onCancel}
-                className="px-[18px] py-2 h-9 bg-card border-[1.5px] border-[var(--color-navy)] rounded-[4px] font-['Manrope'] font-semibold text-sm leading-5 uppercase text-[var(--color-navy)] hover:bg-card hover:text-[var(--color-navy)] hover:border-[var(--color-navy)]"
-                style={{ letterSpacing: '0.42px' }}
-                variant="outline"
-              >
-                CANCEL
-              </Button>
-              
-              {/* Confirm Button */}
-              <Button
-                onClick={onConfirm}
-                className="px-[18px] py-2 h-9 bg-[var(--color-navy)] rounded-[4px] font-['Manrope'] font-semibold text-sm leading-5 uppercase text-white hover:bg-[var(--color-navy-deep)] hover:text-white"
-                style={{ letterSpacing: '0.42px' }}
-              >
-                SWITCH MODE
-              </Button>
+              <DsButton variant="secondary" onClick={onCancel}>Cancel</DsButton>
+              <DsButton onClick={onConfirm}>Switch mode</DsButton>
             </div>
           </div>
         </div>

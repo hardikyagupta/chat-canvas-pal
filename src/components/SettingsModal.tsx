@@ -20,6 +20,7 @@ import {
   BRAND_WIKI_SEED,
   type WikiFileStatus,
 } from '@/data/brandWikiSeed';
+import { DsButton } from '@/components/ui/ds-button';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
 
@@ -608,15 +609,10 @@ export const PersonalizationPanel: React.FC<{
             </div>
             {!hideWikiActions && (
               <>
-                <button
-                  type="button"
-                  onClick={openAdd}
-                  className="flex h-[38px] shrink-0 items-center gap-[6px] rounded-[9px] bg-[var(--color-ink)] px-[14px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90"
-                  style={FONT}
-                >
-                  <Plus className="size-[15px]" />
+                <DsButton onClick={openAdd}>
+                  <Plus />
                   Add
-                </button>
+                </DsButton>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -624,15 +620,10 @@ export const PersonalizationPanel: React.FC<{
                   className="hidden"
                   onChange={onUpload}
                 />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex h-[38px] shrink-0 items-center gap-[6px] rounded-[9px] border border-[var(--color-line-input)] bg-card px-[14px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-                  style={FONT}
-                >
-                  <Upload className="size-[15px]" />
+                <DsButton variant="tertiary" onClick={() => fileInputRef.current?.click()}>
+                  <Upload />
                   Upload
-                </button>
+                </DsButton>
               </>
             )}
           </div>
@@ -810,23 +801,13 @@ const WikiEditor: React.FC<{
         </Field>
 
         <div className="flex items-center justify-end gap-[10px]">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex h-[38px] items-center rounded-[9px] border border-[var(--color-line)] px-[16px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-            style={FONT}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
+          <DsButton variant="tertiary" onClick={onCancel}>Cancel</DsButton>
+          <DsButton
             disabled={!canSave}
             onClick={() => canSave && onSave({ name: name.trim(), useWhen: useWhen.trim(), content: content.trim() })}
-            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[16px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-            style={FONT}
           >
             Save
-          </button>
+          </DsButton>
         </div>
       </div>
     </div>
@@ -845,7 +826,7 @@ const TextInput: React.FC<{ value: string; onChange: (v: string) => void; placeh
     value={value}
     onChange={(e) => onChange(e.target.value)}
     placeholder={placeholder}
-    className="h-[40px] w-full rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
+    className="h-[40px] w-full rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors ds-field"
     style={FONT}
   />
 );
@@ -856,7 +837,7 @@ const TextArea: React.FC<{ value: string; onChange: (v: string) => void; rows?: 
     onChange={(e) => onChange(e.target.value)}
     rows={rows}
     placeholder={placeholder}
-    className="w-full resize-none rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] py-[10px] text-[13px] leading-[1.5] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
+    className="w-full resize-none rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] py-[10px] text-[13px] leading-[1.5] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors ds-field"
     style={FONT}
   />
 );

@@ -3,6 +3,7 @@ import { Calendar, Check, Copy, Download, FileText, Maximize2, ThumbsDown, Thumb
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { DsButton } from '@/components/ui/ds-button';
 
 /**
  * DeepResearchDoc — the finished deep-research report shown inline once the
@@ -278,15 +279,10 @@ const DeepResearchDoc: React.FC<DeepResearchDocProps> = ({
       </div>
 
       {showCreateSchedule ? (
-        <button
-          type="button"
-          onClick={onCreateSchedule}
-          className="inline-flex h-[36px] w-fit items-center gap-[8px] rounded-[8px] border border-[var(--color-line-input)] bg-card px-[12px] text-[13px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface-0)]"
-          style={MANROPE}
-        >
-          <Calendar className="size-[15px] text-[var(--color-royal)]" strokeWidth={1.75} />
+        <DsButton variant="tertiary" className="w-fit" onClick={onCreateSchedule}>
+          <Calendar strokeWidth={1.75} />
           Create schedule
-        </button>
+        </DsButton>
       ) : null}
 
       {showFeedback ? (

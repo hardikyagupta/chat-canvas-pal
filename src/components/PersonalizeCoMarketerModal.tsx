@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 // Imported (not /public) so Vite content-hashes the URL — the intro GIF then
 // busts cache whenever the asset changes.
 import personalizeIntroGif from '@/assets/personalize-intro.gif';
+import { DsButton } from '@/components/ui/ds-button';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
 
@@ -425,22 +426,8 @@ const PersonalizeCoMarketerModal: React.FC<PersonalizeCoMarketerModalProps> = ({
               </div>
 
               <div className="flex items-center gap-[10px]">
-                <button
-                  type="button"
-                  onClick={() => setStarted(true)}
-                  className="whitespace-nowrap rounded-[8px] bg-[#2F68E5] px-[18px] py-[9px] text-[13px] font-semibold text-white transition-colors hover:bg-[#255ad2] motion-safe:active:scale-[0.99]"
-                  style={FONT}
-                >
-                  Get started
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="whitespace-nowrap rounded-[8px] border border-[#DDE2EE] bg-white px-[16px] py-[9px] text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
-                  style={FONT}
-                >
-                  Maybe later
-                </button>
+                <DsButton onClick={() => setStarted(true)}>Get started</DsButton>
+                <DsButton variant="tertiary" onClick={onClose}>Maybe later</DsButton>
               </div>
             </div>
           </div>
@@ -510,37 +497,14 @@ const PersonalizeCoMarketerModal: React.FC<PersonalizeCoMarketerModalProps> = ({
             {/* Footer — "Skip for now" on the left, Back + Continue grouped on
                 the right (matches the Figma structure). */}
             <div className="flex w-full items-center justify-between gap-[16px]">
-              <button
-                type="button"
-                onClick={onClose}
-                className="whitespace-nowrap text-[13px] font-semibold text-[#9097AD] transition-opacity hover:opacity-70"
-                style={FONT}
-              >
-                Skip for now
-              </button>
+              <DsButton variant="link" onClick={onClose}>Skip for now</DsButton>
               <div className="flex shrink-0 items-center gap-[10px]">
                 {!isRoleStep && (
-                  <button
-                    type="button"
-                    onClick={() => setStepIndex((i) => i - 1)}
-                    className="whitespace-nowrap rounded-[8px] border border-[#DDE2EE] bg-white px-[16px] py-[9px] text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
-                    style={FONT}
-                  >
-                    Back
-                  </button>
+                  <DsButton variant="tertiary" onClick={() => setStepIndex((i) => i - 1)}>Back</DsButton>
                 )}
-                <button
-                  type="button"
-                  onClick={handleContinue}
-                  disabled={!canContinue}
-                  className={cn(
-                    'whitespace-nowrap rounded-[8px] bg-[#2F68E5] px-[20px] py-[9px] text-[13px] font-semibold text-white transition-colors motion-safe:active:scale-[0.99]',
-                    canContinue ? 'hover:bg-[#255ad2]' : 'cursor-not-allowed opacity-40'
-                  )}
-                  style={FONT}
-                >
+                <DsButton onClick={handleContinue} disabled={!canContinue}>
                   {step.continueLabel}
-                </button>
+                </DsButton>
               </div>
             </div>
           </>

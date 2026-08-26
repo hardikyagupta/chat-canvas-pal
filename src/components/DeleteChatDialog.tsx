@@ -9,6 +9,8 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
+import { dsButtonVariants } from '@/components/ui/ds-button';
+import { cn } from '@/lib/utils';
 
 const MANROPE = { fontFamily: 'Manrope, sans-serif' } as const;
 
@@ -44,21 +46,19 @@ const DeleteChatDialog: React.FC<DeleteChatDialogProps> = ({
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        {/* Secondary button — matches the artifact "Download" style */}
-        <AlertDialogCancel className="mt-0 flex items-center justify-center px-[16px] py-[6px] h-auto rounded-[6px] border-[0.75px] border-[var(--color-line-strong)] bg-card shadow-[0px_1px_0px_0px_oklch(0_0_0_/_0.02)] text-[14px] leading-[20px] font-normal text-[var(--color-ink)] hover:bg-[var(--color-surface-0)] hover:text-[var(--color-ink)]">
+        {/* DS tertiary / error pair (Infinity DS 3.0 button set). */}
+        <AlertDialogCancel
+          className={cn(dsButtonVariants({ variant: 'tertiary' }), 'mt-0')}
+          style={MANROPE}
+        >
           Cancel
         </AlertDialogCancel>
-        {/* Primary (destructive) — matches the artifact primary button, red fill */}
         <AlertDialogAction
           onClick={onConfirm}
-          className="relative flex items-center justify-center px-[16px] py-[6px] h-auto rounded-[8px] overflow-hidden bg-[var(--color-danger,#e5484d)] hover:bg-[var(--color-danger,#e5484d)]/90 text-[14px] leading-[20px] font-medium text-white"
+          className={dsButtonVariants({ variant: 'error' })}
+          style={MANROPE}
         >
-          <span
-            aria-hidden
-            className="absolute inset-0 rounded-[8px] pointer-events-none"
-            style={{ background: 'linear-gradient(to bottom, oklch(1 0 0 / 0.07) 82%, oklch(1 0 0 / 0.15) 94%)' }}
-          />
-          <span className="relative z-10">Delete</span>
+          Delete
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

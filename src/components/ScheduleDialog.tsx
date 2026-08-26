@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import type { ReportItem } from '@/data/reports';
 import type { ScheduleItem, ScheduleCadence } from '@/data/schedules';
 import { CADENCE_OPTIONS } from '@/data/schedules';
+import { DsButton } from '@/components/ui/ds-button';
 import {
   Dialog,
   DialogContent,
@@ -158,7 +159,7 @@ const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, rep
               value={scheduleName}
               onChange={(e) => setScheduleName(e.target.value)}
               placeholder="e.g. Weekly channel performance"
-              className="h-[40px] rounded-[10px] border border-[var(--color-line-input)] bg-white px-[14px] text-[14px] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-grey-soft)] focus:border-[var(--color-royal)] transition-colors"
+              className="h-[40px] rounded-[10px] border border-[var(--color-line-input)] bg-white px-[14px] text-[14px] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-grey-soft)] ds-field transition-colors"
               style={MANROPE}
             />
           </div>
@@ -208,7 +209,7 @@ const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, rep
                 value={cron}
                 onChange={(e) => setCron(e.target.value)}
                 placeholder="0 9 * * 1"
-                className="h-[40px] rounded-[10px] border border-[var(--color-line-input)] bg-white px-[14px] text-[14px] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-grey-soft)] focus:border-[var(--color-royal)] transition-colors font-mono"
+                className="h-[40px] rounded-[10px] border border-[var(--color-line-input)] bg-white px-[14px] text-[14px] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-grey-soft)] ds-field transition-colors font-mono"
               />
             </div>
           )}
@@ -221,7 +222,7 @@ const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, rep
               value={recipientsRaw}
               onChange={(e) => setRecipientsRaw(e.target.value)}
               placeholder="name@company.com, teammate@company.com"
-              className="h-[40px] rounded-[10px] border border-[var(--color-line-input)] bg-white px-[14px] text-[14px] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-grey-soft)] focus:border-[var(--color-royal)] transition-colors"
+              className="h-[40px] rounded-[10px] border border-[var(--color-line-input)] bg-white px-[14px] text-[14px] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-grey-soft)] ds-field transition-colors"
               style={MANROPE}
             />
             {/* Soft, friendly helper — never a raw validation dump. */}
@@ -241,29 +242,8 @@ const ScheduleDialog: React.FC<ScheduleDialogProps> = ({ open, onOpenChange, rep
 
         {/* Footer */}
         <div className="mt-[24px] flex items-center justify-end gap-[8px]">
-          <button
-            type="button"
-            onClick={() => handleOpenChange(false)}
-            className="flex items-center justify-center px-[14px] py-[8px] rounded-[8px] text-[14px] font-medium text-[var(--color-ink)] hover:bg-[var(--color-surface-1)] transition-colors"
-            style={MANROPE}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleCreate}
-            disabled={!canCreate}
-            className="relative flex items-center justify-center px-[16px] py-[8px] rounded-[8px] bg-foreground overflow-hidden transition-opacity disabled:opacity-40 disabled:pointer-events-none hover:bg-foreground/90"
-          >
-            <span
-              aria-hidden
-              className="absolute inset-0 rounded-[8px] pointer-events-none"
-              style={{ background: 'linear-gradient(to bottom, oklch(1 0 0 / 0.07) 82%, oklch(1 0 0 / 0.15) 94%)' }}
-            />
-            <span className="relative z-10 text-[14px] leading-[20px] font-medium text-background" style={MANROPE}>
-              Create schedule
-            </span>
-          </button>
+          <DsButton variant="tertiary" onClick={() => handleOpenChange(false)}>Cancel</DsButton>
+          <DsButton onClick={handleCreate} disabled={!canCreate}>Create schedule</DsButton>
         </div>
       </DialogContent>
     </Dialog>

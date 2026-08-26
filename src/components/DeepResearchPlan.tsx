@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DsButton } from '@/components/ui/ds-button';
 
 /**
  * DeepResearchPlan — a ChatGPT-style deep-research card shown inline in the chat
@@ -176,29 +177,18 @@ const DeepResearchPlan: React.FC<DeepResearchPlanProps> = ({
       {/* Plan footer — Edit on the left, Cancel + Start on the right (app DL buttons). */}
       {phase === 'plan' && (
         <div className="mt-[18px] flex items-center justify-between gap-[12px]">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onEdit?.()}
-            className="hover:bg-[var(--color-surface-0)] hover:text-[var(--color-ink)]"
-          >
-            Edit
-          </Button>
+          <DsButton variant="tertiary" onClick={() => onEdit?.()}>Edit</DsButton>
           <div className="flex items-center gap-[8px]">
-            <Button
-              variant="outline"
-              size="sm"
+            <DsButton
+              variant="tertiary"
               onClick={() => {
                 setPhase('cancelled');
                 onCancel?.();
               }}
-              className="hover:bg-[var(--color-surface-0)] hover:text-[var(--color-ink)]"
             >
               Cancel
-            </Button>
-            <Button size="sm" onClick={startResearch}>
-              Start
-            </Button>
+            </DsButton>
+            <DsButton onClick={startResearch}>Start</DsButton>
           </div>
         </div>
       )}
