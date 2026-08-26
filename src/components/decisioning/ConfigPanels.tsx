@@ -606,7 +606,7 @@ export function EventMappingPanel({
       <button
         type="button"
         onClick={addCustomEvent}
-        className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#2F68E5] transition-colors hover:text-[#255ad2]"
+        className="dc-btn dc-btn-link mt-3"
       >
         <Plus className="h-4 w-4" strokeWidth={2.5} />
         Add custom event

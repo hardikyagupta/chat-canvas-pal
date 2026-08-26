@@ -119,10 +119,10 @@ function CohortCard({
           onClick={() => onApply?.()}
           disabled={applied}
           className={cn(
-            "inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 font-manrope text-[13px] font-semibold",
+            "dc-btn",
             applied
-              ? "cursor-default bg-[#EDFBF5] text-[#0B7A56]"
-              : "bg-[#2F68E5] text-white hover:bg-[#2557C4]"
+              ? "cursor-default border-transparent bg-[#EDFBF5] text-[#0B7A56]"
+              : "dc-btn-primary"
           )}
         >
           {applied ? (
@@ -307,10 +307,10 @@ export default function SetupApplyCard({
           onClick={() => onApply?.()}
           disabled={applied}
           className={cn(
-            "flex h-9 w-full items-center justify-center gap-1.5 rounded-md font-manrope text-[13px] font-semibold",
+            "dc-btn w-full",
             applied
-              ? "cursor-default bg-[#EDFBF5] text-[#0B7A56]"
-              : "bg-[#2F68E5] text-white hover:bg-[#2557C4]"
+              ? "cursor-default border-transparent bg-[#EDFBF5] text-[#0B7A56]"
+              : "dc-btn-primary"
           )}
         >
           {applied ? (

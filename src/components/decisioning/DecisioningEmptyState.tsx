@@ -367,11 +367,9 @@ export default function DecisioningEmptyState() {
 
           <button
             onClick={() => navigate("/decisioning-engine/preview")}
-            className={`${
-              resuming ? "mt-2" : "mt-8"
-            } flex w-fit items-center gap-2 rounded-lg bg-[#2F68E5] px-5 py-3 font-manrope text-[14px] font-semibold tracking-[0.3px] text-white transition-colors hover:bg-[#255ad2]`}
+            className={`dc-btn dc-btn-primary w-fit ${resuming ? "mt-2" : "mt-8"}`}
           >
-            {resuming ? "Resume setup" : "GET STARTED"}
+            {resuming ? "Resume setup" : "Get started"}
           </button>
 
           <p className="mt-4 font-manrope text-[12px] text-[#9A9AB0]">

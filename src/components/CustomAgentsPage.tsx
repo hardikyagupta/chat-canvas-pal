@@ -11,6 +11,7 @@ import {
 import DeleteChatDialog from './DeleteChatDialog';
 import CreateCustomAgentModal from './CreateCustomAgentModal';
 import { PAGE_COLUMN, pageHeaderPadTop } from './pageLayout';
+import { DsButton } from '@/components/ui/ds-button';
 
 const MANROPE: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
 
@@ -30,20 +31,7 @@ interface CustomAgentsPageProps {
 }
 
 const NewAgentButton: React.FC<{ onClick: () => void; label?: string }> = ({ onClick, label = 'New agent' }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="relative flex items-center justify-center px-[14px] py-[7px] rounded-[8px] bg-foreground overflow-hidden hover:bg-foreground/90 transition-colors shrink-0"
-  >
-    <span
-      aria-hidden
-      className="absolute inset-0 rounded-[8px] pointer-events-none"
-      style={{ background: 'linear-gradient(to bottom, oklch(1 0 0 / 0.07) 82%, oklch(1 0 0 / 0.15) 94%)' }}
-    />
-    <span className="relative z-10 text-[14px] leading-[20px] font-medium text-background" style={MANROPE}>
-      {label}
-    </span>
-  </button>
+  <DsButton onClick={onClick}>{label}</DsButton>
 );
 
 /** Enabled-domain pill (e.g. "campaigns") — read-only, shown on each agent card. */

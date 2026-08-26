@@ -207,7 +207,7 @@ export default function CustomizeCardsPanel({
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-[8px] bg-[#2F68E5] px-8 py-3 font-manrope text-[14px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-[#255ad2]"
+            className="dc-btn dc-btn-primary px-8"
           >
             Save
           </button>

@@ -243,6 +243,23 @@ const GREETING_TOPICS = [
 // Bookmarked chats — the saved subset of the chat list
 const bookmarkedChats = defaultChats.filter((c) => ['2', '5', '8', '11', '17'].includes(c.id));
 
+// Seeded chat history for the starter agents, so an agent's page opens with a
+// populated Recents list instead of an empty one. These behave exactly like
+// chats started in-session: opening one replays the agent's finished thread.
+const seededAgentChats: LhsChatItem[] = [
+  { id: 'agent-seed-report-1', title: "Generate last month's marketing performance report.", time: '3h', agentId: 'starter-monthly-report' },
+  { id: 'agent-seed-launch-1', title: 'Help me plan the launch for our next campaign.', time: '6h', agentId: 'starter-campaign-launch' },
+  { id: 'agent-seed-report-2', title: 'Compare Q2 revenue against the prior quarter', time: '1d', agentId: 'starter-monthly-report', owner: 'Dani Bristow' },
+  { id: 'agent-seed-channel-1', title: 'Which channels need attention this week?', time: '1d', agentId: 'starter-channel-health' },
+  { id: 'agent-seed-launch-2', title: 'Build a pre-flight QA checklist for the festive push', time: '2d', agentId: 'starter-campaign-launch', owner: 'Marcus Lee' },
+  { id: 'agent-seed-audience-1', title: 'Which segments should I prioritize this quarter?', time: '2d', agentId: 'starter-audience-strategist' },
+  { id: 'agent-seed-pulse-1', title: 'What should we know about competitors this week?', time: '3d', agentId: 'starter-market-pulse' },
+  { id: 'agent-seed-report-3', title: 'Summarize which channels drove conversions last month', time: '4d', agentId: 'starter-monthly-report' },
+  { id: 'agent-seed-channel-2', title: 'Check email deliverability after the domain change', time: '5d', agentId: 'starter-channel-health', owner: 'Priya Nair' },
+  { id: 'agent-seed-audience-2', title: 'Find lapsed high-value buyers worth a win-back', time: '1w', agentId: 'starter-audience-strategist', owner: 'Sofia Almeida' },
+];
+
+
 // Pinned to "Good afternoon" so the greeting reads the same in every demo,
 // regardless of what time the deck is being presented.
 const getGreeting = () => 'Good afternoon';
@@ -793,7 +810,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // Chats started from an agent's page, persisted so they show in Recents (global)
   // and under that agent's page as its chat history. `activeAgentChatId` is the one
   // currently open in the conversation view (so Recents doesn't double it up).
-  const [agentChats, setAgentChats] = useState<LhsChatItem[]>([]);
+  const [agentChats, setAgentChats] = useState<LhsChatItem[]>(seededAgentChats);
   const [activeAgentChatId, setActiveAgentChatId] = useState<string | null>(null);
 
   const createCustomAgent = (data: { name: string; description: string; tools?: CustomAgent['tools'] }): CustomAgent => {
@@ -4728,8 +4745,12 @@ The content has been updated across all channels to reflect your changes.`;
                 // ml-auto pins the panel to the right edge: once the chat column is
                 // hidden, the artifact stays right-anchored and its width grows toward
                 // the LEFT (no snap-to-left flicker, no rightward growth).
-                "relative z-10 ml-auto h-full border-l border-[var(--color-line)] bg-card",
-                artifactFullExpanded ? "min-w-0" : "min-w-[360px]",
+                "relative z-10 ml-auto h-full bg-card",
+                // The left border is a column divider: at full width there is no
+                // chat column beside it, so it reads as a stray line down the page.
+                artifactFullExpanded
+                  ? "min-w-0"
+                  : "min-w-[360px] border-l border-[var(--color-line)]",
                 artifactClosing
                   ? "opacity-0 transition-all duration-300 ease-in-out"
                   : "animate-in slide-in-from-right-8 fade-in duration-300",

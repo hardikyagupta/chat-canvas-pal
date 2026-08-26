@@ -4,6 +4,7 @@ import {
   Sparkles, Bot, LayoutGrid, List, type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { dsButtonVariants } from '@/components/ui/ds-button';
 import type { ReportItem, ReportSource } from '@/data/reports';
 import {
   ActionMenu,
@@ -454,11 +455,12 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
                     key={key}
                     type="button"
                     onClick={() => setSourceFilter(key)}
+                    // Chips ARE DS buttons — same variant recipe, not a lookalike:
+                    // selected reads primary, the rest tertiary. Only the right
+                    // padding is trimmed to sit closer to the count badge.
                     className={cn(
-                      'inline-flex items-center gap-[6px] h-[30px] pl-[10px] pr-[9px] rounded-full border text-[13px] font-medium transition-colors',
-                      active
-                        ? 'border-transparent bg-[var(--color-royal)] text-white'
-                        : 'border-[var(--color-line-input)] bg-white text-[var(--color-charcoal)] hover:bg-[var(--color-surface-1)]',
+                      dsButtonVariants({ variant: active ? 'primary' : 'tertiary' }),
+                      'pr-[10px]',
                     )}
                     style={MANROPE}
                   >
@@ -467,7 +469,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({
                     <span
                       className={cn(
                         'inline-flex items-center justify-center min-w-[18px] h-[18px] px-[5px] rounded-full text-[11px] font-semibold',
-                        active ? 'bg-white/20 text-white' : 'bg-[var(--color-surface-1)] text-[var(--color-grey)]',
+                        active ? 'bg-white/20 text-white' : 'bg-[var(--color-surface-2)] text-[var(--btn-neutral)]',
                       )}
                     >
                       {count}

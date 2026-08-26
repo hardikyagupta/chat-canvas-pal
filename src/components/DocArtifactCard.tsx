@@ -1,5 +1,6 @@
 import React from 'react';
 import { FileText, Bookmark } from 'lucide-react';
+import { DsButton } from '@/components/ui/ds-button';
 
 export interface DocArtifact {
   title: string;
@@ -61,30 +62,12 @@ const DocArtifactCard: React.FC<DocArtifactCardProps> = ({ artifact, onDownload,
 
         {/* Actions row: Download + Preview, side by side and full width */}
         <div className="flex gap-[8px] items-center px-[16px] py-[12px] w-full">
-          <button
-            type="button"
-            onClick={onDownload}
-            className="flex flex-1 items-center justify-center px-[12px] py-[6px] rounded-[6px] border-[0.75px] border-[var(--color-line-strong)] bg-card shadow-[0px_1px_0px_0px_oklch(0_0_0_/_0.02)] hover:bg-[var(--color-surface-0)] transition-colors"
-          >
-            <span className="text-[14px] leading-[20px] text-[var(--color-ink)]" style={{ ...MANROPE, fontWeight: 400 }}>
-              Download
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={onPreview}
-            className="relative flex flex-1 items-center justify-center px-[12px] py-[6px] rounded-[8px] bg-foreground overflow-hidden hover:bg-foreground/90 transition-colors"
-          >
-            {/* button shine */}
-            <span
-              aria-hidden
-              className="absolute inset-0 rounded-[8px] pointer-events-none"
-              style={{ background: 'linear-gradient(to bottom, oklch(1 0 0 / 0.07) 82%, oklch(1 0 0 / 0.15) 94%)' }}
-            />
-            <span className="relative z-10 text-[14px] leading-[20px] font-medium text-background" style={MANROPE}>
-              Preview
-            </span>
-          </button>
+          <DsButton variant="tertiary" className="flex-1" onClick={onDownload}>
+            Download
+          </DsButton>
+          <DsButton className="flex-1" onClick={onPreview}>
+            Preview
+          </DsButton>
         </div>
       </div>
     </div>

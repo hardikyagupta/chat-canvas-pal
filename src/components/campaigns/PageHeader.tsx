@@ -54,7 +54,7 @@ export default function PageHeader({
           <div className="relative">
             <button
               onClick={onAiCtaClick}
-              className="flex items-center gap-1.5 rounded border border-[#DDE2EE] bg-white px-3 py-[5px] font-manrope text-sm font-semibold tracking-[0.42px] text-[#17173A] transition-colors hover:bg-[#F4F8FF]"
+              className="dc-btn dc-btn-secondary"
             >
               <img src={sparkle} alt="" className="h-4 w-4" />
               Create with AI
@@ -64,7 +64,7 @@ export default function PageHeader({
         )}
         <button
           onClick={onCtaClick}
-          className="flex items-center gap-2 rounded bg-[#2F68E5] px-3 py-[5px] font-manrope text-sm font-semibold tracking-[0.42px] text-white shadow-[0px_5px_5px_rgba(0,0,0,0.05)] transition-colors hover:bg-[#255ad2]"
+          className="dc-btn dc-btn-primary shadow-[0px_5px_5px_rgba(0,0,0,0.05)]"
         >
           {/* The animated AI sparkle asset. It's royal blue, which would vanish
               against this button's royal-blue fill, so it's flattened to white. */}

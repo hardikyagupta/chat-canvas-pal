@@ -265,7 +265,7 @@ function EmptyObjectivesBody({ onUseOpportunities }: { onUseOpportunities: () =>
           <span className="font-manrope text-[13px] text-[#6F6F8D]">or</span>
           <button
             onClick={onUseOpportunities}
-            className="font-manrope text-[13px] font-semibold text-[#2F68E5] transition-colors hover:text-[#1E4FBF]"
+            className="dc-btn dc-btn-link"
           >
             Create using Opportunities
           </button>

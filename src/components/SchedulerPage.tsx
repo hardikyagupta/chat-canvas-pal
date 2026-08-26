@@ -15,6 +15,7 @@ import {
 import DeleteChatDialog from './DeleteChatDialog';
 import ScheduleDialog, { type SchedulePrefill } from './ScheduleDialog';
 import { PAGE_COLUMN, pageHeaderPadTop } from './pageLayout';
+import { DsButton } from '@/components/ui/ds-button';
 
 const MANROPE: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
 
@@ -256,24 +257,11 @@ const SchedulerPage: React.FC<SchedulerPageProps> = ({
             >
               {title}
             </h1>
-            {/* Black button — matches the New chat button (ChatListPage) / DocArtifactCard. */}
-            <button
-              type="button"
-              onClick={openBlank}
-              className="relative flex items-center justify-center px-[14px] py-[7px] rounded-[8px] bg-foreground overflow-hidden hover:bg-foreground/90 transition-colors shrink-0"
-            >
-              <span
-                aria-hidden
-                className="absolute inset-0 rounded-[8px] pointer-events-none"
-                style={{ background: 'linear-gradient(to bottom, oklch(1 0 0 / 0.07) 82%, oklch(1 0 0 / 0.15) 94%)' }}
-              />
-              <span className="relative z-10 text-[14px] leading-[20px] font-medium text-background" style={MANROPE}>
-                New schedule
-              </span>
-            </button>
+            {/* DS primary (Infinity DS 3.0). */}
+            <DsButton onClick={openBlank}>New schedule</DsButton>
           </div>
 
-          <div className="flex items-center gap-[8px] h-[36px] px-[14px] w-full rounded-[10px] border border-[var(--color-line-input)] bg-white focus-within:border-[var(--color-royal)] transition-colors">
+          <div className="flex items-center gap-[8px] h-[36px] px-[14px] w-full rounded-[10px] border border-[var(--color-line-input)] bg-white ds-field transition-colors">
             <Search className="size-[16px] text-[var(--color-grey-soft)] shrink-0" />
             <input
               type="text"

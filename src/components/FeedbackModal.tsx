@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DsButton } from '@/components/ui/ds-button';
 
 export type FeedbackSentiment = 'up' | 'down';
 
@@ -120,17 +121,13 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ sentiment, onClose, onSub
         {cfg.footer && <p className="text-[12px] text-[var(--color-grey)]">{cfg.footer}</p>}
 
         {/* Submit */}
-        <button
-          type="button"
+        <DsButton
+          className="w-full"
           disabled={!canSubmit}
           onClick={() => onSubmit({ sentiment, tags, details })}
-          className={cn(
-            'w-full rounded-[8px] py-[10px] text-[14px] font-medium transition-colors',
-            canSubmit ? 'bg-foreground text-background hover:bg-foreground/90' : 'bg-[var(--color-line)] text-[var(--color-grey-soft)] cursor-not-allowed'
-          )}
         >
           {cfg.submit}
-        </button>
+        </DsButton>
       </div>
     </div>
   );

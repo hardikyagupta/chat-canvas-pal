@@ -139,7 +139,7 @@ export default function GuardrailsModal({
         <DialogFooter>
           <button
             onClick={() => onOpenChange(false)}
-            className="rounded border border-[#DDE2EE] bg-white px-4 py-2 font-manrope text-[13px] font-semibold text-[#17173A] transition-colors hover:bg-[#F4F8FF]"
+            className="dc-btn dc-btn-secondary"
           >
             Cancel
           </button>
@@ -148,7 +148,7 @@ export default function GuardrailsModal({
               onSave(form);
               onOpenChange(false);
             }}
-            className="rounded bg-[#2F68E5] px-4 py-2 font-manrope text-[13px] font-semibold tracking-[0.42px] text-white transition-colors hover:bg-[#255ad2]"
+            className="dc-btn dc-btn-primary"
           >
             Save guardrails
           </button>

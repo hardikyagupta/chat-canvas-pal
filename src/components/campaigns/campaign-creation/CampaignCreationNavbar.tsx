@@ -53,14 +53,14 @@ export default function CampaignCreationNavbar({
         <button
           type="button"
           onClick={onSave}
-          className="h-8 rounded border border-[#DDE2EE] px-4 font-manrope text-xs font-semibold uppercase tracking-[0.42px] text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+          className="dc-btn dc-btn-secondary"
         >
           Save
         </button>
         <button
           type="button"
           onClick={onNextStep}
-          className="h-8 rounded bg-[#2F68E5] px-4 font-manrope text-xs font-semibold uppercase tracking-[0.42px] text-white transition-colors hover:bg-[#255ad2]"
+          className="dc-btn dc-btn-primary"
         >
           {nextLabel}
         </button>

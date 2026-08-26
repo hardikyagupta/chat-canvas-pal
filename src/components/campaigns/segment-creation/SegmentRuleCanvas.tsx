@@ -109,7 +109,7 @@ function ConditionBlock({
         <>
           <button
             type="button"
-            className="flex h-9 items-center gap-1.5 rounded-md border border-[#2F68E5] px-4 font-manrope text-xs font-semibold uppercase tracking-[0.42px] text-[#2F68E5] transition-colors hover:bg-[#F0F5FF]"
+            className="dc-btn dc-btn-secondary-blue"
           >
             <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
             Add
@@ -253,7 +253,7 @@ export default function SegmentRuleCanvas({
       <div className="mt-5 flex justify-center">
         <button
           type="button"
-          className="flex h-9 items-center gap-1.5 rounded-md border border-[#DDE2EE] px-4 font-manrope text-xs font-semibold uppercase tracking-[0.42px] text-[#6F6F8D] transition-colors hover:border-[#2F68E5] hover:text-[#2F68E5]"
+          className="dc-btn dc-btn-secondary"
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
           Add block

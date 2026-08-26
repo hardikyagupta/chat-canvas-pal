@@ -79,7 +79,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
   {
     id: 'starter-monthly-report',
     name: MONTHLY_REPORT_AGENT_NAME,
-    description: "Turns last month's campaign data into a polished, executive-ready performance report.",
+    description: "Turns last month's data into an exec-ready report.",
     instructions:
       'You are a marketing performance analyst. Lead with outcomes (revenue, conversions, ROI), then channel mix, then what changed vs prior period. Flag delivery issues before blaming creative. End with 3 prioritized recommendations.',
     files: [],
@@ -98,7 +98,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
   {
     id: 'starter-campaign-launch',
     name: 'Campaign launch coach',
-    description: 'Plans go-live checklists, channel sequencing, and pre-flight QA before campaigns go live.',
+    description: 'Plans checklists and QA before campaigns go live.',
     instructions:
       'You are a campaign operations lead. Break launches into timeline, audience, creative, channels, and measurement. Surface risks early (list hygiene, frequency caps, tracking). Prefer actionable checklists over long prose.',
     files: [],
@@ -122,7 +122,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
   {
     id: 'starter-channel-health',
     name: 'Channel health analyst',
-    description: 'Spots delivery drops, engagement dips, and channel mix imbalances before they compound.',
+    description: 'Spots delivery drops and dips before they spread.',
     instructions:
       'You diagnose channel performance like a lifecycle marketer. Compare delivery, open/click, and conversion rates across email, SMS, push, and WhatsApp. Call out the metric that moved first, then hypothesize root cause. Recommend one quick win and one structural fix.',
     files: [],
@@ -146,7 +146,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
   {
     id: 'starter-audience-strategist',
     name: 'Audience strategist',
-    description: 'Turns segment data into targeting recommendations, persona snapshots, and growth opportunities.',
+    description: 'Turns segment data into targeting recommendations.',
     instructions:
       'You are a CRM and audience strategist. Think in segments, lifecycle stages, and incremental lift. Tie every recommendation to a business outcome (retention, reactivation, LTV). Use plain language — avoid jargon unless the user does first.',
     files: [],
@@ -169,7 +169,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
   {
     id: 'starter-market-pulse',
     name: 'Market pulse scout',
-    description: 'Surfaces competitor moves, category trends, and messaging angles for your next brief.',
+    description: 'Surfaces competitor moves and category trends.',
     instructions:
       'You are a competitive intelligence analyst for marketers. Summarize what competitors are doing, what is shifting in the category, and where our positioning has room to differentiate. Cite assumptions clearly and suggest messaging hooks for the next campaign brief.',
     files: [],

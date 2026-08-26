@@ -10,6 +10,7 @@ import {
   REPORT_TEMPLATES,
   ReportTemplate,
 } from '@/data/reportThemes';
+import { DsButton } from '@/components/ui/ds-button';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
 
@@ -284,7 +285,7 @@ const ReportCustomizationPanel: React.FC = () => {
           value={draftBrand.brandName}
           onChange={(e) => patchBrand({ brandName: e.target.value })}
           placeholder="Your Brand"
-          className="h-[40px] w-full rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
+          className="h-[40px] w-full rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors ds-field"
           style={FONT}
         />
       </div>
@@ -312,7 +313,7 @@ const ReportCustomizationPanel: React.FC = () => {
           <select
             value={draftBrand.font}
             onChange={(e) => patchBrand({ font: e.target.value })}
-            className="h-[40px] w-full appearance-none rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] pr-[36px] text-[13px] text-[var(--color-ink)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
+            className="h-[40px] w-full appearance-none rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] pr-[36px] text-[13px] text-[var(--color-ink)] outline-none transition-colors ds-field"
             style={{ fontFamily: draftBrand.font }}
           >
             {FONT_OPTIONS.map((f) => (
@@ -332,15 +333,10 @@ const ReportCustomizationPanel: React.FC = () => {
           negative margins + padding let the bar span the pane's full width and
           sit flush with its bottom edge, covering the content that scrolls by. */}
       <div className="sticky bottom-0 z-10 -mx-[32px] -mb-[40px] mt-[4px] flex items-center justify-between border-t border-[var(--color-line)] bg-[var(--color-surface-0)] px-[32px] pb-[24px] pt-[16px]">
-        <button
-          type="button"
-          onClick={onReset}
-          className="flex h-[38px] items-center gap-[7px] rounded-[9px] border border-[var(--color-line)] px-[14px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-          style={FONT}
-        >
-          <RotateCcw className="size-[14px]" />
+        <DsButton variant="tertiary" onClick={onReset}>
+          <RotateCcw />
           Reset to suggested
-        </button>
+        </DsButton>
         <div className="flex items-center gap-[12px]">
           {justSaved && !dirty && (
             <span className="flex items-center gap-[5px] text-[12px] text-[var(--color-grey)]" style={FONT}>
@@ -348,15 +344,7 @@ const ReportCustomizationPanel: React.FC = () => {
               Saved
             </span>
           )}
-          <button
-            type="button"
-            disabled={!dirty}
-            onClick={onSave}
-            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[18px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-            style={FONT}
-          >
-            Save theme
-          </button>
+          <DsButton disabled={!dirty} onClick={onSave}>Save theme</DsButton>
         </div>
       </div>
     </div>
