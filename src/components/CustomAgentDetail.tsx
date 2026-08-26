@@ -1,10 +1,11 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ArrowLeft, MoreHorizontal, Plus, Pencil, Trash2, X,
+  ArrowLeft, MoreHorizontal, Plus, Trash2, X,
   Paperclip, TextCursorInput, Github, FileText, Bot, MessageSquare,
 } from 'lucide-react';
 import { AgentToolsConfigPanel } from './AgentToolsConfig';
+import { DsButton } from '@/components/ui/ds-button';
 import { cn } from '@/lib/utils';
 import type { CustomAgent, AgentFile, AgentTools } from '@/data/customAgents';
 import { DEFAULT_AGENT_TOOLS } from '@/data/customAgents';
@@ -21,6 +22,14 @@ import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
 import CreateCustomAgentModal from './CreateCustomAgentModal';
 import ReportCustomizationModal from './ReportCustomizationModal';
+
+// Edit pencil (Phosphor "pencil-simple" glyph) — fill-based, uses currentColor.
+// Same glyph the chat row menu uses, so every edit affordance reads as one set.
+const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" {...props}>
+    <path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z" />
+  </svg>
+);
 
 const FONT: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
 
@@ -49,6 +58,10 @@ interface CustomAgentDetailProps {
 }
 
 /* ── Set instructions modal ──────────────────────────────────────── */
+/** Ceiling for agent instructions — long enough for a full brief, short enough
+ *  that the field stays a brief and not a document. */
+const INSTRUCTIONS_MAX_LENGTH = 2000;
+
 const SetInstructionsModal: React.FC<{
   open: boolean;
   initial: string;
@@ -67,6 +80,7 @@ const SetInstructionsModal: React.FC<{
 
   if (!open) return null;
   const canSave = value.trim().length > 0;
+  const nearLimit = value.length >= INSTRUCTIONS_MAX_LENGTH - 200;
 
   // Portal to <body> — see CreateCustomAgentModal: fixed positioning inline gets
   // scoped to the transformed content column, so the backdrop wouldn't cover the
@@ -85,33 +99,34 @@ const SetInstructionsModal: React.FC<{
             Provide relevant instructions and information for chats within this agent.
           </p>
         </div>
-        <textarea
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          autoFocus
-          rows={10}
-          placeholder="Think step by step and show reasoning for complex problems. Use specific examples."
-          className="w-full resize-none rounded-[12px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[14px] py-[12px] text-[13px] leading-[1.5] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
-          style={FONT}
-        />
+        {/* The counter rides the field's bottom-right corner as a small chip. The
+            textarea keeps its normal padding — no reserved band — so the counter
+            costs no vertical space; its opaque backing keeps it readable over any
+            text that scrolls beneath. */}
+        <div className="relative">
+          <textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            autoFocus
+            rows={10}
+            maxLength={INSTRUCTIONS_MAX_LENGTH}
+            placeholder="Think step by step and show reasoning for complex problems. Use specific examples."
+            className="w-full resize-none rounded-[12px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[14px] pt-[12px] pb-[12px] text-[13px] leading-[1.5] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors ds-field"
+            style={FONT}
+          />
+          <span
+            className={`pointer-events-none absolute bottom-[12px] right-[8px] rounded-[6px] bg-background/95 px-[5px] py-[1px] text-[11px] tabular-nums ${nearLimit ? 'text-[var(--color-charcoal)]' : 'text-[var(--color-grey-soft)]'}`}
+            style={FONT}
+            aria-live="polite"
+          >
+            {value.length.toLocaleString()} / {INSTRUCTIONS_MAX_LENGTH.toLocaleString()}
+          </span>
+        </div>
         <div className="flex items-center justify-end gap-[10px]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-[38px] items-center rounded-[9px] border border-[var(--color-line)] px-[16px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-            style={FONT}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={!canSave}
-            onClick={() => canSave && onSave(value.trim())}
-            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[16px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-            style={FONT}
-          >
+          <DsButton variant="tertiary" onClick={onClose}>Cancel</DsButton>
+          <DsButton disabled={!canSave} onClick={() => canSave && onSave(value.trim())}>
             Save instructions
-          </button>
+          </DsButton>
         </div>
       </div>
     </div>,
@@ -166,7 +181,7 @@ const AddTextContentModal: React.FC<{
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Name your content"
             autoFocus
-            className="h-[40px] w-full rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
+            className="h-[40px] w-full rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors ds-field"
             style={FONT}
           />
         </div>
@@ -177,29 +192,16 @@ const AddTextContentModal: React.FC<{
             onChange={(e) => setContent(e.target.value)}
             rows={8}
             placeholder="Type or paste in content…"
-            className="w-full resize-none rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] py-[10px] text-[13px] leading-[1.5] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
+            className="w-full resize-none rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] py-[10px] text-[13px] leading-[1.5] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors ds-field"
             style={FONT}
           />
         </div>
 
         <div className="flex items-center justify-end gap-[10px]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-[38px] items-center rounded-[9px] border border-[var(--color-line)] px-[16px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-            style={FONT}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={!canAdd}
-            onClick={() => canAdd && onAdd({ title: title.trim(), content: content.trim() })}
-            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[16px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-            style={FONT}
-          >
-            Add Content
-          </button>
+          <DsButton variant="tertiary" onClick={onClose}>Cancel</DsButton>
+          <DsButton disabled={!canAdd} onClick={() => canAdd && onAdd({ title: title.trim(), content: content.trim() })}>
+            Add content
+          </DsButton>
         </div>
       </div>
     </div>,
@@ -285,22 +287,8 @@ const SetToolsModal: React.FC<{
         <AgentToolsConfigPanel value={value} onChange={setValue} />
 
         <div className="flex items-center justify-end gap-[10px]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-[38px] items-center rounded-[9px] border border-[var(--color-line)] px-[16px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-            style={FONT}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => onSave(value)}
-            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[16px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90"
-            style={FONT}
-          >
-            Save tools
-          </button>
+          <DsButton variant="tertiary" onClick={onClose}>Cancel</DsButton>
+          <DsButton onClick={() => onSave(value)}>Save tools</DsButton>
         </div>
       </div>
     </div>,
@@ -429,7 +417,7 @@ const SetStarterQuestionsModal: React.FC<{
                 value={question}
                 onChange={(e) => updateQuestion(index, e.target.value)}
                 placeholder="Enter a starter question"
-                className="h-[40px] min-w-0 flex-1 rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors focus:border-[var(--color-line-strong)]"
+                className="h-[40px] min-w-0 flex-1 rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors ds-field"
                 style={FONT}
               />
               <button
@@ -444,33 +432,14 @@ const SetStarterQuestionsModal: React.FC<{
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={addQuestion}
-          className="inline-flex h-[36px] w-fit items-center gap-[6px] rounded-[9px] border border-[var(--color-line)] px-[12px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-          style={FONT}
-        >
-          <Plus className="size-[15px]" />
+        <DsButton variant="tertiary" className="w-fit" onClick={addQuestion}>
+          <Plus />
           Add question
-        </button>
+        </DsButton>
 
         <div className="flex items-center justify-end gap-[10px]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-[38px] items-center rounded-[9px] border border-[var(--color-line)] px-[16px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-            style={FONT}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[16px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90"
-            style={FONT}
-          >
-            Save questions
-          </button>
+          <DsButton variant="tertiary" onClick={onClose}>Cancel</DsButton>
+          <DsButton onClick={handleSave}>Save questions</DsButton>
         </div>
       </div>
     </div>,
@@ -651,15 +620,24 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-[8px] shrink-0">
-            <button
-              type="button"
-              onClick={() => setReportCustomizationOpen(true)}
-              className="flex h-[34px] items-center gap-[6px] rounded-[8px] border border-[var(--color-line)] px-[12px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-              style={FONT}
-            >
-              <FileText className="size-[15px]" />
-              Customize reports
-            </button>
+            {/* Min-view keeps the icon-only square (the label would crowd the
+                agent name); the full view gets the DS tertiary button. */}
+            {compact ? (
+              <button
+                type="button"
+                onClick={() => setReportCustomizationOpen(true)}
+                aria-label="Customize reports"
+                title="Customize reports"
+                className="flex size-[34px] items-center justify-center rounded-[8px] border border-[var(--color-line)] text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
+              >
+                <FileText className="size-[15px]" />
+              </button>
+            ) : (
+              <DsButton variant="tertiary" onClick={() => setReportCustomizationOpen(true)}>
+                <FileText />
+                Customize reports
+              </DsButton>
+            )}
             <ActionMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
               <ActionMenuTrigger asChild>
                 <button
@@ -671,7 +649,7 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
                 </button>
               </ActionMenuTrigger>
               <ActionMenuContent align="end" side="bottom">
-                <ActionMenuItem icon={Pencil} onSelect={() => { setMenuOpen(false); setEditOpen(true); }}>Edit details</ActionMenuItem>
+                <ActionMenuItem icon={PencilIcon} onSelect={() => { setMenuOpen(false); setEditOpen(true); }}>Edit details</ActionMenuItem>
                 {!agent.isBuiltIn ? (
                   <ActionMenuItem icon={Trash2} variant="danger" onSelect={() => { setMenuOpen(false); setDeleteOpen(true); }}>Delete</ActionMenuItem>
                 ) : null}
@@ -785,8 +763,11 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
             )}
           </div>
 
-          {/* Instructions + Files + Tools + Starter questions card */}
-          <div className="flex flex-col rounded-[16px] border border-[var(--color-line-input)] bg-card overflow-hidden">
+          {/* Instructions + Files + Tools + Starter questions card.
+              `shrink-0` matters in the compact column: as a flex item the card
+              would otherwise shrink to the scroll viewport and its own
+              overflow-hidden would crop the sections off the bottom. */}
+          <div className="flex shrink-0 flex-col rounded-[16px] border border-[var(--color-line-input)] bg-card overflow-hidden">
             {/* Instructions */}
             <div className="flex flex-col border-b border-[var(--color-line)]">
               <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
@@ -797,7 +778,7 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
                   aria-label="Edit instructions"
                   className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
                 >
-                  <Pencil className="size-[15px]" />
+                  <PencilIcon className="size-[15px]" />
                 </button>
               </div>
               <button
@@ -806,7 +787,7 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
                 className="px-[18px] pb-[16px] text-left"
               >
                 {agent.instructions ? (
-                  <p className="line-clamp-3 break-words text-[13px] leading-[19px] text-[var(--color-charcoal)] whitespace-pre-wrap" style={FONT}>
+                  <p className="line-clamp-4 break-words text-[13px] leading-[19px] text-[var(--color-charcoal)] whitespace-pre-wrap" style={FONT}>
                     {agent.instructions}
                   </p>
                 ) : (
@@ -934,7 +915,7 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
                   aria-label="Edit tools"
                   className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
                 >
-                  <Pencil className="size-[15px]" />
+                  <PencilIcon className="size-[15px]" />
                 </button>
               </div>
               <button
@@ -958,7 +939,7 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
                   aria-label="Edit starter questions"
                   className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
                 >
-                  <Pencil className="size-[15px]" />
+                  <PencilIcon className="size-[15px]" />
                 </button>
               </div>
               <button

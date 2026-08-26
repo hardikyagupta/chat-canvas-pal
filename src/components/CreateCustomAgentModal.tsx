@@ -5,15 +5,20 @@ import { cn } from '@/lib/utils';
 import type { AgentTools, CustomAgent } from '@/data/customAgents';
 import { DEFAULT_AGENT_TOOLS } from '@/data/customAgents';
 import { AgentToolsConfigPanel } from './AgentToolsConfig';
+import { DsButton } from '@/components/ui/ds-button';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
+
+/** Descriptions are a one-line subtitle on the agent card, so they stay short.
+ *  Mirrors INSTRUCTIONS_MAX_LENGTH in CustomAgentDetail. */
+const DESCRIPTION_MAX_LENGTH = 100;
 
 const fieldClass = (invalid: boolean) =>
   cn(
     'w-full rounded-[9px] border bg-[oklch(1_0_0_/_0.56)] px-[12px] text-[13px] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors',
     invalid
       ? 'border-[var(--color-danger,#e5484d)] ring-2 ring-[color-mix(in_oklch,var(--color-danger,#e5484d)_18%,transparent)] focus:border-[var(--color-danger,#e5484d)]'
-      : 'border-[var(--color-line-input)] focus:border-[var(--color-line-strong)]',
+      : 'border-[var(--color-line-input)] ds-field',
   );
 
 export interface CreateCustomAgentData {
@@ -165,21 +170,38 @@ const CreateCustomAgentModal: React.FC<CreateCustomAgentModalProps> = ({
 
           <div className="flex flex-col gap-[8px]">
             <label className="text-[13px] font-medium text-[var(--color-slate)]" style={FONT}>
-              What are you trying to achieve?
+              Description
             </label>
-            <textarea
-              ref={descriptionRef}
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                if (descriptionError && e.target.value.trim()) setDescriptionError(false);
-              }}
-              rows={4}
-              placeholder="Describe your agent, goals, subject, etc…"
-              aria-invalid={descriptionError}
-              className={cn(fieldClass(descriptionError), 'resize-none py-[10px] leading-[1.5]')}
-              style={FONT}
-            />
+            {/* Counter rides the field's bottom-right corner — same treatment as
+                the instructions modal, and costs no vertical space. */}
+            <div className="relative">
+              <textarea
+                ref={descriptionRef}
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  if (descriptionError && e.target.value.trim()) setDescriptionError(false);
+                }}
+                rows={4}
+                maxLength={DESCRIPTION_MAX_LENGTH}
+                placeholder="Describe your agent, goals, subject, etc…"
+                aria-invalid={descriptionError}
+                className={cn(fieldClass(descriptionError), 'resize-none py-[10px] leading-[1.5]')}
+                style={FONT}
+              />
+              <span
+                className={cn(
+                  'pointer-events-none absolute bottom-[12px] right-[8px] rounded-[6px] bg-background/95 px-[5px] py-[1px] text-[11px] tabular-nums',
+                  description.length >= DESCRIPTION_MAX_LENGTH - 10
+                    ? 'text-[var(--color-charcoal)]'
+                    : 'text-[var(--color-grey-soft)]'
+                )}
+                style={FONT}
+                aria-live="polite"
+              >
+                {description.length} / {DESCRIPTION_MAX_LENGTH}
+              </span>
+            </div>
             {descriptionError ? (
               <p className="text-[12px] text-[var(--color-danger,#e5484d)]" style={FONT}>
                 Describe what this agent should help with
@@ -198,22 +220,8 @@ const CreateCustomAgentModal: React.FC<CreateCustomAgentModalProps> = ({
         </div>
 
         <div className="flex shrink-0 items-center justify-end gap-[10px] border-t border-[var(--color-line)] bg-background px-[24px] py-[16px]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-[38px] items-center rounded-[9px] border border-[var(--color-line)] px-[16px] text-[13px] font-medium text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-            style={FONT}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="flex h-[38px] items-center rounded-[9px] bg-[var(--color-ink)] px-[16px] text-[13px] font-medium text-[var(--color-surface-0)] transition-opacity hover:opacity-90"
-            style={FONT}
-          >
-            {isEdit ? 'Save details' : 'Create agent'}
-          </button>
+          <DsButton variant="tertiary" onClick={onClose}>Cancel</DsButton>
+          <DsButton onClick={handleSubmit}>{isEdit ? 'Save details' : 'Create agent'}</DsButton>
         </div>
       </div>
     </div>,
