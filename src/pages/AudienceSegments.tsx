@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import L1Nav from "@/components/campaigns/L1Nav";
 import TopNav from "@/components/campaigns/TopNav";
@@ -76,6 +77,10 @@ export default function AudienceSegments() {
   // Segments saved from the canvas this session — they head the table, above the
   // stored rows, so the user lands back on the thing they just made.
   const [createdSegments, setCreatedSegments] = useState<Segment[]>([]);
+  const location = useLocation();
+  const navigate = useNavigate();
+  // The route state already turned into a table row — see the effect below.
+  const consumedState = useRef<unknown>(null);
 
   // Coordinate mount → enter and leave → unmount so both directions animate.
   useEffect(() => {
@@ -118,6 +123,27 @@ export default function AudienceSegments() {
       description: `${saved.name} · ${saved.count} contacts`,
     });
   };
+
+  /**
+   * Arrived from a segment canvas on another page (the AI dashboard builds its
+   * segment in its own content column, so the chat that produced it survives).
+   * The saved segment rides in on route state — land it at the top of the table
+   * and confirm it exactly as a save from this page's own canvas would.
+   *
+   * The route state is then cleared so a refresh or a back-navigation can't
+   * re-add it, and `consumedState` guards the window before that lands: the
+   * effect is re-run on the same state by StrictMode's double-invoke, which
+   * would otherwise list the segment twice.
+   */
+  useEffect(() => {
+    const saved = (
+      location.state as { createdSegment?: Parameters<typeof handleSegmentSaved>[0] } | null
+    )?.createdSegment;
+    if (!saved || consumedState.current === location.state) return;
+    consumedState.current = location.state;
+    handleSegmentSaved(saved);
+    navigate(".", { replace: true, state: null });
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggleAgent = (agentId: string, agentName: string) => {
     const agent = marketingAgents.find((a) => a.id === agentId);
