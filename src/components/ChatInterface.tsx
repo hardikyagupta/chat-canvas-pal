@@ -42,11 +42,7 @@ import {
 import { ModeSwitchConfirmation } from './ModeSwitchConfirmation';
 import LhsSidebar, { defaultChats } from './LhsSidebar';
 import type { LhsChatItem, LhsNavKey } from './LhsSidebar';
-// V1 (full nav rail, all sections) is kept around for when more sections are
-// ready; the early-release build below wires up V2 instead. Swap the import
-// (and the <SettingsModal .../> usage further down) back to './SettingsModal'
-// to restore the full experience.
-import SettingsModalV2 from './SettingsModalV2';
+import SettingsModal from './SettingsModal';
 import ChatListPage from './ChatListPage';
 import ReportsPage from './ReportsPage';
 import SchedulerPage from './SchedulerPage';
@@ -3804,11 +3800,10 @@ The content has been updated across all channels to reflect your changes.`;
           prefill={schedulePrefill}
         />
 
-        {/* Settings modal — opened from the Settings button at the bottom of the
-            LHS rail. Early release: wired to V2 (Memory & personalization only,
-            no LHS nav rail) instead of the full V1 experience — see the import
-            above. */}
-        <SettingsModalV2
+        {/* Settings — opened from the Settings button at the bottom of the LHS
+            rail. Nav rail on the left, section on the right; the brand wiki is
+            the section it lands on. */}
+        <SettingsModal
           isOpen={settingsModalOpen}
           onClose={() => setSettingsModalOpen(false)}
         />
