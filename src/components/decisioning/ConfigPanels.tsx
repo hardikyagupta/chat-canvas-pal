@@ -1,38 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Check,
-  ChevronDown,
-  Download,
-  FileText,
-  Globe,
-  Info,
-  Link2,
-  Loader2,
-  Plus,
-  Sparkles,
-  Upload,
-  UploadCloud,
-  X,
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   DEFAULT_EVENT_MAPPINGS,
   DEFAULT_GUARDRAILS,
   DETECTED_EVENTS,
+  EMPTY_BRAND_WIKI,
   STANDARD_EVENTS,
   type BrandWikiData,
   type CustomEventMapping,
   type EventMappingData,
   type GuardrailsData,
 } from "@/contexts/DecisioningSetupContext";
-import {
-  BRAND_WIKI_GROUPS,
-  BRAND_WIKI_TOTAL_QUESTIONS,
-} from "./brand-wiki-questions";
+import { BrandWikiIntake } from "./BrandWikiIntake";
 
 /* ------------------------------------------------------------------ */
 /* Shared RHS config panels — used by the board (initial config) and   */
@@ -149,67 +132,18 @@ export function BrandWikiPanel({
   initialData: BrandWikiData | null;
   onSave: (d: BrandWikiData) => void;
 }) {
-  const empty: BrandWikiData = { files: [], brandName: "", brandVoice: "", audience: "", website: "", answers: {} };
-  const [form, setForm] = useState<BrandWikiData>(empty);
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
-  const [website, setWebsite] = useState("");
-  const [fetching, setFetching] = useState(false);
-  const [fetched, setFetched] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [form, setForm] = useState<BrandWikiData>(EMPTY_BRAND_WIKI);
+  // Bumped on every open so BrandWikiIntake remounts: its own view state (which
+  // question groups are expanded, the website-scan result) resets with it,
+  // which is how this sheet has always behaved on reopen.
+  const [seedKey, setSeedKey] = useState(0);
+
   useEffect(() => {
     if (open) {
-      setForm(initialData ?? empty);
-      setOpenGroups(new Set());
-      setWebsite(initialData?.website ?? "");
-      setFetched(!!initialData?.website);
-      setFetching(false);
+      setForm(initialData ?? EMPTY_BRAND_WIKI);
+      setSeedKey((k) => k + 1);
     }
-  }, [open, initialData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const addFiles = (list: FileList | null) => {
-    if (!list) return;
-    const next = Array.from(list).map((f) => ({ name: f.name, size: f.size }));
-    setForm((f) => ({
-      ...f,
-      files: [...f.files, ...next.filter((n) => !f.files.some((p) => p.name === n.name))],
-    }));
-  };
-
-  // Simulate scanning the website and pre-filling brand details from it.
-  const fetchFromWebsite = () => {
-    const url = website.trim();
-    if (!url || fetching) return;
-    setFetching(true);
-    window.setTimeout(() => {
-      setFetching(false);
-      setFetched(true);
-      setForm((f) => ({
-        ...f,
-        website: url,
-        brandName: f.brandName || "Northwind",
-        brandVoice: f.brandVoice || "Warm, confident, never pushy",
-        audience: f.audience || "Urban millennials shopping for home goods",
-      }));
-    }, 1400);
-  };
-
-  const answers = form.answers ?? {};
-  const setAnswer = (id: string, value: string) =>
-    setForm((f) => ({ ...f, answers: { ...(f.answers ?? {}), [id]: value } }));
-
-  const answeredCount = useMemo(
-    () => Object.values(answers).filter((v) => v.trim() !== "").length,
-    [answers]
-  );
-  const allExpanded = openGroups.size === BRAND_WIKI_GROUPS.length;
-  const toggleAll = () =>
-    setOpenGroups(allExpanded ? new Set() : new Set(BRAND_WIKI_GROUPS.map((g) => g.id)));
-  const toggleGroup = (id: string) =>
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  }, [open, initialData]);
 
   return (
     <PanelShell
@@ -225,271 +159,7 @@ export function BrandWikiPanel({
         onOpenChange(false);
       }}
     >
-      {/* Upload zone */}
-      <div className="rounded-xl border-2 border-dashed border-[#C9D5F5] bg-[#F6F9FF] px-4 py-6 text-center">
-        <UploadCloud className="mx-auto h-6 w-6 text-[#2F68E5]" strokeWidth={1.8} />
-        <p className="mt-2 text-[14px] font-semibold text-[#17173A]">
-          Upload brand document
-        </p>
-        <p className="mt-0.5 text-[12px] text-[#6F6F8D]">
-          Brand guidelines, tone of voice, product catalogue…
-        </p>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="dc-btn dc-btn-primary mt-3"
-        >
-          <Upload strokeWidth={2} />
-          Upload document
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.doc,.docx,.csv,.txt,.md,.xlsx"
-          className="hidden"
-          onChange={(e) => {
-            addFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-      </div>
-
-      {form.files.length > 0 && (
-        <ul className="mt-3 flex flex-col gap-1.5">
-          {form.files.map((file) => (
-            <li
-              key={file.name}
-              className="flex items-center gap-2.5 rounded-lg border border-[#DDE2EE] px-3 py-2"
-            >
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded bg-[#E7EDFF]">
-                <FileText className="h-3.5 w-3.5 text-[#2F68E5]" strokeWidth={1.8} />
-              </span>
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#17173A]">
-                {file.name}
-              </span>
-              <span className="shrink-0 text-[12px] text-[#6F6F8D]">
-                {Math.max(1, Math.round(file.size / 1024))} KB
-              </span>
-              <button
-                aria-label={`Remove ${file.name}`}
-                onClick={() =>
-                  setForm((f) => ({ ...f, files: f.files.filter((p) => p.name !== file.name) }))
-                }
-                className="grid h-5 w-5 shrink-0 place-items-center rounded text-[#6F6F8D] transition-colors hover:bg-[#F4F8FF] hover:text-[#17173A]"
-              >
-                <X className="h-3.5 w-3.5" strokeWidth={2} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <a
-          href="#"
-          onClick={(e) => e.preventDefault()}
-          className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#2F68E5] hover:underline"
-        >
-          <Download className="h-4 w-4" strokeWidth={2} />
-          Download sample template (Excel)
-        </a>
-        <span className="inline-flex items-center gap-1.5 text-[12.5px] text-[#6F6F8D]">
-          Not sure what to upload?
-          <Info className="h-4 w-4 text-[#9A9AB2]" strokeWidth={2} />
-        </span>
-      </div>
-
-      {/* OR divider */}
-      <div className="my-5 flex items-center gap-3">
-        <span className="h-px flex-1 bg-[#E4E8F1]" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#9A9AB2]">
-          Or
-        </span>
-        <span className="h-px flex-1 bg-[#E4E8F1]" />
-      </div>
-
-      {/* Import from website */}
-      <div className="mb-5">
-        <div className="flex items-start gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF3FF]">
-            <Globe className="h-5 w-5 text-[#2F68E5]" strokeWidth={1.8} />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[14px] font-bold text-[#17173A]">Or import from your website</p>
-            <p className="text-[12.5px] text-[#6F6F8D]">
-              Enter your brand website and we'll fetch key information automatically.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-3 flex items-center gap-2">
-          <div className="relative flex-1">
-            <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9A9AB2]" strokeWidth={2} />
-            <Input
-              value={website}
-              onChange={(e) => {
-                setWebsite(e.target.value);
-                setFetched(false);
-              }}
-              onKeyDown={(e) => e.key === "Enter" && fetchFromWebsite()}
-              placeholder="https://yourbrand.com"
-              className="h-9 pl-9 text-[13px]"
-            />
-          </div>
-          <button
-            onClick={fetchFromWebsite}
-            disabled={!website.trim() || fetching}
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded border border-[#2F68E5] bg-white px-4 text-[12px] font-semibold uppercase tracking-[0.5px] text-[#2F68E5] transition-colors hover:bg-[#EEF3FF] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {fetching ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Scanning
-              </>
-            ) : (
-              "Fetch details"
-            )}
-          </button>
-        </div>
-
-        {fetched && !fetching ? (
-          <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-[#00A576]">
-            <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-            Imported brand details from {website.trim()} — review below.
-          </p>
-        ) : (
-          <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-[#6F6F8D]">
-            <Sparkles className="h-3.5 w-3.5 text-[#2F68E5]" strokeWidth={2} />
-            We'll scan your website to identify your brand, products, audience and communication style.
-          </p>
-        )}
-      </div>
-
-      <div id="brand-wiki-manual-fields" />
-      <div className="mb-5 h-px bg-[#E4E8F1]" />
-      <Field label="Brand name">
-        <Input
-          value={form.brandName}
-          onChange={(e) => setForm((f) => ({ ...f, brandName: e.target.value }))}
-          placeholder="e.g. Northwind"
-          className="h-9 text-[13px]"
-        />
-      </Field>
-      <Field label="Brand voice">
-        <Input
-          value={form.brandVoice}
-          onChange={(e) => setForm((f) => ({ ...f, brandVoice: e.target.value }))}
-          placeholder="e.g. Warm, confident, never pushy"
-          className="h-9 text-[13px]"
-        />
-      </Field>
-      <Field label="Who you sell to">
-        <Input
-          value={form.audience}
-          onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))}
-          placeholder="e.g. Urban millennials shopping for home goods"
-          className="h-9 text-[13px]"
-        />
-      </Field>
-
-      <div className="mt-1 border-t border-[#EDEFF5] pt-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h4 className="text-[14px] font-bold text-[#17173A]">
-              Tell us more about your brand
-            </h4>
-            <p className="text-[12.5px] text-[#6F6F8D]">
-              The more details you share, the better the engine can represent your brand.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="rounded-md bg-[#F1F3F9] px-2.5 py-1 text-[12px] font-medium text-[#6F6F8D]">
-              {answeredCount > 0
-                ? `${answeredCount}/${BRAND_WIKI_TOTAL_QUESTIONS} answered`
-                : `${BRAND_WIKI_TOTAL_QUESTIONS} questions`}
-            </span>
-            <button
-              onClick={toggleAll}
-              className="text-[12.5px] font-semibold text-[#2F68E5] hover:underline"
-            >
-              {allExpanded ? "Collapse all" : "Expand all"}
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-col gap-2.5">
-          {BRAND_WIKI_GROUPS.map((group) => {
-            const isOpen = openGroups.has(group.id);
-            const answered = group.questions.filter(
-              (q) => (answers[q.id] ?? "").trim() !== ""
-            ).length;
-            return (
-              <div
-                key={group.id}
-                className="overflow-hidden rounded-xl border border-[#E4E8F1] bg-white"
-              >
-                <button
-                  onClick={() => toggleGroup(group.id)}
-                  aria-expanded={isOpen}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[#FAFBFE]"
-                >
-                  <span
-                    className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${group.tile}`}
-                  >
-                    <group.Icon className="h-5 w-5" strokeWidth={1.8} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5 text-[14px] font-semibold text-[#17173A]">
-                      {group.title}
-                      <span className="text-[13px] font-medium text-[#9A9AB2]">
-                        {answered > 0
-                          ? `(${answered}/${group.questions.length})`
-                          : `(${group.questions.length})`}
-                      </span>
-                    </span>
-                    <span className="block truncate text-[12.5px] text-[#6F6F8D]">
-                      {group.subtitle}
-                    </span>
-                  </span>
-                  <ChevronDown
-                    className={`h-5 w-5 shrink-0 text-[#9A9AB2] transition-transform duration-200 ${
-                      isOpen ? "rotate-180" : ""
-                    }`}
-                    strokeWidth={2}
-                  />
-                </button>
-
-                {isOpen && (
-                  <div className="flex flex-col gap-4 border-t border-[#EDEFF5] px-4 py-4">
-                    {group.questions.map((q) => (
-                      <label key={q.id} className="block">
-                        <span className="mb-1.5 block text-[13px] font-semibold text-[#17173A]">
-                          {q.label}
-                        </span>
-                        {q.multiline ? (
-                          <Textarea
-                            value={answers[q.id] ?? ""}
-                            onChange={(e) => setAnswer(q.id, e.target.value)}
-                            placeholder={q.placeholder}
-                            className="min-h-[64px] text-[13px]"
-                          />
-                        ) : (
-                          <Input
-                            value={answers[q.id] ?? ""}
-                            onChange={(e) => setAnswer(q.id, e.target.value)}
-                            placeholder={q.placeholder}
-                            className="h-9 text-[13px]"
-                          />
-                        )}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <BrandWikiIntake key={seedKey} value={form} onChange={setForm} />
     </PanelShell>
   );
 }

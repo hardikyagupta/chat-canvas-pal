@@ -1,7 +1,6 @@
 import React from 'react';
 import {
-  Search, Palette, SlidersHorizontal, Sparkles, UserRound,
-  Blocks, Bell, ShieldCheck, Cog, Check, X,
+  Search, Palette, UserRound, BookOpen, Check, X, ArrowLeft,
   Plus, Pencil, Trash2, MoreHorizontal, FileText, Upload, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,30 +20,36 @@ import {
   type WikiFileStatus,
 } from '@/data/brandWikiSeed';
 import { DsButton } from '@/components/ui/ds-button';
+import { BrandWikiIntake } from './decisioning/BrandWikiIntake';
+import {
+  EMPTY_BRAND_WIKI,
+  useDecisioningSetupOptional,
+  type BrandWikiData,
+} from '@/contexts/DecisioningSetupContext';
 
 const FONT = { fontFamily: 'Manrope, sans-serif' } as const;
 
 type NavItem = { id: string; label: string; icon: React.ComponentType<{ className?: string }> };
-// Same nav structure as the full-page Settings so the modal mirrors it exactly.
+// Only sections that lead somewhere real. The unbuilt ones (Model & behavior,
+// Tools, Notifications, Privacy, Advanced) are deliberately absent rather than
+// listed against a placeholder — a rail where two thirds of the rows go nowhere
+// reads as a broken product, not a roadmap. Add them back as they land.
 const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
+  { title: 'KNOWLEDGE', items: [
+    { id: 'wiki', label: 'Brand wiki', icon: BookOpen },
+  ] },
   { title: 'APPEARANCE', items: [
     { id: 'theme', label: 'Theme', icon: Palette },
     { id: 'reports', label: 'Report customization', icon: FileText },
-    { id: 'general', label: 'General', icon: SlidersHorizontal },
   ] },
-  { title: 'INTELLIGENCE', items: [
-    { id: 'model', label: 'Model & behavior', icon: Sparkles },
-    { id: 'personalization', label: 'Memory & personalization', icon: UserRound },
-  ] },
-  { title: 'CAPABILITIES', items: [
-    { id: 'tools', label: 'Tools & integrations', icon: Blocks },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-  ] },
-  { title: 'SECURITY', items: [
-    { id: 'privacy', label: 'Privacy & data', icon: ShieldCheck },
-    { id: 'advanced', label: 'Advanced', icon: Cog },
+  { title: 'ACCOUNT', items: [
+    { id: 'profile', label: 'Profile', icon: UserRound },
   ] },
 ];
+
+/** Panels that own their scrolling (sticky header + scrolling list) rather than
+ *  letting the content column scroll them. */
+const SELF_SCROLLING = new Set(['wiki', 'profile']);
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -52,7 +57,7 @@ interface SettingsModalProps {
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const [activeNav, setActiveNav] = React.useState('theme');
+  const [activeNav, setActiveNav] = React.useState('wiki');
   const { translucent, setTranslucent, themeId, setThemeId, presets } = useAtmosphere();
   const { theme, setTheme } = useTheme();
 
@@ -141,13 +146,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <div
               className={cn(
                 'min-h-0 flex-1',
-                activeNav === 'personalization' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto',
+                SELF_SCROLLING.has(activeNav) ? 'flex flex-col overflow-hidden' : 'overflow-y-auto',
               )}
             >
               <div
                 className={cn(
                   'w-full max-w-[720px] px-[32px]',
-                  activeNav === 'personalization'
+                  SELF_SCROLLING.has(activeNav)
                     ? 'flex min-h-0 flex-1 flex-col py-[40px]'
                     : 'py-[40px]',
                 )}
@@ -164,10 +169,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   />
                 ) : activeNav === 'reports' ? (
                   <ReportCustomizationPanel />
-                ) : activeNav === 'personalization' ? (
-                  <PersonalizationPanel />
+                ) : activeNav === 'profile' ? (
+                  <PersonalizationPanel profileOnly />
                 ) : (
-                  <PlaceholderPanel title={NAV_SECTIONS.flatMap((s) => s.items).find((i) => i.id === activeNav)?.label ?? ''} />
+                  // Browse-only, as the early release intended: entries are
+                  // seeded and the Add/Upload actions stay hidden.
+                  <PersonalizationPanel wikiOnly hideWikiActions />
                 )}
               </div>
             </div>
@@ -306,6 +313,16 @@ const TAB_LABEL: Record<PersonalizationTab, string> = {
   wiki: 'Brand wiki',
 };
 
+/** The two halves of the brand wiki: the file library, and the brand intake
+ *  form shared with the decisioning engine. Kept separate from
+ *  PersonalizationTab, which still governs the Profile/Brand-wiki split. */
+type WikiTab = 'sources' | 'brandProfile';
+
+const WIKI_TAB_LABEL: Record<WikiTab, string> = {
+  sources: 'Sources',
+  brandProfile: 'Brand profile',
+};
+
 interface WikiItem {
   id: string;
   name: string;
@@ -352,9 +369,11 @@ const WikiStatusBadge: React.FC<{ status: WikiFileStatus }> = ({ status }) => (
 const WikiFileRow: React.FC<{
   item: WikiItem;
   onToggle: (id: string) => void;
+  /** Tapping the file name reads it — the detail view opens in this same pane. */
+  onOpen: (item: WikiItem) => void;
   onEdit: (item: WikiItem) => void;
   onRemove: (id: string) => void;
-}> = ({ item, onToggle, onEdit, onRemove }) => (
+}> = ({ item, onToggle, onOpen, onEdit, onRemove }) => (
   <div
     className={cn(
       'group relative flex items-center justify-between gap-[12px] px-[14px] py-[11px] transition-opacity',
@@ -363,7 +382,7 @@ const WikiFileRow: React.FC<{
   >
     <button
       type="button"
-      onClick={() => onEdit(item)}
+      onClick={() => onOpen(item)}
       className="min-w-0 flex-1 truncate text-left text-[13px] text-[var(--color-ink)] transition-colors hover:text-[var(--color-slate)]"
       style={FONT}
     >
@@ -407,25 +426,54 @@ const WikiFileRow: React.FC<{
   </div>
 );
 
-// Exported (not just used internally) so SettingsModalV2 — the early-release,
-// LHS-less settings surface — can reuse the exact same profile/brand-wiki panel
-// instead of duplicating this logic.
+// Exported so other entry points can host the same profile/brand-wiki panel
+// without the settings nav rail around it.
 export const PersonalizationPanel: React.FC<{
-  /** V2 renders its own title/description in a header row aligned with the
-   * modal's close button, so it hides this panel's internal copy of them to
-   * avoid showing the heading twice. V1 (nav rail + content pane) leaves it
-   * on — there, this heading is the only place the title appears. */
+  /** For hosts that render their own title/description in a header row — this
+   * suppresses the panel's copy so the heading doesn't appear twice. Inside
+   * Settings it stays on, where it's the only place the title appears. */
   hideHeading?: boolean;
-  /** V2's early release only ships the brand wiki (no profile fields yet), so
-   * a two-item tab switcher would be one dead tab. Locks the view to the wiki
-   * and swaps the tab bar for a plain, non-interactive "Brand wiki" label. */
+  /** Locks the view to the brand wiki, dropping the tab switcher — the wiki is
+   * its own item in the settings rail, so tabs would duplicate that nav. */
   wikiOnly?: boolean;
-  /** V2's early release is browse-only — creating/uploading wiki entries isn't
-   * ready — so this hides the Add/Upload buttons above the wiki list, leaving
-   * just the search. V1 keeps both. */
+  /** Browse-only mode: hides the Add/Upload buttons above the wiki list,
+   * leaving just the search. */
   hideWikiActions?: boolean;
-}> = ({ hideHeading = false, wikiOnly = false, hideWikiActions = false }) => {
+  /** Mirror of `wikiOnly` for the Profile nav item — the brand wiki is its own
+   * section in the rail now, so neither view needs the tab switcher. */
+  profileOnly?: boolean;
+}> = ({ hideHeading = false, wikiOnly = false, hideWikiActions = false, profileOnly = false }) => {
   const [tab, setTab] = React.useState<PersonalizationTab>(wikiOnly ? 'wiki' : 'profile');
+  // One section per rail item, so the in-panel tabs only appear when a caller
+  // asks for both halves at once.
+  const singleSection = wikiOnly || profileOnly;
+
+  // The brand profile is the decisioning engine's brand wiki: one shared store,
+  // so filling it here ticks that setup step and vice versa. Optional hook —
+  // this panel is exported for hosts that may sit outside the provider, and
+  // without the context the Brand profile tab simply isn't offered.
+  const setup = useDecisioningSetupOptional();
+  const [wikiTab, setWikiTab] = React.useState<WikiTab>('sources');
+  const showBrandProfile = wikiOnly && !!setup;
+  // Settings unmounts on close (SettingsModal early-returns when !isOpen), so
+  // this initialiser re-reads the store on every open — no re-seed effect.
+  const [draft, setDraft] = React.useState<BrandWikiData>(() => setup?.brandWiki ?? EMPTY_BRAND_WIKI);
+  const [justSaved, setJustSaved] = React.useState(false);
+
+  const normalise = (d: BrandWikiData) => JSON.stringify({ ...d, website: d.website ?? '' });
+  const brandProfileDirty = normalise(draft) !== normalise(setup?.brandWiki ?? EMPTY_BRAND_WIKI);
+
+  const saveBrandProfile = () => {
+    setup?.saveBrandWiki(draft);
+    setJustSaved(true);
+  };
+
+  // Saved brand documents, listed read-only under Sources. Reads the store, not
+  // the draft, so an unsaved upload doesn't appear as if it were filed. Honours
+  // the search box, since it sits in the same list.
+  const uploadedDocs = (setup?.brandWiki?.files ?? []).filter((f) =>
+    f.name.toLowerCase().includes(query.trim().toLowerCase()),
+  );
 
   // Profile fields
   const [nickname, setNickname] = React.useState('');
@@ -438,6 +486,9 @@ export const PersonalizationPanel: React.FC<{
   const [query, setQuery] = React.useState('');
   const [editorOpen, setEditorOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<WikiItem | null>(null);
+  // The file currently being read. Held by id, not by value, so edits and the
+  // enable toggle stay live while the detail view is open.
+  const [viewingId, setViewingId] = React.useState<string | null>(null);
   const [collapsedCategories, setCollapsedCategories] = React.useState<Set<string>>(new Set());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const wikiScrollRef = React.useRef<HTMLDivElement>(null);
@@ -554,25 +605,84 @@ export const PersonalizationPanel: React.FC<{
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, enabled: !it.enabled } : it)));
   const remove = (id: string) => {
     setItems((prev) => prev.filter((it) => it.id !== id));
+    setViewingId((cur) => (cur === id ? null : cur));
   };
+
+  // Reading a file takes over this pane rather than stacking a dialog on the
+  // settings dialog — the back arrow returns to the list, as in the wider
+  // settings pattern where a detail replaces its list in place.
+  const viewing = viewingId ? items.find((it) => it.id === viewingId) ?? null : null;
+  if (viewing) {
+    return (
+      <>
+        <WikiFileDetail
+          item={viewing}
+          onBack={() => setViewingId(null)}
+          onToggle={() => toggle(viewing.id)}
+          onEdit={() => openEdit(viewing)}
+          onRemove={() => remove(viewing.id)}
+        />
+        {/* Edit still opens the editor dialog — it has to render here too, or
+            editing from the detail view would do nothing. */}
+        {editorOpen && (
+          <WikiEditor
+            initial={editing}
+            onCancel={() => { setEditorOpen(false); setEditing(null); }}
+            onSave={handleSave}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Sticky header — title, tabs, and wiki search stay fixed while list scrolls.
           No explicit background: it must blend into whichever panel hosts it
-          (V1's surface-0 column, V2's plain white dialog) rather than opt into
+          (the settings content column, or a plain dialog) rather than opt into
           its own tint, or it reads as a separate boxed-off header. */}
       <div className="shrink-0 flex flex-col gap-[16px]">
         {!hideHeading && (
           <div className="flex flex-col gap-[8px]">
-            <h1 className="text-[24px] font-medium text-[var(--color-ink)]" style={FONT}>Memory &amp; personalization</h1>
+            <h1 className="text-[24px] font-medium text-[var(--color-ink)]" style={FONT}>
+              {wikiOnly ? 'Brand wiki' : profileOnly ? 'Profile' : 'Memory & personalization'}
+            </h1>
             <p className="text-[13px] text-[var(--color-grey)]" style={FONT}>
-              Manage who you are and what the assistant remembers.
+              {wikiOnly
+                ? wikiTab === 'brandProfile'
+                  ? 'Your brand story, voice and audience — shared with the decisioning engine.'
+                  : 'The brand knowledge the assistant references when it writes for you.'
+                : profileOnly
+                  ? 'Who you are, so the assistant writes in your context.'
+                  : 'Manage who you are and what the assistant remembers.'}
             </p>
           </div>
         )}
 
-        {!wikiOnly && (
+        {showBrandProfile && (
+          <div className="flex items-center gap-[24px] border-b border-[var(--color-line)]">
+            {(['sources', 'brandProfile'] as WikiTab[]).map((t) => {
+              const on = wikiTab === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setWikiTab(t)}
+                  className={cn(
+                    'relative -mb-px pb-[10px] text-[14px] transition-colors',
+                    on ? 'font-medium text-[var(--color-ink)]' : 'text-[var(--color-grey)] hover:text-[var(--color-slate)]'
+                  )}
+                  style={FONT}
+                >
+                  {WIKI_TAB_LABEL[t]}
+                  {on && <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[var(--color-ink)]" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {!singleSection && (
           <div className="flex items-center gap-[24px] border-b border-[var(--color-line)]">
             {(['profile', 'wiki'] as PersonalizationTab[]).map((t) => {
               const on = tab === t;
@@ -595,7 +705,7 @@ export const PersonalizationPanel: React.FC<{
           </div>
         )}
 
-        {tab === 'wiki' && (
+        {tab === 'wiki' && wikiTab === 'sources' && (
           <div className="flex items-center gap-[10px] pb-[4px]">
             <div className="flex h-[38px] flex-1 items-center gap-[9px] rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[11px]">
               <Search className="size-[16px] text-[var(--color-grey-soft)]" />
@@ -636,7 +746,11 @@ export const PersonalizationPanel: React.FC<{
         onScroll={handleWikiScroll}
         className="scroll-reveal min-h-0 flex-1 overflow-y-auto pt-[16px]"
       >
-      {tab === 'profile' ? (
+      {tab === 'wiki' && wikiTab === 'brandProfile' ? (
+        <div className="pt-[4px]">
+          <BrandWikiIntake value={draft} onChange={(next) => { setDraft(next); setJustSaved(false); }} />
+        </div>
+      ) : tab === 'profile' ? (
         <div className="flex flex-col gap-[20px] pt-[4px]">
           <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2">
             <Field label="Nickname">
@@ -668,7 +782,7 @@ export const PersonalizationPanel: React.FC<{
         </div>
       ) : (
         <div className="flex flex-col gap-[10px] pt-[4px]">
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && uploadedDocs.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-[10px] py-[72px]">
               <div className="flex size-[44px] items-center justify-center rounded-full bg-[var(--color-surface-1)]">
                 <Search className="size-[20px] text-[var(--color-grey-soft)]" />
@@ -679,6 +793,35 @@ export const PersonalizationPanel: React.FC<{
             </div>
           ) : (
             <div className="flex flex-col gap-[10px]">
+              {/* Documents uploaded on the Brand profile tab. Read-only here —
+                  they belong to the brand profile, so they're shown for
+                  findability rather than managed from this list. */}
+              {uploadedDocs.length > 0 && (
+                <div className="overflow-hidden rounded-[12px] border border-[var(--color-line)] bg-card">
+                  <div className="flex items-center gap-[10px] bg-[var(--color-surface-1)] px-[14px] py-[11px]">
+                    <Upload className="size-[15px] shrink-0 text-[var(--color-slate)]" />
+                    <span className="text-[14px] font-semibold text-[var(--color-ink)]" style={FONT}>
+                      Uploads
+                    </span>
+                    <span className="text-[13px] font-medium text-[var(--color-grey-soft)]" style={FONT}>
+                      ({uploadedDocs.length})
+                    </span>
+                  </div>
+                  <div className="divide-y divide-[var(--color-line)]">
+                    {uploadedDocs.map((doc) => (
+                      <div
+                        key={doc.name}
+                        className="flex items-center justify-between gap-[12px] px-[14px] py-[11px]"
+                      >
+                        <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--color-ink)]" style={FONT}>
+                          {doc.name}
+                        </span>
+                        <WikiStatusBadge status="uploaded" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {grouped.map(({ category, items: categoryItems }) => {
                 const expanded = !collapsedCategories.has(category);
                 return (
@@ -714,6 +857,7 @@ export const PersonalizationPanel: React.FC<{
                             key={it.id}
                             item={it}
                             onToggle={toggle}
+                            onOpen={(it) => setViewingId(it.id)}
                             onEdit={openEdit}
                             onRemove={remove}
                           />
@@ -729,6 +873,30 @@ export const PersonalizationPanel: React.FC<{
       )}
       </div>
 
+      {/* Brand profile action bar. A flex sibling after the scroll body rather
+          than a sticky element — this panel is already a flex column with a
+          flex-1 scroll area, so shrink-0 pins it to the bottom on its own. The
+          negative margins let it span the settings pane's full width (same
+          offsets ReportCustomizationPanel uses). Saving is explicit because
+          saveBrandWiki also ticks the decisioning setup step — autosave would
+          do that on the first keystroke. */}
+      {tab === 'wiki' && wikiTab === 'brandProfile' && (
+        <div className="shrink-0 -mx-[32px] -mb-[40px] mt-[16px] flex items-center gap-[12px] border-t border-[var(--color-line)] bg-[var(--color-surface-0)] px-[32px] pb-[24px] pt-[16px]">
+          <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-[var(--color-grey)]" style={FONT}>
+            Answers guide content generation and the decisioning engine's setup.
+          </p>
+          {justSaved && !brandProfileDirty && (
+            <span className="flex shrink-0 items-center gap-[5px] text-[12px] text-[var(--color-grey)]" style={FONT}>
+              <Check className="size-[14px] text-[var(--color-success)]" strokeWidth={2.5} />
+              Saved
+            </span>
+          )}
+          <DsButton disabled={!brandProfileDirty} onClick={saveBrandProfile}>
+            Save brand profile
+          </DsButton>
+        </div>
+      )}
+
       {editorOpen && (
         <WikiEditor
           initial={editing}
@@ -739,6 +907,96 @@ export const PersonalizationPanel: React.FC<{
     </div>
   );
 };
+
+/* ── Brand wiki: single file ─────────────────────────────────────── */
+/**
+ * Reading view for one wiki entry, rendered in place of the list inside the
+ * same settings pane. Header carries the way back; the file's own controls
+ * (enable toggle, edit, delete) sit with its name so they read as acting on
+ * this file rather than on the section.
+ */
+const WikiFileDetail: React.FC<{
+  item: WikiItem;
+  onBack: () => void;
+  onToggle: () => void;
+  onEdit: () => void;
+  onRemove: () => void;
+}> = ({ item, onBack, onToggle, onEdit, onRemove }) => (
+  <div className="flex min-h-0 flex-1 flex-col">
+    <div className="shrink-0 flex flex-col gap-[16px]">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex w-fit items-center gap-[8px] text-[14px] text-[var(--color-slate)] transition-colors hover:text-[var(--color-ink)]"
+        style={FONT}
+      >
+        <ArrowLeft className="size-[16px]" />
+        Sources
+      </button>
+
+      <div className="flex items-start justify-between gap-[16px]">
+        <div className="flex min-w-0 flex-col gap-[6px]">
+          <div className="flex items-center gap-[10px]">
+            <h1 className="truncate text-[20px] font-medium text-[var(--color-ink)]" style={FONT}>
+              {item.fileName ?? `${item.name}.md`}
+            </h1>
+            {item.status && <WikiStatusBadge status={item.status} />}
+          </div>
+          {item.useWhen && (
+            <p className="text-[13px] leading-[19px] text-[var(--color-grey)]" style={FONT}>
+              {item.useWhen}
+            </p>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-[10px]">
+          <Switch checked={item.enabled} onCheckedChange={onToggle} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Brand wiki options"
+                className="flex size-[28px] items-center justify-center rounded-[6px] text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)]"
+              >
+                <MoreHorizontal className="size-[16px]" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              sideOffset={6}
+              className="z-[60] w-[152px] rounded-[10px] border border-[var(--color-line)] bg-card p-[4px] shadow-[0px_12px_32px_-8px_oklch(0_0_0_/_0.22)]"
+            >
+              <DropdownMenuItem
+                onClick={onEdit}
+                className="flex cursor-pointer items-center gap-[9px] rounded-[6px] px-[12px] py-[8px] text-[13px] text-[var(--color-slate)] focus:bg-[oklch(0_0_0_/_0.06)]"
+                style={FONT}
+              >
+                <Pencil className="size-[15px]" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={onRemove}
+                className="flex cursor-pointer items-center gap-[9px] rounded-[6px] px-[12px] py-[8px] text-[13px] text-[var(--color-danger,oklch(0.58_0.2_25))] focus:bg-[oklch(0_0_0_/_0.06)]"
+                style={FONT}
+              >
+                <Trash2 className="size-[15px]" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </div>
+
+    {/* The file's contents, boxed so the entry reads as a document rather than
+        as more settings copy. Scrolls on its own; the header stays put. */}
+    <div className="mt-[16px] min-h-0 flex-1 overflow-y-auto rounded-[12px] border border-[var(--color-line)] bg-card">
+      <p
+        className="whitespace-pre-wrap break-words px-[20px] py-[18px] text-[13px] leading-[21px] text-[var(--color-charcoal)]"
+        style={FONT}
+      >
+        {item.content}
+      </p>
+    </div>
+  </div>
+);
 
 const WikiEditor: React.FC<{
   initial: WikiItem | null;
@@ -840,13 +1098,6 @@ const TextArea: React.FC<{ value: string; onChange: (v: string) => void; rows?: 
     className="w-full resize-none rounded-[9px] border border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.56)] px-[12px] py-[10px] text-[13px] leading-[1.5] text-[var(--color-ink)] placeholder:text-[var(--color-grey-soft)] outline-none transition-colors ds-field"
     style={FONT}
   />
-);
-
-const PlaceholderPanel: React.FC<{ title: string }> = ({ title }) => (
-  <div className="flex flex-col gap-[8px]">
-    <h1 className="text-[24px] font-medium text-[var(--color-ink)]" style={FONT}>{title}</h1>
-    <p className="text-[13px] text-[var(--color-grey)]" style={FONT}>This section is coming soon.</p>
-  </div>
 );
 
 export default SettingsModal;

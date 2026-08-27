@@ -7,8 +7,7 @@ import ReportCustomizationPanel from './ReportCustomizationPanel';
  * ReportCustomizationModal — single-purpose wrapper around
  * ReportCustomizationPanel (same component SettingsModal's "Report
  * customization" nav item renders), for entry points that want just that
- * config surface without the full settings nav rail. Mirrors
- * SettingsModalV2's approach for the brand wiki.
+ * config surface without the full settings nav rail.
  *
  * The inner wrapper (max-w-[720px] px-[32px] py-[40px]) matches the padding
  * SettingsModal gives this panel — ReportCustomizationPanel's sticky action

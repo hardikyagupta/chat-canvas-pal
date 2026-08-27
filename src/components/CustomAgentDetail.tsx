@@ -3,12 +3,14 @@ import { createPortal } from 'react-dom';
 import {
   ArrowLeft, MoreHorizontal, Plus, Trash2, X,
   Paperclip, TextCursorInput, Github, FileText, Bot, MessageSquare,
+  TrendingUp, Activity, DollarSign, MousePointerClick, Users, Megaphone,
+  Calendar, Search, Sparkles,
 } from 'lucide-react';
 import { AgentToolsConfigPanel } from './AgentToolsConfig';
 import { DsButton } from '@/components/ui/ds-button';
 import { cn } from '@/lib/utils';
-import type { CustomAgent, AgentFile, AgentTools } from '@/data/customAgents';
-import { DEFAULT_AGENT_TOOLS } from '@/data/customAgents';
+import type { CustomAgent, AgentFile, AgentTools, AgentPromptGroup } from '@/data/customAgents';
+import { DEFAULT_AGENT_TOOLS, DEFAULT_PROMPT_GROUPS } from '@/data/customAgents';
 import type { LhsChatItem } from './LhsSidebar';
 import {
   ActionMenu,
@@ -32,6 +34,21 @@ const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const FONT: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
+
+/** Icon names on AgentPromptGroup resolved to components (the data file stays
+ *  import-free so it can be edited without touching React). */
+const PROMPT_GROUP_ICONS: Record<AgentPromptGroup['icon'], React.ComponentType<{ className?: string }>> = {
+  'trending-up': TrendingUp,
+  'file-text': FileText,
+  activity: Activity,
+  'dollar-sign': DollarSign,
+  'mouse-pointer-click': MousePointerClick,
+  users: Users,
+  megaphone: Megaphone,
+  calendar: Calendar,
+  search: Search,
+  sparkles: Sparkles,
+};
 
 const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
@@ -497,6 +514,11 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [reportCustomizationOpen, setReportCustomizationOpen] = React.useState(false);
   const agentTools = agent.tools ?? DEFAULT_AGENT_TOOLS;
+  // Suggested-prompt topics under the composer. Held by label rather than by
+  // object so switching agents can't leave a stale group selected.
+  const promptGroups = agent.promptGroups ?? DEFAULT_PROMPT_GROUPS;
+  const [selectedGroupLabel, setSelectedGroupLabel] = React.useState<string | null>(null);
+  const selectedGroup = promptGroups.find((g) => g.label === selectedGroupLabel) ?? null;
   const starterQuestions = agent.starterQuestions ?? [];
   // Ids of files currently "uploading" — they render as skeleton rows until the
   // simulated upload settles (mirrors ChatInput's mock upload).
@@ -670,7 +692,61 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
               placeholder="How can I help you today?"
               onSend={onStartChat}
               initialValue={agent.starterPrompt}
+              selectedContextChip={selectedGroup?.label ?? null}
+              onClearSelectedContextChip={() => setSelectedGroupLabel(null)}
             />
+
+            {/* Suggested prompts — the chat homepage's two-step: topic chips
+                first, then that topic's prompts once one is chosen. The chosen
+                topic rides in the composer as a chip, so clearing it there
+                brings the row back. */}
+            {!selectedGroup ? (
+              <div className="composer-hints-enter flex w-full flex-wrap items-center gap-[8px]">
+                {promptGroups.map((group) => {
+                  const GroupIcon = PROMPT_GROUP_ICONS[group.icon];
+                  return (
+                    <button
+                      key={group.label}
+                      type="button"
+                      onClick={() => setSelectedGroupLabel(group.label)}
+                      className="fig-chip flex shrink-0 items-center justify-center gap-[6px] whitespace-nowrap rounded-[8px] px-[10px] py-[6px]"
+                    >
+                      {GroupIcon && <GroupIcon className="size-[14px] shrink-0 text-[var(--color-slate)]" />}
+                      <span
+                        className="text-[12px] font-normal leading-[16px] tracking-[0.36px] text-[var(--color-ink)]"
+                        style={FONT}
+                      >
+                        {group.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                key={`agent-prompts-${selectedGroup.label}`}
+                className="composer-hints-enter flex w-full flex-col gap-[8px]"
+              >
+                <p
+                  className="px-[2px] text-[13px] font-semibold leading-[18px] tracking-[0.42px] text-[var(--color-grey)]"
+                  style={FONT}
+                >
+                  {selectedGroup.header ?? 'Suggested prompts'}
+                </p>
+                {selectedGroup.prompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => onStartChat(prompt)}
+                    className="w-full cursor-pointer rounded-[8px] border border-[var(--color-line)] bg-card p-[12px] text-left transition-colors hover:bg-[var(--color-surface-0)]"
+                  >
+                    <p className="text-[13px] leading-[18px] text-[var(--color-slate)]" style={FONT}>
+                      {prompt}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Recents — this agent's chat history, newest first. */}
             {chats.length > 0 && (

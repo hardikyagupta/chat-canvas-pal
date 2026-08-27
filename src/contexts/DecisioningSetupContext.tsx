@@ -20,6 +20,16 @@ export interface BrandWikiData {
   answers: Record<string, string>;
 }
 
+/** A blank brand wiki — the starting point for every surface that edits one. */
+export const EMPTY_BRAND_WIKI: BrandWikiData = {
+  files: [],
+  brandName: "",
+  brandVoice: "",
+  audience: "",
+  website: "",
+  answers: {},
+};
+
 /** A user-defined event row: a name they typed, mapped to a detected brand event. */
 export interface CustomEventMapping {
   id: string;
@@ -279,4 +289,13 @@ export function useDecisioningSetup(): DecisioningSetupContextValue {
   const ctx = useContext(DecisioningSetupContext);
   if (!ctx) throw new Error("useDecisioningSetup must be used within DecisioningSetupProvider");
   return ctx;
+}
+
+/**
+ * Same context, but null instead of a throw when the provider is absent. For
+ * components that are reusable outside the decisioning tree — the settings
+ * brand wiki, say — and should degrade rather than crash.
+ */
+export function useDecisioningSetupOptional(): DecisioningSetupContextValue | null {
+  return useContext(DecisioningSetupContext);
 }
