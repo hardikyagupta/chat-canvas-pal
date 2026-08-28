@@ -46,11 +46,11 @@ import SettingsModal from './SettingsModal';
 import ChatListPage from './ChatListPage';
 import ReportsPage from './ReportsPage';
 import SchedulerPage from './SchedulerPage';
-import CustomAgentsPage from './CustomAgentsPage';
-import CustomAgentDetail from './CustomAgentDetail';
+import AgentsSurface from './AgentsSurface';
 import CreateCustomAgentModal from './CreateCustomAgentModal';
-import { initialCustomAgents, STARTER_AGENTS, MONTHLY_REPORT_AGENT_NAME, DEFAULT_AGENT_TOOLS, type CustomAgent } from '@/data/customAgents';
-import { generateAgentAvatar, generateAgentOrbTheme } from '@/lib/agentAvatar';
+import { useCustomAgents } from '@/contexts/CustomAgentsContext';
+import { MONTHLY_REPORT_AGENT_NAME } from '@/data/customAgents';
+import { generateAgentOrbTheme } from '@/lib/agentAvatar';
 import type { OrbTheme } from '@/components/orb/agentOrbTheme';
 import { generatedReports } from '@/data/reports';
 import { scheduledReports, scheduleTemplates } from '@/data/schedules';
@@ -176,6 +176,17 @@ interface ChatInterfaceProps {
   initialMessage?: string;
   /** AI Dashboard insight card — auto-sent on mount as a rich first user turn. */
   initialInsightCard?: InsightCardContext;
+  /** Agent chat opened from a host page's agent detail (the L1 Agents page).
+   *  Primed once on mount down the same paths the in-app agent detail page uses,
+   *  so the hand-off intro plays and the chat lands in the shared history.
+   *  One of three shapes: start a fresh chat (`agent` + `message`); re-open a
+   *  past one (`chatId`), which renders as already-finished; or just bind the
+   *  agent (`agent` + `bind`), which opens an empty thread with the agent's chip
+   *  in the composer and sends nothing — the L1 page's "Start chat". */
+  initialAgentChat?:
+    | { agent: { id: string; name: string; avatarSrc?: string }; message: string; chatId?: never; bind?: never }
+    | { chatId: string; agent?: never; message?: never; bind?: never }
+    | { agent: { id: string; name: string; avatarSrc?: string }; bind: true; message?: never; chatId?: never };
   /** Campaign picked from the co-marketer review banner above the campaigns
    *  table. Seeds a short review thread on mount instead of playing a scripted
    *  flow — the user asks to review it, the co-marketer walks through it. */
@@ -238,22 +249,6 @@ const GREETING_TOPICS = [
 
 // Bookmarked chats — the saved subset of the chat list
 const bookmarkedChats = defaultChats.filter((c) => ['2', '5', '8', '11', '17'].includes(c.id));
-
-// Seeded chat history for the starter agents, so an agent's page opens with a
-// populated Recents list instead of an empty one. These behave exactly like
-// chats started in-session: opening one replays the agent's finished thread.
-const seededAgentChats: LhsChatItem[] = [
-  { id: 'agent-seed-report-1', title: "Generate last month's marketing performance report.", time: '3h', agentId: 'starter-monthly-report' },
-  { id: 'agent-seed-launch-1', title: 'Help me plan the launch for our next campaign.', time: '6h', agentId: 'starter-campaign-launch' },
-  { id: 'agent-seed-report-2', title: 'Compare Q2 revenue against the prior quarter', time: '1d', agentId: 'starter-monthly-report', owner: 'Dani Bristow' },
-  { id: 'agent-seed-channel-1', title: 'Which channels need attention this week?', time: '1d', agentId: 'starter-channel-health' },
-  { id: 'agent-seed-launch-2', title: 'Build a pre-flight QA checklist for the festive push', time: '2d', agentId: 'starter-campaign-launch', owner: 'Marcus Lee' },
-  { id: 'agent-seed-audience-1', title: 'Which segments should I prioritize this quarter?', time: '2d', agentId: 'starter-audience-strategist' },
-  { id: 'agent-seed-pulse-1', title: 'What should we know about competitors this week?', time: '3d', agentId: 'starter-market-pulse' },
-  { id: 'agent-seed-report-3', title: 'Summarize which channels drove conversions last month', time: '4d', agentId: 'starter-monthly-report' },
-  { id: 'agent-seed-channel-2', title: 'Check email deliverability after the domain change', time: '5d', agentId: 'starter-channel-health', owner: 'Priya Nair' },
-  { id: 'agent-seed-audience-2', title: 'Find lapsed high-value buyers worth a win-back', time: '1w', agentId: 'starter-audience-strategist', owner: 'Sofia Almeida' },
-];
 
 
 // Pinned to "Good afternoon" so the greeting reads the same in every demo,
@@ -343,7 +338,7 @@ const DockedBodySkeleton = ({
   );
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialReviewCampaign, initialTopic, onReviewArtifact, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   // The scripted storyline this interface plays. Home (`/`) uses 'default';
@@ -739,6 +734,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       !initialExpanded &&
       !initialMessage &&
       !initialInsightCard &&
+      !initialAgentChat &&
       !initialTopic &&
       !initialReviewCampaign
       ? 'home'
@@ -772,20 +768,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     return () => clearTimeout(id);
   }, [activePage]);
 
-  // Custom agents (Claude-Projects-style) — prototype store in React state. The
+  // Custom agents (Claude-Projects-style) — the store is shared with the L1
+  // `/agents` page, so an agent created on either surface shows on both. The
   // list page shows all agents; selecting one opens its detail page.
-  const [customAgents, setCustomAgents] = useState<CustomAgent[]>(initialCustomAgents);
-  const [starterAgentPatches, setStarterAgentPatches] = useState<Record<string, Partial<CustomAgent>>>({});
-  const starterAgents = React.useMemo(
-    () => STARTER_AGENTS.map((agent) => ({ ...agent, ...starterAgentPatches[agent.id] })),
-    [starterAgentPatches],
-  );
-  const allAgents = React.useMemo(() => [...starterAgents, ...customAgents], [starterAgents, customAgents]);
+  const { allAgents, agentChats, setAgentChats, createCustomAgent, cloneCustomAgent } = useCustomAgents();
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  // Clone transition: a brief loading overlay before the detail page opens,
-  // then the freshly-opened detail page itself shows a skeleton before settling.
-  const [cloningAgentName, setCloningAgentName] = useState<string | null>(null);
-  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   // Agent attached to the home composer via "+" → "Add to agent" (shows a chip).
   const [composerAgent, setComposerAgent] = useState<{ id: string; name: string; avatarSrc?: string } | null>(null);
   const [composerCreateOpen, setComposerCreateOpen] = useState(false);
@@ -803,66 +790,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // scripted "Switched to <agent>" intro can play once the view has reset.
   const [chatTitleOverride, setChatTitleOverride] = useState<string | null>(null);
   const [pendingAgentChat, setPendingAgentChat] = useState<{ agent: { id: string; name: string }; message: string; instant?: boolean } | null>(null);
-  // Chats started from an agent's page, persisted so they show in Recents (global)
-  // and under that agent's page as its chat history. `activeAgentChatId` is the one
-  // currently open in the conversation view (so Recents doesn't double it up).
-  const [agentChats, setAgentChats] = useState<LhsChatItem[]>(seededAgentChats);
+  // `agentChats` (chats started from an agent's page) lives in the shared store
+  // so both agents surfaces show the same history; it also feeds Recents here.
+  // `activeAgentChatId` is the one currently open in the conversation view (so
+  // Recents doesn't double it up).
   const [activeAgentChatId, setActiveAgentChatId] = useState<string | null>(null);
 
-  const createCustomAgent = (data: { name: string; description: string; tools?: CustomAgent['tools'] }): CustomAgent => {
-    const agent: CustomAgent = {
-      id: `agent-${Date.now()}`,
-      name: data.name,
-      description: data.description,
-      instructions: '',
-      files: [],
-      updatedAt: 'now',
-      avatarSrc: generateAgentAvatar(data.name),
-      tools: data.tools ?? DEFAULT_AGENT_TOOLS,
-      starterQuestions: [],
-    };
-    setCustomAgents((prev) => [agent, ...prev]);
-    setSelectedAgentId(agent.id);
-    return agent;
-  };
-  const updateAgent = (id: string, patch: Partial<CustomAgent>) => {
-    if (STARTER_AGENTS.some((a) => a.id === id)) {
-      setStarterAgentPatches((prev) => ({
-        ...prev,
-        [id]: { ...prev[id], ...patch, updatedAt: patch.updatedAt ?? 'now' },
-      }));
-      return;
-    }
-    setCustomAgents((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
-  };
-  const deleteCustomAgent = (id: string) => {
-    setCustomAgents((prev) => prev.filter((a) => a.id !== id));
-    setSelectedAgentId((cur) => (cur === id ? null : cur));
-  };
-  // Duplicates any agent (starter or custom) into a new, independent custom
-  // agent the user can edit — starter agents themselves stay read-only.
-  const cloneCustomAgent = (agent: CustomAgent) => {
-    const clone: CustomAgent = {
-      ...agent,
-      id: `agent-${Date.now()}`,
-      name: `${agent.name} (copy)`,
-      updatedAt: 'now',
-      isBuiltIn: false,
-    };
-    setCustomAgents((prev) => [clone, ...prev]);
-    // Brief loading overlay before the detail view opens, then the freshly
-    // opened page shows a skeleton before settling and confirming with a toast.
-    setCloningAgentName(agent.name);
-    window.setTimeout(() => {
-      setSelectedAgentId(clone.id);
-      setCloningAgentName(null);
-      setDetailLoadingId(clone.id);
-      window.setTimeout(() => {
-        setDetailLoadingId(null);
-        toast.success('Agent cloned successfully');
-      }, 700);
-    }, 550);
-  };
   const openCustomAgents = () => { setSelectedAgentId(null); setActivePage('custom-agents'); };
 
   // Which LHS menu row is highlighted. 'home' is the conversation view, so it
@@ -1456,6 +1389,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     setChatTitleOverride(agent.name); // header label = agent name
     setActiveAgentChatId(chatId);
     setPendingAgentChat({ agent, message, instant });
+  };
+
+  // Bind an agent to the composer without sending anything: an empty thread with
+  // the agent's chip already in the field, ready for the user to type. Used by
+  // the L1 agent page's "Start chat", where the page has no composer of its own.
+  // No Recents entry until the user actually sends (handleSendMessage routes
+  // through handleStartAgentChat once `composerAgent` is set).
+  const bindComposerAgent = (agent: { id: string; name: string; avatarSrc?: string }) => {
+    handleNewChat();
+    setComposerAgent({ id: agent.id, name: agent.name, avatarSrc: agent.avatarSrc });
+    setChatTitleOverride(agent.name);
   };
 
   // Launched from a custom-agent's detail page: persist a Recents entry for this
@@ -3310,6 +3254,13 @@ The content has been updated across all channels to reflect your changes.`;
       seedTopic(initialTopic);
       return;
     }
+    if (initialAgentChat) {
+      hasAutoSentRef.current = true;
+      if (initialAgentChat.chatId) handleSelectChat(initialAgentChat.chatId);
+      else if (initialAgentChat.bind) bindComposerAgent(initialAgentChat.agent);
+      else handleStartAgentChat(initialAgentChat.agent, initialAgentChat.message);
+      return;
+    }
     if (initialInsightCard) {
       hasAutoSentRef.current = true;
       handleCampaignsSend('', initialInsightCard);
@@ -3924,50 +3875,13 @@ The content has been updated across all channels to reflect your changes.`;
                   }}
                 />
               ) : activePage === 'custom-agents' ? (
-                (() => {
-                  const selectedAgent = allAgents.find((a) => a.id === selectedAgentId) ?? null;
-                  return (
-                    <>
-                      {selectedAgent ? (
-                        <CustomAgentDetail
-                          agent={selectedAgent}
-                          compact={!isExpanded}
-                          loading={detailLoadingId === selectedAgent.id}
-                          onBack={() => setSelectedAgentId(null)}
-                          onEditAgent={(id, data) => updateAgent(id, { ...data, updatedAt: 'now' })}
-                          onDeleteAgent={deleteCustomAgent}
-                          onUpdateAgent={updateAgent}
-                          onStartChat={(message) =>
-                            handleStartAgentChat({ id: selectedAgent.id, name: selectedAgent.name, avatarSrc: selectedAgent.avatarSrc }, message)
-                          }
-                          chats={agentChats.filter((c) => c.agentId === selectedAgent.id)}
-                          onSelectChat={handleSelectChat}
-                        />
-                      ) : (
-                        <CustomAgentsPage
-                          customAgents={customAgents}
-                          starterAgents={starterAgents}
-                          compact={!isExpanded}
-                          onCreate={createCustomAgent}
-                          onOpenAgent={(id) => setSelectedAgentId(id)}
-                          onCloneAgent={cloneCustomAgent}
-                          onEditAgent={(id, data) => updateAgent(id, { ...data, updatedAt: 'now' })}
-                          onDeleteAgent={deleteCustomAgent}
-                        />
-                      )}
-                      {cloningAgentName ? (
-                        <div className="absolute inset-0 z-30 flex items-center justify-center bg-[var(--color-surface-0)]/80 backdrop-blur-sm">
-                          <div className="flex flex-col items-center gap-[10px]">
-                            <span className="size-[22px] animate-spin rounded-full border-2 border-[var(--color-line-input)] border-t-[var(--color-plum)]" />
-                            <p className="text-[13px] font-medium text-[var(--color-grey)]" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                              Cloning “{cloningAgentName}”…
-                            </p>
-                          </div>
-                        </div>
-                      ) : null}
-                    </>
-                  );
-                })()
+                <AgentsSurface
+                  compact={!isExpanded}
+                  selectedAgentId={selectedAgentId}
+                  onSelectAgentId={setSelectedAgentId}
+                  onStartChat={handleStartAgentChat}
+                  onSelectChat={handleSelectChat}
+                />
               ) : (
                 <ChatListPage
                   title={activePage === 'chats' ? 'Chats' : 'Bookmarks'}

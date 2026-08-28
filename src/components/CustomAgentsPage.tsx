@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Search, MoreHorizontal, Pencil, Trash2, Bot, Copy, LayoutGrid, Rows3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AgentTools, CustomAgent } from '@/data/customAgents';
+import netcoreMark from '/campaign-assets/netcore-logo.svg';
+import { agentCreatedBy, type AgentTools, type CustomAgent } from '@/data/customAgents';
 import {
   ActionMenu,
   ActionMenuTrigger,
@@ -28,6 +29,16 @@ interface CustomAgentsPageProps {
   className?: string;
   /** Minimized (docked widget) view — shrinks the page title + single column. */
   compact?: boolean;
+  /** Override the centred content column. Defaults to the co-marketer's shared
+   *  PAGE_COLUMN; the L1 Agents page passes that shell's full-width gutters. */
+  columnClassName?: string;
+  /**
+   * Which surface this list is on. 'chat' (default) keeps the co-marketer's two
+   * sections — "Your agents" over "Get started with these". 'workspace' (L1)
+   * merges them into a single table/grid; the "Created by" column already says
+   * whose an agent is, so the split headings are redundant there.
+   */
+  variant?: 'chat' | 'workspace';
 }
 
 const NewAgentButton: React.FC<{ onClick: () => void; label?: string }> = ({ onClick, label = 'New agent' }) => (
@@ -132,6 +143,22 @@ const TH: React.FC<{ children: React.ReactNode; className?: string }> = ({ child
   </th>
 );
 
+/**
+ * Who made the agent. Netcore's own carry the brand mark from the L1 rail,
+ * scaled down to sit on a table row; a person's name stands alone.
+ */
+const CreatedBy: React.FC<{ agent: CustomAgent }> = ({ agent }) => {
+  const author = agentCreatedBy(agent);
+  return (
+    <span className="flex min-w-0 items-center gap-[6px]" style={MANROPE}>
+      {agent.isBuiltIn ? (
+        <img src={netcoreMark} alt="" className="size-[14px] shrink-0 object-contain" />
+      ) : null}
+      <span className="min-w-0 truncate text-[13px] leading-[18px] text-[var(--color-grey)]">{author}</span>
+    </span>
+  );
+};
+
 const AgentTable: React.FC<{
   agents: CustomAgent[];
   menuOpenId: string | null;
@@ -145,12 +172,15 @@ const AgentTable: React.FC<{
     <table className="w-full min-w-[900px] border-collapse">
       <thead>
         <tr className="border-b border-[var(--color-line-input)] bg-[var(--color-surface-0)]">
-          <TH className="w-[236px]">Agent name</TH>
+          {/* Fixed widths total 774px, so Description still clears ~125px at the
+              table's 900px minimum — adding "Created by" didn't cost a scroll. */}
+          <TH className="w-[210px]">Agent name</TH>
           <TH>Description</TH>
-          <TH className="w-[132px]">Scope</TH>
-          <TH className="w-[104px]">Visibility</TH>
-          <TH className="w-[112px]">Last executed</TH>
-          <TH className="w-[100px]">Last edited</TH>
+          <TH className="w-[120px]">Created by</TH>
+          <TH className="w-[112px]">Scope</TH>
+          <TH className="w-[92px]">Visibility</TH>
+          <TH className="w-[96px]">Last executed</TH>
+          <TH className="w-[92px]">Last edited</TH>
           <TH className="w-[52px]"><span className="sr-only">Actions</span></TH>
         </tr>
       </thead>
@@ -187,6 +217,9 @@ const AgentTable: React.FC<{
                 <span className="line-clamp-2 text-[13px] leading-[18px] text-[var(--color-grey)]" style={MANROPE}>
                   {agent.description || 'No description yet.'}
                 </span>
+              </td>
+              <td className="px-[14px] py-[12px] align-middle">
+                <CreatedBy agent={agent} />
               </td>
               <td className="px-[14px] py-[12px] align-middle">
                 {chips.length > 0 ? (
@@ -261,6 +294,24 @@ const AgentTable: React.FC<{
   </div>
 );
 
+/**
+ * "You have no agents of your own yet" — the invitation to make one. In the
+ * split layout it stands in for the empty "Your agents" section; in the merged
+ * layout it sits above the list, which is never empty because the Netcore
+ * starters are always in it.
+ */
+const EmptyAgentsPrompt: React.FC<{ onCreate: () => void }> = ({ onCreate }) => (
+  <div className="flex flex-col items-center justify-center gap-[12px] rounded-[16px] border border-dashed border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.4)] px-[24px] py-[32px] text-center">
+    <p className="text-[14px] font-medium text-[var(--color-ink)]" style={MANROPE}>
+      No custom agents yet
+    </p>
+    <p className="max-w-[360px] text-[13px] leading-[19px] text-[var(--color-grey)]" style={MANROPE}>
+      Set instructions and reference files once, then chat with a tailored agent again and again.
+    </p>
+    <NewAgentButton onClick={onCreate} label="Create agent" />
+  </div>
+);
+
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <h2 className="text-[15px] font-semibold text-[var(--color-ink)]" style={MANROPE}>
     {children}
@@ -312,11 +363,14 @@ const AgentCard: React.FC<{
             ))}
           </div>
         ) : null}
-        {!agent.isBuiltIn ? (
-          <span className="mt-[2px] text-[12px] leading-[16px] text-[var(--color-grey-soft)]" style={MANROPE}>
-            Created {agent.updatedAt === 'now' ? 'just now' : `${agent.updatedAt} ago`}
-          </span>
-        ) : null}
+        {/* Byline — who made it, and when for the user's own agents (the starter
+            agents have no meaningful "created" date to show). */}
+        <span className="mt-[2px] text-[12px] leading-[16px] text-[var(--color-grey-soft)]" style={MANROPE}>
+          By {agentCreatedBy(agent)}
+          {!agent.isBuiltIn
+            ? ` · Created ${agent.updatedAt === 'now' ? 'just now' : `${agent.updatedAt} ago`}`
+            : ''}
+        </span>
       </button>
 
       <div
@@ -396,9 +450,13 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
   onDeleteAgent,
   className,
   compact = false,
+  columnClassName,
+  variant = 'chat',
 }) => {
+  // One list instead of two sections — see the `variant` prop.
+  const merged = variant === 'workspace';
   const [query, setQuery] = useState('');
-  const [view, setView] = useState<AgentView>('grid');
+  const [view, setView] = useState<AgentView>(variant === 'workspace' ? 'list' : 'grid');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<CustomAgent | null>(null);
@@ -416,6 +474,13 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
   const filteredStarter = useMemo(() => filterAgents(starterAgents), [starterAgents, query]);
   const hasQuery = query.trim().length > 0;
   const noResults = hasQuery && filteredCustom.length === 0 && filteredStarter.length === 0;
+
+  // Merged order keeps the sections' old priority: the user's own agents first,
+  // then the ones Netcore ships.
+  const mergedAgents = useMemo(
+    () => [...filteredCustom, ...filteredStarter],
+    [filteredCustom, filteredStarter],
+  );
 
   const hasCustomAgents = customAgents.length > 0;
   // The docked widget column is too narrow for a table — always show cards there.
@@ -459,7 +524,7 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
 
   return (
     <div className={cn('flex flex-col h-full w-full overflow-hidden bg-[var(--color-surface-0)]', className)}>
-      <div className={cn('mx-auto flex flex-col min-h-0 flex-1', PAGE_COLUMN)}>
+      <div className={cn('mx-auto flex flex-col min-h-0 flex-1', columnClassName ?? PAGE_COLUMN)}>
         <div className={cn('flex flex-col gap-[16px] pb-[12px] w-full shrink-0', pageHeaderPadTop(compact))}>
           <div className="flex items-center justify-between gap-[12px] h-[34px]">
             <h1
@@ -473,7 +538,9 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
             </h1>
             <div className="flex items-center gap-[10px] shrink-0">
               {!compact ? <ViewToggle view={view} onChange={setView} /> : null}
-              {hasCustomAgents ? <NewAgentButton onClick={openCreate} label="Create agent" /> : null}
+              {/* Merged has no empty-state card to host the CTA, so the header
+                  always carries it there. */}
+              {merged || hasCustomAgents ? <NewAgentButton onClick={openCreate} label="Create agent" /> : null}
             </div>
           </div>
 
@@ -497,21 +564,18 @@ const CustomAgentsPage: React.FC<CustomAgentsPageProps> = ({
                 No agents found
               </p>
             </div>
+          ) : merged ? (
+            <div className="flex flex-col gap-[16px]">
+              {!hasCustomAgents && !hasQuery ? <EmptyAgentsPrompt onCreate={openCreate} /> : null}
+              {renderAgents(mergedAgents)}
+            </div>
           ) : (
             <div className="flex flex-col gap-[28px]">
               {(filteredCustom.length > 0 || !hasQuery) && (
                 <section className="flex flex-col gap-[12px]">
                   <SectionLabel>Your agents</SectionLabel>
                   {filteredCustom.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-[12px] rounded-[16px] border border-dashed border-[var(--color-line-input)] bg-[oklch(1_0_0_/_0.4)] px-[24px] py-[32px] text-center">
-                      <p className="text-[14px] font-medium text-[var(--color-ink)]" style={MANROPE}>
-                        No custom agents yet
-                      </p>
-                      <p className="max-w-[360px] text-[13px] leading-[19px] text-[var(--color-grey)]" style={MANROPE}>
-                        Set instructions and reference files once, then chat with a tailored agent again and again.
-                      </p>
-                      <NewAgentButton onClick={openCreate} label="Create agent" />
-                    </div>
+                    <EmptyAgentsPrompt onCreate={openCreate} />
                   ) : (
                     renderAgents(filteredCustom)
                   )}

@@ -4,6 +4,7 @@
 // (no backend / persistence), so the list resets on refresh.
 
 import { generateAgentAvatar } from '@/lib/agentAvatar';
+import { CURRENT_USER_NAME } from '@/lib/chatMeta';
 
 export type AgentFileKind = 'upload' | 'text' | 'github';
 
@@ -124,7 +125,127 @@ export interface CustomAgent {
   promptGroups?: AgentPromptGroup[];
   /** Pre-built agents shipped with the product — not deletable by the user. */
   isBuiltIn?: boolean;
+  /** Who authored the agent. Unset on the starter agents (they're Netcore's) and
+   *  on anything created before this was tracked — see `agentCreatedBy`. */
+  createdBy?: string;
+  /** What this agent has learned about the user. Unset falls back to
+   *  DEFAULT_AGENT_MEMORY — see `agentMemory`. */
+  memory?: AgentMemory;
+  /** How much this agent is used and what it produced — see `agentUsage`.
+   *  Unset (a freshly created agent) reads as zeros. */
+  usage?: AgentUsage;
+  /**
+   * Whether the agent carries previous conversations into a new chat as
+   * context. Unset means on — an agent you've talked to before should not
+   * start cold by default.
+   */
+  useConversationContext?: boolean;
+  /**
+   * Whether the agent is available to use. Unset means active; turning it off
+   * keeps the agent and its configuration but takes it out of circulation.
+   */
+  isActive?: boolean;
 }
+
+/** Agents are on and context-aware unless they say otherwise. */
+export const agentUsesConversationContext = (agent: CustomAgent): boolean =>
+  agent.useConversationContext ?? true;
+
+export const agentIsActive = (agent: CustomAgent): boolean => agent.isActive ?? true;
+
+/** One themed block of the memory summary. */
+export interface AgentMemorySection {
+  heading: string;
+  body: string;
+}
+
+/**
+ * What an agent has picked up about how this user works. Prototype content —
+ * there's no extraction behind it — but shaped the way a real summary would be:
+ * prose the user can read and correct, plus the facts they asked it to keep.
+ */
+export interface AgentMemory {
+  /** Coarse relative label, same vocabulary as chat times ('now', '11m', '2h'). */
+  updatedAt: string;
+  sections: AgentMemorySection[];
+  /** Things the user explicitly told it to remember, newest first. */
+  notes?: string[];
+}
+
+export const DEFAULT_AGENT_MEMORY: AgentMemory = {
+  updatedAt: '11m',
+  sections: [
+    {
+      heading: 'Overview',
+      body:
+        "You run lifecycle marketing at Netcore and lean on this agent for the weekly and monthly read on performance. " +
+        "You care about outcomes first — revenue, conversions, retention — and treat opens and clicks as diagnostics rather than headline numbers. " +
+        "You would rather see three things worth acting on than a complete dump of every metric.",
+    },
+    {
+      heading: 'Reporting preferences',
+      body:
+        "You want the exec summary at the top, then channel mix, then what changed against the prior period, and you always ask for the delta in absolute terms alongside the percentage. " +
+        "Week-on-week is your default comparison; month-on-month for anything going to leadership. " +
+        "You ask for deliverability to be ruled out before creative gets blamed for a drop, and you like every claim tied back to the campaign or segment it came from.",
+    },
+    {
+      heading: 'Channels and audience',
+      body:
+        "Email and WhatsApp carry most of your volume, with web push as a secondary nudge channel. " +
+        "The segments you return to most are lapsed high-value buyers, first-time purchasers inside their first 30 days, and the festive-season cohort you rebuild each quarter. " +
+        "You have flagged frequency capping as a recurring worry on WhatsApp and expect it called out when send volume climbs.",
+    },
+    {
+      heading: 'Working style',
+      body:
+        "You prefer plain language over marketing vocabulary, short paragraphs, and a clear rationale you can forward to product and engineering without rewriting it. " +
+        "When something looks off you want the caveat stated up front rather than buried. " +
+        "You typically review on Monday mornings and want the roll-up ready before then.",
+    },
+  ],
+  notes: [
+    'Always quote revenue in INR with the USD figure in brackets.',
+    'Exclude internal test campaigns (anything prefixed "test") from every roll-up.',
+    'Priya owns deliverability — loop her in when bounce rate moves more than a point.',
+  ],
+};
+
+/** The memory a given agent carries, falling back to the shared prototype set. */
+export const agentMemory = (agent: CustomAgent): AgentMemory => agent.memory ?? DEFAULT_AGENT_MEMORY;
+
+/**
+ * Per-agent usage telemetry. Prototype values — a real deployment would report
+ * these — but they are the numbers a marketer judges an agent on: how much it
+ * runs, whether those runs land, whether people come back, and how long it takes.
+ */
+export interface AgentUsage {
+  /** Runs in the current month. */
+  runs: number;
+  /** Share of those runs that completed successfully, 0-100. */
+  successRate: number;
+  /** Share of users who came back to this agent after a first run, 0-100. */
+  repeatUsage: number;
+  /** Mean wall-clock seconds a run takes. */
+  avgCompletionSeconds: number;
+}
+
+/** A brand-new agent has done nothing yet — no invented history. */
+export const ZERO_AGENT_USAGE: AgentUsage = {
+  runs: 0, successRate: 0, repeatUsage: 0, avgCompletionSeconds: 0,
+};
+
+export const agentUsage = (agent: CustomAgent): AgentUsage => agent.usage ?? ZERO_AGENT_USAGE;
+
+/** Author shown for the pre-built agents that ship with the product. */
+export const NETCORE_AUTHOR = 'Netcore';
+
+/**
+ * Who to credit for an agent: the stored author, else Netcore for the starter
+ * agents, else the signed-in user (anything they made before this was tracked).
+ */
+export const agentCreatedBy = (agent: CustomAgent): string =>
+  agent.createdBy ?? (agent.isBuiltIn ? NETCORE_AUTHOR : CURRENT_USER_NAME);
 
 export const MONTHLY_REPORT_AGENT_NAME = 'Monthly report agent';
 
@@ -179,6 +300,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
       },
     ],
     isBuiltIn: true,
+    usage: { runs: 128, successRate: 94, repeatUsage: 68, avgCompletionSeconds: 102 },
   },
   {
     id: 'starter-campaign-launch',
@@ -235,6 +357,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
       },
     ],
     isBuiltIn: true,
+    usage: { runs: 76, successRate: 91, repeatUsage: 54, avgCompletionSeconds: 148 },
   },
   {
     id: 'starter-channel-health',
@@ -291,6 +414,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
       },
     ],
     isBuiltIn: true,
+    usage: { runs: 213, successRate: 97, repeatUsage: 74, avgCompletionSeconds: 46 },
   },
   {
     id: 'starter-audience-strategist',
@@ -346,6 +470,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
       },
     ],
     isBuiltIn: true,
+    usage: { runs: 41, successRate: 88, repeatUsage: 61, avgCompletionSeconds: 226 },
   },
   {
     id: 'starter-market-pulse',
@@ -402,6 +527,7 @@ export const STARTER_AGENTS: CustomAgent[] = [
       },
     ],
     isBuiltIn: true,
+    usage: { runs: 57, successRate: 92, repeatUsage: 45, avgCompletionSeconds: 134 },
   },
 ];
 

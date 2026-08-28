@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "/campaign-assets/netcore-logo.svg";
 import iconAiDashboard from "/campaign-assets/nav-ai-dashboard.svg";
+import iconAgents from "/campaign-assets/nav-agents.svg";
 import iconDecisioning from "/campaign-assets/nav-decisioning.svg";
 import iconPinned from "/campaign-assets/nav-pinned.svg";
 import iconDashboard from "/campaign-assets/nav-dashboard.svg";
@@ -28,6 +29,7 @@ import AnalyticsL2 from "./AnalyticsL2";
 const primary = [
   { key: "pinned", icon: iconPinned, label: "Pinned" },
   { key: "ai-dashboard", icon: iconAiDashboard, label: "AI Dashboard", route: "/ai-dashboard" },
+  { key: "agents", icon: iconAgents, label: "Agents", route: "/agents" },
   { key: "decisioning", icon: iconDecisioning, label: "Decisioning engine", route: "/decisioning-engine" },
   { key: "dashboard", icon: iconDashboard, label: "Dashboards" },
   { key: "engage", icon: iconEngage, label: "Engage", route: "/campaigns" },
