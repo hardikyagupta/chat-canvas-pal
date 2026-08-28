@@ -6,8 +6,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AtmosphereProvider } from "@/contexts/AtmosphereContext";
 import { ReportThemeProvider } from "@/contexts/ReportThemeContext";
 import { DecisioningSetupProvider } from "@/contexts/DecisioningSetupContext";
+import { CustomAgentsProvider } from "@/contexts/CustomAgentsContext";
 import Index from "./pages/Index";
 import AiDashboard from "./pages/AiDashboard";
+import Agents from "./pages/Agents";
 import Settings from "./pages/Settings";
 import Campaigns from "./pages/Campaigns";
 import AudienceSegments from "./pages/AudienceSegments";
@@ -33,10 +35,12 @@ const App = () => (
       <AtmosphereProvider>
         <ReportThemeProvider>
         <DecisioningSetupProvider>
+        <CustomAgentsProvider>
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/ai-dashboard" element={<AiDashboard />} />
+              <Route path="/agents" element={<Agents />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/audience/segments" element={<AudienceSegments />} />
@@ -54,6 +58,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+        </CustomAgentsProvider>
         </DecisioningSetupProvider>
         </ReportThemeProvider>
       </AtmosphereProvider>

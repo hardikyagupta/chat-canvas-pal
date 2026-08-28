@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from 'sonner';
 import {
   ArrowLeft, MoreHorizontal, Plus, Trash2, X,
   Paperclip, TextCursorInput, Github, FileText, Bot, MessageSquare,
@@ -10,7 +11,7 @@ import { AgentToolsConfigPanel } from './AgentToolsConfig';
 import { DsButton } from '@/components/ui/ds-button';
 import { cn } from '@/lib/utils';
 import type { CustomAgent, AgentFile, AgentTools, AgentPromptGroup } from '@/data/customAgents';
-import { DEFAULT_AGENT_TOOLS, DEFAULT_PROMPT_GROUPS } from '@/data/customAgents';
+import { DEFAULT_AGENT_TOOLS, DEFAULT_PROMPT_GROUPS, agentMemory } from '@/data/customAgents';
 import type { LhsChatItem } from './LhsSidebar';
 import {
   ActionMenu,
@@ -24,14 +25,12 @@ import ChatActionsMenu from './ChatActionsMenu';
 import DeleteChatDialog from './DeleteChatDialog';
 import CreateCustomAgentModal from './CreateCustomAgentModal';
 import ReportCustomizationModal from './ReportCustomizationModal';
-
-// Edit pencil (Phosphor "pencil-simple" glyph) — fill-based, uses currentColor.
-// Same glyph the chat row menu uses, so every edit affordance reads as one set.
-const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" {...props}>
-    <path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z" />
-  </svg>
-);
+import { PencilIcon } from './PencilIcon';
+import {
+  AgentTabStrip, AgentOverviewPanel, AgentKpiRow, AgentAboutCard,
+  AgentActivityPanel, AgentMemoryPanel, AgentSettingsPanel,
+  type AgentTabKey,
+} from './AgentDetailTabs';
 
 const FONT: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
 
@@ -72,6 +71,23 @@ interface CustomAgentDetailProps {
   chats?: LhsChatItem[];
   /** Open a past chat by id. */
   onSelectChat?: (id: string) => void;
+  /** Override the root surface — the L1 Agents page swaps the co-marketer
+   *  surface for that shell's flat page background. */
+  className?: string;
+  /** Override the centred content column, so the L1 Agents page can use that
+   *  shell's full-width gutters instead of this page's 1080px column. */
+  columnClassName?: string;
+  /**
+   * Which shape this page takes:
+   *  - 'chat' (default): the co-marketer app, where this page *is* where you
+   *    chat — composer and suggested prompts in the body, figures in Overview.
+   *  - 'workspace': the L1 page, where the chat lives in a docked column
+   *    beside it — so no in-page composer, a primary "Start chat" in the
+   *    header, and the figures lifted above the tab strip.
+   */
+  variant?: 'chat' | 'workspace';
+  /** Workspace variant only: "Start chat" — opens the host's chat surface. */
+  onOpenChat?: () => void;
 }
 
 /* ── Set instructions modal ──────────────────────────────────────── */
@@ -503,8 +519,18 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
   onStartChat,
   chats = [],
   onSelectChat,
+  className,
+  columnClassName,
+  variant = 'chat',
+  onOpenChat,
 }) => {
+  // The L1 page keeps its chat in a docked column, so this page carries no
+  // composer of its own — see the `variant` prop.
+  const workspace = variant === 'workspace';
   const [menuOpen, setMenuOpen] = React.useState(false);
+  // Which section is showing. Overview first — it answers "what is this agent
+  // and is it working" before the chat history does.
+  const [activeTab, setActiveTab] = React.useState<AgentTabKey>('overview');
   const [editOpen, setEditOpen] = React.useState(false);
   const [instructionsOpen, setInstructionsOpen] = React.useState(false);
   const [toolsOpen, setToolsOpen] = React.useState(false);
@@ -530,6 +556,14 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
   // Mirrors LhsSidebar / ChatListPage so the popover behaves identically.
   const [titleOverrides, setTitleOverrides] = React.useState<Record<string, string>>({});
   const [deletedChatIds, setDeletedChatIds] = React.useState<Set<string>>(new Set());
+  // What the tabs count and report on: this agent's chats minus any deleted in
+  // session, carrying any in-session rename so every panel agrees.
+  const visibleChats = React.useMemo(
+    () => chats
+      .filter((chat) => !deletedChatIds.has(chat.id))
+      .map((chat) => (titleOverrides[chat.id] ? { ...chat, title: titleOverrides[chat.id] } : chat)),
+    [chats, deletedChatIds, titleOverrides],
+  );
   const [bookmarkedIds, setBookmarkedIds] = React.useState<Set<string>>(new Set());
   const [chatMenuOpenId, setChatMenuOpenId] = React.useState<string | null>(null);
   const [renamingId, setRenamingId] = React.useState<string | null>(null);
@@ -597,9 +631,205 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
     e.target.value = '';
   };
 
+  // Files + Tools + Starter questions (plus Instructions in the chat variant).
+  // Rendered as the RHS rail in the chat variant, and inside Overview's
+  // right-hand column in workspace — so it is defined once and placed twice.
+  const configCard = (
+    <div className="flex shrink-0 flex-col rounded-[16px] border border-[var(--color-line-input)] bg-card overflow-hidden">
+      {/* Instructions — chat variant only. Workspace shows them in full in
+          Overview, with its own pencil, so repeating them here would be
+          the same field twice. */}
+      {!workspace ? (
+      <div className="flex flex-col border-b border-[var(--color-line)]">
+        <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
+          <span className="text-[15px] font-semibold text-[var(--color-ink)]" style={FONT}>Instructions</span>
+          <button
+            type="button"
+            onClick={() => setInstructionsOpen(true)}
+            aria-label="Edit instructions"
+            className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+          >
+            <PencilIcon className="size-[15px]" />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setInstructionsOpen(true)}
+          className="px-[18px] pb-[16px] text-left"
+        >
+          {agent.instructions ? (
+            <p className="line-clamp-4 break-words text-[13px] leading-[19px] text-[var(--color-charcoal)] whitespace-pre-wrap" style={FONT}>
+              {agent.instructions}
+            </p>
+          ) : (
+            <p className="text-[13px] leading-[19px] text-[var(--color-grey-soft)]" style={FONT}>
+              Add instructions to tailor the agent's responses
+            </p>
+          )}
+        </button>
+      </div>
+      ) : null}
+  
+      {/* Files. No divider of its own — Tools below carries a border-t,
+          and the card's own border closes the top when Instructions is
+          hidden. */}
+      <div className="flex flex-col">
+        <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
+          <span className="text-[15px] font-semibold text-[var(--color-ink)]" style={FONT}>Files</span>
+          <Popover open={filesMenuOpen} onOpenChange={setFilesMenuOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Add file"
+                className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+              >
+                <Plus className="size-[16px]" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              sideOffset={6}
+              className="w-[212px] p-[6px] rounded-[12px] border border-border bg-popover shadow-[0px_8px_20px_0px_oklch(0_0_0_/_0.12)]"
+              style={FONT}
+            >
+              <button
+                type="button"
+                onClick={() => { setFilesMenuOpen(false); fileInputRef.current?.click(); }}
+                className="flex w-full items-center gap-[8px] h-[32px] px-[8px] rounded-[8px] text-[13px] font-medium text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+              >
+                <Paperclip className="size-[16px] shrink-0" strokeWidth={1.75} />
+                Upload from device
+              </button>
+              <button
+                type="button"
+                onClick={() => { setFilesMenuOpen(false); setTextContentOpen(true); }}
+                className="flex w-full items-center gap-[8px] h-[32px] px-[8px] rounded-[8px] text-[13px] font-medium text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+              >
+                <TextCursorInput className="size-[16px] shrink-0" strokeWidth={1.75} />
+                Add text content
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilesMenuOpen(false)}
+                className="flex w-full items-center gap-[8px] h-[32px] px-[8px] rounded-[8px] text-[13px] font-medium text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+              >
+                <Github className="size-[16px] shrink-0" strokeWidth={1.75} />
+                GitHub
+              </button>
+            </PopoverContent>
+          </Popover>
+        </div>
+  
+        <div className="px-[18px] pb-[18px]">
+          {agent.files.length === 0 ? (
+            <div className="flex flex-col items-center gap-[8px] rounded-[12px] border border-dashed border-[var(--color-line-input)] bg-[var(--color-surface-0)] py-[26px] px-[16px] text-center">
+              <Bot className="size-[22px] text-[var(--color-grey-soft)]" />
+              <p className="text-[12px] leading-[17px] text-[var(--color-grey-soft)]" style={FONT}>
+                Add PDFs, documents, or other text to reference in this agent.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-[8px]">
+              {agent.files.map((file) => {
+                const isUploading = uploadingIds.has(file.id);
+                if (isUploading) {
+                  // Skeleton row while the (simulated) upload settles.
+                  return (
+                    <div
+                      key={file.id}
+                      className="flex items-center gap-[10px] rounded-[10px] border border-[var(--color-line-input)] bg-[var(--color-surface-0)] px-[12px] py-[9px]"
+                    >
+                      <span className="size-[28px] rounded-[7px] bg-[var(--color-surface-1)] animate-pulse shrink-0" />
+                      <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
+                        <span className="h-[10px] w-[62%] rounded-[4px] bg-[var(--color-surface-1)] animate-pulse" />
+                        <span className="h-[8px] w-[34%] rounded-[4px] bg-[var(--color-surface-1)] animate-pulse" />
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <div
+                    key={file.id}
+                    className="group flex items-center gap-[10px] rounded-[10px] border border-[var(--color-line-input)] bg-[var(--color-surface-0)] px-[12px] py-[9px]"
+                  >
+                    <span className="flex size-[28px] items-center justify-center rounded-[7px] bg-[var(--color-surface-1)] text-[var(--color-charcoal)] shrink-0">
+                      <FileText className="size-[15px]" />
+                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-[13px] font-medium text-[var(--color-ink)]" style={FONT}>{file.title}</span>
+                      <span className="text-[11px] text-[var(--color-grey-soft)]" style={FONT}>
+                        {file.kind === 'upload' && file.size != null
+                          ? formatFileSize(file.size)
+                          : file.kind === 'text' ? 'Text' : 'GitHub'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(file.id)}
+                      aria-label={`Remove ${file.title}`}
+                      className="flex size-[26px] items-center justify-center rounded-[7px] text-[var(--color-grey)] hover:bg-[oklch(0_0_0_/_0.06)] hover:text-[var(--color-ink)] transition-colors shrink-0"
+                    >
+                      <X className="size-[15px]" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+  
+      {/* Tools */}
+      <div className="flex flex-col border-t border-[var(--color-line)]">
+        <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
+          <span className="text-[15px] font-semibold text-[var(--color-ink)]" style={FONT}>Tools</span>
+          <button
+            type="button"
+            onClick={() => setToolsOpen(true)}
+            aria-label="Edit tools"
+            className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+          >
+            <PencilIcon className="size-[15px]" />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setToolsOpen(true)}
+          className="px-[18px] pb-[16px] text-left"
+        >
+          <ToolsSummary tools={agentTools} />
+        </button>
+      </div>
+  
+      {/* Starter questions */}
+      <div className="flex flex-col border-t border-[var(--color-line)]">
+        <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
+          <span className="text-[15px] font-semibold text-[var(--color-ink)]" style={FONT}>
+            Starter questions <span className="font-medium text-[var(--color-grey-soft)]">(optional)</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setStarterQuestionsOpen(true)}
+            aria-label="Edit starter questions"
+            className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
+          >
+            <PencilIcon className="size-[15px]" />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setStarterQuestionsOpen(true)}
+          className="px-[18px] pb-[16px] text-left"
+        >
+          <StarterQuestionsSummary questions={starterQuestions} />
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-[var(--color-surface-0)]">
-      <div className="mx-auto flex flex-col min-h-0 w-full max-w-[1080px] flex-1 px-[20px]">
+    <div className={cn('flex flex-col h-full w-full overflow-hidden bg-[var(--color-surface-0)]', className)}>
+      <div className={cn('mx-auto flex flex-col min-h-0 w-full flex-1', columnClassName ?? 'max-w-[1080px] px-[20px]')}>
         {/* Back link */}
         <div className={cn('shrink-0', compact ? 'pt-[12px]' : 'pt-[12px]')}>
           <button
@@ -642,51 +872,122 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-[8px] shrink-0">
-            {/* Min-view keeps the icon-only square (the label would crowd the
-                agent name); the full view gets the DS tertiary button. */}
-            {compact ? (
-              <button
-                type="button"
-                onClick={() => setReportCustomizationOpen(true)}
-                aria-label="Customize reports"
-                title="Customize reports"
-                className="flex size-[34px] items-center justify-center rounded-[8px] border border-[var(--color-line)] text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
-              >
-                <FileText className="size-[15px]" />
-              </button>
-            ) : (
-              <DsButton variant="tertiary" onClick={() => setReportCustomizationOpen(true)}>
-                <FileText />
-                Customize reports
-              </DsButton>
-            )}
-            <ActionMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
-              <ActionMenuTrigger asChild>
+            {/* Delete sits left of Start chat in workspace — the kebab it used
+                to live in has nothing else left there. Built-ins can't be
+                deleted, so they don't get it. Recoloured DS `secondary` (the
+                outline recipe) rather than a bespoke red button. */}
+            {workspace && !agent.isBuiltIn ? (
+              compact ? (
                 <button
                   type="button"
-                  aria-label="Agent options"
-                  className="flex items-center justify-center size-[34px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                  onClick={() => setDeleteOpen(true)}
+                  aria-label="Delete agent"
+                  title="Delete agent"
+                  className="flex size-[34px] items-center justify-center rounded-[8px] border border-[var(--btn-error)] text-[var(--btn-error)] transition-colors hover:bg-[color-mix(in_oklch,var(--btn-error)_8%,transparent)]"
                 >
-                  <MoreHorizontal className="size-[18px]" />
+                  <Trash2 className="size-[15px]" />
                 </button>
-              </ActionMenuTrigger>
-              <ActionMenuContent align="end" side="bottom">
-                <ActionMenuItem icon={PencilIcon} onSelect={() => { setMenuOpen(false); setEditOpen(true); }}>Edit details</ActionMenuItem>
-                {!agent.isBuiltIn ? (
-                  <ActionMenuItem icon={Trash2} variant="danger" onSelect={() => { setMenuOpen(false); setDeleteOpen(true); }}>Delete</ActionMenuItem>
-                ) : null}
-              </ActionMenuContent>
-            </ActionMenu>
+              ) : (
+                <DsButton
+                  variant="secondary"
+                  onClick={() => setDeleteOpen(true)}
+                  className="border-[var(--btn-error)] text-[var(--btn-error)] hover:border-[var(--btn-error-hover)] hover:bg-[color-mix(in_oklch,var(--btn-error)_8%,transparent)] hover:text-[var(--btn-error-hover)]"
+                >
+                  <Trash2 />
+                  Delete agent
+                </DsButton>
+              )
+            ) : null}
+            {/* Workspace variant: the page has no composer, so starting a chat
+                is a primary action here. Same icon-only treatment as its
+                neighbour in the min view. */}
+            {workspace && onOpenChat ? (
+              compact ? (
+                <button
+                  type="button"
+                  onClick={onOpenChat}
+                  aria-label="Start chat"
+                  title="Start chat"
+                  className="flex size-[34px] items-center justify-center rounded-[8px] bg-[var(--color-royal)] text-white transition-opacity hover:opacity-90"
+                >
+                  <MessageSquare className="size-[15px]" />
+                </button>
+              ) : (
+                <DsButton onClick={onOpenChat}>
+                  <MessageSquare />
+                  Start chat
+                </DsButton>
+              )
+            ) : null}
+            {/* Chat variant only: the workspace variant reaches this from its
+                Settings section, so keeping it here too would say it twice.
+                Min-view keeps the icon-only square (the label would crowd the
+                agent name); the full view gets the DS tertiary button. */}
+            {!workspace ? (
+              compact ? (
+                <button
+                  type="button"
+                  onClick={() => setReportCustomizationOpen(true)}
+                  aria-label="Customize reports"
+                  title="Customize reports"
+                  className="flex size-[34px] items-center justify-center rounded-[8px] border border-[var(--color-line)] text-[var(--color-slate)] transition-colors hover:bg-[oklch(0_0_0_/_0.04)]"
+                >
+                  <FileText className="size-[15px]" />
+                </button>
+              ) : (
+                <DsButton variant="tertiary" onClick={() => setReportCustomizationOpen(true)}>
+                  <FileText />
+                  Customize reports
+                </DsButton>
+              )
+            ) : null}
+            {/* Chat variant only. Workspace edits name/description from
+                Overview's pencils and deletes from the header button, so its
+                menu would be empty. */}
+            {!workspace ? (
+              <ActionMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
+                <ActionMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Agent options"
+                    className="flex items-center justify-center size-[34px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors shrink-0"
+                  >
+                    <MoreHorizontal className="size-[18px]" />
+                  </button>
+                </ActionMenuTrigger>
+                <ActionMenuContent align="end" side="bottom">
+                  <ActionMenuItem icon={PencilIcon} onSelect={() => { setMenuOpen(false); setEditOpen(true); }}>Edit details</ActionMenuItem>
+                  {!agent.isBuiltIn ? (
+                    <ActionMenuItem icon={Trash2} variant="danger" onSelect={() => { setMenuOpen(false); setDeleteOpen(true); }}>Delete</ActionMenuItem>
+                  ) : null}
+                </ActionMenuContent>
+              </ActionMenu>
+            ) : null}
           </div>
         </div>
 
-        {/* Body — chat input (left) + Instructions/Files card (right).
+        {/* Body. The 'chat' variant is two columns — composer left, config card
+            right. The workspace variant is one: the config card moves under
+            Overview, so the figures and panels take the full width.
             `overflow-y-auto` also clips horizontally, which would cut the chat
             input's focus ring at the edge. The -mx/px pair widens the clip area
             by 4px on each side while keeping content aligned with the header. */}
-        <div className={cn('flex-1 min-h-0 overflow-y-auto pt-[6px] pb-[32px] hover-scroll -mx-[4px] px-[4px]', compact ? 'flex flex-col gap-[16px]' : 'grid grid-cols-[minmax(0,1fr)_360px] gap-[24px] items-start')}>
-          {/* Chat input column */}
+        <div
+          className={cn(
+            'flex-1 min-h-0 overflow-y-auto pt-[6px] pb-[32px] hover-scroll -mx-[4px] px-[4px]',
+            compact || workspace
+              ? 'flex flex-col gap-[16px]'
+              : 'grid grid-cols-[minmax(0,1fr)_360px] gap-[24px] items-start',
+          )}
+        >
+          {/* Main column. The 'chat' variant leads with the composer and its
+              suggested prompts; the workspace variant has no composer, so it
+              leads with the agent's headline figures instead. */}
           <div className="flex flex-col gap-[10px]">
+            {workspace ? (
+            <AgentKpiRow agent={agent} />
+            ) : (
+            <>
             <ChatInput
               key={agent.id}
               placeholder="How can I help you today?"
@@ -747,18 +1048,97 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
                 ))}
               </div>
             )}
+            </>
+            )}
+
+            {/* Sections under the composer — Overview / Chats / Activity /
+                Memory / Settings. The strip reuses the Reports page's DS-button
+                filter recipe so the two surfaces read as one system. */}
+            <div className="mt-[18px] flex flex-col gap-[14px]">
+              <AgentTabStrip
+                active={activeTab}
+                onChange={setActiveTab}
+                variant={variant}
+                counts={workspace ? undefined : { chats: visibleChats.length }}
+              />
+
+              {/* Workspace shows the figures above the strip, so Overview here
+                  is just the particulars — no need to repeat them. */}
+              {activeTab === 'overview' && (
+                workspace
+                  ? (
+                    /* Two columns: the agent's particulars beside its files,
+                       tools and starter questions. Stacks under lg, where 360px
+                       of rail would leave the left column too narrow. */
+                    <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+                      <AgentAboutCard
+                        agent={agent}
+                        chats={visibleChats}
+                        showHeading={false}
+                        onEditDetails={() => setEditOpen(true)}
+                        onEditInstructions={() => setInstructionsOpen(true)}
+                      />
+                      {configCard}
+                    </div>
+                  )
+                  : <AgentOverviewPanel agent={agent} chats={visibleChats} />
+              )}
+              {activeTab === 'activity' && <AgentActivityPanel agent={agent} chats={visibleChats} />}
+              {activeTab === 'settings' && (
+                <AgentSettingsPanel
+                  agent={agent}
+                  onSetVisibility={(visibility) => {
+                    const tools = agent.tools ?? DEFAULT_AGENT_TOOLS;
+                    onUpdateAgent(agent.id, { tools: { ...tools, visibility }, updatedAt: 'now' });
+                  }}
+                  onToggleConversationContext={(next) =>
+                    onUpdateAgent(agent.id, { useConversationContext: next, updatedAt: 'now' })
+                  }
+                  onToggleActive={(next) =>
+                    onUpdateAgent(agent.id, { isActive: next, updatedAt: 'now' })
+                  }
+                  onCustomizeReports={() => setReportCustomizationOpen(true)}
+                />
+              )}
+              {activeTab === 'memory' && (
+                <AgentMemoryPanel
+                  agent={agent}
+                  onToggleMemory={(next) => {
+                    const tools = agent.tools ?? DEFAULT_AGENT_TOOLS;
+                    onUpdateAgent(agent.id, {
+                      tools: { ...tools, capabilities: { ...tools.capabilities, memory: next } },
+                      updatedAt: 'now',
+                    });
+                  }}
+                  onEditInstructions={() => setInstructionsOpen(true)}
+                  onRemember={(note) => {
+                    const memory = agentMemory(agent);
+                    onUpdateAgent(agent.id, {
+                      memory: { ...memory, updatedAt: 'now', notes: [note, ...(memory.notes ?? [])] },
+                      updatedAt: 'now',
+                    });
+                    toast.success('Added to memory');
+                  }}
+                  onForget={(note) => {
+                    const memory = agentMemory(agent);
+                    onUpdateAgent(agent.id, {
+                      memory: {
+                        ...memory,
+                        updatedAt: 'now',
+                        notes: (memory.notes ?? []).filter((n) => n !== note),
+                      },
+                      updatedAt: 'now',
+                    });
+                    toast.success('Removed from memory');
+                  }}
+                />
+              )}
 
             {/* Recents — this agent's chat history, newest first. */}
-            {chats.length > 0 && (
-              <div className="flex flex-col mt-[16px]">
-                <span
-                  className="px-[6px] pb-[6px] text-[13px] font-medium text-[var(--color-grey)]"
-                  style={FONT}
-                >
-                  Recents
-                </span>
+            {activeTab === 'chats' && (visibleChats.length > 0 ? (
+              <div className="flex flex-col">
                 <div className="flex flex-col">
-                  {chats.filter((chat) => !deletedChatIds.has(chat.id)).map((chat) => {
+                  {visibleChats.map((chat) => {
                     const isRenaming = chat.id === renamingId;
                     const isMenuOpen = chat.id === chatMenuOpenId;
                     const title = titleOverrides[chat.id] ?? chat.title;
@@ -836,197 +1216,25 @@ const CustomAgentDetail: React.FC<CustomAgentDetailProps> = ({
                   })}
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Instructions + Files + Tools + Starter questions card.
-              `shrink-0` matters in the compact column: as a flex item the card
-              would otherwise shrink to the scroll viewport and its own
-              overflow-hidden would crop the sections off the bottom. */}
-          <div className="flex shrink-0 flex-col rounded-[16px] border border-[var(--color-line-input)] bg-card overflow-hidden">
-            {/* Instructions */}
-            <div className="flex flex-col border-b border-[var(--color-line)]">
-              <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
-                <span className="text-[15px] font-semibold text-[var(--color-ink)]" style={FONT}>Instructions</span>
-                <button
-                  type="button"
-                  onClick={() => setInstructionsOpen(true)}
-                  aria-label="Edit instructions"
-                  className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
-                >
-                  <PencilIcon className="size-[15px]" />
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setInstructionsOpen(true)}
-                className="px-[18px] pb-[16px] text-left"
-              >
-                {agent.instructions ? (
-                  <p className="line-clamp-4 break-words text-[13px] leading-[19px] text-[var(--color-charcoal)] whitespace-pre-wrap" style={FONT}>
-                    {agent.instructions}
-                  </p>
-                ) : (
+              ) : (
+                <div className="flex flex-col items-center gap-[6px] rounded-[16px] border border-[var(--color-line-input)] bg-card px-[16px] py-[28px] text-center">
+                  <MessageSquare className="size-[20px] text-[var(--color-grey-soft)]" />
+                  <p className="text-[14px] font-semibold text-[var(--color-ink)]" style={FONT}>No chats yet</p>
                   <p className="text-[13px] leading-[19px] text-[var(--color-grey-soft)]" style={FONT}>
-                    Add instructions to tailor the agent's responses
+                    Send a message above, or pick one of the suggested prompts, and the exchange shows up here.
                   </p>
-                )}
-              </button>
-            </div>
-
-            {/* Files */}
-            <div className="flex flex-col">
-              <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
-                <span className="text-[15px] font-semibold text-[var(--color-ink)]" style={FONT}>Files</span>
-                <Popover open={filesMenuOpen} onOpenChange={setFilesMenuOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label="Add file"
-                      className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] data-[state=open]:bg-[oklch(0_0_0_/_0.06)] transition-colors"
-                    >
-                      <Plus className="size-[16px]" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="end"
-                    sideOffset={6}
-                    className="w-[212px] p-[6px] rounded-[12px] border border-border bg-popover shadow-[0px_8px_20px_0px_oklch(0_0_0_/_0.12)]"
-                    style={FONT}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => { setFilesMenuOpen(false); fileInputRef.current?.click(); }}
-                      className="flex w-full items-center gap-[8px] h-[32px] px-[8px] rounded-[8px] text-[13px] font-medium text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
-                    >
-                      <Paperclip className="size-[16px] shrink-0" strokeWidth={1.75} />
-                      Upload from device
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setFilesMenuOpen(false); setTextContentOpen(true); }}
-                      className="flex w-full items-center gap-[8px] h-[32px] px-[8px] rounded-[8px] text-[13px] font-medium text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
-                    >
-                      <TextCursorInput className="size-[16px] shrink-0" strokeWidth={1.75} />
-                      Add text content
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFilesMenuOpen(false)}
-                      className="flex w-full items-center gap-[8px] h-[32px] px-[8px] rounded-[8px] text-[13px] font-medium text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
-                    >
-                      <Github className="size-[16px] shrink-0" strokeWidth={1.75} />
-                      GitHub
-                    </button>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="px-[18px] pb-[18px]">
-                {agent.files.length === 0 ? (
-                  <div className="flex flex-col items-center gap-[8px] rounded-[12px] border border-dashed border-[var(--color-line-input)] bg-[var(--color-surface-0)] py-[26px] px-[16px] text-center">
-                    <Bot className="size-[22px] text-[var(--color-grey-soft)]" />
-                    <p className="text-[12px] leading-[17px] text-[var(--color-grey-soft)]" style={FONT}>
-                      Add PDFs, documents, or other text to reference in this agent.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-[8px]">
-                    {agent.files.map((file) => {
-                      const isUploading = uploadingIds.has(file.id);
-                      if (isUploading) {
-                        // Skeleton row while the (simulated) upload settles.
-                        return (
-                          <div
-                            key={file.id}
-                            className="flex items-center gap-[10px] rounded-[10px] border border-[var(--color-line-input)] bg-[var(--color-surface-0)] px-[12px] py-[9px]"
-                          >
-                            <span className="size-[28px] rounded-[7px] bg-[var(--color-surface-1)] animate-pulse shrink-0" />
-                            <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
-                              <span className="h-[10px] w-[62%] rounded-[4px] bg-[var(--color-surface-1)] animate-pulse" />
-                              <span className="h-[8px] w-[34%] rounded-[4px] bg-[var(--color-surface-1)] animate-pulse" />
-                            </div>
-                          </div>
-                        );
-                      }
-                      return (
-                        <div
-                          key={file.id}
-                          className="group flex items-center gap-[10px] rounded-[10px] border border-[var(--color-line-input)] bg-[var(--color-surface-0)] px-[12px] py-[9px]"
-                        >
-                          <span className="flex size-[28px] items-center justify-center rounded-[7px] bg-[var(--color-surface-1)] text-[var(--color-charcoal)] shrink-0">
-                            <FileText className="size-[15px]" />
-                          </span>
-                          <div className="flex min-w-0 flex-1 flex-col">
-                            <span className="truncate text-[13px] font-medium text-[var(--color-ink)]" style={FONT}>{file.title}</span>
-                            <span className="text-[11px] text-[var(--color-grey-soft)]" style={FONT}>
-                              {file.kind === 'upload' && file.size != null
-                                ? formatFileSize(file.size)
-                                : file.kind === 'text' ? 'Text' : 'GitHub'}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(file.id)}
-                            aria-label={`Remove ${file.title}`}
-                            className="flex size-[26px] items-center justify-center rounded-[7px] text-[var(--color-grey)] hover:bg-[oklch(0_0_0_/_0.06)] hover:text-[var(--color-ink)] transition-colors shrink-0"
-                          >
-                            <X className="size-[15px]" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Tools */}
-            <div className="flex flex-col border-t border-[var(--color-line)]">
-              <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
-                <span className="text-[15px] font-semibold text-[var(--color-ink)]" style={FONT}>Tools</span>
-                <button
-                  type="button"
-                  onClick={() => setToolsOpen(true)}
-                  aria-label="Edit tools"
-                  className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
-                >
-                  <PencilIcon className="size-[15px]" />
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setToolsOpen(true)}
-                className="px-[18px] pb-[16px] text-left"
-              >
-                <ToolsSummary tools={agentTools} />
-              </button>
-            </div>
-
-            {/* Starter questions */}
-            <div className="flex flex-col border-t border-[var(--color-line)]">
-              <div className="flex items-center justify-between gap-[8px] px-[18px] pt-[16px] pb-[10px]">
-                <span className="text-[15px] font-semibold text-[var(--color-ink)]" style={FONT}>
-                  Starter questions <span className="font-medium text-[var(--color-grey-soft)]">(optional)</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setStarterQuestionsOpen(true)}
-                  aria-label="Edit starter questions"
-                  className="flex items-center justify-center size-[28px] rounded-[8px] text-[var(--color-charcoal)] hover:bg-[oklch(0_0_0_/_0.06)] transition-colors"
-                >
-                  <PencilIcon className="size-[15px]" />
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStarterQuestionsOpen(true)}
-                className="px-[18px] pb-[16px] text-left"
-              >
-                <StarterQuestionsSummary questions={starterQuestions} />
-              </button>
+                </div>
+              ))}
             </div>
           </div>
+
+          {/* Files + Tools + Starter questions (plus Instructions in the chat
+              variant). The RHS rail in the chat variant; in workspace it is part
+              of Overview, so it follows the tab and hides on the others.
+              `shrink-0` matters in the single-column layouts: as a flex item the
+              card would otherwise shrink to the scroll viewport and its own
+              overflow-hidden would crop the sections off the bottom. */}
+          {!workspace ? configCard : null}
         </div>
         </>
         )}
