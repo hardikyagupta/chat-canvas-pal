@@ -61,13 +61,18 @@ function IconProductPersonalisation({ className }: { className?: string }) {
   );
 }
 
-const items = [
+const items: {
+  key: string;
+  label: string;
+  icon: ({ className }: { className?: string }) => JSX.Element;
+  route?: string;
+}[] = [
   { key: "campaigns", label: "Campaigns", icon: IconCampaigns, route: "/campaigns" },
   { key: "journey", label: "Journey", icon: IconJourney, route: "/journeys" },
   { key: "onsite", label: "On-site messages", icon: IconOnSiteMessages },
   { key: "content", label: "Content personalisation", icon: IconContentPersonalisation },
   { key: "product", label: "Product personalisation", icon: IconProductPersonalisation },
-] as const;
+];
 
 /**
  * Engage L2 — the flyout menu that opens beside the Engage entry in the L1
