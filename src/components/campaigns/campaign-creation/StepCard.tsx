@@ -22,7 +22,7 @@ export default function StepCard({
   children?: ReactNode;
 }) {
   return (
-    <div className="w-full rounded-lg border border-[#DDE2EE] bg-white p-8">
+    <div className="cc-step-card w-full rounded-lg border border-[#DDE2EE] bg-white p-8">
       <div className={cn(wide ? "max-w-[980px]" : "max-w-[640px]")}>
         <div className="mb-6 flex items-start justify-between gap-6">
           <div>

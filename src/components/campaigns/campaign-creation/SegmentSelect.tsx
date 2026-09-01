@@ -1,7 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { segments } from "../segments.data";
+
+/** Why the co-marketer plotted a cut — shown on hover over its chip. */
+export interface SegmentRationale {
+  /** Save state of the cut itself, e.g. "Draft". */
+  status?: string;
+  /** Contacts matching the rules, before reachability is applied. */
+  members?: number;
+  /** The rules behind the cut, ANDed together. */
+  conditions?: string[];
+  /** One paragraph on why this cut, in the agent's voice. */
+  why: string;
+}
 
 /** A list or segment as it sits in the audience form's chips. */
 export interface SegmentRef {
@@ -11,6 +24,8 @@ export interface SegmentRef {
   reach: number;
   /** Built by the co-marketer rather than picked from saved segments. */
   ai?: boolean;
+  /** Present on co-marketer cuts — the reasoning behind this one. */
+  rationale?: SegmentRationale;
 }
 
 const nf = new Intl.NumberFormat("en-US");
@@ -22,6 +37,80 @@ const SAVED: SegmentRef[] = segments.map((s) => ({
   reach: s.email,
   ai: s.aiGenerated,
 }));
+
+/**
+ * The reasoning behind a co-marketer cut — what it is, the rules it was built
+ * from, and why it was picked. Shown on hover so the chip stays a chip: the
+ * user can sanity-check a segment they didn't write without leaving the form.
+ */
+function RationalePanel({ segment }: { segment: SegmentRef }) {
+  const [expanded, setExpanded] = useState(false);
+  const r = segment.rationale;
+  if (!r) return null;
+
+  const conditions = r.conditions ?? [];
+  const shown = expanded ? conditions : conditions.slice(0, 3);
+  const rowLabel = "w-[74px] shrink-0 font-manrope text-[11px] text-[#8A8AA3]";
+
+  return (
+    <div className="font-manrope">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[13px] font-bold leading-[18px] text-[#17173A]">{segment.name}</p>
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#F3F0FF] px-2 py-0.5 text-[11px] font-semibold text-[#7B5CFA]">
+          <Sparkles className="size-3" strokeWidth={2.2} />
+          Drafted for you
+        </span>
+      </div>
+      <p className="mt-1 text-[11px] text-[#8A8AA3]">
+        {nf.format(r.members ?? segment.reach)} members
+      </p>
+
+      <div className="mt-3 space-y-2.5">
+        {r.status && (
+          <div className="flex gap-2">
+            <span className={rowLabel}>Created</span>
+            <span className="text-[12px] font-medium text-[#17173A]">{r.status}</span>
+          </div>
+        )}
+
+        {conditions.length > 0 && (
+          <div className="flex gap-2">
+            <span className={rowLabel}>Conditions</span>
+            <div className="min-w-0 flex-1">
+              {shown.map((c, i) => (
+                <div key={c}>
+                  {i > 0 && (
+                    <span className="my-1 inline-block rounded border border-[#DDE2EE] bg-[#F7F9FC] px-1.5 py-px text-[10px] font-semibold text-[#6F6F8D]">
+                      AND
+                    </span>
+                  )}
+                  <p className="text-[12px] leading-[17px] text-[#17173A]">{c}</p>
+                </div>
+              ))}
+              {conditions.length > 3 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpanded((v) => !v);
+                  }}
+                  className="mt-1 text-[12px] font-semibold text-[#2F68E5] hover:underline"
+                >
+                  {expanded ? "Show less" : "Show more"}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <span className={rowLabel}>Rationale</span>
+          <p className="min-w-0 flex-1 text-[12px] leading-[17px] text-[#6F6F8D]">{r.why}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Multi-select for lists and segments — chips inside the field, options in a
@@ -87,26 +176,51 @@ export default function SegmentSelect({
           {value.length === 0 ? (
             <span className="font-manrope text-sm text-[#A0A0A0]">{placeholder}</span>
           ) : (
-            value.map((v) => (
-              <span
-                key={v.id}
-                className="inline-flex max-w-[260px] items-center gap-1 rounded-full border border-[#DDE2EE] bg-white py-1 pl-2.5 pr-1 font-manrope text-[12px] font-medium text-[#17173A]"
-              >
-                {v.ai && <Sparkles className="size-3 shrink-0 text-[#7B5CFA]" strokeWidth={2.2} />}
-                <span className="truncate">{v.name}</span>
-                <button
-                  type="button"
-                  aria-label={`Remove ${v.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onChange(value.filter((x) => x.id !== v.id));
-                  }}
-                  className="grid size-4 shrink-0 place-items-center rounded-full text-[#8A8AA3] hover:bg-[#E8ECF4] hover:text-[#17173A]"
+            value.map((v) => {
+              const chip = (
+                <span
+                  className={cn(
+                    "inline-flex max-w-[260px] items-center gap-1 rounded-full border bg-white py-1 pl-2.5 pr-1 font-manrope text-[12px] font-medium text-[#17173A]",
+                    v.rationale
+                      ? "border-[#DDD5FF] hover:border-[#7B5CFA]"
+                      : "border-[#DDE2EE]"
+                  )}
                 >
-                  <X className="size-3" strokeWidth={2.5} />
-                </button>
-              </span>
-            ))
+                  {v.ai && <Sparkles className="size-3 shrink-0 text-[#7B5CFA]" strokeWidth={2.2} />}
+                  <span className="truncate">{v.name}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${v.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onChange(value.filter((x) => x.id !== v.id));
+                    }}
+                    className="grid size-4 shrink-0 place-items-center rounded-full text-[#8A8AA3] hover:bg-[#E8ECF4] hover:text-[#17173A]"
+                  >
+                    <X className="size-3" strokeWidth={2.5} />
+                  </button>
+                </span>
+              );
+
+              // Co-marketer cuts explain themselves on hover; saved segments the
+              // user picked themselves need no explaining.
+              if (!v.rationale) return <span key={v.id}>{chip}</span>;
+              return (
+                <HoverCard key={v.id} openDelay={140} closeDelay={120}>
+                  <HoverCardTrigger asChild>{chip}</HoverCardTrigger>
+                  <HoverCardContent
+                    align="start"
+                    side="bottom"
+                    sideOffset={8}
+                    onClick={(e) => e.stopPropagation()}
+                    // Above the campaign creation overlay (z-60) it's plotted on.
+                    className="z-[70] w-[340px] rounded-lg border-[#E6EAF2] p-3.5 shadow-[0_12px_32px_rgba(23,23,58,0.14)]"
+                  >
+                    <RationalePanel segment={v} />
+                  </HoverCardContent>
+                </HoverCard>
+              );
+            })
           )}
         </div>
         <ChevronDown

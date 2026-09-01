@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import sparkle from "/campaign-assets/ic-sparkle-ai.gif";
 import navSparkle from "/campaign-assets/ic-sparkle.gif";
-import { parseTags, goalLabel, type SetupValues } from "./CampaignSetupStep";
+import { parseTags, type SetupValues } from "./CampaignSetupStep";
 import { reachFor, type AudienceValues } from "./CampaignAudienceStep";
 import type { ContentValues } from "./CampaignContentStep";
 import { describeSlot, type ScheduleValues } from "./CampaignScheduleStep";
@@ -135,6 +135,7 @@ function FindingCard({ finding, onAsk }: { finding: Finding; onAsk: () => void }
  */
 export default function CampaignPreview({
   campaignId,
+  campaignName,
   setup,
   audience,
   content,
@@ -148,6 +149,7 @@ export default function CampaignPreview({
   chatSlot,
 }: {
   campaignId: string;
+  campaignName: string;
   setup: SetupValues;
   audience: AudienceValues;
   content: ContentValues;
@@ -168,7 +170,7 @@ export default function CampaignPreview({
   const [previewEmail, setPreviewEmail] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  const name = goalLabel(setup.goal) ?? "Untitled campaign";
+  const name = campaignName;
   const tags = parseTags(setup.tags);
   const template = emailTemplates.find((t) => t.id === content.templateId);
   const reach = reachFor(audience);

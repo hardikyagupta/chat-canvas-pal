@@ -20,13 +20,16 @@ type Badge = {
   tone: "reach" | "intent";
 };
 
-const PROMPTS: {
+export type SegmentStarter = {
   title: string;
   description: string;
   badges: Badge[];
   /** Sent verbatim to the co-marketer chat — keeps the SEGMENTS_FLOWS keywords. */
   prompt: string;
-}[] = [
+};
+
+/** The four starting points, also reused as the campaign wizard's audience pills. */
+export const SEGMENT_STARTERS: SegmentStarter[] = [
   {
     title: "Reach engaged Gmail users",
     description: "Clicked an email in the last 30 days",
@@ -92,7 +95,7 @@ export default function SegmentSuggestions({
       </div>
 
       <div className="flex w-full items-stretch gap-[8px] px-[4px] pb-[4px]">
-        {PROMPTS.map(({ title, description, badges, prompt }, i) => (
+        {SEGMENT_STARTERS.map(({ title, description, badges, prompt }, i) => (
           <button
             key={title}
             type="button"

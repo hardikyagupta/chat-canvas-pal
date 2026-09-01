@@ -1,6 +1,12 @@
-import { X } from "lucide-react";
+import { Info, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import GoalDropdown from "./GoalDropdown";
 import StepCard from "./StepCard";
 
@@ -90,29 +96,102 @@ export function goalLabel(value: string): string | undefined {
 const fieldClass =
   "h-10 w-full rounded-md border border-[#DDE2EE] bg-[#F7F9FC] px-3 font-manrope text-sm text-[#17173A] outline-none transition-colors placeholder:text-[#A0A0A0] focus:border-[#2F68E5] focus:bg-white";
 
+/** Account-level UTM defaults shown on hover of the GA-tracking pill. */
+const GA_ACCOUNT_UTMS = [
+  { label: "Source (utm_source)", value: "netcore" },
+  { label: "Medium (utm_medium)", value: "email" },
+  { label: "Campaign (utm_campaign)", value: "summer_sale_2026" },
+  { label: "Content (utm_content)", value: "hero_cta" },
+  { label: "Key 1, Value 1", value: "coupon, SAVE20" },
+];
+
+function GaConfigPill() {
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            tabIndex={0}
+            className="inline-flex cursor-default items-center rounded-full border border-[#D6E2FF] bg-[#EDF1FF] px-2 py-0.5 font-manrope text-[11px] font-medium leading-4 text-[#2F68E5]"
+          >
+            Pre-filled from account config
+          </span>
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          align="start"
+          className="max-w-[280px] border border-[#DDE2EE] bg-white p-3 text-[#17173A] shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+        >
+          <ul className="space-y-1.5 font-manrope text-xs leading-[18px]">
+            {GA_ACCOUNT_UTMS.map((row) => (
+              <li key={row.label}>
+                <span className="text-[#6F6F8D]">{row.label}</span>
+                <span className="text-[#6F6F8D]"> — </span>
+                <span className="font-semibold text-[#17173A]">{row.value}</span>
+              </li>
+            ))}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function HeadingInfo({ children }: { children: React.ReactNode }) {
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label="More information"
+            className="inline-grid shrink-0 place-items-center text-[#8A8AA3] transition-colors hover:text-[#6F6F8D]"
+          >
+            <Info className="size-3.5" strokeWidth={2} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          align="start"
+          className="max-w-[260px] border border-[#DDE2EE] bg-white px-3 py-2 text-[#17173A] shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+        >
+          <p className="font-manrope text-xs leading-[18px] text-[#6F6F8D]">{children}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 function ToggleRow({
   title,
-  description,
+  info,
   checked,
   onChange,
   flash,
+  badge,
 }: {
   title: string;
-  description: React.ReactNode;
+  /** Helper copy shown in a tooltip on the info icon beside the heading. */
+  info?: React.ReactNode;
   checked: boolean;
   onChange: (v: boolean) => void;
   flash?: boolean;
+  /** Optional chip sitting next to the title, e.g. the GA-tracking source pill. */
+  badge?: React.ReactNode;
 }) {
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-4 rounded-md border border-[#DDE2EE] p-4",
+        "flex items-center justify-between gap-4 rounded-md border border-[#DDE2EE] p-4",
         flash && "cmk-field-flash"
       )}
     >
       <div>
-        <p className="font-manrope text-sm font-bold text-[#17173A]">{title}</p>
-        <p className="mt-1 font-manrope text-xs leading-[18px] text-[#6F6F8D]">{description}</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="font-manrope text-sm font-bold text-[#17173A]">{title}</p>
+          {info && <HeadingInfo>{info}</HeadingInfo>}
+          {badge}
+        </div>
       </div>
       <Switch
         checked={checked}
@@ -138,18 +217,23 @@ export default function CampaignSetupStep({
   /** Field keys just written by a co-marketer apply — briefly flashed. */
   highlight?: Partial<Record<keyof SetupValues, boolean>>;
 }) {
-  const chosen = Boolean(values.goal);
+  // The goal question is out of phase 1, so nothing here is gated any more —
+  // tags and tracking are open from the moment the step is.
+  const chosen = true;
+  // Previously: const chosen = Boolean(values.goal);
   const tags = parseTags(values.tags);
 
   return (
     <StepCard
-      title="Campaign goal"
-      description={
-        chosen
-          ? "Everything from here on is tuned to this goal — change it and the recommendations change with it."
-          : "Tell me what this campaign is for and I'll shape the rest of the setup around it."
-      }
+      title="Campaign details"
+      description="Tag this campaign and choose what you want to track."
+      // Previous, goal-led heading:
+      // title="Campaign goal"
+      // description={chosen
+      //   ? "Everything from here on is tuned to this goal — change it and the recommendations change with it."
+      //   : "Tell me what this campaign is for and I'll shape the rest of the setup around it."}
     >
+      {/* Campaign goal question — not part of phase 1.
       <div className={chosen ? "mb-8" : ""}>
         <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
           What are you trying to achieve? <span className="text-[#FC5E02]">*</span>
@@ -168,6 +252,7 @@ export default function CampaignSetupStep({
           </p>
         )}
       </div>
+      */}
 
       <div className="t-acc" data-open={chosen ? "true" : "false"}>
         <div className="t-acc-panel">
@@ -213,17 +298,27 @@ export default function CampaignSetupStep({
               <h2 className="font-manrope text-base font-bold text-[#17173A]">Advanced</h2>
               <p className="mt-1 font-manrope text-sm leading-5 text-[#6F6F8D]">
                 Track your campaign performance to measure traffic and conversion. Set default values
-                for Google Analytics tracking and conversion goal in global advanced settings.
+                for Google Analytics tracking and conversion goal in{" "}
+                <a
+                  href="https://pr1r.netcoresmartech.com/qa_manual1/admin/index.php/admin/acc_config#ga_tracking"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#2F68E5]"
+                >
+                  global advanced settings
+                </a>
+                .
               </p>
             </div>
 
             <div className="space-y-3">
               <ToggleRow
                 title="GA tracking"
-                description={
+                badge={<GaConfigPill />}
+                info={
                   <>
                     Track performance of your campaign with UTM parameters{" "}
-                    <a href="#" className="text-[#2F68E5] underline">
+                    <a href="#" className="text-[#2F68E5]">
                       learn more
                     </a>
                   </>
@@ -234,7 +329,7 @@ export default function CampaignSetupStep({
               />
               <ToggleRow
                 title="Conversion tracking"
-                description="Activity which represents a conversion for this campaign."
+                info="Activity which represents a conversion for this campaign."
                 checked={values.conversionTracking}
                 onChange={(v) => onChange({ conversionTracking: v })}
                 flash={highlight?.conversionTracking}

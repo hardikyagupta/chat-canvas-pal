@@ -77,6 +77,36 @@
   100% { box-shadow: 0 0 0 0 rgba(47, 104, 229, 0); }
 }
 
+/* ---- One-page accordion ----
+   The cards reuse the objective v2 styling (.ov2-*), whose rules reference
+   tokens scoped to that flow's root, so they're re-declared here. */
+.cc-accordion {
+  --of-brand: #2F68E5;
+  --of-brand-hover: #4F7EF0;
+  --of-brand-active: #1F51BE;
+  --of-brand-subtle: #EDF1FF;
+  --of-ink: #17173A;
+  --of-muted: #6F6F8D;
+  --of-faint: #9494AE;
+  --of-line: #DDE2EE;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-family: 'Manrope', sans-serif;
+}
+.cc-accordion .ov2-chevron { width: 16px; height: 16px; }
+.cc-accordion .ov2-badge svg { width: 16px; height: 16px; }
+
+/* Each step already ships its own white card; inside an accordion card that
+   reads as a double border, so strip the inner chrome and keep the padding
+   the card body provides. */
+.cc-accordion .ov2-card-body .cc-step-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .t-acc-panel, .t-acc-panel-inner, .t-acc-chevron {
     transition: none !important;

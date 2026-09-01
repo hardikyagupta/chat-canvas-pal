@@ -212,6 +212,25 @@ interface ChatInterfaceProps {
    *  page decides where that goes — the segments pages open the segment
    *  creation canvas on the card's rules. */
   onReviewArtifact?: (card: AgentArtifactCardData) => void;
+  /** Replaces the generic starter chips under the composer with a set the host
+   *  page decides — the campaign wizard passes the open step's own chips, so
+   *  the opening suggestions are about the step the user is actually on. */
+  starterChipSet?: StarterChip[];
+}
+
+/** A contextual starter chip: the pill's label, its icon, and the prompts it
+ *  opens (with the heading shown above them). A chip can instead carry an
+ *  `onSelect`, in which case clicking it hands straight back to the host page
+ *  (the campaign wizard's audience pills open segment creation) rather than
+ *  expanding into a prompt list. */
+export interface StarterChip {
+  label: string;
+  icon?: LucideIcon;
+  /** Heading above the prompt list; falls back to "Suggested prompts". */
+  header?: string;
+  prompts?: string[];
+  /** Clicking the pill runs this instead of revealing `prompts`. */
+  onSelect?: () => void;
 }
 
 /** A tap-to-open co-marketer thread: what the user "asked", and the answer. */
@@ -338,7 +357,7 @@ const DockedBodySkeleton = ({
   );
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId, starterChipSet }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   // The scripted storyline this interface plays. Home (`/`) uses 'default';
@@ -469,7 +488,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
       "Going into next month, the highest-leverage moves are to <strong>scale the re-sequenced cart journey, refresh the two fatiguing SMS templates, and shift more Win-back budget to Push</strong>, where cost-per-conversion is now lowest.",
     ],
   };
-  const starterChips = [
+  const defaultStarterChips = [
     "Seasonal Trend",
     "CTR Monitoring",
     "QBR Report",
@@ -477,7 +496,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     "Revenue Monitoring",
   ];
   // A relevant icon for each starter chip.
-  const starterChipIcons: Record<string, LucideIcon> = {
+  const defaultStarterChipIcons: Record<string, LucideIcon> = {
     "Seasonal Trend": TrendingUp,
     "CTR Monitoring": MousePointerClick,
     "QBR Report": FileText,
@@ -494,7 +513,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     "Channels & campaigns": Megaphone,
     "Journeys & audiences": Compass,
   };
-  const starterPromptsByChip: Record<string, string[]> = {
+  const defaultStarterPromptsByChip: Record<string, string[]> = {
     "Seasonal Trend": [
       "Show me seasonal engagement trends across channels for the last 12 months.",
       "Which campaigns performed best during festival periods, and why?",
@@ -522,13 +541,38 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     ],
   };
   // Contextual header shown above the suggested prompts for the selected category
-  const starterPromptHeaderByChip: Record<string, string> = {
+  const defaultStarterPromptHeaderByChip: Record<string, string> = {
     "Seasonal Trend": "Explore seasonal trends",
     "CTR Monitoring": "Monitor click-through performance",
     "QBR Report": "Build your QBR report",
     "Channel Anomalies": "Investigate channel anomalies",
     "Revenue Monitoring": "Track revenue performance",
   };
+
+  // A host page can hand over its own chips (the campaign wizard passes the
+  // chips for the step that's open); otherwise the generic set above stands.
+  const starterChips = starterChipSet
+    ? starterChipSet.map((chip) => chip.label)
+    : defaultStarterChips;
+  const starterChipIcons: Record<string, LucideIcon> = starterChipSet
+    ? Object.fromEntries(
+        starterChipSet.filter((chip) => chip.icon).map((chip) => [chip.label, chip.icon]),
+      )
+    : defaultStarterChipIcons;
+  const starterPromptsByChip: Record<string, string[]> = starterChipSet
+    ? Object.fromEntries(starterChipSet.map((chip) => [chip.label, chip.prompts ?? []]))
+    : defaultStarterPromptsByChip;
+  const starterPromptHeaderByChip: Record<string, string> = starterChipSet
+    ? Object.fromEntries(
+        starterChipSet.filter((chip) => chip.header).map((chip) => [chip.label, chip.header]),
+      )
+    : defaultStarterPromptHeaderByChip;
+  // Chips that hand back to the host page instead of opening a prompt list.
+  const starterChipActions: Record<string, () => void> = starterChipSet
+    ? Object.fromEntries(
+        starterChipSet.filter((chip) => chip.onSelect).map((chip) => [chip.label, chip.onSelect]),
+      )
+    : {};
 
   // Deep-research suggestion set: category sections (emoji + header) each with a
   // couple of chips. The chip's short `label` is shown; clicking sends the fuller
@@ -4082,7 +4126,11 @@ The content has been updated across all channels to reflect your changes.`;
                                   key={index}
                                   type="button"
                                   className="fig-chip flex items-center justify-center gap-[6px] px-[10px] py-[6px] rounded-[8px] whitespace-nowrap shrink-0"
-                                  onClick={() => setSelectedStarterChip(chipLabel)}
+                                  onClick={() => {
+                                    const action = starterChipActions[chipLabel];
+                                    if (action) action();
+                                    else setSelectedStarterChip(chipLabel);
+                                  }}
                                 >
                                   {ChipIcon && (
                                     <ChipIcon className="size-[14px] text-[var(--color-slate)] shrink-0" />

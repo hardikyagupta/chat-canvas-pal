@@ -35,6 +35,9 @@ export interface AgentArtifactCardData {
   stats: AgentArtifactStat[];
   description: string;
   actionLabel: string;
+  /** Segment cards — the rules behind the cut, ANDed. Carried onto the audience
+   *  form so a plotted segment can explain itself on hover. */
+  conditions?: string[];
 }
 
 // --- Campaigns (`/campaigns`) agent-relay flow ------------------------------
@@ -196,6 +199,12 @@ const SEGMENTS_FLOWS: SegmentsFlow[] = [
           description:
             "Contacts on gmail.com who clicked at least one email in the last 30 days, excluding unsubscribes and bounces.",
           actionLabel: "Review segment",
+          conditions: [
+            "Email address contains “gmail.com”",
+            "Clicked Email is at least 1 in the last 30 days",
+            "Unsubscribed equals false",
+            "Hard bounce equals 0",
+          ],
         },
         nextSuggestion: "What's this segment worth if I activate it?",
       },
@@ -232,6 +241,13 @@ const SEGMENTS_FLOWS: SegmentsFlow[] = [
           description:
             "Previously-engaged subscribers with no opens or clicks in the last 6 months, excluding suppressed contacts.",
           actionLabel: "Review segment",
+          conditions: [
+            "Is a member of a list or segment",
+            "Opened Email equals 0 in the last 180 days",
+            "Clicked Email equals 0 in the last 180 days",
+            "Engaged at least once before that window",
+            "Suppressed equals false",
+          ],
         },
         nextSuggestion: "What's this segment worth if I activate it?",
       },
@@ -268,6 +284,12 @@ const SEGMENTS_FLOWS: SegmentsFlow[] = [
           description:
             "Contacts whose first signup or purchase falls inside a rolling 60-day window, de-duplicated across identities.",
           actionLabel: "Review segment",
+          conditions: [
+            "First signup is in the last 60 days",
+            "Or first purchase is in the last 60 days",
+            "De-duplicated across email and mobile identity",
+            "Reachable on at least one channel",
+          ],
         },
         nextSuggestion: "What's this segment worth if I activate it?",
       },
@@ -304,6 +326,11 @@ const SEGMENTS_FLOWS: SegmentsFlow[] = [
           description:
             "European contacts with a 90-day email engagement rate above 30% and valid marketing consent on record.",
           actionLabel: "Review segment",
+          conditions: [
+            "Country is in Europe",
+            "Email engagement rate is greater than 30% in the last 90 days",
+            "Marketing consent equals true",
+          ],
         },
         nextSuggestion: "What's this segment worth if I activate it?",
       },
@@ -340,6 +367,12 @@ const SEGMENTS_FALLBACK: CampaignsTurn[] = [
       description:
         "Contacts matching the conditions in your request, excluding unsubscribes, bounces and suppressed contacts.",
       actionLabel: "Review segment",
+      conditions: [
+        "Matches every condition in your request",
+        "Unsubscribed equals false",
+        "Hard bounce equals 0",
+        "Suppressed equals false",
+      ],
     },
     nextSuggestion: "What's this segment worth if I activate it?",
   },

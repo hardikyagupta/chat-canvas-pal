@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  BarChart3,
   Bell,
   Calendar,
   Check,
+  ChevronDown,
   FileText,
   Mail,
   MessageCircle,
   MessageSquare,
   Monitor,
+  Tag,
+  Target,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import CampaignCreationNavbar from "./CampaignCreationNavbar";
 import CampaignCreationStepper, { type Step } from "./CampaignCreationStepper";
 import CampaignAIPanel, {
@@ -24,10 +29,12 @@ import CampaignAIPanel, {
 import CampaignSetupStep, {
   goalLabel,
   mergeTags,
+  parseTags,
   type SetupValues,
 } from "./CampaignSetupStep";
 import CampaignAudienceStep, {
   EMPTY_AUDIENCE,
+  reachFor,
   type AudienceValues,
 } from "./CampaignAudienceStep";
 import { cohortsForGoal, type AudienceCohort } from "./audienceCohorts.data";
@@ -42,10 +49,18 @@ import CampaignScheduleStep, {
   type ScheduleValues,
 } from "./CampaignScheduleStep";
 import { emailTemplates } from "./emailTemplates.data";
+import { SEGMENT_STARTERS } from "@/components/campaigns/SegmentSuggestions";
+import SegmentCreationOverlay from "@/components/campaigns/segment-creation/SegmentCreationOverlay";
 import type { Finding } from "./previewFindings.data";
 import CampaignPreview from "./CampaignPreview";
-import ChatInterface, { type SeededTopic } from "@/components/ChatInterface";
+import ChatInterface, {
+  type SeededTopic,
+  type StarterChip,
+} from "@/components/ChatInterface";
 import "./campaign-creation.css";
+// The one-page accordion reuses the objective v2 card styling (.ov2-*) so both
+// flows read the same; campaign-creation.css supplies the tokens it references.
+import "@/components/decisioning/objective-v2/objective-flow-v2.css";
 
 /**
  * Full-screen campaign creation wizard, opened from the top bar's quick-create
@@ -78,6 +93,63 @@ const STEPS: Step[] = [
   { id: "schedule", label: "Schedule", icon: Calendar },
 ];
 
+/**
+ * Contextual co-marketer chips per step — what "Ask co-marketer" opens with
+ * while that card is the one on screen, instead of the generic home-page set.
+ * Setup only for now; the other steps follow.
+ */
+const STEP_CHIPS: Record<string, StarterChip[]> = {
+  setup: [
+    {
+      label: "Tracking recommendation",
+      icon: BarChart3,
+      header: "Get this campaign tracked",
+      prompts: [
+        "Do I need GA tracking on for this campaign?",
+        "Which UTM parameters should this campaign carry?",
+        "What will I lose in reporting if I leave tracking off?",
+      ],
+    },
+    {
+      label: "Track conversion goal",
+      icon: Target,
+      header: "Pick the conversion to measure",
+      prompts: [
+        "What conversion goal should I set for this campaign?",
+        "Which event counts as success for a send like this?",
+        "Should conversion tracking be on for this campaign?",
+      ],
+    },
+    {
+      label: "Suggested tags",
+      icon: Tag,
+      header: "Tag this campaign",
+      prompts: [
+        "What tags should I put on this campaign?",
+        "How should we name and tag campaigns so they're easy to find later?",
+      ],
+    },
+  ],
+};
+
+/** Sub-line under each accordion header, before the step has a summary. */
+const STEP_DESCRIPTIONS: Record<string, string> = {
+  setup: "Tag this campaign and choose what you want to track.",
+  audience: "Choose who this campaign should go to.",
+  content: "Write the message and pick the template it goes out in.",
+  schedule: "Decide when this send leaves.",
+};
+
+/** Draft name every new campaign starts on: Untitled_YYYYMMDDHHMMSS, local time. */
+function newCampaignName() {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return (
+    `Untitled_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}` +
+    `${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+  );
+}
+
 const EMPTY_SETUP: SetupValues = {
   goal: "",
   tags: "",
@@ -102,12 +174,12 @@ function audienceCutsTopic(goalValue: string): SeededTopic {
     agentId: "segment-agent",
     reasoningSteps: [
       "Reading 90 days of opens, clicks and orders",
-      `Scoring cohorts against "${label ?? "this goal"}"`,
+      `Scoring cohorts against "${label ?? "this campaign"}"`,
       "Checking channel reachability and consent",
       "Pairing each cut with the suppression it needs",
     ],
     reply:
-      `I read your last 90 days of engagement against "${label ?? "this goal"}" and pulled three cuts worth ` +
+      `I read your last 90 days of engagement against "${label ?? "this campaign"}" and pulled three cuts worth ` +
       `considering, best fit first. Each one comes with the suppression I'd pair it with. ` +
       `Review one and I'll plot it onto the form — you can still edit it there.`,
     setupApplyCard: {
@@ -136,7 +208,18 @@ export default function CampaignCreationOverlay({
   // on the campaigns page uses.
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
+  // Which accordion card is open. -1 means every card is collapsed, which the
+  // header toggle allows — the stepper's "current step" is now just this.
   const [activeIndex, setActiveIndex] = useState(0);
+  // Steps the user has tapped "Done" on. Only these show the green check and
+  // the inline summary when collapsed, same rule as the objective v2 flow.
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+  // The step the co-marketer rail is answering for. Tracked separately from
+  // activeIndex so collapsing every card doesn't blank the suggestions.
+  const [railStepId, setRailStepId] = useState<string>("setup");
+  // The campaign's own name — set once per open and only ever changed by the
+  // navbar rename, so picking a goal no longer retitles the draft.
+  const [campaignName, setCampaignName] = useState(newCampaignName);
   const [setup, setSetup] = useState<SetupValues>(EMPTY_SETUP);
   const [audience, setAudience] = useState<AudienceValues>(EMPTY_AUDIENCE);
   const [content, setContent] = useState<ContentValues>(EMPTY_CONTENT);
@@ -158,15 +241,29 @@ export default function CampaignCreationOverlay({
     Partial<Record<keyof ContentValues, boolean>>
   >({});
   const [audienceFlash, setAudienceFlash] = useState(false);
+  // The docked chat can play either storyline: the campaign relay, or the
+  // Segment agent's thread when an audience pill is picked. Both run in the
+  // same column, so picking a pill never takes the user out of the wizard.
+  const [chatVariant, setChatVariant] = useState<"campaigns" | "segments">("campaigns");
+  const [chatMessage, setChatMessage] = useState<string>();
+  // A segment starting point was picked from the audience pills — opens the
+  // same segment creation canvas the Segments page uses, on that ask.
+  const [segmentPrompt, setSegmentPrompt] = useState<string>();
   // The audience thread seeds once per wizard open, not every time the step is
   // revisited — coming back shouldn't wipe what the user already discussed.
   const audienceSeeded = useRef(false);
   // Whether the open chat is the audience thread — it closes when the step does.
   const audienceChat = useRef(false);
+  // Scroll container + per-card nodes, so opening a card can bring its header
+  // up to the top of the canvas.
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
     if (open) {
       setMounted(true);
+      // Each new draft gets its own timestamped name.
+      setCampaignName(newCampaignName());
       return;
     }
     setShown(false);
@@ -174,11 +271,15 @@ export default function CampaignCreationOverlay({
       setMounted(false);
       setChatOpen(false);
       setChatTopic(null);
+      setChatVariant("campaigns");
+      setChatMessage(undefined);
       setFollowUpTopic(null);
       setFollowUpSeq(0);
       // Reset only after the panel is gone, so the exit slide doesn't show the
       // wizard snapping back to step 1.
       setActiveIndex(0);
+      setCompletedSteps(new Set());
+      setRailStepId("setup");
       setSetup(EMPTY_SETUP);
       setAudience(EMPTY_AUDIENCE);
       setContent(EMPTY_CONTENT);
@@ -210,6 +311,11 @@ export default function CampaignCreationOverlay({
     };
   }, [mounted, open]);
 
+  // Keep the rail pointed at the last card the user opened.
+  useEffect(() => {
+    if (activeIndex >= 0) setRailStepId(STEPS[activeIndex].id);
+  }, [activeIndex]);
+
   // Co-marketer suggestions skeleton in while the goal is new, then reveal.
   useEffect(() => {
     if (!setup.goal) {
@@ -236,15 +342,18 @@ export default function CampaignCreationOverlay({
     };
   }, [open, onClose]);
 
-  // Landing on Audience opens the co-marketer straight away and asks it for
-  // cuts — the audience is the one step where the recommendation is the work,
-  // so the thread leads and the form follows what the user picks.
+  // Landing on Audience opens the co-marketer, but it doesn't answer anything
+  // yet — the thread offers the segment starting points as pills and waits.
   useEffect(() => {
-    if (!open || STEPS[activeIndex].id !== "audience") return;
-    if (audienceSeeded.current || !setup.goal) return;
+    if (!open || STEPS[activeIndex]?.id !== "audience") return;
+    if (audienceSeeded.current) return;
     audienceSeeded.current = true;
     audienceChat.current = true;
-    setChatTopic(audienceCutsTopic(setup.goal));
+    // Previously seeded the Segment agent's cuts thread here:
+    // setChatTopic(audienceCutsTopic(setup.goal));
+    setChatVariant("campaigns");
+    setChatMessage(undefined);
+    setChatTopic(null);
     setFollowUpTopic(null);
     setFollowUpSeq(0);
     setChatSession((n) => n + 1);
@@ -256,7 +365,10 @@ export default function CampaignCreationOverlay({
   // nothing to say about — the suggestion rail takes over there. A chat the
   // user opened themselves from the navbar is left alone.
   useEffect(() => {
-    if (!open || STEPS[activeIndex].id === "audience" || !audienceChat.current) return;
+    const openId = STEPS[activeIndex]?.id;
+    // Every card collapsed isn't "moved on" — the thread stays until another
+    // step is actually opened.
+    if (!open || !openId || openId === "audience" || !audienceChat.current) return;
     audienceChat.current = false;
     setChatOpen(false);
     setChatTopic(null);
@@ -280,7 +392,18 @@ export default function CampaignCreationOverlay({
       ...a,
       mode: "segments",
       segments: [
-        { id: `cohort-${cohort.id}`, name: cohort.name, reach: cohort.reachable, ai: true },
+        {
+          id: `cohort-${cohort.id}`,
+          name: cohort.name,
+          reach: cohort.reachable,
+          ai: true,
+          rationale: {
+            status: "Draft",
+            members: cohort.matched,
+            conditions: cohort.signals,
+            why: `${cohort.why} ${cohort.matched.toLocaleString("en-US")} contacts match, of which ${cohort.reachable.toLocaleString("en-US")} are reachable after consent and suppression checks. This cut converts at ${cohort.cvr} historically.`,
+          },
+        },
       ],
       excludeEnabled: true,
       excludeSegments: [
@@ -289,6 +412,12 @@ export default function CampaignCreationOverlay({
           name: cohort.exclude.name,
           reach: cohort.exclude.reach,
           ai: true,
+          rationale: {
+            status: "Draft",
+            members: cohort.exclude.reach,
+            conditions: [cohort.exclude.name],
+            why: "Held back so this campaign doesn't land on contacts who are already being messaged — it keeps the send from competing with itself.",
+          },
         },
       ],
       cohortId: cohort.id,
@@ -296,6 +425,40 @@ export default function CampaignCreationOverlay({
     setAudienceFlash(true);
     window.setTimeout(() => setAudienceFlash(false), 1200);
   };
+
+  /** Segment saved on the canvas — plot it straight onto the audience form. */
+  const plotSavedSegment = (saved: { name: string; count: string; aiGenerated: boolean }) => {
+    const reach = Number(String(saved.count).replace(/,/g, "")) || 0;
+    setAudience((a) => ({
+      ...a,
+      mode: "segments",
+      segments: [{ id: `seg-${Date.now()}`, name: saved.name, reach, ai: saved.aiGenerated }],
+    }));
+    setAudienceFlash(true);
+    window.setTimeout(() => setAudienceFlash(false), 1200);
+  };
+
+  /**
+   * Audience pills — the same four starting points the Segments page offers.
+   * Picking one replays the Segment agent's thread for that ask in the docked
+   * chat, so the wizard stays exactly where it is.
+   */
+  const audienceChips: StarterChip[] = SEGMENT_STARTERS.map((starter) => ({
+    label: starter.title,
+    icon: Users,
+    onSelect: () => {
+      audienceChat.current = true;
+      setChatVariant("segments");
+      setChatMessage(starter.prompt);
+      setChatTopic(null);
+      setFollowUpTopic(null);
+      setFollowUpSeq(0);
+      setChatSession((n) => n + 1);
+      setChatOpen(true);
+      // Previously handed off to the full-screen segment canvas:
+      // setSegmentPrompt(starter.prompt);
+    },
+  }));
 
   const applySetup = (patch: Partial<SetupValues>) => {
     setSetup((s) => {
@@ -320,9 +483,98 @@ export default function CampaignCreationOverlay({
     window.setTimeout(() => setContentHighlight({}), 1200);
   };
 
+  /** Brings a card's header to the top of the canvas once it has opened. */
+  const scrollToStep = (id: string) => {
+    const container = canvasRef.current;
+    const el = cardRefs.current[id];
+    if (!container || !el) return;
+    const top =
+      container.scrollTop +
+      (el.getBoundingClientRect().top - container.getBoundingClientRect().top) -
+      12;
+    container.scrollTo({ top, behavior: "smooth" });
+  };
+
+  /** Accordion header: open a card, or shut it if it's already the open one. */
+  const toggleStep = (index: number) =>
+    setActiveIndex((current) => (current === index ? -1 : index));
+
+  /** "Done" on a card: mark it finished and open the next one. */
+  const completeStep = (index: number) => {
+    setCompletedSteps((prev) => new Set(prev).add(STEPS[index].id));
+    const next = index + 1;
+    if (next >= STEPS.length) {
+      setActiveIndex(-1);
+      return;
+    }
+    setActiveIndex(next);
+    // Let the collapse/expand transition run before chasing the new position.
+    window.setTimeout(() => scrollToStep(STEPS[next].id), 380);
+  };
+
+  /** Has this step got enough on it to read as done? */
+  const isStepComplete = (id: string): boolean => {
+    switch (id) {
+      // Nothing on setup is required now that the goal question is out.
+      case "setup":
+        return true;
+      case "audience":
+        return reachFor(audience) > 0;
+      case "content":
+        return Boolean(content.subject || content.templateId);
+      case "schedule":
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  /** One-line recap shown on a finished card while it's collapsed. */
+  const summaryFor = (id: string): string => {
+    switch (id) {
+      case "setup": {
+        const tags = parseTags(setup.tags);
+        return [
+          tags.length ? `${tags.length} tag${tags.length === 1 ? "" : "s"}` : "No tags",
+          setup.gaTracking ? "GA tracking on" : null,
+          setup.conversionTracking ? "Conversion tracking on" : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+      }
+      case "audience": {
+        const who =
+          audience.mode === "all"
+            ? "All contacts"
+            : audience.mode === "segments"
+              ? audience.segments.map((s) => s.name).join(", ") || "No segment selected"
+              : audience.mode === "table"
+                ? audience.table || "No table selected"
+                : `${audience.conditions.length} condition${audience.conditions.length === 1 ? "" : "s"}`;
+        return `${who} · ${reachFor(audience).toLocaleString()} reachable`;
+      }
+      case "content": {
+        const template = emailTemplates.find((t) => t.id === content.templateId);
+        return (
+          [content.subject, template?.name].filter(Boolean).join(" · ") || "Nothing written yet"
+        );
+      }
+      case "schedule":
+        if (schedule.mode === "now") return "As soon as this is published";
+        if (schedule.mode === "later") return describeSlot(schedule.sendAt);
+        if (schedule.mode === "slice")
+          return `${schedule.sliceBatches} batches, ${schedule.sliceGapMins} minutes apart`;
+        return `Optimised per contact · ${schedule.optimizeWindow}`;
+      default:
+        return "";
+    }
+  };
+
   /** Opens a brand-new co-marketer thread, from either header CTA. */
   const openFreshChat = () => {
-    audienceChat.current = false;
+    audienceChat.current = railStepId === "audience";
+    setChatVariant("campaigns");
+    setChatMessage(undefined);
     setChatTopic(null);
     setFollowUpTopic(null);
     setFollowUpSeq(0);
@@ -338,6 +590,8 @@ export default function CampaignCreationOverlay({
       setFollowUpSeq((n) => n + 1);
       return;
     }
+    setChatVariant("campaigns");
+    setChatMessage(undefined);
     setChatTopic(topic);
     setChatSession((n) => n + 1);
     setChatOpen(true);
@@ -394,8 +648,35 @@ export default function CampaignCreationOverlay({
         key={chatSession}
         initialExpanded={false}
         docked
-        conversationVariant="campaigns"
+        conversationVariant={chatVariant}
+        initialMessage={chatMessage}
+        starterChipSet={railStepId === "audience" ? audienceChips : STEP_CHIPS[railStepId]}
         initialTopic={chatTopic ?? undefined}
+        // A segment the agent built — plot it onto the audience form rather
+        // than leaving the wizard for the segment canvas.
+        onReviewArtifact={(card) => {
+          const reach = Number(String(card.stats?.[0]?.label ?? "").replace(/[^0-9]/g, "")) || 0;
+          setAudience((a) => ({
+            ...a,
+            mode: "segments",
+            segments: [
+              {
+                id: `seg-${Date.now()}`,
+                name: card.title,
+                reach,
+                ai: true,
+                rationale: {
+                  status: "Draft",
+                  members: reach,
+                  conditions: card.conditions,
+                  why: card.description,
+                },
+              },
+            ],
+          }));
+          setAudienceFlash(true);
+          window.setTimeout(() => setAudienceFlash(false), 1200);
+        }}
         followUpTopic={followUpTopic}
         followUpSeq={followUpSeq}
         onSetupApply={(card, cohortId) => {
@@ -430,6 +711,8 @@ export default function CampaignCreationOverlay({
           audienceChat.current = false;
           setChatOpen(false);
           setChatTopic(null);
+          setChatVariant("campaigns");
+          setChatMessage(undefined);
         }}
       />
     </div>
@@ -461,6 +744,7 @@ export default function CampaignCreationOverlay({
       {previewOpen ? (
         <CampaignPreview
           campaignId="1234"
+          campaignName={campaignName}
           setup={setup}
           audience={audience}
           content={content}
@@ -480,17 +764,23 @@ export default function CampaignCreationOverlay({
       ) : (
         <>
       <CampaignCreationNavbar
-        campaignName={goal ?? `Untitled ${channel} campaign`}
+        campaignName={campaignName}
         icon={Icon}
-        nextLabel={isLastStep ? "Preview" : "Next step"}
+        // Every step is on the page now, so the primary action is the end of
+        // the flow rather than the next step.
+        nextLabel="Publish"
+        // Previous, stepper-driven CTA:
+        // nextLabel={isLastStep ? "Preview" : "Next step"}
+        onRenameCampaign={setCampaignName}
         onAskCoMarketer={openFreshChat}
         onSave={onClose}
-        onNextStep={() =>
-          isLastStep ? setPreviewOpen(true) : setActiveIndex((i) => i + 1)
-        }
+        onNextStep={() => setPreviewOpen(true)}
+        // Previous, stepper-driven handler:
+        // onNextStep={() => (isLastStep ? setPreviewOpen(true) : setActiveIndex((i) => i + 1))}
         onClose={onClose}
       />
 
+      {/* Step rail — replaced by the accordion below. Kept for reference.
       <CampaignCreationStepper
         steps={STEPS}
         activeIndex={activeIndex}
@@ -498,9 +788,92 @@ export default function CampaignCreationOverlay({
         lastSaved="just now"
         onStepSelect={setActiveIndex}
       />
+      */}
 
       <div className={cn("flex min-h-0 flex-1 gap-5 pl-14", chatOpen ? "pr-5" : "pr-14")}>
-        <div className="scroll-slim min-w-0 flex-1 overflow-y-auto py-6">
+        <div ref={canvasRef} className="scroll-slim min-w-0 flex-1 overflow-y-auto py-6">
+          <div className="cc-accordion ov2-accordion">
+            {STEPS.map((step, index) => {
+              const StepIcon = step.icon;
+              const active = index === activeIndex;
+              const complete =
+                !active && completedSteps.has(step.id) && isStepComplete(step.id);
+              const state = active ? "active" : complete ? "complete" : "idle";
+
+              return (
+                <section
+                  key={step.id}
+                  ref={(el) => (cardRefs.current[step.id] = el)}
+                  className={`ov2-card ${state}`}
+                >
+                  <button
+                    type="button"
+                    className="ov2-card-header"
+                    aria-expanded={active}
+                    onClick={() => toggleStep(index)}
+                  >
+                    <span className="ov2-badge">
+                      {complete ? <Check /> : <StepIcon />}
+                    </span>
+                    <span className="ov2-card-label">
+                      <strong>{step.label}</strong>
+                      {complete ? (
+                        <span className="ov2-card-summary">{summaryFor(step.id)}</span>
+                      ) : (
+                        <span className="ov2-card-desc">{STEP_DESCRIPTIONS[step.id]}</span>
+                      )}
+                    </span>
+                    <ChevronDown className="ov2-chevron" />
+                  </button>
+
+                  <div className={`ov2-card-bodywrap${active ? " open" : ""}`}>
+                    <div className="ov2-card-bodywrap-inner">
+                      <div className="ov2-card-body">
+                        {step.id === "setup" && (
+                          <CampaignSetupStep
+                            values={setup}
+                            highlight={highlight}
+                            onChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
+                          />
+                        )}
+                        {step.id === "audience" && (
+                          <CampaignAudienceStep
+                            values={audience}
+                            highlight={audienceFlash}
+                            onChange={(patch) => setAudience((a) => ({ ...a, ...patch }))}
+                          />
+                        )}
+                        {step.id === "content" && (
+                          <CampaignContentStep
+                            values={content}
+                            highlight={contentHighlight}
+                            onChange={(patch) => setContent((c) => ({ ...c, ...patch }))}
+                          />
+                        )}
+                        {step.id === "schedule" && (
+                          <CampaignScheduleStep
+                            values={schedule}
+                            onChange={(patch) => setSchedule((s) => ({ ...s, ...patch }))}
+                          />
+                        )}
+
+                        {index < STEPS.length - 1 && (
+                          <div className="ov2-card-actions">
+                            <Button type="button" onClick={() => completeStep(index)}>
+                              Done
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+
+          {/* One step at a time, driven by the rail above. Replaced by the
+              accordion; kept for reference.
           {activeStep.id === "setup" ? (
             <CampaignSetupStep
               values={setup}
@@ -525,12 +898,15 @@ export default function CampaignCreationOverlay({
               onChange={(patch) => setSchedule((s) => ({ ...s, ...patch }))}
             />
           )}
+          */}
         </div>
 
+        {/* Standing suggestion rail — not part of phase 1. The co-marketer now
+            leads with the open step's chips inside the chat instead.
         {showAIPanel && (
           <CampaignAIPanel
             key={setup.goal}
-            stepId={activeStep.id}
+            stepId={railStepId}
             goal={setup.goal}
             loading={!aiReady}
             values={setup}
@@ -541,15 +917,28 @@ export default function CampaignCreationOverlay({
               // canned answer, so it rebuilds the Segment agent's thread.
               const topic =
                 point.key === "audience-cuts" ? audienceCutsTopic(setup.goal) : toSeeded(point);
-              openTopic(topic, activeStep.id === "audience");
+              openTopic(topic, railStepId === "audience");
             }}
           />
         )}
+        */}
 
         {chatColumn}
       </div>
         </>
       )}
+
+      {/* Segment creation canvas — an audience pill used to hand off to the
+          full-screen Segments experience. It now plays in the docked chat
+          instead, so the wizard is never replaced mid-campaign.
+      <SegmentCreationOverlay
+        open={segmentPrompt !== undefined}
+        segment={null}
+        initialPrompt={segmentPrompt}
+        onSaved={plotSavedSegment}
+        onClose={() => setSegmentPrompt(undefined)}
+      />
+      */}
     </div>
   );
 }
