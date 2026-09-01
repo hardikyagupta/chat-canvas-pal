@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X, type LucideIcon } from "lucide-react";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import sparkle from "/campaign-assets/ic-sparkle.gif";
 
 /**
@@ -52,9 +54,28 @@ export default function CampaignCreationNavbar({
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-[#DDE2EE] bg-white px-14">
       <div className="flex min-w-0 items-center gap-3">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-[#E7EDFF]">
-          <Icon className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />
-        </span>
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                tabIndex={0}
+                aria-label="Email"
+                className="grid h-8 w-8 shrink-0 cursor-default place-items-center rounded bg-[#E7EDFF]"
+              >
+                <Icon className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent
+              side="bottom"
+              align="center"
+              sideOffset={8}
+              className="overflow-visible rounded-lg border-0 bg-black px-3 py-1.5 text-white shadow-none"
+            >
+              <p className="font-manrope text-xs leading-[18px]">Email</p>
+              <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         {isRenaming ? (
           <div className="flex min-w-0 items-center rounded-lg bg-white px-2.5 py-1 ring-2 ring-[#2F68E5]">
             <input
