@@ -458,7 +458,10 @@ function suggestionsFor(goal: string, stepId: string): CampaignSuggestion[] {
   const isPromo = goal === "promo-offer";
   const isCart = goal === "abandoned-cart";
 
-  if (stepId === "setup") {
+  // "schedule" is the combined "Schedule and campaign goals" step — its own
+  // send-time suggestions plus the goal-tagging/tracking ones that used to
+  // live on the separate Setup step.
+  if (stepId === "schedule") {
     return [
       {
         id: "tags",
@@ -506,6 +509,7 @@ function suggestionsFor(goal: string, stepId: string): CampaignSuggestion[] {
           conversionEvent: isCart ? "Checkout completed" : "Purchase completed",
         },
       },
+      ...scheduleSuggestions(goal),
     ];
   }
 
@@ -559,7 +563,6 @@ function suggestionsFor(goal: string, stepId: string): CampaignSuggestion[] {
   }
 
   if (stepId === "content") return contentSuggestions(goal);
-  if (stepId === "schedule") return scheduleSuggestions(goal);
 
   return [
     {

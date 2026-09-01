@@ -30,13 +30,13 @@ function EmptyFrame({ className }: { className?: string }) {
   );
 }
 
-/** Netcore-style wordmark, small enough to read as a logo lockup at this size. */
+/** Brand wordmark, small enough to read as a logo lockup at this size. */
 function Wordmark() {
   return (
     <div className="flex items-center justify-center gap-1 py-2">
-      <span className="font-manrope text-[13px] font-black leading-none text-[#FC5E02]">N</span>
+      <span className="font-manrope text-[13px] font-black leading-none text-[#3F6B4F]">B</span>
       <span className="font-manrope text-[11px] font-bold leading-none text-[#17173A]">
-        Netcore
+        Bloomwood
       </span>
     </div>
   );
@@ -47,40 +47,40 @@ function Line({ w, tone = "#D8D8D8", h = 3 }: { w: string; tone?: string; h?: nu
 }
 
 export function TemplateThumbnail({ kind }: { kind: TemplatePreview }) {
-  if (kind === "watch") {
+  if (kind === "launch") {
     return (
-      <div className="flex h-full flex-col bg-[#E8302A] px-2.5 pt-3">
+      <div className="flex h-full flex-col bg-[#B5714A] px-2.5 pt-3">
         <p className="text-center font-manrope text-[6px] font-bold uppercase leading-[9px] tracking-[0.2px] text-white">
-          Upgrade your watch, upgrade your world.
+          New in the botanicals line
         </p>
         <p className="mt-1.5 text-center font-manrope text-[10px] font-black uppercase leading-none text-white">
-          <span className="text-[6px] font-bold">Introducing </span>Volt 3.0
+          <span className="text-[6px] font-bold">Introducing the </span>Wildflower Trio
         </p>
         <p className="mt-1 text-center font-manrope text-[5px] leading-[8px] text-white/85">
-          A whole new series of smartwatches with a blend of innovation, style and functionality.
+          Three hand-poured candles, blended with real botanicals and soy wax.
         </p>
         <div className="mt-2 flex flex-1 items-end justify-center gap-1.5 pb-0">
-          <span className="mb-1 size-6 rounded-full border-2 border-[#1A1A1A] bg-[#2B2B2B]" />
-          <span className="size-8 rounded-full border-2 border-[#1A1A1A] bg-[#111]" />
-          <span className="mb-1 h-8 w-5 rounded-[4px] border-2 border-[#1A1A1A] bg-[#2B2B2B]" />
+          <span className="mb-1 size-6 rounded-full border-2 border-[#5C3A22] bg-[#EFE3D3]" />
+          <span className="size-8 rounded-full border-2 border-[#5C3A22] bg-[#F6EEDF]" />
+          <span className="mb-1 size-6 rounded-full border-2 border-[#5C3A22] bg-[#EFE3D3]" />
         </div>
-        <div className="-mx-2.5 h-3 bg-[#5B4BE8]" />
+        <div className="-mx-2.5 h-3 bg-[#3F6B4F]" />
       </div>
     );
   }
 
-  if (kind === "fashion") {
+  if (kind === "giftset") {
     return (
       <div className="flex h-full flex-col bg-white">
         <p className="py-1.5 text-center font-manrope text-[9px] font-bold tracking-[1px] text-[#17173A]">
           LOGO
         </p>
-        <div className="relative flex-1 bg-gradient-to-b from-[#9A9A9A] to-[#4A4A4A]">
+        <div className="relative flex-1 bg-gradient-to-b from-[#D9C7A8] to-[#8C6A44]">
           <p className="absolute left-2 top-2 font-manrope text-[7px] font-bold uppercase text-white/90">
             Up to
           </p>
           <p className="absolute left-2 top-6 font-manrope text-[15px] font-black leading-none text-white">
-            40%
+            30%
           </p>
           <p className="absolute left-2 top-11 font-manrope text-[9px] font-black leading-none text-white">
             OFF
@@ -88,14 +88,14 @@ export function TemplateThumbnail({ kind }: { kind: TemplatePreview }) {
         </div>
         <div className="px-2 py-1.5 text-center">
           <p className="font-manrope text-[7px] font-bold text-[#17173A]">
-            Your style upgrade starts here!
+            Your self-care ritual starts here
           </p>
           <p className="mt-0.5 font-manrope text-[5px] text-[#6F6F8D]">
-            Limited-time deals you don't want to miss.
+            Limited-time gift sets you don't want to miss.
           </p>
         </div>
         <div className="mx-2 mb-2 rounded-[2px] bg-black py-1 text-center">
-          <p className="font-manrope text-[6px] font-bold text-white">Special OFFER</p>
+          <p className="font-manrope text-[6px] font-bold text-white">SELFCARE20</p>
           <p className="font-manrope text-[5px] text-white/70">Use the coupon code</p>
         </div>
       </div>
@@ -105,9 +105,9 @@ export function TemplateThumbnail({ kind }: { kind: TemplatePreview }) {
   if (kind === "text") {
     return (
       <div className="flex h-full flex-col gap-1.5 bg-white p-2.5">
-        <p className="font-manrope text-[9px] font-bold text-[#E8302A]">Heading</p>
+        <p className="font-manrope text-[9px] font-bold text-[#3F6B4F]">New In</p>
         {["100%", "96%", "100%", "88%", "94%", "70%"].map((w, i) => (
-          <Line key={i} w={w} tone="#F0A9A6" h={2.5} />
+          <Line key={i} w={w} tone="#C7D9C0" h={2.5} />
         ))}
       </div>
     );
@@ -118,10 +118,10 @@ export function TemplateThumbnail({ kind }: { kind: TemplatePreview }) {
       <div className="flex h-full flex-col bg-white p-1.5">
         <Wordmark />
         <p className="text-center font-manrope text-[6px] font-bold text-[#17173A]">
-          Receipt Summary
+          Order Confirmed
         </p>
         <p className="text-center font-manrope text-[4px] text-[#6F6F8D]">
-          Netcore Cloud Private Limited
+          Bloomwood Botanicals Pvt. Ltd.
         </p>
         <div className="mt-1.5 flex-1 border border-[#D8D8D8]">
           {Array.from({ length: 7 }).map((_, i) => (
@@ -129,7 +129,7 @@ export function TemplateThumbnail({ kind }: { kind: TemplatePreview }) {
               key={i}
               className={cn(
                 "flex h-[9px] items-center gap-1 border-b border-[#E4E4E4] px-1",
-                i === 3 && "bg-[#F7C8C4]"
+                i === 3 && "bg-[#DCE9D6]"
               )}
             >
               <Line w="45%" tone="#CFCFCF" h={2} />
@@ -153,8 +153,8 @@ export function TemplateThumbnail({ kind }: { kind: TemplatePreview }) {
   if (kind === "heading") {
     return (
       <div className="flex h-full flex-col bg-white p-1.5">
-        <p className="py-1.5 text-center font-manrope text-[8px] font-bold text-[#E8302A]">
-          Test Campaign Create
+        <p className="py-1.5 text-center font-manrope text-[8px] font-bold text-[#3F6B4F]">
+          New Season, New Rituals
         </p>
         <EmptyFrame />
       </div>
@@ -166,6 +166,31 @@ export function TemplateThumbnail({ kind }: { kind: TemplatePreview }) {
       <div className="flex h-full flex-col bg-white p-1.5">
         <div className="h-8 bg-[#EDEDED]" />
         <div className="flex-1" />
+      </div>
+    );
+  }
+
+  if (kind === "skincare") {
+    const items: [string, string][] = [
+      ["#E7DCCB", "Shea Butter"],
+      ["#DCE9D6", "Rosewater"],
+      ["#F0E4D3", "Oat Milk"],
+    ];
+    return (
+      <div className="flex h-full flex-col bg-white p-1.5">
+        <p className="py-1 text-center font-manrope text-[8px] font-bold text-[#17173A]">
+          Shop the ritual
+        </p>
+        <div className="flex flex-1 items-stretch gap-1">
+          {items.map(([tone, label]) => (
+            <div key={label} className="flex flex-1 flex-col gap-1">
+              <div className="flex-1 rounded-[2px]" style={{ background: tone }} />
+              <p className="text-center font-manrope text-[4.5px] font-semibold leading-[6px] text-[#6F6F8D]">
+                {label}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -195,7 +220,15 @@ export default function TemplateCard({
       )}
     >
       <div className="aspect-square w-full overflow-hidden border-b border-[#EEF1F7] bg-white">
-        <TemplateThumbnail kind={template.preview} />
+        {template.image ? (
+          <img
+            src={template.image}
+            alt=""
+            className="h-full w-full object-cover object-top"
+          />
+        ) : (
+          <TemplateThumbnail kind={template.preview} />
+        )}
       </div>
 
       {selected && (
@@ -208,7 +241,7 @@ export default function TemplateCard({
         <p className="truncate font-manrope text-[13px] font-semibold text-[#17173A]">
           {template.name}
         </p>
-        <p className="mt-0.5 font-manrope text-[11px] text-[#6F6F8D]">Id: {template.id}</p>
+        <p className="mt-0.5 font-manrope text-[11px] text-[#6F6F8D]">ID: {template.id}</p>
       </div>
     </button>
   );

@@ -102,8 +102,8 @@ export default function CampaignCreationNavbar({
           onClick={onSave}
           className="dc-btn dc-btn-secondary uppercase"
         >
-          {/* Was "Save". */}
-          SAVE AS DRAFT
+          {/* Was "Save", then "Save as draft". */}
+          SAVE FOR LATER
         </button>
         <button
           type="button"

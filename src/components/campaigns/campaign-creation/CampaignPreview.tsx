@@ -236,7 +236,7 @@ export default function CampaignPreview({
           <div className="flex items-start gap-5">
           {/* Left column — setup and audience */}
           <div className="flex w-[34%] shrink-0 flex-col gap-5">
-            <PreviewCard icon={Settings} title="Setup" onEdit={() => onEditStep("setup")}>
+            <PreviewCard icon={Settings} title="Setup" onEdit={() => onEditStep("schedule")}>
               <SubHeading>Campaign details</SubHeading>
               <Row label="Campaign ID:">{campaignId}</Row>
               <Row label="Campaign name:">{name}</Row>

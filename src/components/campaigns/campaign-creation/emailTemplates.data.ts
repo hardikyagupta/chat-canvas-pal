@@ -1,100 +1,67 @@
+import thumbExclusiveDeals from "/campaign-assets/template-thumbs/tpl-exclusive-deals.png";
+import thumbWelcomeFamily from "/campaign-assets/template-thumbs/tpl-welcome-family.png";
+import thumbPriceDrop from "/campaign-assets/template-thumbs/tpl-price-drop.png";
+import thumbGiftCouple from "/campaign-assets/template-thumbs/tpl-gift-couple.png";
+import thumbDoubleIndulgence from "/campaign-assets/template-thumbs/tpl-double-indulgence.jpg";
+import thumbIndependenceDay from "/campaign-assets/template-thumbs/tpl-independence-day.png";
+import thumbElevatedGrooming from "/campaign-assets/template-thumbs/tpl-elevated-grooming.jpg";
+import thumbPanchpushp from "/campaign-assets/template-thumbs/tpl-panchpushp.jpg";
+import thumbFragranceNotes from "/campaign-assets/template-thumbs/tpl-fragrance-notes.jpg";
+import thumbCologneLaunch from "/campaign-assets/template-thumbs/tpl-cologne-launch.jpg";
+
 /**
  * Saved email templates for the Content step's picker.
  *
- * `preview` decides what the card's thumbnail draws. Most saved templates in a
- * real account have never had a thumbnail generated, which is why "none" — the
- * empty-frame placeholder — is the common case rather than the exception.
+ * `image` is a real, rendered thumbnail (cropped to the top of the template)
+ * for the account's recent templates. `preview` decides what the card draws
+ * instead when there's no `image` — most saved templates in a real account
+ * have never had a thumbnail generated, which is why "none", the empty-frame
+ * placeholder, is the common case rather than the exception there.
  */
 export type TemplatePreview =
   | "none"
-  | "watch"
+  | "launch"
   | "brand"
   | "heading"
   | "band"
-  | "fashion"
+  | "giftset"
   | "text"
-  | "receipt";
+  | "receipt"
+  | "skincare";
 
 export interface EmailTemplate {
   id: number;
   name: string;
   preview: TemplatePreview;
+  /** A real rendered thumbnail; takes over from `preview` when set. */
+  image?: string;
   /** Shown under "Create new" and in filters; also drives the AI badge. */
   aiGenerated?: boolean;
 }
 
 /** The most recently touched templates — these carry real thumbnails. */
 const RECENT: EmailTemplate[] = [
-  { id: 868, name: "New launch (1)", preview: "watch" },
-  { id: 8289, name: "adda", preview: "brand" },
-  { id: 8286, name: "testtemplatenam", preview: "none" },
-  { id: 8284, name: "swsaz", preview: "heading" },
-  { id: 8283, name: "Test-Amit-4zc", preview: "band" },
-  { id: 8281, name: "Limited-time offerafaf", preview: "fashion" },
-  { id: 8280, name: "adaaf23e", preview: "none" },
-  { id: 8278, name: "product feed", preview: "none" },
-  { id: 8273, name: "tesfsfsfff", preview: "text" },
-  { id: 8275, name: "adfe", preview: "receipt" },
+  { id: 868, name: "Exclusive Deals — Gold Members", preview: "none", image: thumbExclusiveDeals },
+  { id: 8289, name: "Welcome to the Family", preview: "none", image: thumbWelcomeFamily },
+  { id: 8286, name: "Price Drop Alert", preview: "none", image: thumbPriceDrop },
+  { id: 8284, name: "Festive Gifting — Couple", preview: "none", image: thumbGiftCouple },
+  { id: 8283, name: "Double the Indulgence", preview: "none", image: thumbDoubleIndulgence },
+  { id: 8281, name: "Independence Day Delight", preview: "none", image: thumbIndependenceDay },
+  { id: 8280, name: "Elevated Grooming Rituals", preview: "none", image: thumbElevatedGrooming },
+  { id: 8278, name: "Panchpushp Launch", preview: "none", image: thumbPanchpushp },
+  { id: 8273, name: "Fragrance Notes — Cologne", preview: "none", image: thumbFragranceNotes },
+  { id: 8275, name: "Introducing the New Cologne", preview: "none", image: thumbCologneLaunch },
 ];
 
-/**
- * The long tail. Real accounts accumulate hundreds of half-named drafts, so the
- * picker has to page — these give the pager something honest to page through.
- */
-const TAIL_NAMES = [
-  "Festive teaser v2",
-  "Cart nudge — 24h",
-  "adfsdf",
-  "Welcome series 01",
-  "Welcome series 02",
-  "Winback — 60 day",
-  "Loyalty tier upgrade",
-  "test copy final",
-  "Weekend drop",
-  "Price drop alert",
-  "asdasd23",
-  "Back in stock",
-  "Order confirmation",
-  "Referral invite",
-  "NPS follow-up",
-  "Monsoon sale hero",
-  "temp-clone-3",
-  "App install push-through",
-  "Birthday offer",
-  "Restock reminder",
-  "Q3 newsletter",
-  "flash-sale-copy",
-  "Abandoned browse",
-  "Free shipping banner",
-  "test-amit-99",
-  "Membership renewal",
-  "Category spotlight",
-  "New arrivals grid",
-  "Post-purchase thanks",
-  "dfgdfg",
-  "Survey invite",
-  "Clearance final call",
-  "Bundle offer",
-  "Early access invite",
-  "Wishlist price cut",
-  "draft-untitled-7",
-  "Store event RSVP",
-  "Reactivation nudge",
-];
-
-/** Deterministic preview mix so cards don't all look identical down the pages. */
-const TAIL_PREVIEWS: TemplatePreview[] = ["none", "none", "band", "none", "text", "none", "heading"];
-
-const TAIL: EmailTemplate[] = TAIL_NAMES.map((name, i) => ({
-  id: 8270 - i * 3,
-  name,
-  preview: TAIL_PREVIEWS[i % TAIL_PREVIEWS.length],
-}));
-
-export const emailTemplates: EmailTemplate[] = [...RECENT, ...TAIL];
+export const emailTemplates: EmailTemplate[] = RECENT;
 
 /** Blank starting points offered under the "Create new" tab. */
 export const templateStarters = [
+  {
+    id: "ai",
+    name: "Create with AI",
+    description: "Use co-marketer to create interactive templates.",
+  },
   {
     id: "drag-drop",
     name: "Drag & drop editor",

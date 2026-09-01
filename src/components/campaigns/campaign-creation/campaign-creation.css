@@ -97,6 +97,12 @@
 .cc-accordion .ov2-chevron { width: 16px; height: 16px; }
 .cc-accordion .ov2-badge svg { width: 16px; height: 16px; }
 
+/* The card's own content caps out at 1044px (StepCard's "wide" variant) so
+   form fields and the template grid stay a readable width — without this,
+   the card's border stretches to fill the modal on a wide window while the
+   content stays put, leaving a big empty panel inside the border. */
+.cc-accordion .ov2-card { max-width: 1086px; }
+
 /* Each step already ships its own white card; inside an accordion card that
    reads as a double border, so strip the inner chrome and keep the padding
    the card body provides. */
@@ -107,7 +113,22 @@
   padding: 0;
 }
 
+/* Typewriter caret on the intro screen's rotating placeholder. */
+.cc-typewriter-caret {
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  margin-left: 1px;
+  background: currentColor;
+  vertical-align: -0.15em;
+  animation: cc-caret-blink 1s step-end infinite;
+}
+@keyframes cc-caret-blink {
+  50% { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .cc-typewriter-caret { animation: none; }
   .t-acc-panel, .t-acc-panel-inner, .t-acc-chevron {
     transition: none !important;
   }

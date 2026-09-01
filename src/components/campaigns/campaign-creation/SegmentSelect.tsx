@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Search, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -130,15 +131,47 @@ export default function SegmentSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [rect, setRect] = useState<DOMRect | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (!wrapRef.current?.contains(t) && !panelRef.current?.contains(t)) setOpen(false);
+    };
+    // Escape closes this dropdown first, same as any combobox — and stopping
+    // it here keeps it from also closing the wizard the field lives in, since
+    // the portalled panel wouldn't unmount in sync with that close animation.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, [open]);
+
+  // The trigger sits inside the audience form's accordion, which clips
+  // overflow to animate its height — so the panel is portalled to <body>
+  // and kept in sync with the trigger's live position instead of relying
+  // on normal-flow absolute positioning.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => wrapRef.current && setRect(wrapRef.current.getBoundingClientRect());
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
   }, [open]);
 
   const options = useMemo(() => {
@@ -232,72 +265,78 @@ export default function SegmentSelect({
         />
       </div>
 
-      {open && (
-        <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-[#DDE2EE] bg-white shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
-          <div className="relative border-b border-[#EEF1F7] p-2">
-            <Search className="pointer-events-none absolute left-5 top-1/2 size-4 -translate-y-1/2 text-[#8A8AA3]" />
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search"
-              className="h-9 w-full rounded-md bg-[#F7F9FC] pl-9 pr-3 font-manrope text-sm text-[#17173A] outline-none placeholder:text-[#A0A0A0]"
-            />
-          </div>
-          <div className="scroll-slim max-h-[240px] overflow-y-auto py-1">
-            {options.length === 0 ? (
-              <p className="px-3 py-4 text-center font-manrope text-[13px] text-[#6F6F8D]">
-                No list or segment matches that.
-              </p>
-            ) : (
-              options.map((o) => {
-                const on = value.some((v) => v.id === o.id);
-                return (
-                  <button
-                    key={o.id}
-                    type="button"
-                    onClick={() => toggle(o)}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
-                      on ? "bg-[#F4F8FF]" : "hover:bg-[#F7F9FC]"
-                    )}
-                  >
-                    <span
+      {open && rect &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{ top: rect.bottom + 4, left: rect.left, width: rect.width }}
+            className="fixed z-[80] overflow-hidden rounded-md border border-[#DDE2EE] bg-white shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+          >
+            <div className="relative border-b border-[#EEF1F7] p-2">
+              <Search className="pointer-events-none absolute left-5 top-1/2 size-4 -translate-y-1/2 text-[#8A8AA3]" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search"
+                className="h-9 w-full rounded-md bg-[#F7F9FC] pl-9 pr-3 font-manrope text-sm text-[#17173A] outline-none placeholder:text-[#A0A0A0]"
+              />
+            </div>
+            <div className="scroll-slim max-h-[240px] overflow-y-auto py-1">
+              {options.length === 0 ? (
+                <p className="px-3 py-4 text-center font-manrope text-[13px] text-[#6F6F8D]">
+                  No list or segment matches that.
+                </p>
+              ) : (
+                options.map((o) => {
+                  const on = value.some((v) => v.id === o.id);
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => toggle(o)}
                       className={cn(
-                        "grid size-4 shrink-0 place-items-center rounded border-2",
-                        on ? "border-[#2F68E5] bg-[#2F68E5]" : "border-[#C3CAD9] bg-white"
+                        "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                        on ? "bg-[#F4F8FF]" : "hover:bg-[#F7F9FC]"
                       )}
                     >
-                      {on && (
-                        <svg viewBox="0 0 12 12" className="size-2.5 text-white" fill="none">
-                          <path
-                            d="M2.5 6.2 4.8 8.5 9.5 3.8"
-                            stroke="currentColor"
-                            strokeWidth="2.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      )}
-                    </span>
-                    <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                      {o.ai && (
-                        <Sparkles className="size-3 shrink-0 text-[#7B5CFA]" strokeWidth={2.2} />
-                      )}
-                      <span className="truncate font-manrope text-[13px] text-[#17173A]">
-                        {o.name}
+                      <span
+                        className={cn(
+                          "grid size-4 shrink-0 place-items-center rounded border-2",
+                          on ? "border-[#2F68E5] bg-[#2F68E5]" : "border-[#C3CAD9] bg-white"
+                        )}
+                      >
+                        {on && (
+                          <svg viewBox="0 0 12 12" className="size-2.5 text-white" fill="none">
+                            <path
+                              d="M2.5 6.2 4.8 8.5 9.5 3.8"
+                              stroke="currentColor"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
                       </span>
-                    </span>
-                    <span className="shrink-0 font-manrope text-xs text-[#6F6F8D]">
-                      {nf.format(o.reach)}
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
+                      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                        {o.ai && (
+                          <Sparkles className="size-3 shrink-0 text-[#7B5CFA]" strokeWidth={2.2} />
+                        )}
+                        <span className="truncate font-manrope text-[13px] text-[#17173A]">
+                          {o.name}
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-manrope text-xs text-[#6F6F8D]">
+                        {nf.format(o.reach)}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

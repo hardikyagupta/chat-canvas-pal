@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BarChart3,
   Bell,
@@ -7,9 +7,12 @@ import {
   ChevronDown,
   FileText,
   Mail,
+  Megaphone,
   MessageCircle,
   MessageSquare,
   Monitor,
+  Percent,
+  Sparkles,
   Tag,
   Target,
   Users,
@@ -18,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import CampaignCreationNavbar from "./CampaignCreationNavbar";
+import CampaignCreationIntro from "./CampaignCreationIntro";
 import CampaignCreationStepper, { type Step } from "./CampaignCreationStepper";
 import CampaignAIPanel, {
   isContentPatchApplied,
@@ -33,6 +37,7 @@ import CampaignSetupStep, {
   type SetupValues,
 } from "./CampaignSetupStep";
 import CampaignAudienceStep, {
+  AudienceReachablePill,
   EMPTY_AUDIENCE,
   reachFor,
   type AudienceValues,
@@ -87,19 +92,49 @@ const CHANNEL_ICONS: Record<string, LucideIcon> = {
 
 /** Canonical order — do not reorder; every channel shares it. */
 const STEPS: Step[] = [
-  { id: "setup", label: "Setup", icon: Check },
   { id: "audience", label: "Audience", icon: Users },
   { id: "content", label: "Content", icon: FileText },
-  { id: "schedule", label: "Schedule", icon: Calendar },
+  { id: "schedule", label: "Schedule and campaign goals", icon: Calendar },
 ];
 
 /**
  * Contextual co-marketer chips per step — what "Ask co-marketer" opens with
  * while that card is the one on screen, instead of the generic home-page set.
- * Setup only for now; the other steps follow.
  */
 const STEP_CHIPS: Record<string, StarterChip[]> = {
-  setup: [
+  content: [
+    {
+      label: "Offer 50% off",
+      icon: Percent,
+      header: "Write a 50% off email",
+      prompts: [
+        "Write a subject line and email for a 50% off sale.",
+        "Draft the body copy for a 50% off offer email.",
+        "Suggest a pre-header that boosts opens for a 50% off email.",
+      ],
+    },
+    {
+      label: "End of season sale",
+      icon: Tag,
+      header: "Write an end-of-season sale email",
+      prompts: [
+        "Write a subject line for an end-of-season sale email.",
+        "Draft the body copy for an end-of-season clearance email.",
+        "What template style fits an end-of-season sale best?",
+      ],
+    },
+    {
+      label: "Announce season sale",
+      icon: Megaphone,
+      header: "Announce the season sale",
+      prompts: [
+        "Write an announcement email for our new season sale.",
+        "Draft a subject line that builds excitement for the season sale.",
+        "Suggest a pre-header for a season sale announcement.",
+      ],
+    },
+  ],
+  schedule: [
     {
       label: "Tracking recommendation",
       icon: BarChart3,
@@ -134,10 +169,9 @@ const STEP_CHIPS: Record<string, StarterChip[]> = {
 
 /** Sub-line under each accordion header, before the step has a summary. */
 const STEP_DESCRIPTIONS: Record<string, string> = {
-  setup: "Tag this campaign and choose what you want to track.",
   audience: "Choose who this campaign should go to.",
   content: "Write the message and pick the template it goes out in.",
-  schedule: "Decide when this send leaves.",
+  schedule: "Decide when this send leaves, and tag and track the campaign.",
 };
 
 /** Draft name every new campaign starts on: Untitled_YYYYMMDDHHMMSS, local time. */
@@ -208,6 +242,9 @@ export default function CampaignCreationOverlay({
   // on the campaigns page uses.
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
+  // The Email flow opens on a goal prompt before the step-by-step wizard;
+  // "Start from scratch" (or submitting a goal) is what gets past it.
+  const [introOpen, setIntroOpen] = useState(true);
   // Which accordion card is open. -1 means every card is collapsed, which the
   // header toggle allows — the stepper's "current step" is now just this.
   const [activeIndex, setActiveIndex] = useState(0);
@@ -216,7 +253,7 @@ export default function CampaignCreationOverlay({
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   // The step the co-marketer rail is answering for. Tracked separately from
   // activeIndex so collapsing every card doesn't blank the suggestions.
-  const [railStepId, setRailStepId] = useState<string>("setup");
+  const [railStepId, setRailStepId] = useState<string>("audience");
   // The campaign's own name — set once per open and only ever changed by the
   // navbar rename, so picking a goal no longer retitles the draft.
   const [campaignName, setCampaignName] = useState(newCampaignName);
@@ -277,9 +314,10 @@ export default function CampaignCreationOverlay({
       setFollowUpSeq(0);
       // Reset only after the panel is gone, so the exit slide doesn't show the
       // wizard snapping back to step 1.
+      setIntroOpen(true);
       setActiveIndex(0);
       setCompletedSteps(new Set());
-      setRailStepId("setup");
+      setRailStepId("audience");
       setSetup(EMPTY_SETUP);
       setAudience(EMPTY_AUDIENCE);
       setContent(EMPTY_CONTENT);
@@ -515,13 +553,12 @@ export default function CampaignCreationOverlay({
   /** Has this step got enough on it to read as done? */
   const isStepComplete = (id: string): boolean => {
     switch (id) {
-      // Nothing on setup is required now that the goal question is out.
-      case "setup":
-        return true;
       case "audience":
         return reachFor(audience) > 0;
       case "content":
         return Boolean(content.subject || content.templateId);
+      // Nothing here is required — the goal question is out, and a send
+      // time always has a default.
       case "schedule":
         return true;
       default:
@@ -530,28 +567,34 @@ export default function CampaignCreationOverlay({
   };
 
   /** One-line recap shown on a finished card while it's collapsed. */
-  const summaryFor = (id: string): string => {
+  const summaryFor = (id: string): ReactNode => {
     switch (id) {
-      case "setup": {
-        const tags = parseTags(setup.tags);
-        return [
-          tags.length ? `${tags.length} tag${tags.length === 1 ? "" : "s"}` : "No tags",
-          setup.gaTracking ? "GA tracking on" : null,
-          setup.conversionTracking ? "Conversion tracking on" : null,
-        ]
-          .filter(Boolean)
-          .join(" · ");
-      }
       case "audience": {
+        const reachable = `${reachFor(audience).toLocaleString()} reachable`;
+        if (audience.mode === "segments") {
+          if (audience.segments.length === 0) return `No segment selected · ${reachable}`;
+          return (
+            <span className="inline-flex min-w-0 items-center gap-1.5 overflow-hidden">
+              {audience.segments.map((s) => (
+                <span
+                  key={s.id}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#DDE2EE] bg-white px-2 py-0.5 text-[11px] font-semibold text-[#17173A]"
+                >
+                  {s.ai && <Sparkles className="size-2.5 shrink-0 text-[#7B5CFA]" strokeWidth={2.2} />}
+                  {s.name}
+                </span>
+              ))}
+              <span className="shrink-0 font-semibold text-[#17173A]">· {reachable}</span>
+            </span>
+          );
+        }
         const who =
           audience.mode === "all"
             ? "All contacts"
-            : audience.mode === "segments"
-              ? audience.segments.map((s) => s.name).join(", ") || "No segment selected"
-              : audience.mode === "table"
-                ? audience.table || "No table selected"
-                : `${audience.conditions.length} condition${audience.conditions.length === 1 ? "" : "s"}`;
-        return `${who} · ${reachFor(audience).toLocaleString()} reachable`;
+            : audience.mode === "table"
+              ? audience.table || "No table selected"
+              : `${audience.conditions.length} condition${audience.conditions.length === 1 ? "" : "s"}`;
+        return `${who} · ${reachable}`;
       }
       case "content": {
         const template = emailTemplates.find((t) => t.id === content.templateId);
@@ -559,12 +602,23 @@ export default function CampaignCreationOverlay({
           [content.subject, template?.name].filter(Boolean).join(" · ") || "Nothing written yet"
         );
       }
-      case "schedule":
-        if (schedule.mode === "now") return "As soon as this is published";
-        if (schedule.mode === "later") return describeSlot(schedule.sendAt);
-        if (schedule.mode === "slice")
-          return `${schedule.sliceBatches} batches, ${schedule.sliceGapMins} minutes apart`;
-        return `Optimised per contact · ${schedule.optimizeWindow}`;
+      case "schedule": {
+        const when =
+          schedule.mode === "now"
+            ? "As soon as this is published"
+            : schedule.mode === "later"
+              ? describeSlot(schedule.sendAt)
+              : schedule.mode === "slice"
+                ? `${schedule.sliceBatches} batches, ${schedule.sliceGapMins} minutes apart`
+                : `Optimised per contact · ${schedule.optimizeWindow}`;
+        const tags = parseTags(setup.tags);
+        const goalBits = [
+          tags.length ? `${tags.length} tag${tags.length === 1 ? "" : "s"}` : null,
+          setup.gaTracking ? "GA tracking on" : null,
+          setup.conversionTracking ? "Conversion tracking on" : null,
+        ].filter(Boolean);
+        return [when, ...goalBits].join(" · ");
+      }
       default:
         return "";
     }
@@ -741,7 +795,17 @@ export default function CampaignCreationOverlay({
         shown ? "translate-y-0" : "translate-y-full"
       )}
     >
-      {previewOpen ? (
+      {channel === "Email" && introOpen ? (
+        <CampaignCreationIntro
+          onContinue={() => {
+            setIntroOpen(false);
+            // Co-marketer stays open by default going into the wizard —
+            // the intro screen was already a co-marketer prompt.
+            openFreshChat();
+          }}
+          onClose={onClose}
+        />
+      ) : previewOpen ? (
         <CampaignPreview
           campaignId="1234"
           campaignName={campaignName}
@@ -768,7 +832,7 @@ export default function CampaignCreationOverlay({
         icon={Icon}
         // Every step is on the page now, so the primary action is the end of
         // the flow rather than the next step.
-        nextLabel="Publish"
+        nextLabel="Send"
         // Previous, stepper-driven CTA:
         // nextLabel={isLastStep ? "Preview" : "Next step"}
         onRenameCampaign={setCampaignName}
@@ -806,11 +870,18 @@ export default function CampaignCreationOverlay({
                   ref={(el) => (cardRefs.current[step.id] = el)}
                   className={`ov2-card ${state}`}
                 >
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     className="ov2-card-header"
                     aria-expanded={active}
                     onClick={() => toggleStep(index)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleStep(index);
+                      }
+                    }}
                   >
                     <span className="ov2-badge">
                       {complete ? <Check /> : <StepIcon />}
@@ -823,19 +894,21 @@ export default function CampaignCreationOverlay({
                         <span className="ov2-card-desc">{STEP_DESCRIPTIONS[step.id]}</span>
                       )}
                     </span>
+                    {/* A real button (the refresh icon inside) can't nest inside
+                        the header's own button, so the header is a div now —
+                        stopPropagation on the pill keeps its clicks from also
+                        toggling the accordion. */}
+                    {step.id === "audience" && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <AudienceReachablePill reach={reachFor(audience)} />
+                      </div>
+                    )}
                     <ChevronDown className="ov2-chevron" />
-                  </button>
+                  </div>
 
                   <div className={`ov2-card-bodywrap${active ? " open" : ""}`}>
                     <div className="ov2-card-bodywrap-inner">
                       <div className="ov2-card-body">
-                        {step.id === "setup" && (
-                          <CampaignSetupStep
-                            values={setup}
-                            highlight={highlight}
-                            onChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
-                          />
-                        )}
                         {step.id === "audience" && (
                           <CampaignAudienceStep
                             values={audience}
@@ -848,13 +921,23 @@ export default function CampaignCreationOverlay({
                             values={content}
                             highlight={contentHighlight}
                             onChange={(patch) => setContent((c) => ({ ...c, ...patch }))}
+                            chatOpen={chatOpen}
                           />
                         )}
                         {step.id === "schedule" && (
-                          <CampaignScheduleStep
-                            values={schedule}
-                            onChange={(patch) => setSchedule((s) => ({ ...s, ...patch }))}
-                          />
+                          <>
+                            <CampaignScheduleStep
+                              values={schedule}
+                              onChange={(patch) => setSchedule((s) => ({ ...s, ...patch }))}
+                            />
+                            <div className="mt-8">
+                              <CampaignSetupStep
+                                values={setup}
+                                highlight={highlight}
+                                onChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
+                              />
+                            </div>
+                          </>
                         )}
 
                         {index < STEPS.length - 1 && (

@@ -1,5 +1,9 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -8,14 +12,21 @@ import {
   Code2,
   Info,
   LayoutGrid,
+  Paperclip,
   Plus,
+  RotateCcw,
   Search,
   SlidersHorizontal,
+  Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   Type,
+  Upload,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import sparkle from "/campaign-assets/ic-sparkle-ai.gif";
 import StepCard from "./StepCard";
 import TemplateCard from "./TemplateCard";
 import { emailTemplates, templateStarters } from "./emailTemplates.data";
@@ -28,11 +39,17 @@ export interface ContentValues {
   domain: string;
   subject: string;
   preHeader: string;
-  /** Optional sender fields, each opened from its own "+" button. */
+  /** Optional sender fields, each opened from its own "+" button. Kept for the
+   *  v1 layout (see CONTENT_LAYOUT_V2) even while it's hidden. */
   replyEnabled: boolean;
   replyEmail: string;
   copyEnabled: boolean;
   copyEmails: string;
+  /** Cc/Bcc — the v2 layout's own fields, separate from the v1 ones above. */
+  ccEnabled: boolean;
+  ccEmails: string;
+  bccEnabled: boolean;
+  bccEmails: string;
   attachmentsEnabled: boolean;
   attachments: string[];
   tab: TemplateTab;
@@ -51,6 +68,10 @@ export const EMPTY_CONTENT: ContentValues = {
   replyEmail: "",
   copyEnabled: false,
   copyEmails: "",
+  ccEnabled: false,
+  ccEmails: "",
+  bccEnabled: false,
+  bccEmails: "",
   attachmentsEnabled: false,
   attachments: [],
   tab: "my",
@@ -61,12 +82,25 @@ export const EMPTY_CONTENT: ContentValues = {
 /** Verified sending domains on the account. */
 const DOMAINS = ["m3m.in", "mailer.m3m.in", "news.m3m.in", "offers.m3m.in"];
 
-const PER_PAGE_OPTIONS = [10, 20, 30];
+/** Formats a saved attachment can be, and the size cap on it. */
+const ATTACHMENT_ACCEPT = ".csv,.xls,.xlsx,.htm,.html,.pdf,.docx,.jpg,.jpeg,.gif,.png,.ics";
+
+/**
+ * Exploring a new take on the Content step's header (From/Cc/Bcc/attachments,
+ * then Subject/Pre-header) — the old sender-fields block stays in place below,
+ * just not rendered, so flipping this back to false brings it right back.
+ */
+const CONTENT_LAYOUT_V2 = true;
+
+const PER_PAGE_OPTIONS = [5, 10, 50, 100, 150];
+/** Only these page sizes are wired up; the rest are shown but not selectable. */
+const PER_PAGE_ENABLED = [5, 10];
 
 const STARTER_ICONS: Record<string, LucideIcon> = {
   "drag-drop": LayoutGrid,
   "rich-text": Type,
   html: Code2,
+  ai: Sparkles,
 };
 
 const TABS: { id: TemplateTab; label: string }[] = [
@@ -79,9 +113,28 @@ const fieldClass =
 
 function InfoDot({ label }: { label: string }) {
   return (
-    <span title={label} className="inline-grid place-items-center text-[#8A8AA3]">
-      <Info className="size-4" strokeWidth={2} />
-    </span>
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label="More information"
+            className="inline-grid shrink-0 place-items-center text-[#8A8AA3] transition-colors hover:text-[#6F6F8D]"
+          >
+            <Info className="size-4" strokeWidth={2} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          side="right"
+          align="center"
+          sideOffset={8}
+          className="max-w-[260px] overflow-visible rounded-lg border-0 bg-black px-3 py-2.5 text-white shadow-none"
+        >
+          <p className="font-manrope text-xs leading-[18px]">{label}</p>
+          <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -112,6 +165,40 @@ function Field({
   );
 }
 
+/** A borderless field styled as a single line — label, then the field, then
+ *  whatever's trailing on that row. Full-width rows separated by hairlines,
+ *  the way a mail composer lays out From/Cc/Bcc/Subject rather than a form. */
+function FieldRow({
+  label,
+  required,
+  info,
+  trailing,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  info?: string;
+  trailing?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-4 border-b border-[#E8ECF4] py-3">
+      <span className="w-20 shrink-0 font-manrope text-sm font-semibold text-[#17173A]">
+        {label}
+        {required && <span className="ml-0.5 text-[#FC5E02]">*</span>}
+      </span>
+      <div className="flex min-w-0 flex-1 items-center gap-2">{children}</div>
+      {info && <InfoDot label={info} />}
+      {trailing}
+    </div>
+  );
+}
+
+/** Plain text styling for a FieldRow's own input — no box, the row's own
+ *  bottom hairline is the only separator. */
+const lineInputClass =
+  "min-w-0 flex-1 bg-transparent font-manrope text-sm text-[#17173A] outline-none placeholder:text-[#A0A0A0]";
+
 /** The "+ REPLY EMAIL ID" row under the sender fields — each opens one field. */
 function AddButton({
   label,
@@ -139,6 +226,258 @@ function AddButton({
     </button>
   );
 }
+
+/** The attachment picker — a paperclip icon that opens this, and shows a green
+ *  tick once something's saved. One file, per the reference. */
+function AttachmentsModal({
+  open,
+  initial,
+  onCancel,
+  onSave,
+}: {
+  open: boolean;
+  initial: string | null;
+  onCancel: () => void;
+  onSave: (fileName: string | null) => void;
+}) {
+  const [fileName, setFileName] = useState(initial);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // The component stays mounted (it just renders null) between opens, so the
+  // draft has to be reset from the saved value on each open — otherwise a
+  // cancelled draft would still be sitting there next time.
+  useEffect(() => {
+    if (open) setFileName(initial);
+  }, [open, initial]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="relative w-full max-w-[520px] rounded-lg bg-white p-6 shadow-[0_20px_60px_rgba(23,23,58,0.25)]">
+        <div className="flex items-start justify-between">
+          <h2 className="font-manrope text-xl font-bold text-[#17173A]">Attachments</h2>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onCancel}
+            className="grid size-8 place-items-center rounded-full text-[#8A8AA3] hover:bg-[#F0F3F9] hover:text-[#17173A]"
+          >
+            <X className="size-5" strokeWidth={2} />
+          </button>
+        </div>
+        <p className="mt-1 font-manrope text-sm text-[#6F6F8D]">You can add upto 1 attachments</p>
+
+        <div className="mt-5 rounded-lg border border-[#DDE2EE] p-4">
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files[0];
+              if (f) setFileName(f.name);
+            }}
+            className={cn(
+              "flex flex-col items-center justify-center gap-3 rounded-md border border-dashed px-6 py-10 text-center transition-colors sm:flex-row",
+              dragOver ? "border-[#2F68E5] bg-[#F4F8FF]" : "border-[#C3CAD9] bg-white"
+            )}
+          >
+            <span className="font-manrope text-sm font-bold uppercase tracking-[0.4px] text-[#6F6F8D]">
+              Drag &amp; drop
+            </span>
+            <span className="font-manrope text-sm font-bold text-[#6F6F8D]">OR</span>
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#DDE2EE] bg-white px-3 font-manrope text-[12px] font-bold uppercase tracking-[0.4px] text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+            >
+              <Upload className="size-4" strokeWidth={2.2} />
+              Click to upload
+            </button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept={ATTACHMENT_ACCEPT}
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) setFileName(f.name);
+              }}
+            />
+          </div>
+          {fileName && (
+            <div className="mt-3 flex items-center justify-between rounded-md bg-[#F7F9FC] px-3 py-2">
+              <span className="min-w-0 truncate font-manrope text-sm text-[#17173A]">
+                {fileName}
+              </span>
+              <button
+                type="button"
+                aria-label="Remove file"
+                onClick={() => setFileName(null)}
+                className="grid size-5 shrink-0 place-items-center rounded-full text-[#8A8AA3] hover:bg-[#E8ECF4] hover:text-[#17173A]"
+              >
+                <X className="size-3.5" strokeWidth={2.4} />
+              </button>
+            </div>
+          )}
+          <p className="mt-3 font-manrope text-xs leading-[18px] text-[#8A8AA3]">
+            Supported formats csv, xls, xlsx, htm, html, pdf, docx, jpg, jpeg, gif, png and ics
+            with the maximum file size of 1024 KB
+          </p>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-10 items-center rounded-md border border-[#2F68E5] px-5 font-manrope text-sm font-bold uppercase tracking-[0.4px] text-[#2F68E5] transition-colors hover:bg-[#F4F8FF]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(fileName)}
+            className="inline-flex h-10 items-center rounded-md bg-[#2F68E5] px-5 font-manrope text-sm font-bold uppercase tracking-[0.4px] text-white transition-colors hover:bg-[#255ad2]"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/** The AI sparkle on Subject/Pre-header — a dark suggestion popover, three
+ *  picks at a time, Retry cycling to the next three from the same pool. */
+function AiSuggestPopover({ pool, onPick }: { pool: string[]; onPick: (text: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const shown = [0, 1, 2].map((i) => pool[(offset + i) % pool.length]);
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        type="button"
+        aria-label="Suggest with AI"
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "grid size-7 place-items-center rounded-md transition-colors",
+          open ? "bg-[#F3F0FF]" : "hover:bg-[#F3F0FF]"
+        )}
+      >
+        <img src={sparkle} alt="" className="size-4 shrink-0" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-2 w-[320px] rounded-lg border border-[#DDE2EE] bg-white p-3 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
+          <div className="flex items-center justify-between gap-2 px-1">
+            <span className="font-manrope text-[13px] font-bold text-[#17173A]">
+              Here are some options for you
+            </span>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setOpen(false)}
+              className="grid size-5 shrink-0 place-items-center rounded-full text-[#8A8AA3] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+            >
+              <X className="size-3.5" strokeWidth={2.2} />
+            </button>
+          </div>
+
+          <div className="mt-2 flex flex-col gap-2">
+            {shown.map((text, i) => (
+              <button
+                key={text}
+                type="button"
+                style={{ animationDelay: `${i * 50}ms` }}
+                onClick={() => {
+                  onPick(text);
+                  setOpen(false);
+                }}
+                className="cmk-reveal group flex items-center gap-2.5 rounded-lg border border-[#DDE2EE] bg-white p-2.5 text-left transition-colors hover:border-[#2F68E5] hover:bg-[#F7F9FF]"
+              >
+                <span className="min-w-0 flex-1 font-manrope text-[13px] font-medium leading-[18px] text-[#17173A]">
+                  {text}
+                </span>
+                <ChevronRight
+                  className="size-4 shrink-0 text-[#A0A0B8] transition-colors group-hover:text-[#2F68E5]"
+                  strokeWidth={2}
+                />
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-2 flex items-center justify-between border-t border-[#EEF1F7] px-1 pt-2.5">
+            <button
+              type="button"
+              onClick={() => setOffset((o) => o + 3)}
+              className="flex items-center gap-1.5 font-manrope text-[12px] font-semibold text-[#2F68E5] transition-colors hover:text-[#1F51BE]"
+            >
+              <RotateCcw className="size-3.5" strokeWidth={2.2} />
+              Retry
+            </button>
+            <div className="flex items-center gap-1 text-[#8A8AA3]">
+              <button
+                type="button"
+                aria-label="Good suggestion"
+                className="grid size-6 place-items-center rounded-full transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+              >
+                <ThumbsUp className="size-3.5" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                aria-label="Bad suggestion"
+                className="grid size-6 place-items-center rounded-full transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+              >
+                <ThumbsDown className="size-3.5" strokeWidth={2} />
+              </button>
+            </div>
+          </div>
+          <p className="mt-1.5 flex items-start gap-1.5 px-1 font-manrope text-[11px] leading-[16px] text-[#8A8AA3]">
+            <Info className="mt-px size-3.5 shrink-0" strokeWidth={2} />
+            Review generated results for accuracy.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Pools the Subject/Pre-header sparkle draws from — three shown at a time. */
+const SUBJECT_SUGGESTIONS = [
+  "Your exclusive invite is here!",
+  "Check out what's in your cart",
+  "Shop the latest styles today",
+  "Don't miss this weekend's drop",
+  "A little something just for you",
+  "Your favourites are back in stock",
+];
+const PREHEADER_SUGGESTIONS = [
+  "Open now for early access",
+  "Free shipping on orders over ₹999",
+  "Limited stock — shop before it's gone",
+  "Handpicked picks, just for you",
+  "Exclusive deals inside",
+  "Offer ends soon — don't wait",
+];
 
 /** Collapsible wrapper, same accordion the setup and audience steps use. */
 function Reveal({ open, children }: { open: boolean; children: ReactNode }) {
@@ -214,17 +553,22 @@ export default function CampaignContentStep({
   values,
   onChange,
   highlight,
+  chatOpen,
 }: {
   values: ContentValues;
   onChange: (patch: Partial<ContentValues>) => void;
   /** Field keys just written by a co-marketer apply — briefly flashed. */
   highlight?: Partial<Record<keyof ContentValues, boolean>>;
+  /** The docked co-marketer chat narrows this card, so the starter cards drop
+   *  from a single row to 2x2 to keep each one legible. */
+  chatOpen?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [perPage, setPerPage] = useState(10);
   const [page, setPage] = useState(1);
   const [perPageOpen, setPerPageOpen] = useState(false);
+  const [attachModalOpen, setAttachModalOpen] = useState(false);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -242,135 +586,311 @@ export default function CampaignContentStep({
   return (
     <StepCard
       wide
-      title="Sender details"
-      description="Define sender details to be used for sending the email"
+      {...(CONTENT_LAYOUT_V2
+        ? {}
+        : {
+            title: "Sender details",
+            description: "Define sender details to be used for sending the email",
+          })}
     >
-      <div className="grid grid-cols-3 gap-x-6 gap-y-6">
-        <Field label="Sender name" info="Shown as the from-name in the inbox.">
-          <input
-            type="text"
-            value={values.senderName}
-            onChange={(e) => onChange({ senderName: e.target.value })}
-            placeholder="Sender name"
-            className={cn(fieldClass, highlight?.senderName && "cmk-field-flash")}
-          />
-        </Field>
-
-        <Field
-          label="Sender email"
-          required
-          info="Local part of the address — the domain is picked alongside."
-        >
-          <input
-            type="text"
-            value={values.senderEmail}
-            onChange={(e) => onChange({ senderEmail: e.target.value })}
-            placeholder="Sender email"
-            className={cn(fieldClass, highlight?.senderEmail && "cmk-field-flash")}
-          />
-        </Field>
-
-        <Field label="Domain" required>
-          <div className="relative">
-            <select
-              value={values.domain}
-              onChange={(e) => onChange({ domain: e.target.value })}
-              className={cn(fieldClass, "appearance-none pr-9")}
-            >
-              {DOMAINS.map((d) => (
-                <option key={d}>{d}</option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8A8AA3]"
-              strokeWidth={2}
-            />
-          </div>
-        </Field>
-
-        <Field
-          label="Subject"
-          required
-          info="The line this campaign gets opened on — keep it under 60 characters."
-          className="col-span-2"
-        >
-          <input
-            type="text"
-            value={values.subject}
-            onChange={(e) => onChange({ subject: e.target.value })}
-            placeholder="Subject line"
-            className={cn(fieldClass, highlight?.subject && "cmk-field-flash")}
-          />
-        </Field>
-        <div aria-hidden />
-
-        <Field label="Pre-header" className="col-span-2">
-          <input
-            type="text"
-            value={values.preHeader}
-            onChange={(e) => onChange({ preHeader: e.target.value })}
-            placeholder="Pre-header"
-            className={cn(fieldClass, highlight?.preHeader && "cmk-field-flash")}
-          />
-        </Field>
-        <div aria-hidden />
-      </div>
-
-      <div className="mt-7 flex flex-wrap gap-3">
-        <AddButton
-          label="Reply email id"
-          active={values.replyEnabled}
-          onClick={() => onChange({ replyEnabled: !values.replyEnabled })}
-        />
-        <AddButton
-          label="Receive a copy"
-          active={values.copyEnabled}
-          onClick={() => onChange({ copyEnabled: !values.copyEnabled })}
-        />
-        <AddButton
-          label="Attachments"
-          active={values.attachmentsEnabled}
-          onClick={() => onChange({ attachmentsEnabled: !values.attachmentsEnabled })}
-        />
-      </div>
-
-      <Reveal open={extrasOpen}>
-        <div className="grid grid-cols-3 gap-x-6 gap-y-5">
-          {values.replyEnabled && (
-            <Field label="Reply email id" info="Where replies to this campaign land.">
-              <input
-                type="text"
-                value={values.replyEmail}
-                onChange={(e) => onChange({ replyEmail: e.target.value })}
-                placeholder="reply@m3m.in"
-                className={fieldClass}
-              />
-            </Field>
-          )}
-          {values.copyEnabled && (
-            <Field label="Receive a copy" info="Comma-separated internal recipients.">
-              <input
-                type="text"
-                value={values.copyEmails}
-                onChange={(e) => onChange({ copyEmails: e.target.value })}
-                placeholder="marketing@m3m.in, ops@m3m.in"
-                className={fieldClass}
-              />
-            </Field>
-          )}
-          {values.attachmentsEnabled && (
-            <Field label="Attachments">
+      {CONTENT_LAYOUT_V2 ? (
+        <>
+          {(() => {
+            // Bcc and the attachment icon stay pinned to the From row no
+            // matter what — only the Cc toggle itself leaves it, once Cc has
+            // opened its own row underneath.
+            const ccToggle = !values.ccEnabled && (
               <button
                 type="button"
-                className="flex h-10 w-full items-center gap-2 rounded-md border border-dashed border-[#C3CAD9] bg-[#F7F9FC] px-3 font-manrope text-sm text-[#6F6F8D] transition-colors hover:border-[#2F68E5] hover:text-[#2F68E5]"
+                onClick={() => onChange({ ccEnabled: true })}
+                className="font-manrope text-sm font-medium text-[#6F6F8D] transition-colors hover:text-[#17173A]"
               >
-                <Plus className="size-4" strokeWidth={2.4} />
-                Add a file (max 5 MB)
+                Cc
               </button>
+            );
+            const bccToggle = !values.bccEnabled && (
+              <button
+                type="button"
+                onClick={() => onChange({ bccEnabled: true })}
+                className="font-manrope text-sm font-medium text-[#6F6F8D] transition-colors hover:text-[#17173A]"
+              >
+                Bcc
+              </button>
+            );
+            const attachmentButton = (
+              <button
+                type="button"
+                aria-label="Add attachments"
+                onClick={() => setAttachModalOpen(true)}
+                className="relative grid size-7 place-items-center rounded-md text-[#6F6F8D] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+              >
+                <Paperclip className="size-4" strokeWidth={2} />
+                {values.attachments.length > 0 && (
+                  <span className="absolute -right-1 -top-1 grid size-3.5 place-items-center rounded-full bg-[#00C48C] text-white">
+                    <Check className="size-2" strokeWidth={3} />
+                  </span>
+                )}
+              </button>
+            );
+            const removeButton = (label: string, onRemove: () => void) => (
+              <button
+                type="button"
+                aria-label={`Remove ${label}`}
+                onClick={onRemove}
+                className="grid size-5 place-items-center rounded-full text-[#8A8AA3] hover:bg-[#F0F3F9] hover:text-[#17173A]"
+              >
+                <X className="size-3.5" strokeWidth={2.4} />
+              </button>
+            );
+
+            const fromTrailing = (
+              <div className="ml-auto flex shrink-0 items-center gap-4">
+                {ccToggle}
+                {bccToggle}
+                {attachmentButton}
+              </div>
+            );
+            const ccTrailing = removeButton("Cc", () => onChange({ ccEnabled: false }));
+            const bccTrailing = removeButton("Bcc", () => onChange({ bccEnabled: false }));
+
+            return (
+              <div>
+                <FieldRow label="From" trailing={fromTrailing}>
+                  <input
+                    type="text"
+                    value={values.senderName}
+                    onChange={(e) => onChange({ senderName: e.target.value })}
+                    placeholder="Sender name"
+                    className={cn(lineInputClass, highlight?.senderName && "cmk-field-flash")}
+                  />
+                  <div className="relative flex shrink-0 items-center">
+                    <select
+                      value={values.domain}
+                      onChange={(e) => onChange({ domain: e.target.value })}
+                      className="appearance-none bg-transparent pr-6 font-manrope text-sm font-semibold text-[#17173A] outline-none"
+                    >
+                      {DOMAINS.map((d) => (
+                        <option key={d} value={d}>{`@${d}`}</option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="pointer-events-none absolute right-0 size-4 text-[#8A8AA3]"
+                      strokeWidth={2}
+                    />
+                  </div>
+                </FieldRow>
+
+                {values.ccEnabled && (
+                  <FieldRow label="Cc" trailing={ccTrailing}>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={values.ccEmails}
+                      onChange={(e) => onChange({ ccEmails: e.target.value })}
+                      placeholder="Cc email"
+                      className={lineInputClass}
+                    />
+                  </FieldRow>
+                )}
+
+                {values.bccEnabled && (
+                  <FieldRow label="Bcc" trailing={bccTrailing}>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={values.bccEmails}
+                      onChange={(e) => onChange({ bccEmails: e.target.value })}
+                      placeholder="Bcc email"
+                      className={lineInputClass}
+                    />
+                  </FieldRow>
+                )}
+
+                <FieldRow
+                  label="Subject"
+                  required
+                  info="The line this campaign gets opened on — keep it under 60 characters."
+                  trailing={
+                    <AiSuggestPopover
+                      pool={SUBJECT_SUGGESTIONS}
+                      onPick={(text) => onChange({ subject: text })}
+                    />
+                  }
+                >
+                  <input
+                    type="text"
+                    value={values.subject}
+                    onChange={(e) => onChange({ subject: e.target.value })}
+                    placeholder="Subject line"
+                    className={cn(lineInputClass, highlight?.subject && "cmk-field-flash")}
+                  />
+                </FieldRow>
+
+                <FieldRow
+                  label="Pre-header"
+                  trailing={
+                    <AiSuggestPopover
+                      pool={PREHEADER_SUGGESTIONS}
+                      onPick={(text) => onChange({ preHeader: text })}
+                    />
+                  }
+                >
+                  <input
+                    type="text"
+                    value={values.preHeader}
+                    onChange={(e) => onChange({ preHeader: e.target.value })}
+                    placeholder="Pre-header"
+                    className={cn(lineInputClass, highlight?.preHeader && "cmk-field-flash")}
+                  />
+                </FieldRow>
+              </div>
+            );
+          })()}
+
+          <AttachmentsModal
+            open={attachModalOpen}
+            initial={values.attachments[0] ?? null}
+            onCancel={() => setAttachModalOpen(false)}
+            onSave={(fileName) => {
+              onChange({
+                attachments: fileName ? [fileName] : [],
+                attachmentsEnabled: Boolean(fileName),
+              });
+              setAttachModalOpen(false);
+            }}
+          />
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-6">
+            <Field label="Sender name" info="Shown as the from-name in the inbox.">
+              <input
+                type="text"
+                value={values.senderName}
+                onChange={(e) => onChange({ senderName: e.target.value })}
+                placeholder="Sender name"
+                className={cn(fieldClass, highlight?.senderName && "cmk-field-flash")}
+              />
             </Field>
-          )}
-        </div>
-      </Reveal>
+
+            <Field label="Sender email" required>
+              <div
+                className={cn(
+                  "flex h-10 w-full items-stretch overflow-hidden rounded-md border border-[#DDE2EE] bg-[#F7F9FC] transition-colors focus-within:border-[#2F68E5] focus-within:bg-white",
+                  highlight?.senderEmail && "cmk-field-flash"
+                )}
+              >
+                <input
+                  type="text"
+                  value={values.senderEmail}
+                  onChange={(e) => onChange({ senderEmail: e.target.value })}
+                  placeholder="noreply"
+                  className="min-w-0 flex-1 bg-transparent px-3 font-manrope text-sm text-[#17173A] outline-none placeholder:text-[#A0A0A0]"
+                />
+                <span className="flex items-center font-manrope text-sm text-[#6F6F8D]">@</span>
+                <div className="relative flex items-center">
+                  <select
+                    value={values.domain}
+                    onChange={(e) => onChange({ domain: e.target.value })}
+                    className="h-full appearance-none bg-transparent pl-1.5 pr-8 font-manrope text-sm font-semibold text-[#17173A] outline-none"
+                  >
+                    {DOMAINS.map((d) => (
+                      <option key={d}>{d}</option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    className="pointer-events-none absolute right-3 size-4 text-[#8A8AA3]"
+                    strokeWidth={2}
+                  />
+                </div>
+              </div>
+              <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">
+                Only verified domains appear here.
+              </p>
+            </Field>
+
+            <Field
+              label="Subject"
+              required
+              info="The line this campaign gets opened on — keep it under 60 characters."
+            >
+              <input
+                type="text"
+                value={values.subject}
+                onChange={(e) => onChange({ subject: e.target.value })}
+                placeholder="Subject line"
+                className={cn(fieldClass, highlight?.subject && "cmk-field-flash")}
+              />
+            </Field>
+
+            <Field label="Pre-header">
+              <input
+                type="text"
+                value={values.preHeader}
+                onChange={(e) => onChange({ preHeader: e.target.value })}
+                placeholder="Pre-header"
+                className={cn(fieldClass, highlight?.preHeader && "cmk-field-flash")}
+              />
+            </Field>
+          </div>
+
+          <div className="mt-7 flex flex-wrap gap-3">
+            <AddButton
+              label="Reply email id"
+              active={values.replyEnabled}
+              onClick={() => onChange({ replyEnabled: !values.replyEnabled })}
+            />
+            <AddButton
+              label="Receive a copy"
+              active={values.copyEnabled}
+              onClick={() => onChange({ copyEnabled: !values.copyEnabled })}
+            />
+            <AddButton
+              label="Attachments"
+              active={values.attachmentsEnabled}
+              onClick={() => onChange({ attachmentsEnabled: !values.attachmentsEnabled })}
+            />
+          </div>
+
+          <Reveal open={extrasOpen}>
+            <div className="grid grid-cols-3 gap-x-6 gap-y-5">
+              {values.replyEnabled && (
+                <Field label="Reply email id" info="Where replies to this campaign land.">
+                  <input
+                    type="text"
+                    value={values.replyEmail}
+                    onChange={(e) => onChange({ replyEmail: e.target.value })}
+                    placeholder="reply@m3m.in"
+                    className={fieldClass}
+                  />
+                </Field>
+              )}
+              {values.copyEnabled && (
+                <Field label="Receive a copy" info="Comma-separated internal recipients.">
+                  <input
+                    type="text"
+                    value={values.copyEmails}
+                    onChange={(e) => onChange({ copyEmails: e.target.value })}
+                    placeholder="marketing@m3m.in, ops@m3m.in"
+                    className={fieldClass}
+                  />
+                </Field>
+              )}
+              {values.attachmentsEnabled && (
+                <Field label="Attachments">
+                  <button
+                    type="button"
+                    className="flex h-10 w-full items-center gap-2 rounded-md border border-dashed border-[#C3CAD9] bg-[#F7F9FC] px-3 font-manrope text-sm text-[#6F6F8D] transition-colors hover:border-[#2F68E5] hover:text-[#2F68E5]"
+                  >
+                    <Plus className="size-4" strokeWidth={2.4} />
+                    Add a file (max 5 MB)
+                  </button>
+                </Field>
+              )}
+            </div>
+          </Reveal>
+        </>
+      )}
 
       {/* Template picker — same panel, its own heading, exactly as sender
           details and the template list sit together in the reference. */}
@@ -414,7 +934,7 @@ export default function CampaignContentStep({
                   }}
                   onBlur={() => !query && setSearchOpen(false)}
                   placeholder="Search templates"
-                  className="h-10 w-[240px] rounded-md border border-[#2F68E5] bg-white pl-9 pr-8 font-manrope text-sm text-[#17173A] outline-none placeholder:text-[#A0A0A0]"
+                  className="h-8 w-[240px] rounded-md border border-[#2F68E5] bg-white pl-9 pr-8 font-manrope text-sm text-[#17173A] outline-none placeholder:text-[#A0A0A0]"
                 />
                 {query && (
                   <button
@@ -436,14 +956,14 @@ export default function CampaignContentStep({
                 type="button"
                 aria-label="Search templates"
                 onClick={() => setSearchOpen(true)}
-                className="grid size-10 place-items-center rounded-md border border-[#DDE2EE] bg-white text-[#6F6F8D] transition-colors hover:bg-[#F7F9FC] hover:text-[#17173A]"
+                className="grid size-8 place-items-center rounded-md border border-[#DDE2EE] bg-white text-[#6F6F8D] transition-colors hover:bg-[#F7F9FC] hover:text-[#17173A]"
               >
-                <Search className="size-[18px]" strokeWidth={2} />
+                <Search className="size-4" strokeWidth={2} />
               </button>
             )}
             <button
               type="button"
-              className="dc-btn dc-btn-secondary h-10"
+              className="dc-btn dc-btn-secondary"
             >
               <SlidersHorizontal className="size-4" strokeWidth={2} />
               Filters
@@ -491,25 +1011,32 @@ export default function CampaignContentStep({
               </button>
               {perPageOpen && (
                 <div className="absolute bottom-11 left-0 z-20 w-[215px] overflow-hidden rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
-                  {PER_PAGE_OPTIONS.map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => {
-                        setPerPage(n);
-                        setPage(1);
-                        setPerPageOpen(false);
-                      }}
-                      className={cn(
-                        "block w-full px-3 py-2 text-left font-manrope text-sm transition-colors",
-                        n === perPage
-                          ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]"
-                          : "text-[#17173A] hover:bg-[#F7F9FC]"
-                      )}
-                    >
-                      {n} per page
-                    </button>
-                  ))}
+                  {PER_PAGE_OPTIONS.map((n) => {
+                    const enabled = PER_PAGE_ENABLED.includes(n);
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        disabled={!enabled}
+                        onClick={() => {
+                          if (!enabled) return;
+                          setPerPage(n);
+                          setPage(1);
+                          setPerPageOpen(false);
+                        }}
+                        className={cn(
+                          "block w-full px-3 py-2 text-left font-manrope text-sm transition-colors",
+                          !enabled
+                            ? "cursor-not-allowed text-[#B9BAC7]"
+                            : n === perPage
+                              ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]"
+                              : "text-[#17173A] hover:bg-[#F7F9FC]"
+                        )}
+                      >
+                        {n} per page
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -518,10 +1045,11 @@ export default function CampaignContentStep({
           </div>
         </>
       ) : (
-        <div className="mt-6 grid grid-cols-3 gap-4">
+        <div className={cn("mt-6 grid gap-4", chatOpen ? "grid-cols-2" : "grid-cols-4")}>
           {templateStarters.map((s) => {
             const Icon = STARTER_ICONS[s.id];
             const on = values.starterId === s.id;
+            const ai = s.id === "ai";
             return (
               <button
                 key={s.id}
@@ -530,14 +1058,24 @@ export default function CampaignContentStep({
                 className={cn(
                   "flex flex-col items-start gap-3 rounded-lg border bg-white p-5 text-left transition-colors",
                   on
-                    ? "border-[#2F68E5] bg-[#F4F8FF]"
-                    : "border-[#DDE2EE] hover:border-[#B9C6E4] hover:bg-[#F7F9FC]"
+                    ? ai
+                      ? "border-[#7B5CFA] bg-[#F8F6FF]"
+                      : "border-[#2F68E5] bg-[#F4F8FF]"
+                    : ai
+                      ? "border-[#DDD5FF] hover:border-[#B7A5FF] hover:bg-[#F8F6FF]"
+                      : "border-[#DDE2EE] hover:border-[#B9C6E4] hover:bg-[#F7F9FC]"
                 )}
               >
                 <span
                   className={cn(
                     "grid size-10 place-items-center rounded-md",
-                    on ? "bg-[#2F68E5] text-white" : "bg-[#F0F3F9] text-[#6F6F8D]"
+                    on
+                      ? ai
+                        ? "bg-[#7B5CFA] text-white"
+                        : "bg-[#2F68E5] text-white"
+                      : ai
+                        ? "bg-[#F3F0FF] text-[#7B5CFA]"
+                        : "bg-[#F0F3F9] text-[#6F6F8D]"
                   )}
                 >
                   <Icon className="size-5" strokeWidth={2} />
