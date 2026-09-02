@@ -6,7 +6,6 @@ import {
   Check,
   ChevronDown,
   FileText,
-  FlaskConical,
   Mail,
   Megaphone,
   MessageCircle,
@@ -47,7 +46,6 @@ import CampaignAudienceStep, {
 import { cohortsForGoal, type AudienceCohort } from "./audienceCohorts.data";
 import CampaignContentStep, {
   EMPTY_CONTENT,
-  VariantTestSettingsStep,
   type ContentValues,
 } from "./CampaignContentStep";
 import CampaignScheduleStep, {
@@ -97,7 +95,6 @@ const CHANNEL_ICONS: Record<string, LucideIcon> = {
 const STEPS: Step[] = [
   { id: "audience", label: "Send to", icon: Users },
   { id: "content", label: "Message", icon: FileText },
-  { id: "variantSettings", label: "Variant test settings", icon: FlaskConical },
   { id: "schedule", label: "Schedule & tracking", icon: Calendar },
 ];
 
@@ -166,7 +163,6 @@ const STEP_CHIPS: Record<string, StarterChip[]> = {
 const STEP_DESCRIPTIONS: Record<string, string> = {
   audience: "Select the target audience.",
   content: "Design the message which would go to your selected contacts.",
-  variantSettings: "Configure how the winning variant is tested and picked.",
   schedule: "Decide when this send leaves, and what you want to track.",
 };
 
@@ -532,9 +528,30 @@ export default function CampaignCreationOverlay({
     container.scrollTo({ top, behavior: "smooth" });
   };
 
-  /** Accordion header: open a card, or shut it if it's already the open one. */
-  const toggleStep = (index: number) =>
-    setActiveIndex((current) => (current === index ? -1 : index));
+  /** Accordion header: open that card, or shut it if it's already open —
+   *  except "Send to", the fallback home step, which can't collapse itself.
+   *  Collapsing Message or Schedule & tracking lands back on "Send to"
+   *  rather than leaving nothing open. */
+  const toggleStep = (index: number) => {
+    setActiveIndex((current) => {
+      if (current !== index) return index;
+      if (STEPS[index].id === "audience") return current;
+      const audienceIndex = STEPS.findIndex((s) => s.id === "audience");
+      return audienceIndex >= 0 ? audienceIndex : current;
+    });
+  };
+
+  /** Navbar stepper: jump straight to a step, rather than toggling it shut
+   *  the way clicking its own accordion header would. */
+  const selectStep = (id: string) => {
+    const index = STEPS.findIndex((s) => s.id === id);
+    if (index < 0) return;
+    setActiveIndex(index);
+    window.setTimeout(() => scrollToStep(id), 380);
+  };
+
+  /** Steps the navbar stepper shows. */
+  const navbarSteps = STEPS.map((s) => ({ id: s.id, label: s.label }));
 
   /** "Done" on a card: mark it finished and open the next one. */
   const completeStep = (index: number) => {
@@ -771,7 +788,6 @@ export default function CampaignCreationOverlay({
 
   const Icon = CHANNEL_ICONS[channel] ?? Mail;
   const activeStep = STEPS[activeIndex];
-  const isLastStep = activeIndex === STEPS.length - 1;
   const goal = goalLabel(setup.goal);
   // The suggestion rail stays closed until the campaign has a goal — before
   // that there's nothing for the co-marketer to be relevant about — and stands
@@ -827,19 +843,15 @@ export default function CampaignCreationOverlay({
       <CampaignCreationNavbar
         campaignName={campaignName}
         icon={Icon}
-        // Every step is on the page now, so the primary action is the end of
-        // the flow rather than the next step.
-        nextLabel="Send"
-        // Previous, stepper-driven CTA:
-        // nextLabel={isLastStep ? "Preview" : "Next step"}
         onRenameCampaign={setCampaignName}
         onOpenSettings={() => setSettingsOpen(true)}
         onAskCoMarketer={openFreshChat}
-        onSave={onClose}
-        onNextStep={() => setPreviewOpen(true)}
-        // Previous, stepper-driven handler:
-        // onNextStep={() => (isLastStep ? setPreviewOpen(true) : setActiveIndex((i) => i + 1))}
+        // Only Email drops the verb — every other channel keeps "Ask co-marketer".
+        askCoMarketerLabel={channel === "Email" ? "Co-marketer" : "Ask co-marketer"}
         onClose={onClose}
+        steps={navbarSteps}
+        activeStepId={activeIndex >= 0 ? STEPS[activeIndex]?.id ?? null : null}
+        onSelectStep={selectStep}
       />
 
       {/* Step rail — replaced by the accordion below. Kept for reference.
@@ -852,14 +864,10 @@ export default function CampaignCreationOverlay({
       />
       */}
 
-      <div className={cn("flex min-h-0 flex-1 gap-5 pl-14", chatOpen ? "pr-5" : "pr-14")}>
+      <div className={cn("flex min-h-0 flex-1 gap-5 pl-[20rem]", chatOpen ? "pr-5" : "pr-[20rem]")}>
         <div ref={canvasRef} className="scroll-slim min-w-0 flex-1 overflow-y-auto py-6">
           <div className="cc-accordion ov2-accordion">
             {STEPS.map((step, index) => {
-              // Only relevant once the Message step has more than one
-              // variant to test against each other.
-              if (step.id === "variantSettings" && content.variants.length <= 1) return null;
-
               const StepIcon = step.icon;
               const active = index === activeIndex;
               const complete =
@@ -893,7 +901,6 @@ export default function CampaignCreationOverlay({
                       <strong>{step.label}</strong>
                       {step.id === "audience" ||
                       step.id === "content" ||
-                      step.id === "variantSettings" ||
                       step.id === "schedule" ? (
                         active && (
                           <span className="ov2-card-desc">{STEP_DESCRIPTIONS[step.id]}</span>
@@ -941,12 +948,6 @@ export default function CampaignCreationOverlay({
                             onChange={(patch) => setContent((c) => ({ ...c, ...patch }))}
                             chatOpen={chatOpen}
                             reach={reachFor(audience)}
-                          />
-                        )}
-                        {step.id === "variantSettings" && (
-                          <VariantTestSettingsStep
-                            values={content}
-                            onChange={(patch) => setContent((c) => ({ ...c, ...patch }))}
                           />
                         )}
                         {step.id === "schedule" && (

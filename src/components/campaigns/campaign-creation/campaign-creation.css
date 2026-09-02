@@ -113,11 +113,8 @@
 .cc-accordion section[data-step-id="content"]:not(.complete) .ov2-badge {
   background: linear-gradient(135deg, #7B5CFA, #FC5E02);
 }
-.cc-accordion section[data-step-id="variantSettings"]:not(.complete) .ov2-badge {
-  background: linear-gradient(135deg, #FC5E02, #00C48C);
-}
 .cc-accordion section[data-step-id="schedule"]:not(.complete) .ov2-badge {
-  background: linear-gradient(135deg, #00C48C, #2F68E5);
+  background: linear-gradient(135deg, #FFB020, #FC5E02);
 }
 .cc-accordion .ov2-card.complete .ov2-badge {
   background: #E4F5EC;
@@ -137,6 +134,18 @@
   border-radius: 0;
   background: transparent;
   padding: 0;
+}
+
+/* Percentage inputs that sit inside a pill — the browser's spinners would
+   collide with the "%" suffix. */
+.cc-plain-number {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.cc-plain-number::-webkit-outer-spin-button,
+.cc-plain-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* Typewriter caret on the intro screen's rotating placeholder. */
