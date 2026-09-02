@@ -93,16 +93,21 @@ export default function CampaignCreationIntro({
   };
 
   return (
-    <div className="relative flex flex-1 flex-col items-center justify-center px-6">
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute right-6 top-6 grid size-9 place-items-center rounded-full text-[#8A8AA3] transition-colors hover:bg-white hover:text-[#17173A]"
-      >
-        <X className="size-5" strokeWidth={2} />
-      </button>
+    <div className="flex flex-1 flex-col">
+      {/* Same white header bar as the wizard, but with nothing else in it —
+          there's no campaign yet to name or save. */}
+      <header className="flex h-14 shrink-0 items-center justify-end border-b border-[#DDE2EE] bg-white px-14">
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="grid h-8 w-8 place-items-center rounded border border-[#DDE2EE] text-[#6F6F8D] transition-colors hover:bg-[#F7F9FC] hover:text-[#17173A]"
+        >
+          <X className="h-4 w-4" strokeWidth={2} />
+        </button>
+      </header>
 
+      <div className="flex flex-1 flex-col items-center justify-center px-6">
       <div className="w-full max-w-[620px]">
         <div className="text-center">
           <p className="font-manrope text-sm font-semibold text-[#6F6F8D]">Hi, admin!</p>
@@ -167,6 +172,7 @@ export default function CampaignCreationIntro({
             Start from scratch
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

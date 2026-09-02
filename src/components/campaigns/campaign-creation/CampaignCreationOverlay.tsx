@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   FileText,
+  FlaskConical,
   Mail,
   Megaphone,
   MessageCircle,
@@ -21,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import CampaignCreationNavbar from "./CampaignCreationNavbar";
+import CampaignSettingsDrawer from "./CampaignSettingsDrawer";
 import CampaignCreationIntro from "./CampaignCreationIntro";
 import CampaignCreationStepper, { type Step } from "./CampaignCreationStepper";
 import CampaignAIPanel, {
@@ -33,11 +35,11 @@ import CampaignAIPanel, {
 import CampaignSetupStep, {
   goalLabel,
   mergeTags,
-  parseTags,
   type SetupValues,
 } from "./CampaignSetupStep";
 import CampaignAudienceStep, {
   AudienceReachablePill,
+  AudienceReachStat,
   EMPTY_AUDIENCE,
   reachFor,
   type AudienceValues,
@@ -45,6 +47,7 @@ import CampaignAudienceStep, {
 import { cohortsForGoal, type AudienceCohort } from "./audienceCohorts.data";
 import CampaignContentStep, {
   EMPTY_CONTENT,
+  VariantTestSettingsStep,
   type ContentValues,
 } from "./CampaignContentStep";
 import CampaignScheduleStep, {
@@ -92,9 +95,10 @@ const CHANNEL_ICONS: Record<string, LucideIcon> = {
 
 /** Canonical order — do not reorder; every channel shares it. */
 const STEPS: Step[] = [
-  { id: "audience", label: "Audience", icon: Users },
-  { id: "content", label: "Content", icon: FileText },
-  { id: "schedule", label: "Schedule and campaign goals", icon: Calendar },
+  { id: "audience", label: "Send to", icon: Users },
+  { id: "content", label: "Message", icon: FileText },
+  { id: "variantSettings", label: "Variant test settings", icon: FlaskConical },
+  { id: "schedule", label: "Schedule & tracking", icon: Calendar },
 ];
 
 /**
@@ -155,23 +159,15 @@ const STEP_CHIPS: Record<string, StarterChip[]> = {
         "Should conversion tracking be on for this campaign?",
       ],
     },
-    {
-      label: "Suggested tags",
-      icon: Tag,
-      header: "Tag this campaign",
-      prompts: [
-        "What tags should I put on this campaign?",
-        "How should we name and tag campaigns so they're easy to find later?",
-      ],
-    },
   ],
 };
 
 /** Sub-line under each accordion header, before the step has a summary. */
 const STEP_DESCRIPTIONS: Record<string, string> = {
-  audience: "Choose who this campaign should go to.",
-  content: "Write the message and pick the template it goes out in.",
-  schedule: "Decide when this send leaves, and tag and track the campaign.",
+  audience: "Select the target audience.",
+  content: "Design the message which would go to your selected contacts.",
+  variantSettings: "Configure how the winning variant is tested and picked.",
+  schedule: "Decide when this send leaves, and what you want to track.",
 };
 
 /** Draft name every new campaign starts on: Untitled_YYYYMMDDHHMMSS, local time. */
@@ -264,6 +260,9 @@ export default function CampaignCreationOverlay({
   // Preview is the screen after the last step, not a fifth step — it replaces
   // the wizard chrome with its own header while the draft stays in state.
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Campaign-level settings (tags, for now) live in their own drawer off the
+  // navbar rather than a step, since they don't belong to any one of them.
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // Docked co-marketer chat, opened from the navbar CTA. `chatSession` is
   // bumped per open so the widget remounts on a fresh thread.
   const [chatOpen, setChatOpen] = useState(false);
@@ -611,9 +610,7 @@ export default function CampaignCreationOverlay({
               : schedule.mode === "slice"
                 ? `${schedule.sliceBatches} batches, ${schedule.sliceGapMins} minutes apart`
                 : `Optimised per contact · ${schedule.optimizeWindow}`;
-        const tags = parseTags(setup.tags);
         const goalBits = [
-          tags.length ? `${tags.length} tag${tags.length === 1 ? "" : "s"}` : null,
           setup.gaTracking ? "GA tracking on" : null,
           setup.conversionTracking ? "Conversion tracking on" : null,
         ].filter(Boolean);
@@ -836,6 +833,7 @@ export default function CampaignCreationOverlay({
         // Previous, stepper-driven CTA:
         // nextLabel={isLastStep ? "Preview" : "Next step"}
         onRenameCampaign={setCampaignName}
+        onOpenSettings={() => setSettingsOpen(true)}
         onAskCoMarketer={openFreshChat}
         onSave={onClose}
         onNextStep={() => setPreviewOpen(true)}
@@ -858,6 +856,10 @@ export default function CampaignCreationOverlay({
         <div ref={canvasRef} className="scroll-slim min-w-0 flex-1 overflow-y-auto py-6">
           <div className="cc-accordion ov2-accordion">
             {STEPS.map((step, index) => {
+              // Only relevant once the Message step has more than one
+              // variant to test against each other.
+              if (step.id === "variantSettings" && content.variants.length <= 1) return null;
+
               const StepIcon = step.icon;
               const active = index === activeIndex;
               const complete =
@@ -868,6 +870,7 @@ export default function CampaignCreationOverlay({
                 <section
                   key={step.id}
                   ref={(el) => (cardRefs.current[step.id] = el)}
+                  data-step-id={step.id}
                   className={`ov2-card ${state}`}
                 >
                   <div
@@ -888,17 +891,22 @@ export default function CampaignCreationOverlay({
                     </span>
                     <span className="ov2-card-label">
                       <strong>{step.label}</strong>
-                      {complete ? (
+                      {step.id === "audience" ||
+                      step.id === "content" ||
+                      step.id === "variantSettings" ||
+                      step.id === "schedule" ? (
+                        active && (
+                          <span className="ov2-card-desc">{STEP_DESCRIPTIONS[step.id]}</span>
+                        )
+                      ) : complete ? (
                         <span className="ov2-card-summary">{summaryFor(step.id)}</span>
                       ) : (
                         <span className="ov2-card-desc">{STEP_DESCRIPTIONS[step.id]}</span>
                       )}
                     </span>
-                    {/* A real button (the refresh icon inside) can't nest inside
-                        the header's own button, so the header is a div now —
-                        stopPropagation on the pill keeps its clicks from also
-                        toggling the accordion. */}
-                    {step.id === "audience" && (
+                    {/* Only while collapsed — once expanded, the same count
+                        moves into the card body next to the mode picker. */}
+                    {step.id === "audience" && !active && (
                       <div onClick={(e) => e.stopPropagation()}>
                         <AudienceReachablePill reach={reachFor(audience)} />
                       </div>
@@ -910,11 +918,21 @@ export default function CampaignCreationOverlay({
                     <div className="ov2-card-bodywrap-inner">
                       <div className="ov2-card-body">
                         {step.id === "audience" && (
-                          <CampaignAudienceStep
-                            values={audience}
-                            highlight={audienceFlash}
-                            onChange={(patch) => setAudience((a) => ({ ...a, ...patch }))}
-                          />
+                          <div className="flex items-start justify-between gap-6">
+                            <div className="min-w-0 flex-1">
+                              <CampaignAudienceStep
+                                values={audience}
+                                highlight={audienceFlash}
+                                onChange={(patch) => setAudience((a) => ({ ...a, ...patch }))}
+                              />
+                            </div>
+                            {/* Sits outside CampaignAudienceStep's own StepCard so
+                                it reaches the accordion row's true right edge
+                                instead of being capped by the card's own max-width. */}
+                            <div className="shrink-0">
+                              <AudienceReachStat reach={reachFor(audience)} />
+                            </div>
+                          </div>
                         )}
                         {step.id === "content" && (
                           <CampaignContentStep
@@ -922,6 +940,13 @@ export default function CampaignCreationOverlay({
                             highlight={contentHighlight}
                             onChange={(patch) => setContent((c) => ({ ...c, ...patch }))}
                             chatOpen={chatOpen}
+                            reach={reachFor(audience)}
+                          />
+                        )}
+                        {step.id === "variantSettings" && (
+                          <VariantTestSettingsStep
+                            values={content}
+                            onChange={(patch) => setContent((c) => ({ ...c, ...patch }))}
                           />
                         )}
                         {step.id === "schedule" && (
@@ -1010,6 +1035,13 @@ export default function CampaignCreationOverlay({
       </div>
         </>
       )}
+
+      <CampaignSettingsDrawer
+        open={settingsOpen}
+        tags={setup.tags}
+        onChangeTags={(tags) => setSetup((s) => ({ ...s, tags }))}
+        onClose={() => setSettingsOpen(false)}
+      />
 
       {/* Segment creation canvas — an audience pill used to hand off to the
           full-screen Segments experience. It now plays in the docked chat
