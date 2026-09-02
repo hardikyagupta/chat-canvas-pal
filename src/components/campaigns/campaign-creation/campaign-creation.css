@@ -97,11 +97,37 @@
 .cc-accordion .ov2-chevron { width: 16px; height: 16px; }
 .cc-accordion .ov2-badge svg { width: 16px; height: 16px; }
 
-/* The card's own content caps out at 1044px (StepCard's "wide" variant) so
-   form fields and the template grid stay a readable width — without this,
-   the card's border stretches to fill the modal on a wide window while the
-   content stays put, leaving a big empty panel inside the border. */
-.cc-accordion .ov2-card { max-width: 1086px; }
+/* Each step keeps its own colorful gradient identity instead of the shared
+   flow's flat blue-when-active fill — regardless of active/idle state.
+   Each blends two of our own accent colors (brand blue, AI purple, success
+   green, accent orange) rather than a single tint-to-shade ramp, so no
+   badge reduces to one hue the way the reference icons did.
+   "complete" still overrides to the green check treatment. */
+.cc-accordion .ov2-badge {
+  border: none;
+  color: #fff;
+}
+.cc-accordion section[data-step-id="audience"]:not(.complete) .ov2-badge {
+  background: linear-gradient(135deg, #2F68E5, #7B5CFA);
+}
+.cc-accordion section[data-step-id="content"]:not(.complete) .ov2-badge {
+  background: linear-gradient(135deg, #7B5CFA, #FC5E02);
+}
+.cc-accordion section[data-step-id="variantSettings"]:not(.complete) .ov2-badge {
+  background: linear-gradient(135deg, #FC5E02, #00C48C);
+}
+.cc-accordion section[data-step-id="schedule"]:not(.complete) .ov2-badge {
+  background: linear-gradient(135deg, #00C48C, #2F68E5);
+}
+.cc-accordion .ov2-card.complete .ov2-badge {
+  background: #E4F5EC;
+  color: #16A34A;
+}
+
+/* The row itself fills the available width; the card's own content still
+   caps out at 1044px (StepCard's "wide" variant) so form fields and the
+   template grid stay a readable width regardless of how wide the row gets. */
+.cc-accordion .ov2-card { max-width: none; }
 
 /* Each step already ships its own white card; inside an accordion card that
    reads as a double border, so strip the inner chrome and keep the padding

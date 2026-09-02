@@ -1,8 +1,130 @@
-import { useEffect, useState } from "react";
-import { AlertTriangle, Calendar, Info } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Calendar, ChevronDown, Clock, Info } from "lucide-react";
+import * as SwitchPrimitives from "@radix-ui/react-switch";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import StepCard from "./StepCard";
+
+/** A smaller toggle than the shared Switch — matches the compact toggle+text
+ *  rows used elsewhere in the wizard (e.g. Audience's "Don't include"). */
+function MiniSwitch({
+  checked,
+  onCheckedChange,
+}: {
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <SwitchPrimitives.Root
+      checked={checked}
+      onCheckedChange={onCheckedChange}
+      className="peer inline-flex h-4 w-7 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=checked]:bg-[#00C48C] data-[state=unchecked]:bg-input"
+    >
+      <SwitchPrimitives.Thumb className="pointer-events-none block h-3 w-3 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3 data-[state=unchecked]:translate-x-0" />
+    </SwitchPrimitives.Root>
+  );
+}
+
+/** Our own styled dropdown — a trigger button plus a floating option list —
+ *  in place of a native <select>. Info icons sit on the list only, never on
+ *  the selected trigger. */
+function Dropdown({
+  value,
+  options,
+  onChange,
+  className,
+}: {
+  value: string;
+  options: { label: string; info?: string }[];
+  onChange: (v: string) => void;
+  /** Width of the field — defaults to the step's standard column. */
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div ref={wrapRef} className={cn("relative w-full max-w-[320px]", className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex h-10 w-full items-center justify-between gap-2 rounded-md border bg-white px-3 font-manrope text-sm text-[#17173A] outline-none transition-colors",
+          open ? "border-[#2F68E5]" : "border-[#DDE2EE]"
+        )}
+      >
+        <span className="truncate">{value}</span>
+        <ChevronDown
+          className={cn("size-4 shrink-0 text-[#8A8AA3] transition-transform", open && "rotate-180")}
+          strokeWidth={2}
+        />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-full rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
+          {options.map((o) => (
+            <div
+              key={o.label}
+              className={cn(
+                "flex w-full cursor-pointer items-center gap-1.5 px-3 py-2",
+                o.label === value ? "bg-[#F4F8FF]" : "hover:bg-[#F7F9FC]"
+              )}
+              onClick={() => {
+                onChange(o.label);
+                setOpen(false);
+              }}
+            >
+              <span
+                className={cn(
+                  "whitespace-nowrap font-manrope text-sm",
+                  o.label === value ? "font-semibold text-[#2F68E5]" : "text-[#17173A]"
+                )}
+              >
+                {o.label}
+              </span>
+              {o.info && (
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={`About ${o.label}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="grid size-5 shrink-0 place-items-center text-[#8A8AA3] transition-colors hover:text-[#6F6F8D]"
+                      >
+                        <Info className="size-3.5" strokeWidth={2} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="right"
+                      align="center"
+                      className="max-w-[260px] border border-[#DDE2EE] bg-white px-3 py-2 text-[#17173A] shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+                    >
+                      <p className="font-manrope text-xs leading-[18px] text-[#6F6F8D]">{o.info}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export type SendMode = "now" | "later" | "slice" | "optimize";
 
@@ -23,11 +145,15 @@ const TIMEZONE = "Asia/Calcutta";
 const MODES: { id: SendMode; label: string; info?: string }[] = [
   { id: "now", label: "Send now" },
   { id: "later", label: "Send later" },
-  { id: "slice", label: "Slice & Send" },
+  {
+    id: "slice",
+    label: "Send in batches",
+    info: "Splits the audience into equal batches and spaces them out, so a bad subject line doesn't reach the whole list before you can stop it.",
+  },
   {
     id: "optimize",
     label: "Optimize with Co-marketer",
-    info: "Each contact is sent at the hour they've historically opened, inside the window you pick.",
+    info: "Each contact is sent at the hour they've historically opened, inside the window you pick. Contacts without enough history fall back to your account's best-performing hour.",
   },
 ];
 
@@ -113,24 +239,6 @@ export const EMPTY_SCHEDULE: ScheduleValues = {
   optimizeWindow: "Next 24 hours",
 };
 
-function Radio({ checked }: { checked: boolean }) {
-  return (
-    <span
-      className={cn(
-        "grid size-[18px] shrink-0 place-items-center rounded-full border-2 transition-colors",
-        checked ? "border-[#2F68E5]" : "border-[#C3CAD9]"
-      )}
-    >
-      {checked && <span className="size-2 rounded-full bg-[#2F68E5]" />}
-    </span>
-  );
-}
-
-/** The bordered sections this step is built from. */
-function Panel({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-lg border border-[#DDE2EE] p-5">{children}</div>;
-}
-
 /**
  * Schedule step — the frequency-cap override and when this campaign goes out.
  * The cap warning is deliberately loud: skipping it is the one setting here
@@ -152,31 +260,21 @@ export default function CampaignScheduleStep({
   }, []);
 
   return (
-    <StepCard
-      wide
-      title="Schedule campaign"
-      action={
+    <StepCard wide>
+      <div className="mb-6 flex items-center gap-2">
+        <Clock className="size-4 shrink-0 text-[#6F6F8D]" strokeWidth={2} />
         <p className="font-manrope text-sm text-[#6F6F8D]">
           Timezone: <span className="font-bold text-[#17173A]">{TIMEZONE}</span> | {stamp(now)}
         </p>
-      }
-    >
-      <Panel>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="font-manrope text-base font-bold text-[#17173A]">Frequency cap</h3>
-            <p className="mt-1 font-manrope text-sm text-[#6F6F8D]">
-              Skip frequency capping for this campaign{" "}
-              <a href="#" className="font-bold text-[#2F68E5] hover:underline">
-                Learn more.
-              </a>
-            </p>
-          </div>
-          <Switch
+      </div>
+
+      <div>
+        <div className="flex items-center gap-2">
+          <MiniSwitch
             checked={values.skipFrequencyCap}
             onCheckedChange={(v) => onChange({ skipFrequencyCap: v })}
-            className="mt-1 shrink-0 data-[state=checked]:bg-[#00C48C]"
           />
+          <p className="font-manrope text-sm font-semibold text-[#17173A]">Frequency cap</p>
         </div>
 
         <div className="t-acc" data-open={values.skipFrequencyCap ? "true" : "false"}>
@@ -195,144 +293,96 @@ export default function CampaignScheduleStep({
             </div>
           </div>
         </div>
-      </Panel>
+      </div>
 
-      <div className="mt-5">
-        <Panel>
-          <h3 className="font-manrope text-base font-bold text-[#17173A]">When to send</h3>
+      <div className="mt-6">
+        <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
+          When to send
+        </label>
+        <Dropdown
+          value={MODES.find((m) => m.id === values.mode)?.label ?? MODES[0].label}
+          options={MODES.map((m) => ({ label: m.label, info: m.info }))}
+          onChange={(label) => {
+            const mode = MODES.find((m) => m.label === label)?.id;
+            if (mode) onChange({ mode });
+          }}
+        />
 
-          <div className="mt-4 flex flex-wrap items-center gap-x-10 gap-y-3">
-            {MODES.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => onChange({ mode: m.id })}
-                className="flex items-center gap-2.5 text-left"
-              >
-                <Radio checked={values.mode === m.id} />
-                <span
-                  className={cn(
-                    "font-manrope text-sm",
-                    values.mode === m.id
-                      ? "font-semibold text-[#17173A]"
-                      : "font-medium text-[#6F6F8D]"
-                  )}
-                >
-                  {m.label}
-                </span>
-                {m.info && (
-                  <span title={m.info} className="inline-grid place-items-center text-[#8A8AA3]">
-                    <Info className="size-4" strokeWidth={2} />
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {values.mode === "now" && (
-            <p className="mt-5 font-manrope text-sm leading-5 text-[#6F6F8D]">
-              This campaign goes out as soon as you hit Launch. Nothing is queued, so there's no
-              window to pull it back in.
+        {values.mode === "later" && (
+          <div className="mt-5 w-full max-w-[320px]">
+            <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
+              Select date and time <span className="text-[#FC5E02]">*</span>
+            </label>
+            <div className="relative">
+              <Calendar
+                className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-[#6F6F8D]"
+                strokeWidth={2}
+              />
+              <input
+                type="datetime-local"
+                value={values.sendAt}
+                min={toLocalInput(new Date())}
+                onChange={(e) => onChange({ sendAt: e.target.value })}
+                className={cn(fieldClass, "pl-10")}
+              />
+            </div>
+            <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">
+              Scheduled in {TIMEZONE}, the timezone this account sends in.
             </p>
-          )}
+          </div>
+        )}
 
-          {values.mode === "later" && (
-            <div className="mt-5 max-w-[360px]">
-              <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
-                Select date and time <span className="text-[#FC5E02]">*</span>
-              </label>
-              <div className="relative">
-                <Calendar
-                  className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-[#6F6F8D]"
-                  strokeWidth={2}
-                />
-                <input
-                  type="datetime-local"
-                  value={values.sendAt}
-                  min={toLocalInput(new Date())}
-                  onChange={(e) => onChange({ sendAt: e.target.value })}
-                  className={cn(fieldClass, "pl-10")}
+        {values.mode === "slice" && (
+          <div className="mt-5">
+            <div className="flex w-full max-w-[320px] items-end gap-3">
+              <div className="min-w-0 flex-1">
+                <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
+                  Number of batches
+                </label>
+                <Dropdown
+                  className="max-w-none"
+                  value={`${values.sliceBatches} batches`}
+                  options={SLICE_BATCHES.map((n) => ({ label: `${n} batches` }))}
+                  onChange={(label) => onChange({ sliceBatches: parseInt(label, 10) })}
                 />
               </div>
-              <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">
-                Scheduled in {TIMEZONE}, the timezone this account sends in.
-              </p>
-            </div>
-          )}
-
-          {values.mode === "slice" && (
-            <div className="mt-5">
-              <p className="font-manrope text-sm leading-5 text-[#6F6F8D]">
-                Splits the audience into equal batches and spaces them out, so a bad subject line
-                doesn't reach the whole list before you can stop it.
-              </p>
-              <div className="mt-4 flex flex-wrap items-end gap-4">
-                <div className="w-[200px]">
-                  <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
-                    Number of batches
-                  </label>
-                  <select
-                    value={values.sliceBatches}
-                    onChange={(e) => onChange({ sliceBatches: Number(e.target.value) })}
-                    className={fieldClass}
-                  >
-                    {SLICE_BATCHES.map((n) => (
-                      <option key={n} value={n}>
-                        {n} batches
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="w-[200px]">
-                  <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
-                    Gap between batches
-                  </label>
-                  <select
-                    value={values.sliceGapMins}
-                    onChange={(e) => onChange({ sliceGapMins: Number(e.target.value) })}
-                    className={fieldClass}
-                  >
-                    {SLICE_GAPS.map((n) => (
-                      <option key={n} value={n}>
-                        {n} minutes
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="min-w-0 flex-1">
+                <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
+                  Gap between batches
+                </label>
+                <Dropdown
+                  className="max-w-none"
+                  value={`${values.sliceGapMins} minutes`}
+                  options={SLICE_GAPS.map((n) => ({ label: `${n} minutes` }))}
+                  onChange={(label) => onChange({ sliceGapMins: parseInt(label, 10) })}
+                />
               </div>
-              <p className="mt-3 font-manrope text-xs text-[#6F6F8D]">
-                Full send completes about{" "}
-                <span className="font-bold text-[#17173A]">
-                  {((values.sliceBatches - 1) * values.sliceGapMins) / 60 >= 1
-                    ? `${(((values.sliceBatches - 1) * values.sliceGapMins) / 60).toFixed(1)} hours`
-                    : `${(values.sliceBatches - 1) * values.sliceGapMins} minutes`}
-                </span>{" "}
-                after the first batch leaves.
-              </p>
             </div>
-          )}
+            <p className="mt-3 font-manrope text-xs text-[#6F6F8D]">
+              Full send completes about{" "}
+              <span className="font-bold text-[#17173A]">
+                {((values.sliceBatches - 1) * values.sliceGapMins) / 60 >= 1
+                  ? `${(((values.sliceBatches - 1) * values.sliceGapMins) / 60).toFixed(1)} hours`
+                  : `${(values.sliceBatches - 1) * values.sliceGapMins} minutes`}
+              </span>{" "}
+              after the first batch leaves.
+            </p>
+          </div>
+        )}
 
-          {values.mode === "optimize" && (
-            <div className="mt-5 max-w-[360px]">
-              <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
-                Delivery window
-              </label>
-              <select
-                value={values.optimizeWindow}
-                onChange={(e) => onChange({ optimizeWindow: e.target.value })}
-                className={fieldClass}
-              >
-                {OPTIMIZE_WINDOWS.map((w) => (
-                  <option key={w}>{w}</option>
-                ))}
-              </select>
-              <p className="mt-1.5 font-manrope text-xs leading-[18px] text-[#6F6F8D]">
-                Each contact is sent at the hour they've historically opened, inside this window.
-                Contacts without enough history fall back to your account's best-performing hour.
-              </p>
-            </div>
-          )}
-        </Panel>
+        {values.mode === "optimize" && (
+          <div className="mt-5 w-full max-w-[320px]">
+            <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
+              Delivery window
+            </label>
+            <Dropdown
+              className="max-w-none"
+              value={values.optimizeWindow}
+              options={OPTIMIZE_WINDOWS.map((w) => ({ label: w }))}
+              onChange={(label) => onChange({ optimizeWindow: label })}
+            />
+          </div>
+        )}
       </div>
     </StepCard>
   );

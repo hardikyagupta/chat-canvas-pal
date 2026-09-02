@@ -10,8 +10,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Code2,
+  Copy,
   Info,
   LayoutGrid,
+  MoreVertical,
   Paperclip,
   Plus,
   RotateCcw,
@@ -20,6 +22,7 @@ import {
   Sparkles,
   ThumbsDown,
   ThumbsUp,
+  Trash2,
   Type,
   Upload,
   X,
@@ -56,6 +59,20 @@ export interface ContentValues {
   /** Saved template picked for this campaign, if any. */
   templateId: number | null;
   starterId: string;
+  /** A/B variants — "A" only until the "+" tab adds more. */
+  variants: string[];
+  activeVariant: string;
+  testGoal: "content" | "engagement";
+  /** Engagement goal only. */
+  winningMetric: "Open" | "Clicks" | "Conversion";
+  /** Engagement goal only — how long the test runs before a winner is picked. */
+  testDurationValue: string;
+  testDurationUnit: "Hours" | "Days";
+  /** Engagement goal only — % of reach entered into the test; split evenly
+   *  across variants, the remainder going to the winning variation. */
+  testSizePercent: number;
+  /** Content goal only — each variant's own % of the send, keyed by letter. */
+  contentSplits: Record<string, number>;
 }
 
 export const EMPTY_CONTENT: ContentValues = {
@@ -77,10 +94,36 @@ export const EMPTY_CONTENT: ContentValues = {
   tab: "my",
   templateId: null,
   starterId: "",
+  variants: ["A"],
+  activeVariant: "A",
+  testGoal: "engagement",
+  winningMetric: "Open",
+  testDurationValue: "01",
+  testDurationUnit: "Hours",
+  testSizePercent: 80,
+  contentSplits: { A: 100 },
 };
 
 /** Verified sending domains on the account. */
 const DOMAINS = ["m3m.in", "mailer.m3m.in", "news.m3m.in", "offers.m3m.in"];
+
+/** A/B variants cap out at five (A–E). */
+const MAX_VARIANTS = 5;
+
+/** One color per variant letter, for the small badges in User distribution. */
+const VARIANT_COLORS: Record<string, { bg: string; text: string }> = {
+  A: { bg: "#2F68E5", text: "#fff" },
+  B: { bg: "#7B5CFA", text: "#fff" },
+  C: { bg: "#00C48C", text: "#fff" },
+  D: { bg: "#FC5E02", text: "#fff" },
+  E: { bg: "#F5C542", text: "#17173A" },
+};
+
+const DURATION_UNITS = ["Hours", "Days"] as const;
+const durationOptionsFor = (unit: string) => {
+  const max = unit === "Days" ? 30 : 23;
+  return Array.from({ length: max }, (_, i) => String(i + 1).padStart(2, "0"));
+};
 
 /** Formats a saved attachment can be, and the size cap on it. */
 const ATTACHMENT_ACCEPT = ".csv,.xls,.xlsx,.htm,.html,.pdf,.docx,.jpg,.jpeg,.gif,.png,.ics";
@@ -110,6 +153,69 @@ const TABS: { id: TemplateTab; label: string }[] = [
 
 const fieldClass =
   "h-10 w-full rounded-md border border-[#DDE2EE] bg-[#F7F9FC] px-3 font-manrope text-sm text-[#17173A] outline-none transition-colors placeholder:text-[#A0A0A0] focus:border-[#2F68E5] focus:bg-white";
+
+/** Our own styled dropdown — a trigger button plus a floating option list —
+ *  in place of a native <select>, for the variant test-settings fields. */
+function Dropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div ref={wrapRef} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex h-10 w-full items-center justify-between gap-2 rounded-md border bg-white px-3 font-manrope text-sm text-[#17173A] outline-none transition-colors",
+          open ? "border-[#2F68E5]" : "border-[#DDE2EE]"
+        )}
+      >
+        <span className="truncate">{value}</span>
+        <ChevronDown
+          className={cn("size-4 shrink-0 text-[#8A8AA3] transition-transform", open && "rotate-180")}
+          strokeWidth={2}
+        />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-full overflow-y-auto rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
+          {options.map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => {
+                onChange(o);
+                setOpen(false);
+              }}
+              className={cn(
+                "block w-full whitespace-nowrap px-3 py-2 text-left font-manrope text-sm transition-colors",
+                o === value ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]" : "text-[#17173A] hover:bg-[#F7F9FC]"
+              )}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function InfoDot({ label }: { label: string }) {
   return (
@@ -198,6 +304,99 @@ function FieldRow({
  *  bottom hairline is the only separator. */
 const lineInputClass =
   "min-w-0 flex-1 bg-transparent font-manrope text-sm text-[#17173A] outline-none placeholder:text-[#A0A0A0]";
+
+/** One variant's tab — its own label to select it, plus (once a second
+ *  variant exists) a kebab menu to copy or delete it. */
+function VariantTab({
+  letter,
+  active,
+  showMenu,
+  onSelect,
+  onCopy,
+  onDelete,
+}: {
+  letter: string;
+  active: boolean;
+  showMenu: boolean;
+  onSelect: () => void;
+  onCopy: () => void;
+  onDelete: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [menuOpen]);
+
+  return (
+    <div
+      ref={wrapRef}
+      className={cn(
+        "relative flex h-9 items-stretch rounded-md transition-colors",
+        active ? "bg-[#2F68E5] text-white" : "border border-[#DDE2EE] bg-white text-[#17173A]"
+      )}
+    >
+      <button
+        type="button"
+        onClick={onSelect}
+        className={cn(
+          "rounded-l-md px-4 font-manrope text-xs font-bold uppercase tracking-[0.4px] transition-colors",
+          !showMenu && "rounded-r-md",
+          !active && "hover:bg-[#F7F9FC]"
+        )}
+      >
+        Variant {letter}
+      </button>
+      {showMenu && (
+        <>
+          <button
+            type="button"
+            aria-label={`Variant ${letter} options`}
+            onClick={() => setMenuOpen((o) => !o)}
+            className={cn(
+              "grid w-7 shrink-0 place-items-center rounded-r-md transition-colors",
+              active ? "hover:bg-white/15" : "hover:bg-[#F7F9FC]"
+            )}
+          >
+            <MoreVertical className="size-4" strokeWidth={2.2} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
+              <button
+                type="button"
+                onClick={() => {
+                  onCopy();
+                  setMenuOpen(false);
+                }}
+                className="flex w-full items-center justify-between border-l-2 border-transparent px-3 py-2 text-left font-manrope text-sm text-[#17173A] transition-colors hover:border-[#2F68E5] hover:bg-[#F4F8FF]"
+              >
+                Copy
+                <Copy className="size-4 text-[#8A8AA3]" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDelete();
+                  setMenuOpen(false);
+                }}
+                className="flex w-full items-center justify-between border-l-2 border-transparent px-3 py-2 text-left font-manrope text-sm text-[#17173A] transition-colors hover:border-[#2F68E5] hover:bg-[#F4F8FF]"
+              >
+                Delete
+                <Trash2 className="size-4 text-[#8A8AA3]" strokeWidth={2} />
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 /** The "+ REPLY EMAIL ID" row under the sender fields — each opens one field. */
 function AddButton({
@@ -545,6 +744,172 @@ function Pager({
 }
 
 /**
+ * Its own accordion step — only relevant once the Message step has more than
+ * one variant, so the overlay skips rendering this step entirely until then.
+ */
+export function VariantTestSettingsStep({
+  values,
+  onChange,
+}: {
+  values: ContentValues;
+  onChange: (patch: Partial<ContentValues>) => void;
+}) {
+  if (values.variants.length <= 1) return null;
+
+  return (
+    <StepCard wide>
+      <div className="space-y-6">
+        <div className="max-w-[280px]">
+          <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
+            Goal
+          </label>
+          <Dropdown
+            value={values.testGoal === "content" ? "Test content" : "Test engagement"}
+            options={["Test content", "Test engagement"]}
+            onChange={(v) => onChange({ testGoal: v === "Test content" ? "content" : "engagement" })}
+          />
+        </div>
+
+        {values.testGoal === "engagement" ? (
+          <>
+            <div className="max-w-[280px]">
+              <label className="block font-manrope text-sm font-semibold text-[#17173A]">
+                Winning metric
+              </label>
+              <p className="mb-1.5 mt-0.5 whitespace-nowrap font-manrope text-xs text-[#6F6F8D]">
+                Select the metric that will determine the test winner.
+              </p>
+              <Dropdown
+                value={values.winningMetric}
+                options={["Open", "Clicks", "Conversion"]}
+                onChange={(v) => onChange({ winningMetric: v as ContentValues["winningMetric"] })}
+              />
+            </div>
+
+            <div className="flex gap-4">
+              <div className="w-[140px]">
+                <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
+                  Duration
+                </label>
+                <Dropdown
+                  value={values.testDurationValue}
+                  options={durationOptionsFor(values.testDurationUnit)}
+                  onChange={(v) => onChange({ testDurationValue: v })}
+                />
+              </div>
+              <div className="w-[140px]">
+                <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
+                  Unit
+                </label>
+                <Dropdown
+                  value={values.testDurationUnit}
+                  options={[...DURATION_UNITS]}
+                  onChange={(v) => {
+                    const unit = v as ContentValues["testDurationUnit"];
+                    const options = durationOptionsFor(unit);
+                    onChange({
+                      testDurationUnit: unit,
+                      testDurationValue: options.includes(values.testDurationValue)
+                        ? values.testDurationValue
+                        : options[0],
+                    });
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-manrope text-sm font-semibold text-[#17173A]">User distribution</p>
+                <p className="mt-0.5 font-manrope text-xs text-[#6F6F8D]">
+                  Set the percentage of users for each variant.
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-3">
+                <div className="flex h-9 w-[92px] items-center rounded-md border border-[#DDE2EE] pl-3 pr-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={values.testSizePercent}
+                    onChange={(e) =>
+                      onChange({
+                        testSizePercent: Math.min(100, Math.max(0, Number(e.target.value))),
+                      })
+                    }
+                    className="w-full bg-transparent font-manrope text-sm text-[#17173A] outline-none"
+                  />
+                  <span className="font-manrope text-sm text-[#8A8AA3]">%</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {values.variants.map((v) => {
+                    const color = VARIANT_COLORS[v] ?? VARIANT_COLORS.A;
+                    return (
+                      <span
+                        key={v}
+                        className="flex items-center gap-1.5 rounded-full border border-[#DDE2EE] bg-white py-1 pl-1 pr-2.5"
+                      >
+                        <span
+                          className="grid size-5 place-items-center rounded-full text-[10px] font-bold"
+                          style={{ background: color.bg, color: color.text }}
+                        >
+                          {v}
+                        </span>
+                        <span className="font-manrope text-xs font-semibold text-[#17173A]">
+                          {(values.testSizePercent / values.variants.length).toFixed(1)}%
+                        </span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-manrope text-sm font-semibold text-[#17173A]">Winning variation</p>
+                <p className="mt-0.5 font-manrope text-xs text-[#6F6F8D]">
+                  Percentage of recipients that will receive the highest performing variation.
+                </p>
+              </div>
+              <p className="shrink-0 font-manrope text-sm text-[#17173A]">
+                {(100 - values.testSizePercent).toFixed(1)}%
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-3">
+            {values.variants.map((v) => (
+              <div key={v} className="flex items-center justify-between gap-4">
+                <p className="font-manrope text-sm font-semibold text-[#17173A]">Variant {v}</p>
+                <div className="flex h-9 w-[92px] shrink-0 items-center rounded-md border border-[#DDE2EE] pl-3 pr-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={values.contentSplits[v] ?? 0}
+                    onChange={(e) =>
+                      onChange({
+                        contentSplits: {
+                          ...values.contentSplits,
+                          [v]: Math.min(100, Math.max(0, Number(e.target.value))),
+                        },
+                      })
+                    }
+                    className="w-full bg-transparent font-manrope text-sm text-[#17173A] outline-none"
+                  />
+                  <span className="font-manrope text-sm text-[#8A8AA3]">%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </StepCard>
+  );
+}
+
+/**
  * Content step — who the email comes from, what it says on the tin, and which
  * template carries it. Sender details sit above the picker because the subject
  * line is what a template gets chosen against, not the other way round.
@@ -554,6 +919,7 @@ export default function CampaignContentStep({
   onChange,
   highlight,
   chatOpen,
+  reach = 0,
 }: {
   values: ContentValues;
   onChange: (patch: Partial<ContentValues>) => void;
@@ -562,6 +928,8 @@ export default function CampaignContentStep({
   /** The docked co-marketer chat narrows this card, so the starter cards drop
    *  from a single row to 2x2 to keep each one legible. */
   chatOpen?: boolean;
+  /** Audience reach — the base the variant test's "Est. profiles" is drawn from. */
+  reach?: number;
 }) {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -582,6 +950,46 @@ export default function CampaignContentStep({
   const current = Math.min(page, pageCount);
   const shown = matches.slice((current - 1) * perPage, current * perPage);
   const extrasOpen = values.replyEnabled || values.copyEnabled || values.attachmentsEnabled;
+
+  const nextUnusedLetter = (variants: string[]) => {
+    for (let i = 0; i < MAX_VARIANTS; i++) {
+      const letter = String.fromCharCode(65 + i);
+      if (!variants.includes(letter)) return letter;
+    }
+    return null;
+  };
+
+  const addVariant = () => {
+    if (values.variants.length >= MAX_VARIANTS) return;
+    const nextLetter = nextUnusedLetter(values.variants);
+    if (!nextLetter) return;
+    const nextVariants = [...values.variants, nextLetter];
+    const evenSplit = Math.round((100 / nextVariants.length) * 10) / 10;
+    const contentSplits = Object.fromEntries(nextVariants.map((v) => [v, evenSplit]));
+    onChange({ variants: nextVariants, activeVariant: nextLetter, contentSplits });
+  };
+
+  const copyVariant = (source: string) => {
+    if (values.variants.length >= MAX_VARIANTS) return;
+    const nextLetter = nextUnusedLetter(values.variants);
+    if (!nextLetter) return;
+    onChange({
+      variants: [...values.variants, nextLetter],
+      activeVariant: nextLetter,
+      contentSplits: { ...values.contentSplits, [nextLetter]: values.contentSplits[source] ?? 0 },
+    });
+  };
+
+  const deleteVariant = (letter: string) => {
+    if (values.variants.length <= 1) return;
+    const nextVariants = values.variants.filter((v) => v !== letter);
+    const { [letter]: _removed, ...contentSplits } = values.contentSplits;
+    onChange({
+      variants: nextVariants,
+      activeVariant: values.activeVariant === letter ? nextVariants[0] : values.activeVariant,
+      contentSplits,
+    });
+  };
 
   return (
     <StepCard
@@ -655,6 +1063,44 @@ export default function CampaignContentStep({
 
             return (
               <div>
+                <div className="mb-5 flex items-center gap-2">
+                  {values.variants.map((v) => (
+                    <VariantTab
+                      key={v}
+                      letter={v}
+                      active={values.activeVariant === v}
+                      showMenu={values.variants.length > 1}
+                      onSelect={() => onChange({ activeVariant: v })}
+                      onCopy={() => copyVariant(v)}
+                      onDelete={() => deleteVariant(v)}
+                    />
+                  ))}
+                  {values.variants.length < MAX_VARIANTS && (
+                    <TooltipProvider delayDuration={150}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label="Add variant"
+                            onClick={addVariant}
+                            className="grid size-9 shrink-0 place-items-center rounded border border-[#DDE2EE] text-[#6F6F8D] transition-colors hover:bg-[#F7F9FC] hover:text-[#17173A]"
+                          >
+                            <Plus className="size-4" strokeWidth={2.4} />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          sideOffset={8}
+                          className="overflow-visible rounded-lg border-0 bg-black px-3 py-2.5 text-white shadow-none"
+                        >
+                          <p className="font-manrope text-xs leading-[18px]">Add variant</p>
+                          <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+
                 <FieldRow label="From" trailing={fromTrailing}>
                   <input
                     type="text"

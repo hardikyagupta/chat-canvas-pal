@@ -125,7 +125,7 @@ export function buildFindings({ setup, audience, content, schedule }: CampaignDr
         kind: "sendtime",
         schedulePatch: { sliceGapMins: 30 },
       },
-      link: { stepId: "schedule", stepLabel: "Schedule", field: "Slice & Send" },
+      link: { stepId: "schedule", stepLabel: "Schedule", field: "Send in batches" },
     });
   }
 

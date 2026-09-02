@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, type LucideIcon } from "lucide-react";
+import { Settings, X, type LucideIcon } from "lucide-react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import sparkle from "/campaign-assets/ic-sparkle.gif";
@@ -15,6 +15,7 @@ export default function CampaignCreationNavbar({
   icon: Icon,
   nextLabel = "Next step",
   onRenameCampaign,
+  onOpenSettings,
   onAskCoMarketer,
   onSave,
   onNextStep,
@@ -25,6 +26,7 @@ export default function CampaignCreationNavbar({
   /** Last step swaps this for the terminal action. */
   nextLabel?: string;
   onRenameCampaign?: (name: string) => void;
+  onOpenSettings?: () => void;
   onAskCoMarketer?: () => void;
   onSave?: () => void;
   onNextStep?: () => void;
@@ -105,6 +107,29 @@ export default function CampaignCreationNavbar({
       </div>
 
       <div className="ml-auto flex items-center gap-3">
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                aria-label="Settings"
+                className="grid h-8 w-8 place-items-center rounded border border-[#DDE2EE] text-[#6F6F8D] transition-colors hover:bg-[#F7F9FC] hover:text-[#17173A]"
+              >
+                <Settings className="h-4 w-4" strokeWidth={2} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="bottom"
+              align="center"
+              sideOffset={8}
+              className="overflow-visible rounded-lg border-0 bg-black px-3 py-1.5 text-white shadow-none"
+            >
+              <p className="font-manrope text-xs leading-[18px]">Settings</p>
+              <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         {/* Ask co-marketer — the top-nav CTA verbatim: rotating conic-gradient
             ring (.snake-border), sparkle GIF, h-8 to match Save/Next step. */}
         <button

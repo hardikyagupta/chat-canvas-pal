@@ -1,5 +1,5 @@
-import { Info, X } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { Info } from "lucide-react";
+import * as SwitchPrimitives from "@radix-ui/react-switch";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -9,6 +9,26 @@ import {
 } from "@/components/ui/tooltip";
 import GoalDropdown from "./GoalDropdown";
 import StepCard from "./StepCard";
+
+/** A smaller toggle than the shared Switch — matches the compact toggle+text
+ *  rows used elsewhere in the wizard (e.g. Audience's "Don't include"). */
+function MiniSwitch({
+  checked,
+  onCheckedChange,
+}: {
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <SwitchPrimitives.Root
+      checked={checked}
+      onCheckedChange={onCheckedChange}
+      className="peer inline-flex h-4 w-7 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=checked]:bg-[#00C48C] data-[state=unchecked]:bg-input"
+    >
+      <SwitchPrimitives.Thumb className="pointer-events-none block h-3 w-3 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3 data-[state=unchecked]:translate-x-0" />
+    </SwitchPrimitives.Root>
+  );
+}
 
 export interface SetupValues {
   /** What this campaign is for. Nothing else in the step opens until it's set. */
@@ -180,24 +200,11 @@ function ToggleRow({
   badge?: React.ReactNode;
 }) {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-4 rounded-md border border-[#DDE2EE] p-4",
-        flash && "cmk-field-flash"
-      )}
-    >
-      <div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <p className="font-manrope text-sm font-bold text-[#17173A]">{title}</p>
-          {info && <HeadingInfo>{info}</HeadingInfo>}
-          {badge}
-        </div>
-      </div>
-      <Switch
-        checked={checked}
-        onCheckedChange={onChange}
-        className="shrink-0 data-[state=checked]:bg-[#00C48C]"
-      />
+    <div className={cn("flex flex-wrap items-center gap-2", flash && "cmk-field-flash")}>
+      <MiniSwitch checked={checked} onCheckedChange={onChange} />
+      <p className="font-manrope text-sm font-semibold text-[#17173A]">{title}</p>
+      {info && <HeadingInfo>{info}</HeadingInfo>}
+      {badge}
     </div>
   );
 }
@@ -218,21 +225,12 @@ export default function CampaignSetupStep({
   highlight?: Partial<Record<keyof SetupValues, boolean>>;
 }) {
   // The goal question is out of phase 1, so nothing here is gated any more —
-  // tags and tracking are open from the moment the step is.
+  // tracking is open from the moment the step is. Tags live in Campaign settings.
   const chosen = true;
   // Previously: const chosen = Boolean(values.goal);
-  const tags = parseTags(values.tags);
 
   return (
-    <StepCard
-      title="Campaign details"
-      description="Tag this campaign and choose what you want to track."
-      // Previous, goal-led heading:
-      // title="Campaign goal"
-      // description={chosen
-      //   ? "Everything from here on is tuned to this goal — change it and the recommendations change with it."
-      //   : "Tell me what this campaign is for and I'll shape the rest of the setup around it."}
-    >
+    <StepCard>
       {/* Campaign goal question — not part of phase 1.
       <div className={chosen ? "mb-8" : ""}>
         <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
@@ -257,48 +255,10 @@ export default function CampaignSetupStep({
       <div className="t-acc" data-open={chosen ? "true" : "false"}>
         <div className="t-acc-panel">
           <div className="t-acc-panel-inner">
-            <div className={cn("mb-8", highlight?.tags && "cmk-field-flash rounded-md")}>
-              <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
-                Add tags
-              </label>
-              <input
-                type="text"
-                value={values.tags}
-                onChange={(e) => onChange({ tags: e.target.value })}
-                placeholder="Ex: Festive, Q3"
-                className={fieldClass}
-              />
-              {tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center gap-1 rounded-full border border-[#DDE2EE] bg-[#F7F9FC] py-0.5 pl-2.5 pr-1 font-manrope text-[11px] font-medium text-[#17173A]"
-                    >
-                      {tag}
-                      <button
-                        type="button"
-                        aria-label={`Remove ${tag}`}
-                        onClick={() =>
-                          onChange({
-                            tags: tags.filter((t) => t !== tag).join(", "),
-                          })
-                        }
-                        className="grid size-4 place-items-center rounded-full text-[#8A8AA3] hover:bg-[#E8ECF4] hover:text-[#17173A]"
-                      >
-                        <X className="size-3" strokeWidth={2.5} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
             <div className="mb-5">
-              <h2 className="font-manrope text-base font-bold text-[#17173A]">Advanced</h2>
+              <h2 className="font-manrope text-base font-bold text-[#17173A]">Tracking</h2>
               <p className="mt-1 font-manrope text-sm leading-5 text-[#6F6F8D]">
-                Track your campaign performance to measure traffic and conversion. Set default values
-                for Google Analytics tracking and conversion goal in{" "}
+                Add UTM parameters to track campaign performance. Set default values in{" "}
                 <a
                   href="https://pr1r.netcoresmartech.com/qa_manual1/admin/index.php/admin/acc_config#ga_tracking"
                   target="_blank"
@@ -343,14 +303,12 @@ export default function CampaignSetupStep({
                   highlight?.conversionEvent && "cmk-field-flash rounded-md"
                 )}
               >
-                <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
-                  Conversion event
-                </label>
                 <input
                   type="text"
                   value={values.conversionEvent}
                   onChange={(e) => onChange({ conversionEvent: e.target.value })}
-                  placeholder="e.g. Purchase completed"
+                  placeholder="Select conversion event"
+                  aria-label="Select conversion event"
                   className={fieldClass}
                 />
               </div>

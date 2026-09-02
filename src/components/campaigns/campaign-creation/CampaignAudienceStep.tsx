@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Info, Plus, RefreshCw, UserCheck, X } from "lucide-react";
+import { ChevronDown, Info, Plus, UserCheck, X } from "lucide-react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -191,32 +191,34 @@ function Dropdown({
   );
 }
 
-/** The reachable-contacts count, with a refresh spin — sits on the Audience
- *  step's own accordion header rather than inside the card body. */
+/** The reachable-contacts count for the Audience step's own accordion
+ *  header — shown only while the step is collapsed, since the expanded
+ *  body shows the fuller AudienceReachStat instead. */
 export function AudienceReachablePill({ reach }: { reach: number }) {
-  const [refreshing, setRefreshing] = useState(false);
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex h-8 items-center gap-2 rounded-full border border-[#DDE2EE] bg-white pl-2 pr-3">
-        <UserCheck className="size-4 text-[#8A8AA3]" strokeWidth={2} />
-        <span className="font-manrope text-[13px] text-[#6F6F8D]">Reachable contacts</span>
-        <span className="font-manrope text-[13px] font-bold text-[#17173A]">
-          {nf.format(reach)}
-        </span>
-        <button
-          type="button"
-          aria-label="Refresh reachable contacts"
-          onClick={(e) => {
-            e.stopPropagation();
-            setRefreshing(true);
-            window.setTimeout(() => setRefreshing(false), 900);
-          }}
-          className="grid size-5 place-items-center rounded-full text-[#8A8AA3] hover:bg-[#F0F3F9] hover:text-[#17173A]"
-        >
-          <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} strokeWidth={2.2} />
-        </button>
+    <div className="flex h-8 items-center gap-2 rounded-full border border-[#DDE2EE] bg-white pl-2 pr-3">
+      <UserCheck className="size-4 text-[#8A8AA3]" strokeWidth={2} />
+      <span className="font-manrope text-[13px] text-[#6F6F8D]">
+        Potential reach: <span className="font-bold text-[#17173A]">{nf.format(reach)}</span>
+      </span>
+    </div>
+  );
+}
+
+/** The same reach count, laid out for the expanded card body — a big
+ *  number over its caption. Rendered by the overlay as a sibling of this
+ *  step's own StepCard (not inside it), so it sits at the accordion row's
+ *  true right edge instead of being capped by the card's own max-width. */
+export function AudienceReachStat({ reach }: { reach: number }) {
+  return (
+    <div className="flex flex-col items-end">
+      <span className="font-manrope text-2xl font-bold leading-none text-[#17173A]">
+        {nf.format(reach)}
+      </span>
+      <div className="mt-1 flex items-center gap-1">
+        <span className="font-manrope text-[13px] text-[#6F6F8D]">Potential reach</span>
+        <InfoDot label="Contacts who can receive this channel after consent and suppression checks." />
       </div>
-      <InfoDot label="Contacts who can receive this channel after consent and suppression checks." />
     </div>
   );
 }
@@ -464,7 +466,7 @@ export default function CampaignAudienceStep({
       </div>
 
       <FilterSection
-        title="Exclude list/segment"
+        title="Don't include"
         info="Contacts in these segments are held back even if they match your targeting."
         checked={values.excludeEnabled}
         onChange={(v) => onChange({ excludeEnabled: v })}
@@ -477,7 +479,7 @@ export default function CampaignAudienceStep({
       </FilterSection>
 
       <FilterSection
-        title="Domain filters"
+        title="Domain"
         info="Include specific email domains from your audience."
         checked={values.domainEnabled}
         onChange={(v) => onChange({ domainEnabled: v })}

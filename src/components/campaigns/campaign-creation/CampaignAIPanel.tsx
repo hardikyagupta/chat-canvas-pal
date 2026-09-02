@@ -458,24 +458,11 @@ function suggestionsFor(goal: string, stepId: string): CampaignSuggestion[] {
   const isPromo = goal === "promo-offer";
   const isCart = goal === "abandoned-cart";
 
-  // "schedule" is the combined "Schedule and campaign goals" step — its own
-  // send-time suggestions plus the goal-tagging/tracking ones that used to
-  // live on the separate Setup step.
+  // "schedule" is the combined "Schedule and tracking" step — send-time
+  // suggestions plus the tracking ones that used to live on Setup. Tags
+  // live in Campaign settings, not this step.
   if (stepId === "schedule") {
     return [
-      {
-        id: "tags",
-        title: "Suggested tags",
-        tags,
-        ...ICON.tags,
-        prompt: "What tags should I put on this campaign?",
-        navLabel: "Tagging help",
-        reply:
-          "I'd use these three — they match how you already group similar campaigns, so this one lands in the quarterly rollup without anyone backfilling it later.",
-        applyLabel: "Add tags to campaign",
-        appliedLabel: "Tags added",
-        patch: { tags: tags.join(", ") },
-      },
       {
         id: "tracking",
         title: "Tracking recommendation",
