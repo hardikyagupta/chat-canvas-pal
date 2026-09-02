@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Settings, X, type LucideIcon } from "lucide-react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import sparkle from "/campaign-assets/ic-sparkle.gif";
 
 /**
@@ -13,24 +14,27 @@ import sparkle from "/campaign-assets/ic-sparkle.gif";
 export default function CampaignCreationNavbar({
   campaignName,
   icon: Icon,
-  nextLabel = "Next step",
   onRenameCampaign,
   onOpenSettings,
   onAskCoMarketer,
-  onSave,
-  onNextStep,
+  askCoMarketerLabel = "Ask co-marketer",
   onClose,
+  steps,
+  activeStepId,
+  onSelectStep,
 }: {
   campaignName: string;
   icon: LucideIcon;
-  /** Last step swaps this for the terminal action. */
-  nextLabel?: string;
   onRenameCampaign?: (name: string) => void;
   onOpenSettings?: () => void;
   onAskCoMarketer?: () => void;
-  onSave?: () => void;
-  onNextStep?: () => void;
+  /** Email reads as just "Co-marketer" here; every other channel keeps the verb. */
+  askCoMarketerLabel?: string;
   onClose?: () => void;
+  /** The accordion's own steps — drives the centered stepper below. */
+  steps?: { id: string; label: string }[];
+  activeStepId?: string | null;
+  onSelectStep?: (id: string) => void;
 }) {
   // Inline rename, same interaction as the co-marketer chat header: click the
   // name to edit, Enter/blur commits, Escape reverts, blank keeps the old name.
@@ -53,8 +57,35 @@ export default function CampaignCreationNavbar({
   };
   const cancelRename = () => setIsRenaming(false);
 
+  const activeLabel = steps?.find((s) => s.id === activeStepId)?.label;
+
   return (
-    <header className="flex h-14 shrink-0 items-center border-b border-[#DDE2EE] bg-white px-14">
+    <header className="relative flex h-14 shrink-0 items-center border-b border-[#DDE2EE] bg-white px-14">
+      {steps && steps.length > 0 && (
+        <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5">
+          {activeLabel && (
+            <p className="font-manrope text-xs font-bold text-[#17173A]">{activeLabel}</p>
+          )}
+          <div className="flex items-center gap-1.5">
+            {steps.map((step) => (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => onSelectStep?.(step.id)}
+                aria-label={step.label}
+                aria-current={step.id === activeStepId}
+                className={cn(
+                  "h-1.5 w-8 rounded-full transition-colors",
+                  step.id === activeStepId
+                    ? "bg-[#00C48C]"
+                    : "bg-[#DDE2EE] hover:bg-[#C3CAD9]"
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex min-w-0 items-center gap-3">
         <TooltipProvider delayDuration={150}>
           <Tooltip>
@@ -140,23 +171,8 @@ export default function CampaignCreationNavbar({
           <span aria-hidden="true" className="snake-border" />
           <img src={sparkle} alt="" className="relative z-[1] h-5 w-5" />
           <span className="relative z-[1] font-manrope text-xs font-semibold tracking-[0.42px] text-ash">
-            Ask co-marketer
+            {askCoMarketerLabel}
           </span>
-        </button>
-        <button
-          type="button"
-          onClick={onSave}
-          className="dc-btn dc-btn-secondary uppercase"
-        >
-          {/* Was "Save", then "Save as draft". */}
-          SAVE FOR LATER
-        </button>
-        <button
-          type="button"
-          onClick={onNextStep}
-          className="dc-btn dc-btn-primary uppercase"
-        >
-          {nextLabel}
         </button>
         <button
           type="button"

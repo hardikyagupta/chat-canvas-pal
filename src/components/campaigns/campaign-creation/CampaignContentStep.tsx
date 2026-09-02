@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import * as SwitchPrimitives from "@radix-ui/react-switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Check,
@@ -23,6 +24,7 @@ import {
   ThumbsDown,
   ThumbsUp,
   Trash2,
+  Trophy,
   Type,
   Upload,
   X,
@@ -62,17 +64,14 @@ export interface ContentValues {
   /** A/B variants — "A" only until the "+" tab adds more. */
   variants: string[];
   activeVariant: string;
-  testGoal: "content" | "engagement";
-  /** Engagement goal only. */
+  /** % of reach each variant gets. Whatever's left over is the winner send. */
+  variantSplit: Record<string, number>;
+  /** On = the sentence below picks a winner automatically. */
+  decideWinner: boolean;
   winningMetric: "Open" | "Clicks" | "Conversion";
-  /** Engagement goal only — how long the test runs before a winner is picked. */
+  /** How long the test runs before a winner is picked. */
   testDurationValue: string;
   testDurationUnit: "Hours" | "Days";
-  /** Engagement goal only — % of reach entered into the test; split evenly
-   *  across variants, the remainder going to the winning variation. */
-  testSizePercent: number;
-  /** Content goal only — each variant's own % of the send, keyed by letter. */
-  contentSplits: Record<string, number>;
 }
 
 export const EMPTY_CONTENT: ContentValues = {
@@ -96,12 +95,11 @@ export const EMPTY_CONTENT: ContentValues = {
   starterId: "",
   variants: ["A"],
   activeVariant: "A",
-  testGoal: "engagement",
+  variantSplit: { A: 100 },
+  decideWinner: false,
   winningMetric: "Open",
   testDurationValue: "01",
   testDurationUnit: "Hours",
-  testSizePercent: 80,
-  contentSplits: { A: 100 },
 };
 
 /** Verified sending domains on the account. */
@@ -118,6 +116,42 @@ const VARIANT_COLORS: Record<string, { bg: string; text: string }> = {
   D: { bg: "#FC5E02", text: "#fff" },
   E: { bg: "#F5C542", text: "#17173A" },
 };
+
+/** Share held back for the winning variant's send, once that's switched on. */
+const WINNER_RESERVE = 20;
+
+/** Splits `total` across `variants`, giving the remainder to the first one so
+ *  the pills always add up to a round 100. */
+function evenSplit(variants: string[], total: number): Record<string, number> {
+  const each = Math.floor(total / variants.length);
+  const split: Record<string, number> = {};
+  variants.forEach((v, i) => {
+    split[v] = i === 0 ? total - each * (variants.length - 1) : each;
+  });
+  return split;
+}
+
+/** Rescales an existing split to a new total, keeping each variant's share of
+ *  the test relative to the others. Used when the winner's cut is edited. */
+function rescaleSplit(
+  variants: string[],
+  split: Record<string, number>,
+  total: number
+): Record<string, number> {
+  const current = variants.reduce((sum, v) => sum + (split[v] ?? 0), 0);
+  if (current <= 0) return evenSplit(variants, total);
+  const next: Record<string, number> = {};
+  let assigned = 0;
+  variants.forEach((v, i) => {
+    if (i === variants.length - 1) {
+      next[v] = total - assigned;
+      return;
+    }
+    next[v] = Math.round(((split[v] ?? 0) * total) / current);
+    assigned += next[v];
+  });
+  return next;
+}
 
 const DURATION_UNITS = ["Hours", "Days"] as const;
 const durationOptionsFor = (unit: string) => {
@@ -154,6 +188,26 @@ const TABS: { id: TemplateTab; label: string }[] = [
 const fieldClass =
   "h-10 w-full rounded-md border border-[#DDE2EE] bg-[#F7F9FC] px-3 font-manrope text-sm text-[#17173A] outline-none transition-colors placeholder:text-[#A0A0A0] focus:border-[#2F68E5] focus:bg-white";
 
+/** A smaller toggle than the shared Switch — matches the compact toggle+text
+ *  rows used elsewhere in the wizard (e.g. Audience's "Don't include"). */
+function MiniSwitch({
+  checked,
+  onCheckedChange,
+}: {
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <SwitchPrimitives.Root
+      checked={checked}
+      onCheckedChange={onCheckedChange}
+      className="peer inline-flex h-4 w-7 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=checked]:bg-[#00C48C] data-[state=unchecked]:bg-input"
+    >
+      <SwitchPrimitives.Thumb className="pointer-events-none block h-3 w-3 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3 data-[state=unchecked]:translate-x-0" />
+    </SwitchPrimitives.Root>
+  );
+}
+
 /** Our own styled dropdown — a trigger button plus a floating option list —
  *  in place of a native <select>, for the variant test-settings fields. */
 function Dropdown({
@@ -166,15 +220,34 @@ function Dropdown({
   onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (!wrapRef.current?.contains(t) && !panelRef.current?.contains(t)) setOpen(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  // Some triggers sit inside the accordion's height-animating panel, which
+  // clips overflow — so the option list is portalled to <body> and kept in
+  // sync with the trigger's live position instead of relying on normal-flow
+  // absolute positioning (which that ancestor would crop).
+  useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => wrapRef.current && setRect(wrapRef.current.getBoundingClientRect());
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
   }, [open]);
 
   return (
@@ -193,26 +266,33 @@ function Dropdown({
           strokeWidth={2}
         />
       </button>
-      {open && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-full overflow-y-auto rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
-          {options.map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => {
-                onChange(o);
-                setOpen(false);
-              }}
-              className={cn(
-                "block w-full whitespace-nowrap px-3 py-2 text-left font-manrope text-sm transition-colors",
-                o === value ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]" : "text-[#17173A] hover:bg-[#F7F9FC]"
-              )}
-            >
-              {o}
-            </button>
-          ))}
-        </div>
-      )}
+      {open &&
+        rect &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{ top: rect.bottom + 4, left: rect.left, width: rect.width }}
+            className="scroll-slim fixed z-[80] max-h-[240px] overflow-y-auto rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+          >
+            {options.map((o) => (
+              <button
+                key={o}
+                type="button"
+                onClick={() => {
+                  onChange(o);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "block w-full whitespace-nowrap px-3 py-2 text-left font-manrope text-sm transition-colors",
+                  o === value ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]" : "text-[#17173A] hover:bg-[#F7F9FC]"
+                )}
+              >
+                {o}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -743,171 +823,6 @@ function Pager({
   );
 }
 
-/**
- * Its own accordion step — only relevant once the Message step has more than
- * one variant, so the overlay skips rendering this step entirely until then.
- */
-export function VariantTestSettingsStep({
-  values,
-  onChange,
-}: {
-  values: ContentValues;
-  onChange: (patch: Partial<ContentValues>) => void;
-}) {
-  if (values.variants.length <= 1) return null;
-
-  return (
-    <StepCard wide>
-      <div className="space-y-6">
-        <div className="max-w-[280px]">
-          <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
-            Goal
-          </label>
-          <Dropdown
-            value={values.testGoal === "content" ? "Test content" : "Test engagement"}
-            options={["Test content", "Test engagement"]}
-            onChange={(v) => onChange({ testGoal: v === "Test content" ? "content" : "engagement" })}
-          />
-        </div>
-
-        {values.testGoal === "engagement" ? (
-          <>
-            <div className="max-w-[280px]">
-              <label className="block font-manrope text-sm font-semibold text-[#17173A]">
-                Winning metric
-              </label>
-              <p className="mb-1.5 mt-0.5 whitespace-nowrap font-manrope text-xs text-[#6F6F8D]">
-                Select the metric that will determine the test winner.
-              </p>
-              <Dropdown
-                value={values.winningMetric}
-                options={["Open", "Clicks", "Conversion"]}
-                onChange={(v) => onChange({ winningMetric: v as ContentValues["winningMetric"] })}
-              />
-            </div>
-
-            <div className="flex gap-4">
-              <div className="w-[140px]">
-                <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
-                  Duration
-                </label>
-                <Dropdown
-                  value={values.testDurationValue}
-                  options={durationOptionsFor(values.testDurationUnit)}
-                  onChange={(v) => onChange({ testDurationValue: v })}
-                />
-              </div>
-              <div className="w-[140px]">
-                <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
-                  Unit
-                </label>
-                <Dropdown
-                  value={values.testDurationUnit}
-                  options={[...DURATION_UNITS]}
-                  onChange={(v) => {
-                    const unit = v as ContentValues["testDurationUnit"];
-                    const options = durationOptionsFor(unit);
-                    onChange({
-                      testDurationUnit: unit,
-                      testDurationValue: options.includes(values.testDurationValue)
-                        ? values.testDurationValue
-                        : options[0],
-                    });
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="font-manrope text-sm font-semibold text-[#17173A]">User distribution</p>
-                <p className="mt-0.5 font-manrope text-xs text-[#6F6F8D]">
-                  Set the percentage of users for each variant.
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-3">
-                <div className="flex h-9 w-[92px] items-center rounded-md border border-[#DDE2EE] pl-3 pr-2">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={values.testSizePercent}
-                    onChange={(e) =>
-                      onChange({
-                        testSizePercent: Math.min(100, Math.max(0, Number(e.target.value))),
-                      })
-                    }
-                    className="w-full bg-transparent font-manrope text-sm text-[#17173A] outline-none"
-                  />
-                  <span className="font-manrope text-sm text-[#8A8AA3]">%</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {values.variants.map((v) => {
-                    const color = VARIANT_COLORS[v] ?? VARIANT_COLORS.A;
-                    return (
-                      <span
-                        key={v}
-                        className="flex items-center gap-1.5 rounded-full border border-[#DDE2EE] bg-white py-1 pl-1 pr-2.5"
-                      >
-                        <span
-                          className="grid size-5 place-items-center rounded-full text-[10px] font-bold"
-                          style={{ background: color.bg, color: color.text }}
-                        >
-                          {v}
-                        </span>
-                        <span className="font-manrope text-xs font-semibold text-[#17173A]">
-                          {(values.testSizePercent / values.variants.length).toFixed(1)}%
-                        </span>
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="font-manrope text-sm font-semibold text-[#17173A]">Winning variation</p>
-                <p className="mt-0.5 font-manrope text-xs text-[#6F6F8D]">
-                  Percentage of recipients that will receive the highest performing variation.
-                </p>
-              </div>
-              <p className="shrink-0 font-manrope text-sm text-[#17173A]">
-                {(100 - values.testSizePercent).toFixed(1)}%
-              </p>
-            </div>
-          </>
-        ) : (
-          <div className="space-y-3">
-            {values.variants.map((v) => (
-              <div key={v} className="flex items-center justify-between gap-4">
-                <p className="font-manrope text-sm font-semibold text-[#17173A]">Variant {v}</p>
-                <div className="flex h-9 w-[92px] shrink-0 items-center rounded-md border border-[#DDE2EE] pl-3 pr-2">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={values.contentSplits[v] ?? 0}
-                    onChange={(e) =>
-                      onChange({
-                        contentSplits: {
-                          ...values.contentSplits,
-                          [v]: Math.min(100, Math.max(0, Number(e.target.value))),
-                        },
-                      })
-                    }
-                    className="w-full bg-transparent font-manrope text-sm text-[#17173A] outline-none"
-                  />
-                  <span className="font-manrope text-sm text-[#8A8AA3]">%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </StepCard>
-  );
-}
 
 /**
  * Content step — who the email comes from, what it says on the tin, and which
@@ -959,37 +874,62 @@ export default function CampaignContentStep({
     return null;
   };
 
+  const variantTotal = values.variants.reduce((sum, v) => sum + (values.variantSplit[v] ?? 0), 0);
+  const winnerShare = Math.max(0, 100 - variantTotal);
+  // What the variants have to share between them. Once a winner send is in
+  // play that's whatever it isn't holding, so re-splitting keeps its cut.
+  const testPot = values.decideWinner ? Math.min(100, variantTotal) : 100;
+
+  const splitEvenly = () => onChange({ variantSplit: evenSplit(values.variants, testPot) });
+
+  const setVariantShare = (letter: string, next: number) =>
+    onChange({
+      variantSplit: {
+        ...values.variantSplit,
+        [letter]: Math.min(100, Math.max(0, next)),
+      },
+    });
+
+  // The winner's cut is whatever the variants leave behind, so editing it
+  // rescales them — their shares of the test stay in the same proportion.
+  const setWinnerShare = (next: number) =>
+    onChange({
+      variantSplit: rescaleSplit(
+        values.variants,
+        values.variantSplit,
+        100 - Math.min(100, Math.max(0, next))
+      ),
+    });
+
   const addVariant = () => {
     if (values.variants.length >= MAX_VARIANTS) return;
     const nextLetter = nextUnusedLetter(values.variants);
     if (!nextLetter) return;
     const nextVariants = [...values.variants, nextLetter];
-    const evenSplit = Math.round((100 / nextVariants.length) * 10) / 10;
-    const contentSplits = Object.fromEntries(nextVariants.map((v) => [v, evenSplit]));
-    onChange({ variants: nextVariants, activeVariant: nextLetter, contentSplits });
-  };
-
-  const copyVariant = (source: string) => {
-    if (values.variants.length >= MAX_VARIANTS) return;
-    const nextLetter = nextUnusedLetter(values.variants);
-    if (!nextLetter) return;
     onChange({
-      variants: [...values.variants, nextLetter],
+      variants: nextVariants,
       activeVariant: nextLetter,
-      contentSplits: { ...values.contentSplits, [nextLetter]: values.contentSplits[source] ?? 0 },
+      variantSplit: evenSplit(nextVariants, testPot),
     });
   };
+
+  const copyVariant = addVariant;
 
   const deleteVariant = (letter: string) => {
     if (values.variants.length <= 1) return;
     const nextVariants = values.variants.filter((v) => v !== letter);
-    const { [letter]: _removed, ...contentSplits } = values.contentSplits;
     onChange({
       variants: nextVariants,
       activeVariant: values.activeVariant === letter ? nextVariants[0] : values.activeVariant,
-      contentSplits,
+      variantSplit: evenSplit(nextVariants, testPot),
     });
   };
+
+  const toggleDecideWinner = (on: boolean) =>
+    onChange({
+      decideWinner: on,
+      variantSplit: evenSplit(values.variants, on ? 100 - WINNER_RESERVE : 100),
+    });
 
   return (
     <StepCard
@@ -1071,7 +1011,7 @@ export default function CampaignContentStep({
                       active={values.activeVariant === v}
                       showMenu={values.variants.length > 1}
                       onSelect={() => onChange({ activeVariant: v })}
-                      onCopy={() => copyVariant(v)}
+                      onCopy={() => copyVariant()}
                       onDelete={() => deleteVariant(v)}
                     />
                   ))}
@@ -1536,6 +1476,123 @@ export default function CampaignContentStep({
             );
           })}
         </div>
+      )}
+
+      {values.variants.length > 1 && (
+        <>
+          <div className="my-8 h-px bg-[#E8ECF4]" />
+          <h3 className="mb-5 font-manrope text-base font-bold text-[#17173A]">Test settings</h3>
+
+          <div>
+            <p className="font-manrope text-sm font-semibold text-[#17173A]">User distribution</p>
+            <p className="mt-0.5 font-manrope text-xs text-[#6F6F8D]">
+              Set the percentage of users for each variant.
+            </p>
+
+            <div className="mt-4 flex flex-col items-start gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                {values.variants.map((v) => {
+                  const color = VARIANT_COLORS[v] ?? VARIANT_COLORS.A;
+                  return (
+                    <label
+                      key={v}
+                      className="flex h-11 cursor-text items-center gap-2 rounded-full border border-[#DDE2EE] bg-white py-1 pl-1 pr-4 transition-colors focus-within:border-[#2F68E5]"
+                    >
+                      <span
+                        className="grid size-8 shrink-0 place-items-center rounded-full font-manrope text-xs font-bold"
+                        style={{ background: color.bg, color: color.text }}
+                      >
+                        {v}
+                      </span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        aria-label={`Percentage for variant ${v}`}
+                        value={values.variantSplit[v] ?? 0}
+                        onChange={(e) => setVariantShare(v, Number(e.target.value))}
+                        className="cc-plain-number w-9 bg-transparent text-right font-manrope text-sm font-bold text-[#17173A] outline-none"
+                      />
+                      <span className="font-manrope text-sm text-[#8A8AA3]">%</span>
+                    </label>
+                  );
+                })}
+
+                {values.decideWinner && (
+                  <label className="flex h-11 cursor-text items-center gap-2 rounded-full border border-[#DDE2EE] bg-white py-1 pl-1 pr-4 transition-colors focus-within:border-[#2F68E5]">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#F5C542]">
+                      <Trophy className="size-4 text-[#8A6100]" strokeWidth={2} />
+                    </span>
+                    <span className="font-manrope text-sm font-bold text-[#17173A]">Winner</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      aria-label="Percentage for the winning variant"
+                      value={winnerShare}
+                      onChange={(e) => setWinnerShare(Number(e.target.value))}
+                      className="cc-plain-number w-9 bg-transparent text-right font-manrope text-sm font-bold text-[#17173A] outline-none"
+                    />
+                    <span className="font-manrope text-sm text-[#8A8AA3]">%</span>
+                  </label>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={splitEvenly}
+                className="font-manrope text-sm font-bold text-[#2F68E5] transition-colors hover:text-[#2455C0]"
+              >
+                Split evenly
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 flex items-center gap-2">
+            <MiniSwitch checked={values.decideWinner} onCheckedChange={toggleDecideWinner} />
+            <p className="font-manrope text-sm font-semibold text-[#17173A]">
+              Decide a winner variant
+            </p>
+          </div>
+
+          {values.decideWinner && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 font-manrope text-sm text-[#17173A]">
+              <span>Decide winner on basis of</span>
+              <div className="w-[130px]">
+                <Dropdown
+                  value={values.winningMetric}
+                  options={["Open", "Clicks", "Conversion"]}
+                  onChange={(v) => onChange({ winningMetric: v as ContentValues["winningMetric"] })}
+                />
+              </div>
+              <span>after</span>
+              <div className="w-[90px]">
+                <Dropdown
+                  value={values.testDurationValue}
+                  options={durationOptionsFor(values.testDurationUnit)}
+                  onChange={(v) => onChange({ testDurationValue: v })}
+                />
+              </div>
+              <div className="w-[100px]">
+                <Dropdown
+                  value={values.testDurationUnit}
+                  options={[...DURATION_UNITS]}
+                  onChange={(v) => {
+                    const unit = v as ContentValues["testDurationUnit"];
+                    const options = durationOptionsFor(unit);
+                    onChange({
+                      testDurationUnit: unit,
+                      testDurationValue: options.includes(values.testDurationValue)
+                        ? values.testDurationValue
+                        : options[0],
+                    });
+                  }}
+                />
+              </div>
+              <span>.</span>
+            </div>
+          )}
+        </>
       )}
     </StepCard>
   );
