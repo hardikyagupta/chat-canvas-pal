@@ -284,7 +284,7 @@ function contentSuggestions(goal: string): CampaignSuggestion[] {
       applyLabel: "Select this template",
       appliedLabel: "Template selected",
       patch: {},
-      contentPatch: { templateId: template.id, tab: "my" },
+      contentPatch: { templateId: template.id },
       text: `${template.name} (Id: ${template.id})`,
     });
   }

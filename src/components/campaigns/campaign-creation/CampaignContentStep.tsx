@@ -14,6 +14,7 @@ import {
   Copy,
   Info,
   LayoutGrid,
+  Mail,
   MoreVertical,
   Paperclip,
   Plus,
@@ -25,18 +26,22 @@ import {
   ThumbsUp,
   Trash2,
   Trophy,
-  Type,
   Upload,
   X,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import sparkle from "/campaign-assets/ic-sparkle-ai.gif";
+import folderIcon from "/campaign-assets/ic-template-folder.svg";
 import StepCard from "./StepCard";
 import TemplateCard from "./TemplateCard";
-import { emailTemplates, templateStarters } from "./emailTemplates.data";
-
-export type TemplateTab = "my" | "new";
+import {
+  emailTemplates,
+  savedTemplateFolders,
+  templateLibrary,
+  type TemplateFolder,
+} from "./emailTemplates.data";
 
 export interface ContentValues {
   senderName: string;
@@ -57,7 +62,6 @@ export interface ContentValues {
   bccEmails: string;
   attachmentsEnabled: boolean;
   attachments: string[];
-  tab: TemplateTab;
   /** Saved template picked for this campaign, if any. */
   templateId: number | null;
   starterId: string;
@@ -90,7 +94,6 @@ export const EMPTY_CONTENT: ContentValues = {
   bccEmails: "",
   attachmentsEnabled: false,
   attachments: [],
-  tab: "my",
   templateId: null,
   starterId: "",
   variants: ["A"],
@@ -173,17 +176,28 @@ const PER_PAGE_OPTIONS = [5, 10, 50, 100, 150];
 /** Only these page sizes are wired up; the rest are shown but not selectable. */
 const PER_PAGE_ENABLED = [5, 10];
 
-const STARTER_ICONS: Record<string, LucideIcon> = {
-  "drag-drop": LayoutGrid,
-  "rich-text": Type,
-  html: Code2,
-  ai: Sparkles,
-};
-
-const TABS: { id: TemplateTab; label: string }[] = [
-  { id: "my", label: "My template" },
-  { id: "new", label: "Create new" },
+/** The three editors either email format leads to, from the "Create new"
+ *  menu — same destinations regardless of HTML or AMP. */
+const EDITOR_OPTIONS: { id: string; label: string; icon: LucideIcon }[] = [
+  { id: "ai", label: "Create with AI", icon: Sparkles },
+  { id: "drag-drop", label: "Drag and drop editor", icon: LayoutGrid },
+  { id: "html", label: "Code editor", icon: Code2 },
 ];
+
+const EMAIL_FORMATS: { id: "html" | "amp"; label: string; icon: LucideIcon }[] = [
+  { id: "html", label: "HTML email", icon: Mail },
+  { id: "amp", label: "AMP email", icon: Zap },
+];
+
+type TemplateSourceTab = "library" | "saved";
+
+const TEMPLATE_SOURCE_TABS: { id: TemplateSourceTab; label: string }[] = [
+  { id: "library", label: "Template library" },
+  { id: "saved", label: "Saved templates" },
+];
+
+/** Folders collapse to one row until "View more" is tapped. */
+const FOLDERS_COLLAPSED_COUNT = 3;
 
 const fieldClass =
   "h-10 w-full rounded-md border border-[#DDE2EE] bg-[#F7F9FC] px-3 font-manrope text-sm text-[#17173A] outline-none transition-colors placeholder:text-[#A0A0A0] focus:border-[#2F68E5] focus:bg-white";
@@ -205,6 +219,139 @@ function MiniSwitch({
     >
       <SwitchPrimitives.Thumb className="pointer-events-none block h-3 w-3 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3 data-[state=unchecked]:translate-x-0" />
     </SwitchPrimitives.Root>
+  );
+}
+
+/** "Create new" — a menu button whose two rows (HTML/AMP email) each open a
+ *  submenu of the same three editors on hover, flyout-style. Portalled to
+ *  <body> and positioned by rect, same as this file's other dropdowns —
+ *  the accordion's height-animation wrapper clips overflow, which would
+ *  otherwise crop the flyout instead of letting it float free. */
+function CreateNewMenu({ onPick }: { onPick: (starterId: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState<"html" | "amp" | null>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (
+        !wrapRef.current?.contains(e.target as Node) &&
+        !panelRef.current?.contains(e.target as Node)
+      ) {
+        setOpen(false);
+        setHovered(null);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => wrapRef.current && setRect(wrapRef.current.getBoundingClientRect());
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open]);
+
+  const pick = (starterId: string) => {
+    onPick(starterId);
+    setOpen(false);
+    setHovered(null);
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="dc-btn dc-btn-secondary"
+      >
+        <Plus className="size-4" strokeWidth={2.4} />
+        Create new
+      </button>
+      {open &&
+        rect &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{ position: "fixed", top: rect.bottom + 4, left: rect.right - 190, width: 190 }}
+            className="z-[80] rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+          >
+            {EMAIL_FORMATS.map((fmt) => (
+              <div
+                key={fmt.id}
+                className="relative"
+                onMouseEnter={() => setHovered(fmt.id)}
+                onMouseLeave={() => setHovered((h) => (h === fmt.id ? null : h))}
+              >
+                <button
+                  type="button"
+                  className={cn(
+                    "flex w-full items-center justify-between gap-2 px-3 py-2 text-left font-manrope text-sm transition-colors",
+                    hovered === fmt.id
+                      ? "bg-[#F4F8FF] text-[#2F68E5]"
+                      : "text-[#17173A] hover:bg-[#F7F9FC]"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <fmt.icon className="size-4" strokeWidth={2} />
+                    {fmt.label}
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#8A8AA3]" strokeWidth={2} />
+                </button>
+                {hovered === fmt.id && (
+                  <div className="absolute left-full top-0 z-[80] -ml-px w-[190px] rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
+                    {EDITOR_OPTIONS.map((o) => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => pick(o.id)}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left font-manrope text-sm text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+                      >
+                        <o.icon className="size-4 text-[#6F6F8D]" strokeWidth={2} />
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
+
+/** One folder under "Saved templates" — icon, name, counts, and a kebab menu
+ *  that's just a placeholder for now (no menu wired up yet). */
+function FolderCard({ folder }: { folder: TemplateFolder }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-[#DDE2EE] bg-white px-4 py-3 transition-colors hover:border-[#B9C6E4]">
+      <img src={folderIcon} alt="" className="size-5 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-manrope text-xs font-semibold text-[#17173A]">{folder.name}</p>
+        <p className="mt-0.5 font-manrope text-[11px] text-[#6F6F8D]">
+          {folder.templateCount} template{folder.templateCount === 1 ? "" : "s"}, {folder.folderCount}{" "}
+          folder{folder.folderCount === 1 ? "" : "s"}
+        </p>
+      </div>
+      <button
+        type="button"
+        aria-label="Folder options"
+        className="grid size-7 shrink-0 place-items-center rounded-md text-[#8A8AA3] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+      >
+        <MoreVertical className="size-4" strokeWidth={2} />
+      </button>
+    </div>
   );
 }
 
@@ -833,16 +980,12 @@ export default function CampaignContentStep({
   values,
   onChange,
   highlight,
-  chatOpen,
   reach = 0,
 }: {
   values: ContentValues;
   onChange: (patch: Partial<ContentValues>) => void;
   /** Field keys just written by a co-marketer apply — briefly flashed. */
   highlight?: Partial<Record<keyof ContentValues, boolean>>;
-  /** The docked co-marketer chat narrows this card, so the starter cards drop
-   *  from a single row to 2x2 to keep each one legible. */
-  chatOpen?: boolean;
   /** Audience reach — the base the variant test's "Est. profiles" is drawn from. */
   reach?: number;
 }) {
@@ -852,6 +995,8 @@ export default function CampaignContentStep({
   const [page, setPage] = useState(1);
   const [perPageOpen, setPerPageOpen] = useState(false);
   const [attachModalOpen, setAttachModalOpen] = useState(false);
+  const [sourceTab, setSourceTab] = useState<TemplateSourceTab>("saved");
+  const [foldersExpanded, setFoldersExpanded] = useState(false);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1280,92 +1425,128 @@ export default function CampaignContentStep({
 
       {/* Template picker — same panel, its own heading, exactly as sender
           details and the template list sit together in the reference. */}
-      <h2 className="mb-4 mt-10 font-manrope text-base font-bold text-[#17173A]">
-        Select a template
-      </h2>
+      <div className="mb-4 mt-10 flex items-center justify-between gap-4">
+        <h2 className="font-manrope text-base font-bold text-[#17173A]">Select a template</h2>
 
-      <div className="flex items-center justify-between gap-4 border-b border-[#E8ECF4]">
-        <div className="flex items-center gap-6">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => onChange({ tab: t.id })}
-              className={cn(
-                "relative pb-2.5 font-manrope text-sm transition-colors",
-                values.tab === t.id
-                  ? "font-bold text-[#2F68E5]"
-                  : "font-medium text-[#6F6F8D] hover:text-[#17173A]"
-              )}
-            >
-              {t.label}
-              {values.tab === t.id && (
-                <span className="absolute -bottom-px left-0 h-[3px] w-full rounded-[1.5px] bg-[#2F68E5]" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {values.tab === "my" && (
-          <div className="flex items-center gap-2 pb-2">
-            {searchOpen ? (
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8A8AA3]" />
-                <input
-                  autoFocus
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
+        <div className="flex items-center gap-2">
+          {searchOpen ? (
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8A8AA3]" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
+                onBlur={() => !query && setSearchOpen(false)}
+                placeholder="Search templates"
+                className="h-8 w-[240px] rounded-md border border-[#2F68E5] bg-white pl-9 pr-8 font-manrope text-sm text-[#17173A] outline-none placeholder:text-[#A0A0A0]"
+              />
+              {query && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    setQuery("");
+                    setSearchOpen(false);
                     setPage(1);
                   }}
-                  onBlur={() => !query && setSearchOpen(false)}
-                  placeholder="Search templates"
-                  className="h-8 w-[240px] rounded-md border border-[#2F68E5] bg-white pl-9 pr-8 font-manrope text-sm text-[#17173A] outline-none placeholder:text-[#A0A0A0]"
-                />
-                {query && (
-                  <button
-                    type="button"
-                    aria-label="Clear search"
-                    onClick={() => {
-                      setQuery("");
-                      setSearchOpen(false);
-                      setPage(1);
-                    }}
-                    className="absolute right-2 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-full text-[#8A8AA3] hover:bg-[#F0F3F9]"
-                  >
-                    <X className="size-3.5" strokeWidth={2.4} />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <button
-                type="button"
-                aria-label="Search templates"
-                onClick={() => setSearchOpen(true)}
-                className="grid size-8 place-items-center rounded-md border border-[#DDE2EE] bg-white text-[#6F6F8D] transition-colors hover:bg-[#F7F9FC] hover:text-[#17173A]"
-              >
-                <Search className="size-4" strokeWidth={2} />
-              </button>
-            )}
+                  className="absolute right-2 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded-full text-[#8A8AA3] hover:bg-[#F0F3F9]"
+                >
+                  <X className="size-3.5" strokeWidth={2.4} />
+                </button>
+              )}
+            </div>
+          ) : (
             <button
               type="button"
-              className="dc-btn dc-btn-secondary"
+              aria-label="Search templates"
+              onClick={() => setSearchOpen(true)}
+              className="grid size-8 place-items-center rounded-md border border-[#DDE2EE] bg-white text-[#6F6F8D] transition-colors hover:bg-[#F7F9FC] hover:text-[#17173A]"
             >
-              <SlidersHorizontal className="size-4" strokeWidth={2} />
-              Filters
+              <Search className="size-4" strokeWidth={2} />
             </button>
-          </div>
-        )}
+          )}
+          <button type="button" className="dc-btn dc-btn-secondary">
+            <SlidersHorizontal className="size-4" strokeWidth={2} />
+            Filters
+          </button>
+          <CreateNewMenu onPick={(starterId) => onChange({ starterId, templateId: null })} />
+        </div>
       </div>
 
-      {values.tab === "my" ? (
+      <div className="mb-6 flex items-center gap-6 border-b border-[#E8ECF4]">
+        {TEMPLATE_SOURCE_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setSourceTab(t.id)}
+            className={cn(
+              "relative pb-2.5 font-manrope text-sm transition-colors",
+              sourceTab === t.id
+                ? "font-bold text-[#2F68E5]"
+                : "font-medium text-[#6F6F8D] hover:text-[#17173A]"
+            )}
+          >
+            {t.label}
+            {sourceTab === t.id && (
+              <span className="absolute -bottom-px left-0 h-[3px] w-full rounded-[1.5px] bg-[#2F68E5]" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {sourceTab === "library" ? (
+        <div className="grid grid-cols-5 gap-4">
+          {templateLibrary.map((t) => (
+            <TemplateCard
+              key={t.id}
+              template={t}
+              selected={values.templateId === t.id}
+              onSelect={() =>
+                onChange({ templateId: values.templateId === t.id ? null : t.id })
+              }
+            />
+          ))}
+        </div>
+      ) : (
         <>
+          <div className="mb-8">
+            <h3 className="mb-4 font-manrope text-sm font-bold text-[#17173A]">Folders</h3>
+            <div className="grid grid-cols-3 gap-4">
+              {(foldersExpanded
+                ? savedTemplateFolders
+                : savedTemplateFolders.slice(0, FOLDERS_COLLAPSED_COUNT)
+              ).map((f) => (
+                <FolderCard key={f.id} folder={f} />
+              ))}
+            </div>
+            {savedTemplateFolders.length > FOLDERS_COLLAPSED_COUNT && (
+              <button
+                type="button"
+                onClick={() => setFoldersExpanded((o) => !o)}
+                className="mt-3 flex items-center gap-1.5 font-manrope text-sm font-semibold text-[#2F68E5] transition-colors hover:text-[#255ad2]"
+              >
+                {foldersExpanded ? "View less" : "View more"}
+                <ChevronDown
+                  className={cn("size-4 transition-transform", foldersExpanded && "rotate-180")}
+                  strokeWidth={2}
+                />
+              </button>
+            )}
+          </div>
+
+          <h3 className="mb-4 font-manrope text-sm font-bold text-[#17173A]">
+            Unorganized templates
+          </h3>
+
           {shown.length === 0 ? (
             <p className="py-16 text-center font-manrope text-sm text-[#6F6F8D]">
               No template matches “{query}”.
             </p>
           ) : (
-            <div className="mt-6 grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-5 gap-4">
               {shown.map((t) => (
                 <TemplateCard
                   key={t.id}
@@ -1430,52 +1611,6 @@ export default function CampaignContentStep({
             <Pager page={current} pageCount={pageCount} onPage={setPage} />
           </div>
         </>
-      ) : (
-        <div className={cn("mt-6 grid gap-4", chatOpen ? "grid-cols-2" : "grid-cols-4")}>
-          {templateStarters.map((s) => {
-            const Icon = STARTER_ICONS[s.id];
-            const on = values.starterId === s.id;
-            const ai = s.id === "ai";
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => onChange({ starterId: on ? "" : s.id })}
-                className={cn(
-                  "flex flex-col items-start gap-3 rounded-lg border bg-white p-5 text-left transition-colors",
-                  on
-                    ? ai
-                      ? "border-[#7B5CFA] bg-[#F8F6FF]"
-                      : "border-[#2F68E5] bg-[#F4F8FF]"
-                    : ai
-                      ? "border-[#DDD5FF] hover:border-[#B7A5FF] hover:bg-[#F8F6FF]"
-                      : "border-[#DDE2EE] hover:border-[#B9C6E4] hover:bg-[#F7F9FC]"
-                )}
-              >
-                <span
-                  className={cn(
-                    "grid size-10 place-items-center rounded-md",
-                    on
-                      ? ai
-                        ? "bg-[#7B5CFA] text-white"
-                        : "bg-[#2F68E5] text-white"
-                      : ai
-                        ? "bg-[#F3F0FF] text-[#7B5CFA]"
-                        : "bg-[#F0F3F9] text-[#6F6F8D]"
-                  )}
-                >
-                  <Icon className="size-5" strokeWidth={2} />
-                </span>
-                <div>
-                  <p className="font-manrope text-sm font-bold text-[#17173A]">{s.name}</p>
-                  <p className="mt-1 font-manrope text-xs leading-[18px] text-[#6F6F8D]">
-                    {s.description}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
       )}
 
       {values.variants.length > 1 && (

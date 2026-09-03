@@ -1,6 +1,6 @@
 import { goalContent } from "./CampaignAIPanel";
 import type { SetupApplyKind } from "./SetupApplyCard";
-import { nextSlot, type ScheduleValues } from "./CampaignScheduleStep";
+import { minGapMinutes, nextSlot, sliceWindows, type ScheduleValues } from "./CampaignScheduleStep";
 import { reachFor, type AudienceValues } from "./CampaignAudienceStep";
 import type { ContentValues } from "./CampaignContentStep";
 import type { SetupValues } from "./CampaignSetupStep";
@@ -110,23 +110,23 @@ export function buildFindings({ setup, audience, content, schedule }: CampaignDr
     });
   }
 
-  if (schedule.mode === "slice" && schedule.sliceGapMins < 30) {
-    out.push({
-      id: "slice-gap",
-      askLabel: "Space the batches out",
-      category: "Timing",
-      title: "Batches are spaced too tightly",
-      verdict: "NEEDS ATTENTION",
-      impact: "Cap check can be bypassed",
-      detail: `A ${schedule.sliceGapMins}-minute gap sits inside the 30-minute data sync window.`,
-      evidence: "Cap checks run on synced data — batches inside 30 minutes can double-message a profile.",
-      action: {
-        label: "Space batches 30 minutes apart",
-        kind: "sendtime",
-        schedulePatch: { sliceGapMins: 30 },
-      },
-      link: { stepId: "schedule", stepLabel: "Schedule", field: "Send in batches" },
-    });
+  if (schedule.mode === "slice") {
+    const gap = minGapMinutes(sliceWindows(schedule));
+    if (gap !== null && gap < 30) {
+      out.push({
+        id: "slice-gap",
+        askLabel: "Space the batches out",
+        category: "Timing",
+        title: "Batches are spaced too tightly",
+        verdict: "NEEDS ATTENTION",
+        impact: "Cap check can be bypassed",
+        detail: `A ${Math.round(gap)}-minute gap sits inside the 30-minute data sync window.`,
+        evidence: "Cap checks run on synced data — batches inside 30 minutes can double-message a profile.",
+        // No one-tap fix — which day or time to move depends on which two
+        // windows collide, so this one sends the user to the step itself.
+        link: { stepId: "schedule", stepLabel: "Schedule", field: "Send in batches" },
+      });
+    }
   }
 
   // — Audience ————————————————————————————————————————————
