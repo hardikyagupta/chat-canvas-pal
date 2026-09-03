@@ -16,7 +16,7 @@ import navSparkle from "/campaign-assets/ic-sparkle.gif";
 import { parseTags, type SetupValues } from "./CampaignSetupStep";
 import { reachFor, type AudienceValues } from "./CampaignAudienceStep";
 import type { ContentValues } from "./CampaignContentStep";
-import { describeSlot, type ScheduleValues } from "./CampaignScheduleStep";
+import { describeSlot, sliceSummaryLabel, type ScheduleValues } from "./CampaignScheduleStep";
 import { TemplateThumbnail } from "./TemplateCard";
 import { emailTemplates } from "./emailTemplates.data";
 import { buildFindings, groupFindings, type Finding } from "./previewFindings.data";
@@ -192,8 +192,7 @@ export default function CampaignPreview({
   const sendSummary = () => {
     if (schedule.mode === "now") return "As soon as this is published";
     if (schedule.mode === "later") return describeSlot(schedule.sendAt);
-    if (schedule.mode === "slice")
-      return `${schedule.sliceBatches} batches, ${schedule.sliceGapMins} minutes apart`;
+    if (schedule.mode === "slice") return sliceSummaryLabel(schedule, reach);
     return `Optimised per contact · ${schedule.optimizeWindow}`;
   };
 

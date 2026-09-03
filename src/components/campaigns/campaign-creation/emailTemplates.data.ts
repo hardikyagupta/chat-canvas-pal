@@ -8,6 +8,14 @@ import thumbElevatedGrooming from "/campaign-assets/template-thumbs/tpl-elevated
 import thumbPanchpushp from "/campaign-assets/template-thumbs/tpl-panchpushp.jpg";
 import thumbFragranceNotes from "/campaign-assets/template-thumbs/tpl-fragrance-notes.jpg";
 import thumbCologneLaunch from "/campaign-assets/template-thumbs/tpl-cologne-launch.jpg";
+import thumbLibFlashSale from "/campaign-assets/template-thumbs/tpl-lib-flash-sale.png";
+import thumbLibStreetwear from "/campaign-assets/template-thumbs/tpl-lib-streetwear.png";
+import thumbLibBeautyGlow from "/campaign-assets/template-thumbs/tpl-lib-beauty-glow.png";
+import thumbLibMonochrome from "/campaign-assets/template-thumbs/tpl-lib-monochrome.png";
+import thumbLibSkincare from "/campaign-assets/template-thumbs/tpl-lib-skincare.png";
+import thumbLibBirthday from "/campaign-assets/template-thumbs/tpl-lib-birthday.png";
+import thumbLibGrocery from "/campaign-assets/template-thumbs/tpl-lib-grocery.png";
+import thumbLibElectronics from "/campaign-assets/template-thumbs/tpl-lib-electronics.png";
 
 /**
  * Saved email templates for the Content step's picker.
@@ -55,26 +63,40 @@ const RECENT: EmailTemplate[] = [
 
 export const emailTemplates: EmailTemplate[] = RECENT;
 
-/** Blank starting points offered under the "Create new" tab. */
-export const templateStarters = [
-  {
-    id: "ai",
-    name: "Create with AI",
-    description: "Use co-marketer to create interactive templates.",
-  },
-  {
-    id: "drag-drop",
-    name: "Drag & drop editor",
-    description: "Build the email visually from blocks — no code needed.",
-  },
-  {
-    id: "rich-text",
-    name: "Rich text",
-    description: "A plain, text-first email that renders anywhere.",
-  },
-  {
-    id: "html",
-    name: "Import HTML",
-    description: "Paste or upload HTML you've already built.",
-  },
-] as const;
+/** Netcore-provided starting points — shown under the "Template library" tab,
+ *  as opposed to the account's own "Saved templates". Real thumbnails, same
+ *  as the account's recent templates below. */
+export const templateLibrary: EmailTemplate[] = [
+  { id: 90001, name: "Flash Sale — 40% Off", preview: "none", image: thumbLibFlashSale },
+  { id: 90002, name: "We Haven't Seen You Lately", preview: "none", image: thumbLibStreetwear },
+  { id: 90003, name: "Glow Up Beauty Drop", preview: "none", image: thumbLibBeautyGlow },
+  { id: 90004, name: "Be You — Monochrome Edit", preview: "none", image: thumbLibMonochrome },
+  { id: 90005, name: "Skincare Ritual Launch", preview: "none", image: thumbLibSkincare },
+  { id: 90006, name: "Birthday Surprise Offer", preview: "none", image: thumbLibBirthday },
+  { id: 90007, name: "Fresh From The Garden", preview: "none", image: thumbLibGrocery },
+  { id: 90008, name: "New Year Audio Drop", preview: "none", image: thumbLibElectronics },
+];
+
+export interface TemplateFolder {
+  id: string;
+  name: string;
+  templateCount: number;
+  folderCount: number;
+}
+
+/** Folders under "Saved templates" — organizing the account's own templates.
+ *  Everything not filed into one of these shows under "Unorganized templates". */
+export const savedTemplateFolders: TemplateFolder[] = [
+  { id: "newsletters", name: "Newsletters", templateCount: 6, folderCount: 0 },
+  { id: "promotions", name: "Promotions", templateCount: 9, folderCount: 0 },
+  { id: "abandoned-cart", name: "Abandoned cart", templateCount: 3, folderCount: 0 },
+  { id: "welcome-series", name: "Welcome series", templateCount: 4, folderCount: 0 },
+  { id: "product-launches", name: "Product launches", templateCount: 5, folderCount: 0 },
+  { id: "seasonal-sales", name: "Seasonal sales", templateCount: 7, folderCount: 0 },
+  { id: "loyalty-program", name: "Loyalty program", templateCount: 2, folderCount: 0 },
+  { id: "re-engagement", name: "Re-engagement", templateCount: 4, folderCount: 0 },
+  { id: "order-updates", name: "Order updates", templateCount: 3, folderCount: 0 },
+  { id: "event-invites", name: "Event invites", templateCount: 2, folderCount: 0 },
+  { id: "customer-feedback", name: "Customer feedback", templateCount: 1, folderCount: 0 },
+  { id: "vip-offers", name: "VIP offers", templateCount: 5, folderCount: 0 },
+];

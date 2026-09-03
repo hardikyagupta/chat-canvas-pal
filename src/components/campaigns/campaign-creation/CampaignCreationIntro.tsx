@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import CampaignNameField from "./CampaignNameField";
 
 /** Rotates through while the box is empty — typed out, held, then deleted. */
 const ROTATING_PROMPTS = [
@@ -113,9 +114,13 @@ function useTypewriter(prompts: string[], paused: boolean) {
  * the same wizard for now; there's no goal-driven build yet to hand it to.
  */
 export default function CampaignCreationIntro({
+  campaignName,
+  onRenameCampaign,
   onContinue,
   onClose,
 }: {
+  campaignName: string;
+  onRenameCampaign?: (name: string) => void;
   onContinue: () => void;
   onClose: () => void;
 }) {
@@ -134,9 +139,7 @@ export default function CampaignCreationIntro({
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-[#E7EDFF]">
             <Mail className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />
           </span>
-          <span className="font-manrope text-base font-bold leading-[22px] text-[#17173A]">
-            New email campaign
-          </span>
+          <CampaignNameField campaignName={campaignName} onRenameCampaign={onRenameCampaign} />
         </div>
         <button
           type="button"
@@ -165,10 +168,8 @@ export default function CampaignCreationIntro({
             <h1 className="font-manrope text-[26px] font-bold leading-tight text-[#17173A]">
               Create your email campaign
             </h1>
-            <p className="mt-2 font-manrope text-sm leading-6 text-[#6F6F8D]">
-              Tell me what you want to achieve,
-              <br />
-              and I'll help you build it.
+            <p className="mt-2 whitespace-nowrap font-manrope text-sm leading-6 text-[#6F6F8D]">
+              Tell me what you want to achieve, and I'll help you build it.
             </p>
           </div>
 

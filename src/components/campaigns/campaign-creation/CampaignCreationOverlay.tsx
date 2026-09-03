@@ -52,6 +52,7 @@ import CampaignScheduleStep, {
   EMPTY_SCHEDULE,
   defaultSendAt,
   describeSlot,
+  sliceSummaryLabel,
   type ScheduleValues,
 } from "./CampaignScheduleStep";
 import { emailTemplates } from "./emailTemplates.data";
@@ -95,7 +96,7 @@ const CHANNEL_ICONS: Record<string, LucideIcon> = {
 const STEPS: Step[] = [
   { id: "audience", label: "Send to", icon: Users },
   { id: "content", label: "Message", icon: FileText },
-  { id: "schedule", label: "Schedule & tracking", icon: Calendar },
+  { id: "schedule", label: "Schedule", icon: Calendar },
 ];
 
 /**
@@ -163,7 +164,7 @@ const STEP_CHIPS: Record<string, StarterChip[]> = {
 const STEP_DESCRIPTIONS: Record<string, string> = {
   audience: "Select the target audience.",
   content: "Design the message which would go to your selected contacts.",
-  schedule: "Decide when this send leaves, and what you want to track.",
+  schedule: "Decide when this do you want to send this campaign.",
 };
 
 /** Draft name every new campaign starts on: Untitled_YYYYMMDDHHMMSS, local time. */
@@ -625,7 +626,7 @@ export default function CampaignCreationOverlay({
             : schedule.mode === "later"
               ? describeSlot(schedule.sendAt)
               : schedule.mode === "slice"
-                ? `${schedule.sliceBatches} batches, ${schedule.sliceGapMins} minutes apart`
+                ? sliceSummaryLabel(schedule, reachFor(audience))
                 : `Optimised per contact · ${schedule.optimizeWindow}`;
         const goalBits = [
           setup.gaTracking ? "GA tracking on" : null,
@@ -674,7 +675,6 @@ export default function CampaignCreationOverlay({
       if (sp?.mode === "optimize") return "Optimised per contact, inside the next 24 hours";
       if (sp?.mode === "later" && sp.sendAt) return describeSlot(sp.sendAt);
       if (sp?.skipFrequencyCap === false) return "Respect the account frequency cap";
-      if (sp?.sliceGapMins) return `${sp.sliceGapMins} minutes between batches`;
       if (cp?.subject) return cp.subject;
       if (cp?.preHeader) return cp.preHeader;
       if (cp?.templateId) {
@@ -810,6 +810,8 @@ export default function CampaignCreationOverlay({
     >
       {channel === "Email" && introOpen ? (
         <CampaignCreationIntro
+          campaignName={campaignName}
+          onRenameCampaign={setCampaignName}
           onContinue={() => {
             setIntroOpen(false);
             // Co-marketer stays open by default going into the wizard —
@@ -845,6 +847,7 @@ export default function CampaignCreationOverlay({
         icon={Icon}
         onRenameCampaign={setCampaignName}
         onOpenSettings={() => setSettingsOpen(true)}
+        onLaunch={() => setPreviewOpen(true)}
         onAskCoMarketer={openFreshChat}
         // Only Email drops the verb — every other channel keeps "Ask co-marketer".
         askCoMarketerLabel={channel === "Email" ? "Co-marketer" : "Ask co-marketer"}
@@ -864,8 +867,20 @@ export default function CampaignCreationOverlay({
       />
       */}
 
-      <div className={cn("flex min-h-0 flex-1 gap-5 pl-[20rem]", chatOpen ? "pr-5" : "pr-[20rem]")}>
-        <div ref={canvasRef} className="scroll-slim min-w-0 flex-1 overflow-y-auto py-6">
+      {/* Opening the docked chat shifts this row left rather than shrinking
+          the accordion cards inside it — left padding drops by exactly the
+          chat column's own width (474px) + the row gap, so the canvas keeps
+          the same width open or closed. */}
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 gap-5",
+          chatOpen ? "pl-[7.875rem] pr-5" : "pl-[20rem] pr-[20rem]"
+        )}
+      >
+        <div
+          ref={canvasRef}
+          className="scroll-slim mx-auto min-w-0 max-w-[1044px] flex-1 overflow-y-auto py-6"
+        >
           <div className="cc-accordion ov2-accordion">
             {STEPS.map((step, index) => {
               const StepIcon = step.icon;
@@ -946,7 +961,6 @@ export default function CampaignCreationOverlay({
                             values={content}
                             highlight={contentHighlight}
                             onChange={(patch) => setContent((c) => ({ ...c, ...patch }))}
-                            chatOpen={chatOpen}
                             reach={reachFor(audience)}
                           />
                         )}
@@ -955,6 +969,7 @@ export default function CampaignCreationOverlay({
                             <CampaignScheduleStep
                               values={schedule}
                               onChange={(patch) => setSchedule((s) => ({ ...s, ...patch }))}
+                              audienceCount={reachFor(audience)}
                             />
                             <div className="mt-8">
                               <CampaignSetupStep
@@ -1039,8 +1054,9 @@ export default function CampaignCreationOverlay({
 
       <CampaignSettingsDrawer
         open={settingsOpen}
-        tags={setup.tags}
-        onChangeTags={(tags) => setSetup((s) => ({ ...s, tags }))}
+        values={setup}
+        highlight={highlight}
+        onChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
         onClose={() => setSettingsOpen(false)}
       />
 

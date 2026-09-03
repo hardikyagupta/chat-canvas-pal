@@ -46,7 +46,7 @@ const ALL_CONTACTS_REACH = 412_640;
 /** The three ways "Filter by" can be narrowed further. */
 const FILTER_MODES: { id: AudienceMode; label: string }[] = [
   { id: "segments", label: "Segments/Lists" },
-  { id: "adhoc", label: "Ad-hoc segment" },
+  { id: "adhoc", label: "Conditions" },
   { id: "table", label: "User data table" },
 ];
 
@@ -445,7 +445,7 @@ export default function CampaignAudienceStep({
               className="mt-3 inline-flex items-center gap-1.5 font-manrope text-[13px] font-semibold text-[#2F68E5] hover:underline"
             >
               <Plus className="size-4" strokeWidth={2.4} />
-              Add condition
+              Add
             </button>
           </div>
         )}

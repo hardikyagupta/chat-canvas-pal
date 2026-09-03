@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
 import { Settings, X, type LucideIcon } from "lucide-react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import CampaignNameField from "./CampaignNameField";
 import sparkle from "/campaign-assets/ic-sparkle.gif";
 
 /**
  * Top bar of the campaign creation overlay — channel icon + campaign name on
- * the left, ASK CO-MARKETER / SAVE / NEXT STEP / close on the right. Structure
+ * the left, settings / Launch / Co-marketer / close on the right. Structure
  * follows the shared campaign-creation reference; styling is this app's
  * language (Manrope, #2F68E5 primary, #DDE2EE lines).
  */
@@ -16,6 +16,7 @@ export default function CampaignCreationNavbar({
   icon: Icon,
   onRenameCampaign,
   onOpenSettings,
+  onLaunch,
   onAskCoMarketer,
   askCoMarketerLabel = "Ask co-marketer",
   onClose,
@@ -27,6 +28,7 @@ export default function CampaignCreationNavbar({
   icon: LucideIcon;
   onRenameCampaign?: (name: string) => void;
   onOpenSettings?: () => void;
+  onLaunch?: () => void;
   onAskCoMarketer?: () => void;
   /** Email reads as just "Co-marketer" here; every other channel keeps the verb. */
   askCoMarketerLabel?: string;
@@ -36,27 +38,6 @@ export default function CampaignCreationNavbar({
   activeStepId?: string | null;
   onSelectStep?: (id: string) => void;
 }) {
-  // Inline rename, same interaction as the co-marketer chat header: click the
-  // name to edit, Enter/blur commits, Escape reverts, blank keeps the old name.
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [renameValue, setRenameValue] = useState("");
-  const renameInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isRenaming) renameInputRef.current?.select();
-  }, [isRenaming]);
-
-  const startRename = () => {
-    setRenameValue(campaignName);
-    setIsRenaming(true);
-  };
-  const commitRename = () => {
-    const next = renameValue.trim();
-    if (next && next !== campaignName) onRenameCampaign?.(next);
-    setIsRenaming(false);
-  };
-  const cancelRename = () => setIsRenaming(false);
-
   const activeLabel = steps?.find((s) => s.id === activeStepId)?.label;
 
   return (
@@ -109,32 +90,7 @@ export default function CampaignCreationNavbar({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        {isRenaming ? (
-          <div className="flex min-w-0 items-center rounded-lg bg-white px-2.5 py-1 ring-2 ring-[#2F68E5]">
-            <input
-              ref={renameInputRef}
-              autoFocus
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commitRename();
-                else if (e.key === "Escape") cancelRename();
-              }}
-              onBlur={commitRename}
-              aria-label="Campaign name"
-              className="w-[320px] max-w-full min-w-0 border-0 bg-transparent p-0 font-manrope text-base font-bold leading-[22px] text-[#17173A] focus:outline-none"
-            />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={startRename}
-            aria-label="Rename campaign"
-            className="max-w-full truncate rounded-md px-2 py-1 font-manrope text-base font-bold leading-[22px] text-[#17173A] transition-colors hover:bg-[#F0F3F9]"
-          >
-            {campaignName}
-          </button>
-        )}
+        <CampaignNameField campaignName={campaignName} onRenameCampaign={onRenameCampaign} />
       </div>
 
       <div className="ml-auto flex items-center gap-3">
@@ -161,6 +117,9 @@ export default function CampaignCreationNavbar({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        <button type="button" onClick={onLaunch} className="dc-btn dc-btn-primary">
+          Launch
+        </button>
         {/* Ask co-marketer — the top-nav CTA verbatim: rotating conic-gradient
             ring (.snake-border), sparkle GIF, h-8 to match Save/Next step. */}
         <button

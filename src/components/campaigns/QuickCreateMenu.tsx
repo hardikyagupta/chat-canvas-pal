@@ -38,6 +38,8 @@ interface QuickCreateItem {
   inset: string;
   /** Items that open a further level show the caret on the right. */
   hasSubmenu?: boolean;
+  /** Disabled items are shown but not selectable. */
+  disabled?: boolean;
 }
 
 interface QuickCreateSection {
@@ -53,11 +55,17 @@ const SECTIONS: QuickCreateSection[] = [
   {
     heading: "Create campaigns",
     items: [
-      { label: "Email", icon: iconEmail, inset: "9.74% 5.36%", hasSubmenu: true },
-      { label: "SMS", icon: iconSms, inset: "5.57% 5.36% 5.73% 5.87%" },
-      { label: "App Push Notification", icon: iconAppPush, inset: "6.47% 7.14% 5.95% 5.36%", hasSubmenu: true },
-      { label: "Web Push Notification", icon: iconWebPush, inset: "6.47% 6.52% 4.93% 5.53%" },
-      { label: "Whatsapp", icon: iconWhatsapp, inset: "5.21%" },
+      { label: "Email", icon: iconEmail, inset: "9.74% 5.36%" },
+      { label: "SMS", icon: iconSms, inset: "5.57% 5.36% 5.73% 5.87%", disabled: true },
+      {
+        label: "App Push Notification",
+        icon: iconAppPush,
+        inset: "6.47% 7.14% 5.95% 5.36%",
+        hasSubmenu: true,
+        disabled: true,
+      },
+      { label: "Web Push Notification", icon: iconWebPush, inset: "6.47% 6.52% 4.93% 5.53%", disabled: true },
+      { label: "Whatsapp", icon: iconWhatsapp, inset: "5.21%", disabled: true },
     ],
   },
   {
@@ -199,24 +207,44 @@ export default function QuickCreateMenu({ onSelect }: { onSelect?: (label: strin
                   {section.heading}
                 </p>
               )}
-              {section.items.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => onSelect?.(item.label)}
-                  className="flex w-full items-center gap-[8px] rounded-[4px] p-[8px] text-left transition-colors hover:bg-[#F7F9FC]"
-                >
-                  <ItemIcon src={item.icon} inset={item.inset} />
-                  <span className="flex-1 text-[14px] font-semibold leading-[18px] text-[#17173A]">
-                    {item.label}
-                  </span>
-                  {item.hasSubmenu && (
-                    <span className="grid size-[16px] shrink-0 place-items-center">
-                      <img src={iconChevron} alt="" className="block h-[5px] w-[8px] -rotate-90" />
+              {section.items.map((item) => {
+                const row = (
+                  <>
+                    <ItemIcon src={item.icon} inset={item.inset} />
+                    <span className="flex-1 text-[14px] font-semibold leading-[18px] text-[#17173A]">
+                      {item.label}
                     </span>
-                  )}
-                </button>
-              ))}
+                    {item.hasSubmenu && (
+                      <span className="grid size-[16px] shrink-0 place-items-center">
+                        <img src={iconChevron} alt="" className="block h-[5px] w-[8px] -rotate-90" />
+                      </span>
+                    )}
+                  </>
+                );
+
+                if (item.disabled) {
+                  return (
+                    <div
+                      key={item.label}
+                      aria-disabled="true"
+                      className="flex w-full cursor-default items-center gap-[8px] rounded-[4px] p-[8px] text-left"
+                    >
+                      {row}
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => onSelect?.(item.label)}
+                    className="flex w-full items-center gap-[8px] rounded-[4px] p-[8px] text-left transition-colors hover:bg-[#F7F9FC]"
+                  >
+                    {row}
+                  </button>
+                );
+              })}
             </div>
           ))
         )}
