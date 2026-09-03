@@ -184,9 +184,11 @@ export default function CampaignPreview({
         ? audience.segments.map((s) => s.name).join(", ")
         : "No segment selected";
     if (audience.mode === "table") return audience.table || "No table selected";
-    return audience.conditions
-      .map((c) => `${c.attribute} ${c.operator} ${c.value}`)
-      .join(" AND ");
+    return (
+      audience.conditions
+        .map((c) => `${c.attribute} ${c.operator} ${c.value}`.trim())
+        .join(" AND ") || "No conditions added"
+    );
   };
 
   const sendSummary = () => {

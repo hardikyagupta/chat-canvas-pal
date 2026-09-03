@@ -77,6 +77,28 @@
   100% { box-shadow: 0 0 0 0 rgba(47, 104, 229, 0); }
 }
 
+/* What the co-marketer just plotted — a soft ring around that group only,
+   drawn on a pseudo-element so nothing in the form shifts, and eased in and
+   held before it fades rather than pulsing on and off. */
+.cmk-plot-flash {
+  position: relative;
+}
+.cmk-plot-flash::after {
+  content: "";
+  position: absolute;
+  inset: -10px -12px;
+  border-radius: 10px;
+  border: 1px solid rgba(47, 104, 229, 0.45);
+  pointer-events: none;
+  animation: cmk-plot-ring 2200ms ease-in-out both;
+}
+@keyframes cmk-plot-ring {
+  0%   { opacity: 0; }
+  18%  { opacity: 1; }
+  62%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ---- One-page accordion ----
    The cards reuse the objective v2 styling (.ov2-*), whose rules reference
    tokens scoped to that flow's root, so they're re-declared here. */
@@ -169,4 +191,5 @@
   }
   .cmk-skel-pulse { animation: none !important; }
   .cmk-reveal, .cmk-field-flash { animation: none !important; }
+  .cmk-plot-flash::after { animation: none !important; opacity: 0; }
 }

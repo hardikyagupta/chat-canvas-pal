@@ -302,6 +302,16 @@
   @apply bg-border/70 rounded hover:bg-border;
 }
 
+/* Fully invisible scrollbar, never revealed on hover — the scrolling itself
+ * still works, there's just nothing drawn for it (the wizard's own canvas,
+ * where the visible scroller now belongs to the template preview instead). */
+.scroll-hidden {
+  scrollbar-width: none; /* Firefox */
+}
+.scroll-hidden::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Edge */
+}
+
 /* Thinking text shimmer - gradient moves across the text */
 .thinking-shimmer-gradient {
   background: linear-gradient(

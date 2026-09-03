@@ -4,6 +4,7 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  Archive,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -12,15 +13,21 @@ import {
   ChevronsRight,
   Code2,
   Copy,
+  FolderInput,
   Info,
   LayoutGrid,
   Mail,
+  Monitor,
   MoreVertical,
   Paperclip,
+  Pencil,
   Plus,
+  Replace,
   RotateCcw,
   Search,
+  Send,
   SlidersHorizontal,
+  Smartphone,
   Sparkles,
   ThumbsDown,
   ThumbsUp,
@@ -34,12 +41,14 @@ import {
 import { cn } from "@/lib/utils";
 import sparkle from "/campaign-assets/ic-sparkle-ai.gif";
 import folderIcon from "/campaign-assets/ic-template-folder.svg";
+import { ActionMenu, ActionMenuContent, ActionMenuTrigger } from "@/components/ui/action-menu";
 import StepCard from "./StepCard";
-import TemplateCard from "./TemplateCard";
+import TemplateCard, { CardMenuItem, TemplateThumbnail } from "./TemplateCard";
 import {
   emailTemplates,
   savedTemplateFolders,
   templateLibrary,
+  type EmailTemplate,
   type TemplateFolder,
 } from "./emailTemplates.data";
 
@@ -332,7 +341,7 @@ function CreateNewMenu({ onPick }: { onPick: (starterId: string) => void }) {
 }
 
 /** One folder under "Saved templates" — icon, name, counts, and a kebab menu
- *  that's just a placeholder for now (no menu wired up yet). */
+ *  offering the two things you can do to a folder itself (not what's in it). */
 function FolderCard({ folder }: { folder: TemplateFolder }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-[#DDE2EE] bg-white px-4 py-3 transition-colors hover:border-[#B9C6E4]">
@@ -344,13 +353,127 @@ function FolderCard({ folder }: { folder: TemplateFolder }) {
           folder{folder.folderCount === 1 ? "" : "s"}
         </p>
       </div>
-      <button
-        type="button"
-        aria-label="Folder options"
-        className="grid size-7 shrink-0 place-items-center rounded-md text-[#8A8AA3] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
-      >
-        <MoreVertical className="size-4" strokeWidth={2} />
-      </button>
+      <ActionMenu>
+        <ActionMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Actions for ${folder.name}`}
+            className="grid size-7 shrink-0 place-items-center rounded-md text-[#8A8AA3] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+          >
+            <MoreVertical className="size-4" strokeWidth={2} />
+          </button>
+        </ActionMenuTrigger>
+        <ActionMenuContent
+          align="end"
+          side="bottom"
+          sideOffset={4}
+          className="z-[120] w-[148px] gap-0 overflow-hidden rounded-lg border-[#DDE2EE] p-0 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+        >
+          <CardMenuItem icon={FolderInput} onSelect={() => {}}>
+            Move
+          </CardMenuItem>
+          <CardMenuItem icon={Archive} onSelect={() => {}}>
+            Archive
+          </CardMenuItem>
+        </ActionMenuContent>
+      </ActionMenu>
+    </div>
+  );
+}
+
+/** Replaces the whole "Select a template" picker once one's been picked —
+ *  a laptop/mobile preview of the chosen template, plus the three things
+ *  you can do with it from here. */
+function TemplatePreviewPanel({
+  template,
+  device,
+  onDeviceChange,
+  onChangeTemplate,
+}: {
+  template: EmailTemplate | null;
+  device: "desktop" | "mobile";
+  onDeviceChange: (device: "desktop" | "mobile") => void;
+  onChangeTemplate: () => void;
+}) {
+  return (
+    <div className="mt-10">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-1 rounded-md border border-[#DDE2EE] bg-white p-1">
+          <button
+            type="button"
+            aria-label="Desktop preview"
+            aria-pressed={device === "desktop"}
+            onClick={() => onDeviceChange("desktop")}
+            className={cn(
+              "grid size-8 place-items-center rounded-md transition-colors",
+              device === "desktop"
+                ? "bg-[#F0F3F9] text-[#17173A]"
+                : "text-[#8A8AA3] hover:text-[#17173A]"
+            )}
+          >
+            <Monitor className="size-4" strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            aria-label="Mobile preview"
+            aria-pressed={device === "mobile"}
+            onClick={() => onDeviceChange("mobile")}
+            className={cn(
+              "grid size-8 place-items-center rounded-md transition-colors",
+              device === "mobile"
+                ? "bg-[#F0F3F9] text-[#17173A]"
+                : "text-[#8A8AA3] hover:text-[#17173A]"
+            )}
+          >
+            <Smartphone className="size-4" strokeWidth={2} />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button type="button" className="dc-btn dc-btn-secondary">
+            <Pencil className="size-4" strokeWidth={2} />
+            Edit
+          </button>
+          <button type="button" className="dc-btn dc-btn-secondary">
+            <Send className="size-4" strokeWidth={2} />
+            Send a test email
+          </button>
+          <button type="button" onClick={onChangeTemplate} className="dc-btn dc-btn-secondary">
+            <Replace className="size-4" strokeWidth={2} />
+            Change template
+          </button>
+        </div>
+      </div>
+
+      <div className="flex justify-center rounded-xl border border-[#DDE2EE] bg-[#F7F9FC] p-8">
+        <div
+          className={cn(
+            "overflow-hidden rounded-lg border border-[#DDE2EE] bg-white shadow-[0_8px_24px_rgba(23,23,58,0.08)] transition-all duration-300 ease-in-out",
+            device === "desktop" ? "w-[900px]" : "w-[380px]"
+          )}
+        >
+          <div className="h-9 border-b border-[#EEF1F7] bg-[#F7F9FC]" />
+          {/* The frame is a fixed viewport, not the template's own height — this
+              scrollbar (unlike the wizard canvas behind it) stays visible, so
+              it's clear there's more of the template to see below the fold. */}
+          <div
+            className={cn(
+              "overflow-y-auto bg-white transition-all duration-300 ease-in-out",
+              device === "desktop" ? "h-[560px]" : "h-[640px]"
+            )}
+          >
+            {!template ? (
+              <div className="grid h-full place-items-center font-manrope text-sm text-[#6F6F8D]">
+                Template not found.
+              </div>
+            ) : template.image ? (
+              <img src={template.image} alt="" className="block h-auto w-full" />
+            ) : (
+              <TemplateThumbnail kind={template.preview} />
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -997,6 +1120,7 @@ export default function CampaignContentStep({
   const [attachModalOpen, setAttachModalOpen] = useState(false);
   const [sourceTab, setSourceTab] = useState<TemplateSourceTab>("saved");
   const [foldersExpanded, setFoldersExpanded] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1010,6 +1134,8 @@ export default function CampaignContentStep({
   const current = Math.min(page, pageCount);
   const shown = matches.slice((current - 1) * perPage, current * perPage);
   const extrasOpen = values.replyEnabled || values.copyEnabled || values.attachmentsEnabled;
+  const selectedTemplate =
+    [...emailTemplates, ...templateLibrary].find((t) => t.id === values.templateId) ?? null;
 
   const nextUnusedLetter = (variants: string[]) => {
     for (let i = 0; i < MAX_VARIANTS; i++) {
@@ -1423,6 +1549,15 @@ export default function CampaignContentStep({
         </>
       )}
 
+      {values.templateId !== null ? (
+        <TemplatePreviewPanel
+          template={selectedTemplate}
+          device={previewDevice}
+          onDeviceChange={setPreviewDevice}
+          onChangeTemplate={() => onChange({ templateId: null })}
+        />
+      ) : (
+        <>
       {/* Template picker — same panel, its own heading, exactly as sender
           details and the template list sit together in the reference. */}
       <div className="mb-4 mt-10 flex items-center justify-between gap-4">
@@ -1610,6 +1745,8 @@ export default function CampaignContentStep({
 
             <Pager page={current} pageCount={pageCount} onPage={setPage} />
           </div>
+        </>
+      )}
         </>
       )}
 

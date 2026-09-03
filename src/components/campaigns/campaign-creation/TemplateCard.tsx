@@ -1,5 +1,11 @@
-import { Check } from "lucide-react";
+import { Check, MoreVertical, Pencil, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  ActionMenu,
+  ActionMenuContent,
+  ActionMenuTrigger,
+} from "@/components/ui/action-menu";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import type { EmailTemplate, TemplatePreview } from "./emailTemplates.data";
 
 /**
@@ -198,6 +204,35 @@ export function TemplateThumbnail({ kind }: { kind: TemplatePreview }) {
   return <EmptyFrame className="h-full" />;
 }
 
+/** One row in a card kebab — icon on the right, a blue rail on hover. Grey by
+ *  default; hovering darkens the label only, never the icon. The menu that
+ *  hosts this needs its own `overflow-hidden` so the row's edge-to-edge
+ *  highlight follows the panel's rounded corners instead of squaring off
+ *  past them. */
+export function CardMenuItem({
+  icon: Icon,
+  children,
+  onSelect,
+}: {
+  icon: typeof Pencil;
+  children: string;
+  onSelect: () => void;
+}) {
+  return (
+    <DropdownMenuPrimitive.Item
+      onSelect={onSelect}
+      className={cn(
+        "relative flex h-9 cursor-pointer items-center justify-between gap-8 pl-4 pr-3 font-manrope text-[13px] font-medium text-[#6F6F8D] outline-none transition-colors",
+        "data-[highlighted]:bg-[#F4F8FF] data-[highlighted]:text-[#17173A]",
+        "data-[highlighted]:before:absolute data-[highlighted]:before:inset-y-0 data-[highlighted]:before:left-0 data-[highlighted]:before:w-[3px] data-[highlighted]:before:bg-[#2F68E5]"
+      )}
+    >
+      {children}
+      <Icon className="size-4 shrink-0 text-[#8A8AA3]" strokeWidth={1.75} />
+    </DropdownMenuPrimitive.Item>
+  );
+}
+
 export default function TemplateCard({
   template,
   selected,
@@ -208,10 +243,7 @@ export default function TemplateCard({
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
+    <div
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-lg border bg-white text-left transition-all",
         selected
@@ -231,18 +263,56 @@ export default function TemplateCard({
         )}
       </div>
 
+      {template.inUse && (
+        <span className="pointer-events-none absolute right-2 top-2 rounded-[4px] border-[1.5px] border-[#4CC08C] bg-white/95 px-1.5 py-[3px] font-manrope text-[9px] font-extrabold uppercase leading-none tracking-[0.06em] text-[#4CC08C]">
+          In use
+        </span>
+      )}
+
+      {/* Moves aside on a template that's already badged, so the two don't stack. */}
       {selected && (
-        <span className="absolute right-2 top-2 grid size-5 place-items-center rounded-full bg-[#2F68E5] text-white shadow-sm">
+        <span
+          className={cn(
+            "pointer-events-none absolute top-2 grid size-5 place-items-center rounded-full bg-[#2F68E5] text-white shadow-sm",
+            template.inUse ? "left-2" : "right-2"
+          )}
+        >
           <Check className="size-3" strokeWidth={3} />
         </span>
       )}
 
-      <div className="px-3 py-2.5">
-        <p className="truncate font-manrope text-[13px] font-semibold text-[#17173A]">
-          {template.name}
-        </p>
-        <p className="mt-0.5 font-manrope text-[11px] text-[#6F6F8D]">ID: {template.id}</p>
+      <div className="flex items-center gap-1 px-2 py-2.5 pl-3">
+        <div className="min-w-0 flex-1 text-left">
+          <p className="truncate font-manrope text-[13px] font-semibold text-[#17173A]">
+            {template.name}
+          </p>
+          <p className="mt-0.5 font-manrope text-[11px] text-[#6F6F8D]">ID: {template.id}</p>
+        </div>
+        <ActionMenu>
+          <ActionMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={`Actions for ${template.name}`}
+              className="grid size-7 shrink-0 place-items-center rounded-md text-[#8A8AA3] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+            >
+              <MoreVertical className="size-4" strokeWidth={2} />
+            </button>
+          </ActionMenuTrigger>
+          <ActionMenuContent
+            align="end"
+            side="bottom"
+            sideOffset={4}
+            className="z-[120] w-[148px] gap-0 overflow-hidden rounded-lg border-[#DDE2EE] p-0 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+          >
+            <CardMenuItem icon={Pencil} onSelect={() => {}}>
+              Edit
+            </CardMenuItem>
+            <CardMenuItem icon={Send} onSelect={onSelect}>
+              Use
+            </CardMenuItem>
+          </ActionMenuContent>
+        </ActionMenu>
       </div>
-    </button>
+    </div>
   );
 }

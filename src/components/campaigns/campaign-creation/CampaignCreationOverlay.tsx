@@ -44,6 +44,7 @@ import CampaignAudienceStep, {
   type AudienceValues,
 } from "./CampaignAudienceStep";
 import { cohortsForGoal, type AudienceCohort } from "./audienceCohorts.data";
+import { segmentConditionsFor } from "./segmentConditions";
 import CampaignContentStep, {
   EMPTY_CONTENT,
   type ContentValues,
@@ -81,6 +82,9 @@ import "@/components/decisioning/objective-v2/objective-flow-v2.css";
 
 /** How long the slide runs; must match the duration class below. */
 const SLIDE_MS = 380;
+
+/** Ring around freshly-plotted audience fields; matches .cmk-plot-flash. */
+const AUDIENCE_FLASH_MS = 2200;
 
 const CHANNEL_ICONS: Record<string, LucideIcon> = {
   Email: Mail,
@@ -457,7 +461,7 @@ export default function CampaignCreationOverlay({
       cohortId: cohort.id,
     }));
     setAudienceFlash(true);
-    window.setTimeout(() => setAudienceFlash(false), 1200);
+    window.setTimeout(() => setAudienceFlash(false), AUDIENCE_FLASH_MS);
   };
 
   /** Segment saved on the canvas — plot it straight onto the audience form. */
@@ -469,7 +473,7 @@ export default function CampaignCreationOverlay({
       segments: [{ id: `seg-${Date.now()}`, name: saved.name, reach, ai: saved.aiGenerated }],
     }));
     setAudienceFlash(true);
-    window.setTimeout(() => setAudienceFlash(false), 1200);
+    window.setTimeout(() => setAudienceFlash(false), AUDIENCE_FLASH_MS);
   };
 
   /**
@@ -610,7 +614,9 @@ export default function CampaignCreationOverlay({
             ? "All contacts"
             : audience.mode === "table"
               ? audience.table || "No table selected"
-              : `${audience.conditions.length} condition${audience.conditions.length === 1 ? "" : "s"}`;
+              : audience.conditions.length === 0
+                ? "No conditions added"
+                : `${audience.conditions.length} condition${audience.conditions.length === 1 ? "" : "s"}`;
         return `${who} · ${reachable}`;
       }
       case "content": {
@@ -720,30 +726,22 @@ export default function CampaignCreationOverlay({
         initialMessage={chatMessage}
         starterChipSet={railStepId === "audience" ? audienceChips : STEP_CHIPS[railStepId]}
         initialTopic={chatTopic ?? undefined}
-        // A segment the agent built — plot it onto the audience form rather
-        // than leaving the wizard for the segment canvas.
+        // A segment the agent built — its rules land on the Conditions tab as
+        // editable rows, rather than as a read-only segment the user can't
+        // adjust from inside the wizard.
+        artifactActionLabel="Use segment conditions"
         onReviewArtifact={(card) => {
+          const conditions = segmentConditionsFor(card.title, card.description);
+          if (conditions.length === 0) return;
           const reach = Number(String(card.stats?.[0]?.label ?? "").replace(/[^0-9]/g, "")) || 0;
           setAudience((a) => ({
             ...a,
-            mode: "segments",
-            segments: [
-              {
-                id: `seg-${Date.now()}`,
-                name: card.title,
-                reach,
-                ai: true,
-                rationale: {
-                  status: "Draft",
-                  members: reach,
-                  conditions: card.conditions,
-                  why: card.description,
-                },
-              },
-            ],
+            mode: "adhoc",
+            conditions,
+            conditionsReach: reach || undefined,
           }));
           setAudienceFlash(true);
-          window.setTimeout(() => setAudienceFlash(false), 1200);
+          window.setTimeout(() => setAudienceFlash(false), AUDIENCE_FLASH_MS);
         }}
         followUpTopic={followUpTopic}
         followUpSeq={followUpSeq}
@@ -879,7 +877,7 @@ export default function CampaignCreationOverlay({
       >
         <div
           ref={canvasRef}
-          className="scroll-slim mx-auto min-w-0 max-w-[1044px] flex-1 overflow-y-auto py-6"
+          className="scroll-hidden mx-auto min-w-0 max-w-[1044px] flex-1 overflow-y-auto py-6"
         >
           <div className="cc-accordion ov2-accordion">
             {STEPS.map((step, index) => {
