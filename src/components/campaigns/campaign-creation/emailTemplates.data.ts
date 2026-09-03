@@ -45,12 +45,14 @@ export interface EmailTemplate {
   image?: string;
   /** Shown under "Create new" and in filters; also drives the AI badge. */
   aiGenerated?: boolean;
+  /** Already running in a live campaign — badged on the thumbnail. */
+  inUse?: boolean;
 }
 
 /** The most recently touched templates — these carry real thumbnails. */
 const RECENT: EmailTemplate[] = [
   { id: 868, name: "Exclusive Deals — Gold Members", preview: "none", image: thumbExclusiveDeals },
-  { id: 8289, name: "Welcome to the Family", preview: "none", image: thumbWelcomeFamily },
+  { id: 8289, name: "Welcome to the Family", preview: "none", image: thumbWelcomeFamily, inUse: true },
   { id: 8286, name: "Price Drop Alert", preview: "none", image: thumbPriceDrop },
   { id: 8284, name: "Festive Gifting — Couple", preview: "none", image: thumbGiftCouple },
   { id: 8283, name: "Double the Indulgence", preview: "none", image: thumbDoubleIndulgence },

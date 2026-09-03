@@ -212,6 +212,10 @@ interface ChatInterfaceProps {
    *  page decides where that goes — the segments pages open the segment
    *  creation canvas on the card's rules. */
   onReviewArtifact?: (card: AgentArtifactCardData) => void;
+  /** Overrides the action label on artifact cards. The campaign wizard uses it
+   *  because there the action plots conditions onto the form rather than
+   *  opening a segment canvas — everywhere else keeps the card's own label. */
+  artifactActionLabel?: string;
   /** Replaces the generic starter chips under the composer with a set the host
    *  page decides — the campaign wizard passes the open step's own chips, so
    *  the opening suggestions are about the step the user is actually on. */
@@ -357,7 +361,7 @@ const DockedBodySkeleton = ({
   );
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId, starterChipSet }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, artifactActionLabel, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId, starterChipSet }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   // The scripted storyline this interface plays. Home (`/`) uses 'default';
@@ -4360,7 +4364,11 @@ The content has been updated across all channels to reflect your changes.`;
                       }
                       statCards={message.statCards}
                       miniChart={message.miniChart}
-                      agentArtifactCard={message.agentArtifactCard}
+                      agentArtifactCard={
+                        message.agentArtifactCard && artifactActionLabel
+                          ? { ...message.agentArtifactCard, actionLabel: artifactActionLabel }
+                          : message.agentArtifactCard
+                      }
                       onAgentArtifactAction={
                         message.agentArtifactCard && onReviewArtifact
                           ? () => {

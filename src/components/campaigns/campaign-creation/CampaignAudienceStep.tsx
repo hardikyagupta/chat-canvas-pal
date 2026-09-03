@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Info, Plus, UserCheck, X } from "lucide-react";
+import { ChevronDown, Info, UserCheck, X } from "lucide-react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import SegmentSelect, { type SegmentRef } from "./SegmentSelect";
 import StepCard from "./StepCard";
+import ConditionAttributePicker, {
+  DEFAULT_VALUE_BY_TYPE,
+  OPERATORS_BY_TYPE,
+  type AttributeType,
+  type ConditionAttribute,
+} from "./ConditionAttributePicker";
 
 export type AudienceMode = "all" | "segments" | "adhoc" | "table";
 
 export interface AdhocCondition {
   attribute: string;
+  /** Kept alongside the attribute so the row knows its operator set. */
+  type: AttributeType;
   operator: string;
   value: string;
 }
@@ -19,6 +27,9 @@ export interface AudienceValues {
   mode: AudienceMode;
   segments: SegmentRef[];
   conditions: AdhocCondition[];
+  /** Reach for conditions plotted from an agent-built segment — the count that
+   *  segment was sized at, kept until the user edits the conditions. */
+  conditionsReach?: number;
   table: string;
   excludeEnabled: boolean;
   excludeSegments: SegmentRef[];
@@ -31,7 +42,8 @@ export interface AudienceValues {
 export const EMPTY_AUDIENCE: AudienceValues = {
   mode: "all",
   segments: [],
-  conditions: [{ attribute: "Last opened", operator: "in the last", value: "30 days" }],
+  // No condition by default — the user picks the first attribute from the picker.
+  conditions: [],
   table: "",
   excludeEnabled: false,
   excludeSegments: [],
@@ -50,8 +62,6 @@ const FILTER_MODES: { id: AudienceMode; label: string }[] = [
   { id: "table", label: "User data table" },
 ];
 
-const ATTRIBUTES = ["Last opened", "Last clicked", "Last purchase", "Lifetime orders", "City"];
-const OPERATORS = ["in the last", "not in the last", "is", "is not", "is greater than"];
 const DATA_TABLES = ["orders_master", "loyalty_tier", "app_events_daily", "product_catalogue"];
 const EMAIL_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"];
 
@@ -273,7 +283,13 @@ export function reachFor(v: AudienceValues): number {
   let base = 0;
   if (v.mode === "all") base = ALL_CONTACTS_REACH;
   if (v.mode === "segments") base = union(v.segments);
-  if (v.mode === "adhoc") base = Math.round(ALL_CONTACTS_REACH * Math.pow(0.42, v.conditions.length));
+  if (v.mode === "adhoc") {
+    // An empty condition set matches nobody — 0.42^0 would otherwise
+    // read as the full base, which is the opposite of a blank filter.
+    base = v.conditions.length
+      ? (v.conditionsReach ?? Math.round(ALL_CONTACTS_REACH * Math.pow(0.42, v.conditions.length)))
+      : 0;
+  }
   if (v.mode === "table") base = v.table ? 38_412 : 0;
 
   if (v.excludeEnabled) {
@@ -306,14 +322,35 @@ export default function CampaignAudienceStep({
   /** Briefly flashed after the co-marketer plots a cohort. */
   highlight?: boolean;
 }) {
+  /** Any hand edit invalidates a count that came from the co-marketer's segment. */
+  const setConditions = (conditions: AdhocCondition[]) =>
+    onChange({ conditions, conditionsReach: undefined });
+
   const setCondition = (index: number, patch: Partial<AdhocCondition>) =>
-    onChange({
-      conditions: values.conditions.map((c, i) => (i === index ? { ...c, ...patch } : c)),
-    });
+    setConditions(values.conditions.map((c, i) => (i === index ? { ...c, ...patch } : c)));
+
+  /** A picked attribute carries its own operator set, so the row starts on that
+   *  type's first operator and default value rather than an invalid pairing. */
+  const conditionFor = (a: ConditionAttribute): AdhocCondition => ({
+    attribute: a.label,
+    type: a.type,
+    operator: OPERATORS_BY_TYPE[a.type][0],
+    value: DEFAULT_VALUE_BY_TYPE[a.type],
+  });
+
+  const addCondition = (a: ConditionAttribute) =>
+    setConditions([...values.conditions, conditionFor(a)]);
+
+  const replaceAttribute = (index: number, a: ConditionAttribute) => {
+    const next = conditionFor(a);
+    // Swapping within the same type keeps what the user already typed.
+    const current = values.conditions[index];
+    setCondition(index, current.type === a.type ? { attribute: a.label } : next);
+  };
 
   return (
     <StepCard wide>
-      <div className={cn(highlight && "cmk-field-flash")}>
+      <div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <button
             type="button"
@@ -383,10 +420,12 @@ export default function CampaignAudienceStep({
                 Contacts which are in
               </span>
             </div>
-            <SegmentSelect
-              value={values.segments}
-              onChange={(segments) => onChange({ segments })}
-            />
+            <div className={cn(highlight && "cmk-plot-flash")}>
+              <SegmentSelect
+                value={values.segments}
+                onChange={(segments) => onChange({ segments })}
+              />
+            </div>
             <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">
               Select upto 15 list / segment
             </p>
@@ -395,58 +434,56 @@ export default function CampaignAudienceStep({
 
         {values.mode === "adhoc" && (
           <div className="mt-4">
-            <div className="space-y-2">
+            <div className={cn("space-y-2", highlight && "cmk-plot-flash")}>
               {values.conditions.map((c, i) => (
                 <div key={i} className="flex flex-wrap items-center gap-2">
                   <span className="w-[100px] shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
                     {i === 0 ? "Contacts who" : "And"}
                   </span>
-                  <Dropdown
+                  <ConditionAttributePicker
+                    variant="chip"
                     value={c.attribute}
-                    options={ATTRIBUTES}
-                    onChange={(v) => setCondition(i, { attribute: v })}
+                    onSelect={(a) => replaceAttribute(i, a)}
                   />
                   <Dropdown
                     value={c.operator}
-                    options={OPERATORS}
+                    options={OPERATORS_BY_TYPE[c.type]}
                     onChange={(v) => setCondition(i, { operator: v })}
                   />
-                  <input
-                    type="text"
-                    value={c.value}
-                    onChange={(e) => setCondition(i, { value: e.target.value })}
-                    className={cn(chipSelectClass, "w-[160px]")}
-                  />
-                  {values.conditions.length > 1 && (
-                    <button
-                      type="button"
-                      aria-label="Remove condition"
-                      onClick={() =>
-                        onChange({ conditions: values.conditions.filter((_, x) => x !== i) })
-                      }
-                      className="grid size-7 place-items-center rounded-md text-[#8A8AA3] hover:bg-[#F0F3F9] hover:text-[#17173A]"
-                    >
-                      <X className="size-4" strokeWidth={2.2} />
-                    </button>
+                  {c.type === "boolean" ? (
+                    <Dropdown
+                      value={c.value}
+                      options={["True", "False"]}
+                      onChange={(v) => setCondition(i, { value: v })}
+                      widthClass="w-[160px]"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={c.value}
+                      onChange={(e) => setCondition(i, { value: e.target.value })}
+                      className={cn(chipSelectClass, "w-[160px]")}
+                    />
                   )}
+                  <button
+                    type="button"
+                    aria-label="Remove condition"
+                    onClick={() => setConditions(values.conditions.filter((_, x) => x !== i))}
+                    className="grid size-7 place-items-center rounded-md text-[#8A8AA3] hover:bg-[#F0F3F9] hover:text-[#17173A]"
+                  >
+                    <X className="size-4" strokeWidth={2.2} />
+                  </button>
                 </div>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() =>
-                onChange({
-                  conditions: [
-                    ...values.conditions,
-                    { attribute: "Lifetime orders", operator: "is greater than", value: "0" },
-                  ],
-                })
-              }
-              className="mt-3 inline-flex items-center gap-1.5 font-manrope text-[13px] font-semibold text-[#2F68E5] hover:underline"
-            >
-              <Plus className="size-4" strokeWidth={2.4} />
-              Add
-            </button>
+            <div className={cn(values.conditions.length > 0 && "mt-3")}>
+              <ConditionAttributePicker onSelect={addCondition} />
+              {values.conditions.length === 0 && (
+                <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">
+                  Get started by adding a condition
+                </p>
+              )}
+            </div>
           </div>
         )}
 
