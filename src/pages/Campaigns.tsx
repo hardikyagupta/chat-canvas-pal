@@ -132,7 +132,7 @@ export default function Campaigns() {
     const row: Campaign = {
       id: `launch-${Date.now()}`,
       name,
-      refId: aiGenerated ? "ID - AI" : "ID - 001",
+      refId: "ID - 001",
       status: "SCHEDULED",
       channel: aiGenerated ? "mail-ai" : "mail",
       scheduledTime: formatLaunchTime(),

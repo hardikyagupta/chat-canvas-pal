@@ -266,7 +266,7 @@ const TIMEZONE = "Asia/Calcutta";
 type TopMode = "optimize" | "nowOrLater" | "slice";
 
 const TOP_MODES: { id: TopMode; label: string; info?: string }[] = [
-  { id: "optimize", label: "Optimize with Co-marketer" },
+  { id: "optimize", label: "Send time optimizer" },
   { id: "nowOrLater", label: "Send now or later" },
   {
     id: "slice",

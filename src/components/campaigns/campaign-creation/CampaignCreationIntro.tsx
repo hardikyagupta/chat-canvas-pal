@@ -170,7 +170,7 @@ export default function CampaignCreationIntro({
               />
             </div>
             <h1 className="font-manrope text-[26px] font-bold leading-tight text-[#17173A]">
-              Create your email campaign
+              Create with campaign composer
             </h1>
             <p className="mt-2 whitespace-nowrap font-manrope text-sm leading-6 text-[#6F6F8D]">
               Tell me what you want to achieve, and I'll help you build it.
