@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import SegmentSelect, { type SegmentRef } from "./SegmentSelect";
 import StepCard from "./StepCard";
 import ConditionAttributePicker, {
+  COUNTABLE_ATTRIBUTES,
   DEFAULT_VALUE_BY_TYPE,
   OPERATORS_BY_TYPE,
   type AttributeType,
@@ -21,6 +22,9 @@ export interface AdhocCondition {
   type: AttributeType;
   operator: string;
   value: string;
+  /** "At least N times" — only meaningful for a countable behaviour on
+   *  "in the last"; undefined means no threshold, i.e. any number of times. */
+  count?: number;
 }
 
 export interface AudienceValues {
@@ -343,9 +347,10 @@ export default function CampaignAudienceStep({
 
   const replaceAttribute = (index: number, a: ConditionAttribute) => {
     const next = conditionFor(a);
-    // Swapping within the same type keeps what the user already typed.
+    // Swapping within the same type keeps what the user already typed — but
+    // never a count from the old attribute, which may not even be countable.
     const current = values.conditions[index];
-    setCondition(index, current.type === a.type ? { attribute: a.label } : next);
+    setCondition(index, current.type === a.type ? { attribute: a.label, count: undefined } : next);
   };
 
   return (
@@ -436,8 +441,8 @@ export default function CampaignAudienceStep({
           <div className="mt-4">
             <div className={cn("space-y-2", highlight && "cmk-plot-flash")}>
               {values.conditions.map((c, i) => (
-                <div key={i} className="flex flex-wrap items-center gap-2">
-                  <span className="w-[100px] shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
+                <div key={i} className="flex flex-wrap items-center gap-1">
+                  <span className="w-[90px] shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
                     {i === 0 ? "Contacts who" : "And"}
                   </span>
                   <ConditionAttributePicker
@@ -445,24 +450,49 @@ export default function CampaignAudienceStep({
                     value={c.attribute}
                     onSelect={(a) => replaceAttribute(i, a)}
                   />
+                  {c.type === "recency" && COUNTABLE_ATTRIBUTES.has(c.attribute) && c.operator === "in the last" && (
+                    <>
+                      <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
+                        at least
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={c.count ?? ""}
+                        onChange={(e) =>
+                          setCondition(i, {
+                            count: e.target.value ? Math.max(1, parseInt(e.target.value, 10)) : undefined,
+                          })
+                        }
+                        placeholder="1"
+                        className={cn(chipSelectClass, "w-[36px] text-center")}
+                      />
+                      <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
+                        times
+                      </span>
+                    </>
+                  )}
                   <Dropdown
                     value={c.operator}
                     options={OPERATORS_BY_TYPE[c.type]}
-                    onChange={(v) => setCondition(i, { operator: v })}
+                    onChange={(v) =>
+                      setCondition(i, { operator: v, count: v === "in the last" ? c.count : undefined })
+                    }
+                    widthClass="w-[130px]"
                   />
                   {c.type === "boolean" ? (
                     <Dropdown
                       value={c.value}
                       options={["True", "False"]}
                       onChange={(v) => setCondition(i, { value: v })}
-                      widthClass="w-[160px]"
+                      widthClass="w-[110px]"
                     />
                   ) : (
                     <input
                       type="text"
                       value={c.value}
                       onChange={(e) => setCondition(i, { value: e.target.value })}
-                      className={cn(chipSelectClass, "w-[160px]")}
+                      className={cn(chipSelectClass, "w-[80px]")}
                     />
                   )}
                   <button

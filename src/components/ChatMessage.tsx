@@ -16,6 +16,8 @@ import DocArtifactCard, { DocArtifact } from './DocArtifactCard';
 import AgentArtifactCard from './AgentArtifactCard';
 import type { AgentArtifactCardData } from '@/data/conversations';
 import SetupApplyCard, { type SetupApplyCardData } from '@/components/campaigns/campaign-creation/SetupApplyCard';
+import { FindingsReviewList } from '@/components/campaigns/campaign-creation/FindingCard';
+import type { Finding } from '@/components/campaigns/campaign-creation/previewFindings.data';
 import type { InsightCardContext } from '@/types/insightCard';
 import { ContentAgentResponse } from './ContentAgentResponse';
 import { ContentAgentClarification } from './ContentAgentClarification';
@@ -468,6 +470,10 @@ interface ChatMessageProps {
   /** Which cut is already plotted, when the card carries audience cohorts. */
   appliedCohortId?: string;
   onSetupApply?: (cohortId?: string) => void;
+  /** Co-marketer audit findings — the same cards the preview screen's review
+   *  rail shows, dropped into this message instead. */
+  findings?: Finding[];
+  onAskFinding?: (finding: Finding) => void;
   // Feedback actions — open the matching feedback modal
   onThumbsUp?: () => void;
   onThumbsDown?: () => void;
@@ -533,6 +539,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   setupApplyApplied,
   onSetupApply,
   appliedCohortId,
+  findings,
+  onAskFinding,
   onThumbsUp,
   onThumbsDown,
   insightCard,
@@ -1495,6 +1503,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                       appliedCohortId={appliedCohortId}
                       onApply={onSetupApply}
                     />
+                  </div>
+                )}
+                {findings && findings.length > 0 && isAnimationDone && (
+                  <div className="py-2 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-1">
+                    <FindingsReviewList findings={findings} onAsk={(f) => onAskFinding?.(f)} />
                   </div>
                 )}
                 {/* Executive Summary Content Accordion - only shown for executive summary messages */}

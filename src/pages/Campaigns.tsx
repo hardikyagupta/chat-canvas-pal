@@ -6,6 +6,8 @@ import PageHeader from "@/components/campaigns/PageHeader";
 import TabBar from "@/components/campaigns/TabBar";
 import TableToolbar from "@/components/campaigns/TableToolbar";
 import CampaignTable from "@/components/campaigns/CampaignTable";
+import { campaigns as initialCampaigns, type Campaign } from "@/components/campaigns/campaigns.data";
+import LaunchConfetti from "@/components/campaigns/LaunchConfetti";
 import CoMarketerReviewBanner from "@/components/campaigns/CoMarketerReviewBanner";
 import Pagination from "@/components/campaigns/Pagination";
 import ChatInterface, { type ReviewCampaignContext } from "@/components/ChatInterface";
@@ -16,6 +18,19 @@ import SegmentCreationOverlay, {
   type ReviewSegmentContext,
 } from "@/components/campaigns/segment-creation/SegmentCreationOverlay";
 import { marketingAgents } from "@/data/agents";
+import { useToast } from "@/hooks/use-toast";
+import { CheckCircle2 } from "lucide-react";
+
+/** "Jul 03, 2021 01:08 PM" — matches the table's existing scheduled-time style. */
+function formatLaunchTime(): string {
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  let hours = d.getHours();
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  return `${MONTHS[d.getMonth()]} ${pad(d.getDate())}, ${d.getFullYear()} ${pad(hours)}:${pad(d.getMinutes())} ${ampm}`;
+}
 
 /**
  * Campaigns (New Engage) listing page.
@@ -49,6 +64,13 @@ export default function Campaigns() {
   // "Review segment" on the Segment agent's artifact card — opens the segment
   // creation canvas on that card's rules. Cleared when the canvas closes.
   const [reviewSegment, setReviewSegment] = useState<ReviewSegmentContext | null>(null);
+  // The table's own data — lifted out of the static import so a freshly
+  // launched campaign can actually land a new row instead of just closing
+  // the wizard on top of a list that never changes.
+  const [campaignRows, setCampaignRows] = useState<Campaign[]>(initialCampaigns);
+  // One-shot confetti layer over the whole page — mounted only while it plays.
+  const [confettiActive, setConfettiActive] = useState(false);
+  const { toast } = useToast();
 
   // Coordinate mount → enter and leave → unmount so both directions animate.
   useEffect(() => {
@@ -98,8 +120,46 @@ export default function Campaigns() {
     });
   };
 
+  /** "Launch" finished its pop-up in the creation wizard — land the new
+   *  campaign at the top of the table, celebrate it, and say so. */
+  const handleCampaignLaunched = ({
+    name,
+    aiGenerated,
+  }: {
+    name: string;
+    aiGenerated: boolean;
+  }) => {
+    const row: Campaign = {
+      id: `launch-${Date.now()}`,
+      name,
+      refId: aiGenerated ? "ID - AI" : "ID - 001",
+      status: "SCHEDULED",
+      channel: aiGenerated ? "mail-ai" : "mail",
+      scheduledTime: formatLaunchTime(),
+      published: "--",
+      sent: "--",
+      deliveredOpened: "--",
+      submission: "--",
+      clicked: "--",
+      conversions: "--",
+      highlighted: true,
+    };
+    setCampaignRows((rows) => [row, ...rows]);
+    setConfettiActive(true);
+    toast({
+      title: (
+        <span className="flex items-center gap-2 font-manrope text-sm font-semibold text-[#17173A]">
+          <CheckCircle2 className="size-4 shrink-0 text-[#00C48C]" strokeWidth={2} />
+          Campaign launched successfully
+        </span>
+      ),
+      description: <span className="font-manrope text-[#6F6F8D]">{name}</span>,
+    });
+  };
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#F4F8FF]">
+      {confettiActive && <LaunchConfetti onDone={() => setConfettiActive(false)} />}
       <L1Nav
         nudgeHighlightKey={
           nudgeStep === "decisioning" || nudgeStep === "ai-dashboard"
@@ -135,6 +195,7 @@ export default function Campaigns() {
           onBackToAiDashboardNudge={() => setNudgeStep("ai-dashboard")}
           onCoMarketerNext={() => setNudgeStep("decisioning")}
           onFinishNudgeSequence={() => setNudgeStep("done")}
+          onCampaignLaunched={handleCampaignLaunched}
         />
 
         <div className="mt-2 flex min-h-0 flex-1 gap-2">
@@ -171,7 +232,7 @@ export default function Campaigns() {
             </div>
 
             <div className="mt-4">
-              <CampaignTable />
+              <CampaignTable rows={campaignRows} />
             </div>
 
             <div className="mt-4 pb-8">

@@ -23,6 +23,8 @@ import { Button } from "@/components/ui/button";
 import CampaignCreationNavbar from "./CampaignCreationNavbar";
 import CampaignSettingsDrawer from "./CampaignSettingsDrawer";
 import CampaignCreationIntro from "./CampaignCreationIntro";
+import CampaignAIGenerating from "./CampaignAIGenerating";
+import CampaignLaunchingModal from "./CampaignLaunchingModal";
 import CampaignCreationStepper, { type Step } from "./CampaignCreationStepper";
 import CampaignAIPanel, {
   isContentPatchApplied,
@@ -59,12 +61,13 @@ import CampaignScheduleStep, {
 import { emailTemplates } from "./emailTemplates.data";
 import { SEGMENT_STARTERS } from "@/components/campaigns/SegmentSuggestions";
 import SegmentCreationOverlay from "@/components/campaigns/segment-creation/SegmentCreationOverlay";
-import type { Finding } from "./previewFindings.data";
+import { buildFindings, type Finding } from "./previewFindings.data";
 import CampaignPreview from "./CampaignPreview";
 import ChatInterface, {
   type SeededTopic,
   type StarterChip,
 } from "@/components/ChatInterface";
+import sparkle from "/campaign-assets/ic-sparkle.gif";
 import "./campaign-creation.css";
 // The one-page accordion reuses the objective v2 card styling (.ov2-*) so both
 // flows read the same; campaign-creation.css supplies the tokens it references.
@@ -164,6 +167,14 @@ const STEP_CHIPS: Record<string, StarterChip[]> = {
   ],
 };
 
+/** Empty-state greeting for the docked chat, per open step — replaces the
+ *  generic "Good afternoon, Amit" with a question about what that step is
+ *  actually for. Schedule has none, so it falls back to the generic one. */
+const STEP_GREETINGS: Record<string, string> = {
+  audience: "What type of segment would you like to create?",
+  content: "What type of template would you like to create?",
+};
+
 /** Sub-line under each accordion header, before the step has a summary. */
 const STEP_DESCRIPTIONS: Record<string, string> = {
   audience: "Select the target audience.",
@@ -228,11 +239,15 @@ export default function CampaignCreationOverlay({
   open,
   channel,
   onClose,
+  onLaunched,
 }: {
   open: boolean;
   /** Quick-create label that opened this, e.g. "Email". */
   channel: string;
   onClose: () => void;
+  /** Fired once the launching pop-up finishes, right before the wizard
+   *  closes — the listing page uses this to add the row, toast, and confetti. */
+  onLaunched?: (info: { name: string; aiGenerated: boolean }) => void;
 }) {
   // `mounted` keeps the panel in the DOM through its exit slide; `shown` drives
   // the transform. Same mount → enter → leave → unmount dance the docked chat
@@ -242,6 +257,14 @@ export default function CampaignCreationOverlay({
   // The Email flow opens on a goal prompt before the step-by-step wizard;
   // "Start from scratch" (or submitting a goal) is what gets past it.
   const [introOpen, setIntroOpen] = useState(true);
+  // Shown between submitting a goal on the intro and landing on the wizard —
+  // the phase checklist animates while the AI draft is applied underneath.
+  const [generating, setGenerating] = useState(false);
+  // Flags a campaign the AI drafted end-to-end, for the navbar's badge.
+  const [campaignAIGenerated, setCampaignAIGenerated] = useState(false);
+  // Brief pop-up shown the moment "Launch" is clicked, before handing off
+  // to the listing page — skips the Preview/review screen entirely.
+  const [launching, setLaunching] = useState(false);
   // Which accordion card is open. -1 means every card is collapsed, which the
   // header toggle allows — the stepper's "current step" is now just this.
   const [activeIndex, setActiveIndex] = useState(0);
@@ -315,6 +338,9 @@ export default function CampaignCreationOverlay({
       // Reset only after the panel is gone, so the exit slide doesn't show the
       // wizard snapping back to step 1.
       setIntroOpen(true);
+      setGenerating(false);
+      setCampaignAIGenerated(false);
+      setLaunching(false);
       setActiveIndex(0);
       setCompletedSteps(new Set());
       setRailStepId("audience");
@@ -521,6 +547,56 @@ export default function CampaignCreationOverlay({
     window.setTimeout(() => setContentHighlight({}), 1200);
   };
 
+  /**
+   * Drafts a whole campaign from a typed goal — audience, message and
+   * schedule all at once — rather than handing the user a blank wizard. The
+   * generating screen covers the wizard while this runs, so there's nothing
+   * to stagger: every field can land in one pass.
+   */
+  const applyAIGeneratedCampaign = () => {
+    setCampaignName("Re-engage Multi-View Shoppers — Free Shipping");
+    setCampaignAIGenerated(true);
+    // The audience step's own effect already opened the co-marketer and
+    // flagged it as that step's thread (so leaving audience would close it).
+    // This chat is the one that drafted the whole campaign, though — it
+    // should ride along through Message and Schedule instead of getting
+    // dismissed the moment the user expands the next card.
+    audienceChat.current = false;
+    setAudience({
+      ...EMPTY_AUDIENCE,
+      mode: "adhoc",
+      conditions: [
+        { attribute: "Product viewed", type: "recency", operator: "in the last", value: "30 days", count: 2 },
+        { attribute: "Purchase", type: "recency", operator: "not in the last", value: "30 days" },
+      ],
+      conditionsReach: 28_450,
+    });
+    setContent({
+      ...EMPTY_CONTENT,
+      senderName: "Forest Essentials",
+      subject: "Still thinking it over? Enjoy free shipping🚛",
+      preHeader: "Complete your purchase with free shipping on us.",
+      templateId: 9101,
+    });
+    setSchedule({ ...EMPTY_SCHEDULE, sendAt: defaultSendAt(), mode: "optimize" });
+  };
+
+  /** "Send" on the intro's prompt box — unlike "Build from scratch", this one
+   *  hands the goal to the AI draft instead of an empty wizard. */
+  const handleGenerateFromPrompt = () => {
+    applyAIGeneratedCampaign();
+    setIntroOpen(false);
+    setGenerating(true);
+  };
+
+  /** The launching pop-up's own timer calls this — hands the finished
+   *  campaign to the listing page and closes the wizard behind it. */
+  const handleLaunchDone = () => {
+    onLaunched?.({ name: campaignName, aiGenerated: campaignAIGenerated });
+    setLaunching(false);
+    onClose();
+  };
+
   /** Brings a card's header to the top of the canvas once it has opened. */
   const scrollToStep = (id: string) => {
     const container = canvasRef.current;
@@ -645,9 +721,12 @@ export default function CampaignCreationOverlay({
     }
   };
 
-  /** Opens a brand-new co-marketer thread, from either header CTA. */
+  /** Opens a brand-new co-marketer thread, from either header CTA. Not tied to
+   *  the audience step, so it's exempt from the auto-close effect below —
+   *  expanding a card elsewhere in the wizard shouldn't dismiss a chat the
+   *  user opened themselves from the navbar. */
   const openFreshChat = () => {
-    audienceChat.current = railStepId === "audience";
+    audienceChat.current = false;
     setChatVariant("campaigns");
     setChatMessage(undefined);
     setChatTopic(null);
@@ -713,6 +792,25 @@ export default function CampaignCreationOverlay({
     };
   };
 
+  /** "Audit campaign" — the same review the preview screen's co-marketer rail
+   *  runs, asked for from inside the wizard instead of waiting until publish.
+   *  The findings land as cards on this one thread turn. */
+  const auditTopic = (findings: Finding[]): SeededTopic => ({
+    prompt: "Audit this campaign before I publish it.",
+    navLabel: "Audit",
+    reply:
+      findings.length === 0
+        ? "I've been through this one and found nothing that would hold it back."
+        : `I went through this campaign against your last 90 days. ${findings.length} thing${
+            findings.length === 1 ? "" : "s"
+          } worth fixing before it goes out.`,
+    findings,
+  });
+
+  const handleAuditCampaign = () => {
+    openTopic(auditTopic(buildFindings({ setup, audience, content, schedule })));
+  };
+
   /* Co-marketer chat — docked column. Opened from a suggestion card (seeded
      on that prompt), from a preview finding, or from "Ask co-marketer" in
      either header. Rendered beside whichever screen is up. */
@@ -725,6 +823,7 @@ export default function CampaignCreationOverlay({
         conversationVariant={chatVariant}
         initialMessage={chatMessage}
         starterChipSet={railStepId === "audience" ? audienceChips : STEP_CHIPS[railStepId]}
+        emptyStateGreeting={STEP_GREETINGS[railStepId]}
         initialTopic={chatTopic ?? undefined}
         // A segment the agent built — its rules land on the Conditions tab as
         // editable rows, rather than as a read-only segment the user can't
@@ -745,6 +844,7 @@ export default function CampaignCreationOverlay({
         }}
         followUpTopic={followUpTopic}
         followUpSeq={followUpSeq}
+        onAskFinding={(finding) => openTopic(findingTopic(finding))}
         onSetupApply={(card, cohortId) => {
           const cohort = card.cohorts?.find((c) => c.id === cohortId);
           if (cohort) {
@@ -806,6 +906,10 @@ export default function CampaignCreationOverlay({
         shown ? "translate-y-0" : "translate-y-full"
       )}
     >
+      {launching && (
+        <CampaignLaunchingModal campaignName={campaignName} onDone={handleLaunchDone} />
+      )}
+
       {channel === "Email" && introOpen ? (
         <CampaignCreationIntro
           campaignName={campaignName}
@@ -816,7 +920,14 @@ export default function CampaignCreationOverlay({
             // the intro screen was already a co-marketer prompt.
             openFreshChat();
           }}
+          onGenerate={handleGenerateFromPrompt}
           onClose={onClose}
+        />
+      ) : channel === "Email" && generating ? (
+        <CampaignAIGenerating
+          campaignName={campaignName}
+          onClose={onClose}
+          onDone={() => setGenerating(false)}
         />
       ) : previewOpen ? (
         <CampaignPreview
@@ -842,10 +953,11 @@ export default function CampaignCreationOverlay({
         <>
       <CampaignCreationNavbar
         campaignName={campaignName}
+        aiGenerated={campaignAIGenerated}
         icon={Icon}
         onRenameCampaign={setCampaignName}
         onOpenSettings={() => setSettingsOpen(true)}
-        onLaunch={() => setPreviewOpen(true)}
+        onLaunch={() => setLaunching(true)}
         onAskCoMarketer={openFreshChat}
         // Only Email drops the verb — every other channel keeps "Ask co-marketer".
         askCoMarketerLabel={channel === "Email" ? "Co-marketer" : "Ask co-marketer"}
@@ -960,6 +1072,7 @@ export default function CampaignCreationOverlay({
                             highlight={contentHighlight}
                             onChange={(patch) => setContent((c) => ({ ...c, ...patch }))}
                             reach={reachFor(audience)}
+                            aiGenerated={campaignAIGenerated}
                           />
                         )}
                         {step.id === "schedule" && (
@@ -979,19 +1092,33 @@ export default function CampaignCreationOverlay({
                           </>
                         )}
 
-                        {index < STEPS.length - 1 && (
-                          <div className="ov2-card-actions">
-                            <Button type="button" onClick={() => completeStep(index)}>
-                              Done
-                            </Button>
-                          </div>
-                        )}
+                        <div className="ov2-card-actions">
+                          <Button type="button" onClick={() => completeStep(index)}>
+                            Done
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </section>
               );
             })}
+          </div>
+
+          {/* Same treatment as the navbar's "Ask co-marketer" CTA — white fill,
+              rotating conic-gradient ring (.snake-border), sparkle GIF. */}
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={handleAuditCampaign}
+              className="relative z-[1] flex h-8 items-center gap-1.5 overflow-hidden rounded-lg bg-white px-2.5 transition-shadow hover:shadow-sm"
+            >
+              <span aria-hidden="true" className="snake-border" />
+              <img src={sparkle} alt="" className="relative z-[1] h-5 w-5" />
+              <span className="relative z-[1] font-manrope text-xs font-semibold tracking-[0.42px] text-ash">
+                Audit campaign
+              </span>
+            </button>
           </div>
 
           {/* One step at a time, driven by the rail above. Replaced by the

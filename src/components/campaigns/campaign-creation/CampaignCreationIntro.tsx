@@ -117,11 +117,15 @@ export default function CampaignCreationIntro({
   campaignName,
   onRenameCampaign,
   onContinue,
+  onGenerate,
   onClose,
 }: {
   campaignName: string;
   onRenameCampaign?: (name: string) => void;
   onContinue: () => void;
+  /** A typed-and-submitted goal, unlike "Build from scratch" — this one gets
+   *  the AI-drafted campaign, not a blank wizard. */
+  onGenerate: (prompt: string) => void;
   onClose: () => void;
 }) {
   const [text, setText] = useState("");
@@ -129,7 +133,7 @@ export default function CampaignCreationIntro({
 
   const submit = () => {
     if (!text.trim()) return;
-    onContinue();
+    onGenerate(text.trim());
   };
 
   return (
@@ -219,7 +223,7 @@ export default function CampaignCreationIntro({
           </div>
 
           <p className="mt-6 text-center font-manrope text-sm font-semibold text-[#6F6F8D]">
-            Try asking
+            Get started with a campaign to
           </p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {STARTERS.map((s) => {

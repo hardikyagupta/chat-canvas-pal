@@ -30,10 +30,13 @@ export default function TopNav({
   onBackToAiDashboardNudge,
   onCoMarketerNext,
   onFinishNudgeSequence,
+  onCampaignLaunched,
 }: {
   onOpenChat?: () => void;
   /** An item was picked in the quick-create menu, e.g. "Email". */
   onQuickCreate?: (label: string) => void;
+  /** A campaign in the creation wizard finished its launch pop-up. */
+  onCampaignLaunched?: (info: { name: string; aiGenerated: boolean }) => void;
   label?: string;
   showAskCoMarketer?: boolean;
   /** False keeps the button but skips its discovery nudge (and dot). Toggling
@@ -223,6 +226,7 @@ export default function TopNav({
           open={flowOpen}
           channel={flowChannel ?? "Email"}
           onClose={() => setFlowOpen(false)}
+          onLaunched={onCampaignLaunched}
         />,
         document.body
       )}

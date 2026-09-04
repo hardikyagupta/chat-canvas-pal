@@ -8,6 +8,7 @@ import thumbElevatedGrooming from "/campaign-assets/template-thumbs/tpl-elevated
 import thumbPanchpushp from "/campaign-assets/template-thumbs/tpl-panchpushp.jpg";
 import thumbFragranceNotes from "/campaign-assets/template-thumbs/tpl-fragrance-notes.jpg";
 import thumbCologneLaunch from "/campaign-assets/template-thumbs/tpl-cologne-launch.jpg";
+import thumbAIWinbackShipping from "/campaign-assets/template-thumbs/tpl-ai-winback-shipping.png";
 import thumbLibFlashSale from "/campaign-assets/template-thumbs/tpl-lib-flash-sale.png";
 import thumbLibStreetwear from "/campaign-assets/template-thumbs/tpl-lib-streetwear.png";
 import thumbLibBeautyGlow from "/campaign-assets/template-thumbs/tpl-lib-beauty-glow.png";
@@ -51,6 +52,13 @@ export interface EmailTemplate {
 
 /** The most recently touched templates — these carry real thumbnails. */
 const RECENT: EmailTemplate[] = [
+  {
+    id: 9101,
+    name: "Still Thinking About It? — Free Shipping",
+    preview: "none",
+    image: thumbAIWinbackShipping,
+    aiGenerated: true,
+  },
   { id: 868, name: "Exclusive Deals — Gold Members", preview: "none", image: thumbExclusiveDeals },
   { id: 8289, name: "Welcome to the Family", preview: "none", image: thumbWelcomeFamily, inUse: true },
   { id: 8286, name: "Price Drop Alert", preview: "none", image: thumbPriceDrop },

@@ -1028,6 +1028,20 @@ const PREHEADER_SUGGESTIONS = [
   "Offer ends soon — don't wait",
 ];
 
+/** Swapped in for a campaign the AI drafted end-to-end — on-theme with the
+ *  free-shipping win-back goal it was generated for, rather than the
+ *  generic pool above. */
+const AI_GENERATED_SUBJECT_SUGGESTIONS = [
+  "Your picks are waiting for you 🛍️",
+  "Free shipping, just for you",
+  "Your next favorite is still waiting 💫",
+];
+const AI_GENERATED_PREHEADER_SUGGESTIONS = [
+  "Complete your purchase with free shipping. ✨",
+  "That product you loved is still waiting. 💙",
+  "Enjoy free shipping and make it yours today.",
+];
+
 /** Collapsible wrapper, same accordion the setup and audience steps use. */
 function Reveal({ open, children }: { open: boolean; children: ReactNode }) {
   return (
@@ -1104,6 +1118,7 @@ export default function CampaignContentStep({
   onChange,
   highlight,
   reach = 0,
+  aiGenerated = false,
 }: {
   values: ContentValues;
   onChange: (patch: Partial<ContentValues>) => void;
@@ -1111,6 +1126,9 @@ export default function CampaignContentStep({
   highlight?: Partial<Record<keyof ContentValues, boolean>>;
   /** Audience reach — the base the variant test's "Est. profiles" is drawn from. */
   reach?: number;
+  /** Swaps the Subject/Pre-header AI suggestions for ones on-theme with the
+   *  goal this campaign was drafted from. */
+  aiGenerated?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -1369,7 +1387,7 @@ export default function CampaignContentStep({
                   info="The line this campaign gets opened on — keep it under 60 characters."
                   trailing={
                     <AiSuggestPopover
-                      pool={SUBJECT_SUGGESTIONS}
+                      pool={aiGenerated ? AI_GENERATED_SUBJECT_SUGGESTIONS : SUBJECT_SUGGESTIONS}
                       onPick={(text) => onChange({ subject: text })}
                     />
                   }
@@ -1387,7 +1405,7 @@ export default function CampaignContentStep({
                   label="Pre-header"
                   trailing={
                     <AiSuggestPopover
-                      pool={PREHEADER_SUGGESTIONS}
+                      pool={aiGenerated ? AI_GENERATED_PREHEADER_SUGGESTIONS : PREHEADER_SUGGESTIONS}
                       onPick={(text) => onChange({ preHeader: text })}
                     />
                   }
