@@ -19,6 +19,7 @@ const DEFAULT_DEEP_RESEARCH_TOPIC =
 import type { InsightCardContext } from '@/types/insightCard';
 import { formatInsightContent } from '@/types/insightCard';
 import type { SetupApplyCardData } from '@/components/campaigns/campaign-creation/SetupApplyCard';
+import type { Finding } from '@/components/campaigns/campaign-creation/previewFindings.data';
 import AgentSwitchDivider from './AgentSwitchDivider';
 import AgentThreadHeader from './AgentThreadHeader';
 import AvatarStack from './AvatarStack';
@@ -158,6 +159,8 @@ interface ChatMessageData {
   // AI Dashboard insight card carried into the opening user turn.
   insightCard?: InsightCardContext;
   setupApplyCard?: SetupApplyCardData;
+  // Co-marketer audit findings — the review rail's cards, dropped into chat.
+  findings?: Finding[];
 }
 
 // Props for the main ChatInterface component
@@ -216,10 +219,17 @@ interface ChatInterfaceProps {
    *  because there the action plots conditions onto the form rather than
    *  opening a segment canvas — everywhere else keeps the card's own label. */
   artifactActionLabel?: string;
+  /** "Ask" on an audit finding card rendered inline in the chat — same
+   *  callback the preview screen's review rail uses for its own cards. */
+  onAskFinding?: (finding: Finding) => void;
   /** Replaces the generic starter chips under the composer with a set the host
    *  page decides — the campaign wizard passes the open step's own chips, so
    *  the opening suggestions are about the step the user is actually on. */
   starterChipSet?: StarterChip[];
+  /** Replaces the empty-state "Good afternoon, Amit" greeting — the campaign
+   *  wizard asks a step-specific question instead, since a docked thread
+   *  opened onto a particular step already knows what it's there to help with. */
+  emptyStateGreeting?: string;
 }
 
 /** A contextual starter chip: the pill's label, its icon, and the prompts it
@@ -243,6 +253,9 @@ export interface SeededTopic {
   reply: string;
   navLabel?: string;
   setupApplyCard?: SetupApplyCardData;
+  /** Co-marketer audit findings — same cards as the preview screen's review
+   *  rail, rendered inline on this topic's answer. */
+  findings?: Finding[];
   /**
    * Hand the answer to a specialist rather than the co-marketer. When set, the
    * thread plays the full hand-off — switch divider, then that agent thinking
@@ -361,7 +374,7 @@ const DockedBodySkeleton = ({
   );
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, artifactActionLabel, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId, starterChipSet }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, artifactActionLabel, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId, starterChipSet, onAskFinding, emptyStateGreeting }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   // The scripted storyline this interface plays. Home (`/`) uses 'default';
@@ -3187,6 +3200,7 @@ The content has been updated across all channels to reflect your changes.`;
           content: topic.reply,
           hidePerformanceDashboard: true,
           setupApplyCard: topic.setupApplyCard,
+          findings: topic.findings,
         },
       ];
 
@@ -3252,6 +3266,7 @@ The content has been updated across all channels to reflect your changes.`;
         content: topic.reply,
         hidePerformanceDashboard: true,
         setupApplyCard: topic.setupApplyCard,
+        findings: topic.findings,
         onAnimationComplete: () => setMockChatCompleted(true),
       }]);
     }, 700);
@@ -4000,9 +4015,13 @@ The content has been updated across all channels to reflect your changes.`;
                 {messages.length === 0 && !isGeneratingOutput && (
                   <div className="w-full flex flex-col items-center">
                     <div className={cn("w-full flex flex-col gap-[32px] items-center", isExpanded ? "max-w-[768px]" : "max-w-full")}>
-                      {/* Greeting — single line ("Good afternoon, Amit"). */}
+                      {/* Greeting — single line ("Good afternoon, Amit"), unless
+                          the host page asked a step-specific question instead. */}
                       <div className="flex flex-col gap-[6px] items-center">
-                        <GreetingShimmer text={`${getGreeting()}, Amit`} />
+                        <GreetingShimmer
+                          text={emptyStateGreeting ?? `${getGreeting()}, Amit`}
+                          small={Boolean(emptyStateGreeting)}
+                        />
                       </div>
                       <div className="w-full flex flex-col gap-[16px] items-center">
                         <ChatInput
@@ -4395,6 +4414,8 @@ The content has been updated across all channels to reflect your changes.`;
                           ? (cohortId?: string) => onSetupApply?.(message.setupApplyCard!, cohortId)
                           : undefined
                       }
+                      findings={message.findings}
+                      onAskFinding={onAskFinding}
                       onThumbsUp={() => setFeedbackModal('up')}
                       onThumbsDown={() => setFeedbackModal('down')}
                       onContinueSegment={() => {
@@ -4772,7 +4793,7 @@ export default ChatInterface;
 // as plain static text so it doesn't re-shimmer every time you hit the empty state.
 const GREETING_SHIMMER_KEY = 'greeting-shimmer-played';
 
-function GreetingShimmer({ text }: { text: string }) {
+function GreetingShimmer({ text, small = false }: { text: string; small?: boolean }) {
   const [play, setPlay] = useState(() => {
     try { return sessionStorage.getItem(GREETING_SHIMMER_KEY) !== '1'; } catch { return true; }
   });
@@ -4787,7 +4808,11 @@ function GreetingShimmer({ text }: { text: string }) {
     return () => clearTimeout(t);
   }, [play]);
 
-  const cls = 'font-semibold text-[24px] leading-[30px] text-center tracking-[0.42px] whitespace-nowrap';
+  // A step-specific question reads longer than "Good afternoon, Amit" — sized
+  // down so it still lands on one line at the docked panel's width.
+  const cls = small
+    ? 'font-semibold text-[18px] leading-[24px] text-center tracking-[0.3px] whitespace-nowrap'
+    : 'font-semibold text-[24px] leading-[30px] text-center tracking-[0.42px] whitespace-nowrap';
   const fontStyle: React.CSSProperties = { fontFamily: 'Manrope, sans-serif' };
 
   if (!play) {

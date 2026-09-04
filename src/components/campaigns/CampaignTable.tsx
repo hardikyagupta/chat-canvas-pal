@@ -126,7 +126,7 @@ function CampaignRow({ c }: { c: Campaign }) {
   );
 }
 
-export default function CampaignTable() {
+export default function CampaignTable({ rows = campaigns }: { rows?: Campaign[] }) {
   const [allChecked, setAllChecked] = useState(false);
   return (
     <div className="scroll-slim overflow-x-auto rounded-lg border border-[#DDE2EE] bg-white shadow-[0px_5px_10px_0px_rgba(23,23,58,0.05)]">
@@ -153,7 +153,7 @@ export default function CampaignTable() {
 
       {/* Body */}
       <div>
-        {campaigns.map((c) => (
+        {rows.map((c) => (
           <CampaignRow key={c.id} c={c} />
         ))}
       </div>

@@ -1,4 +1,4 @@
-import { Settings, X, type LucideIcon } from "lucide-react";
+import { Settings, Sparkles, X, type LucideIcon } from "lucide-react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ import sparkle from "/campaign-assets/ic-sparkle.gif";
  */
 export default function CampaignCreationNavbar({
   campaignName,
+  aiGenerated,
   icon: Icon,
   onRenameCampaign,
   onOpenSettings,
@@ -25,6 +26,8 @@ export default function CampaignCreationNavbar({
   onSelectStep,
 }: {
   campaignName: string;
+  /** Flags a campaign the AI drafted end-to-end from a typed goal. */
+  aiGenerated?: boolean;
   icon: LucideIcon;
   onRenameCampaign?: (name: string) => void;
   onOpenSettings?: () => void;
@@ -91,6 +94,12 @@ export default function CampaignCreationNavbar({
           </Tooltip>
         </TooltipProvider>
         <CampaignNameField campaignName={campaignName} onRenameCampaign={onRenameCampaign} />
+        {aiGenerated && (
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#F0E8FF] px-2.5 py-1 font-manrope text-[11px] font-bold text-[#7B5CFA]">
+            <Sparkles className="size-3" strokeWidth={2.4} />
+            AI-generated
+          </span>
+        )}
       </div>
 
       <div className="ml-auto flex items-center gap-3">

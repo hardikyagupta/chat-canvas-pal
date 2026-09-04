@@ -1,4 +1,4 @@
-import { Check, MoreVertical, Pencil, Send } from "lucide-react";
+import { Check, MoreVertical, Pencil, Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ActionMenu,
@@ -262,6 +262,15 @@ export default function TemplateCard({
           <TemplateThumbnail kind={template.preview} />
         )}
       </div>
+
+      {template.aiGenerated && (
+        <span
+          aria-label="AI-generated"
+          className="pointer-events-none absolute left-2 top-2 grid size-6 place-items-center rounded-full bg-white/95 shadow-[0_1px_4px_rgba(23,23,58,0.16)]"
+        >
+          <Sparkles className="size-3.5 text-[#7B5CFA]" strokeWidth={2.2} />
+        </span>
+      )}
 
       {template.inUse && (
         <span className="pointer-events-none absolute right-2 top-2 rounded-[4px] border-[1.5px] border-[#4CC08C] bg-white/95 px-1.5 py-[3px] font-manrope text-[9px] font-extrabold uppercase leading-none tracking-[0.06em] text-[#4CC08C]">

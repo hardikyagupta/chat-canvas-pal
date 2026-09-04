@@ -35,6 +35,9 @@ export interface ConditionAttribute {
   type: AttributeType;
   /** Rendered as an info dot beside the label, as in the reference picker. */
   info?: string;
+  /** A behaviour that happens more than once — the Conditions row adds an
+   *  "at least N times" field alongside the recency window for these. */
+  countable?: boolean;
 }
 
 interface AttributeCategory {
@@ -83,11 +86,11 @@ const CATEGORIES: AttributeCategory[] = [
     label: "Behaviour",
     icon: Activity,
     attributes: [
-      { label: "Purchase", type: "recency" },
-      { label: "Added to cart", type: "recency" },
-      { label: "Product viewed", type: "recency" },
-      { label: "App opened", type: "recency" },
-      { label: "Page visited", type: "recency" },
+      { label: "Purchase", type: "recency", countable: true },
+      { label: "Added to cart", type: "recency", countable: true },
+      { label: "Product viewed", type: "recency", countable: true },
+      { label: "App opened", type: "recency", countable: true },
+      { label: "Page visited", type: "recency", countable: true },
     ],
   },
   {
@@ -135,6 +138,13 @@ const CATEGORIES: AttributeCategory[] = [
     ],
   },
 ];
+
+/** Attribute labels the Conditions row lets you qualify with "at least N times". */
+export const COUNTABLE_ATTRIBUTES = new Set(
+  CATEGORIES.flatMap((c) => c.attributes)
+    .filter((a) => a.countable)
+    .map((a) => a.label)
+);
 
 export const OPERATORS_BY_TYPE: Record<AttributeType, string[]> = {
   recency: ["in the last", "not in the last", "before"],
@@ -269,7 +279,7 @@ export default function ConditionAttributePicker({
   };
 
   return (
-    <div ref={wrapRef} className={cn("relative", variant === "chip" ? "w-[180px] shrink-0" : "inline-block")}>
+    <div ref={wrapRef} className={cn("relative", variant === "chip" ? "w-[140px] shrink-0" : "inline-block")}>
       {variant === "chip" ? (
         <button
           type="button"
