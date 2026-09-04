@@ -465,7 +465,10 @@ export default function CampaignAudienceStep({
                           })
                         }
                         placeholder="1"
-                        className={cn(chipSelectClass, "w-[36px] text-center")}
+                        className={cn(
+                          chipSelectClass,
+                          "w-[44px] px-1 text-center [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        )}
                       />
                       <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
                         times

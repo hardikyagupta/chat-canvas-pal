@@ -1138,7 +1138,7 @@ export default function CampaignContentStep({
   const [attachModalOpen, setAttachModalOpen] = useState(false);
   const [sourceTab, setSourceTab] = useState<TemplateSourceTab>("saved");
   const [foldersExpanded, setFoldersExpanded] = useState(false);
-  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("mobile");
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
