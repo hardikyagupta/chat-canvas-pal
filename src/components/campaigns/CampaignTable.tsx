@@ -1,4 +1,4 @@
-import { Mail, FileText, Zap, MoreVertical, ChevronDown, Check } from "lucide-react";
+import { Mail, FileText, Sparkles, MoreVertical, ChevronDown, Check } from "lucide-react";
 import { useState } from "react";
 import { campaigns, type Campaign, type ChannelIcon } from "./campaigns.data";
 import StatusBadge from "./StatusBadge";
@@ -46,7 +46,7 @@ function ChannelGlyph({ channel }: { channel: ChannelIcon }) {
       <Mail className="h-[22px] w-[22px] text-[#7B7B96]" strokeWidth={1.5} />
       {channel === "mail-ai" && (
         <span className="absolute -bottom-0.5 -left-0.5 grid h-[13px] w-[13px] place-items-center rounded-full bg-[#BE52F2] ring-2 ring-white">
-          <Zap className="h-2 w-2 text-white" fill="white" strokeWidth={0} />
+          <Sparkles className="h-2 w-2 text-white" fill="white" strokeWidth={0} />
         </span>
       )}
     </div>

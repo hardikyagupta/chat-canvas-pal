@@ -408,10 +408,15 @@ export default function CampaignCreationOverlay({
 
   // Landing on Audience opens the co-marketer, but it doesn't answer anything
   // yet — the thread offers the segment starting points as pills and waits.
+  // An AI-generated draft skips this: the campaign already arrived built, so
+  // there's nothing left for the co-marketer to open a thread about — unlike
+  // "Build from scratch", which still gets the co-marketer by default.
   useEffect(() => {
-    if (!open || STEPS[activeIndex]?.id !== "audience") return;
+    if (!open || introOpen || generating) return;
+    if (STEPS[activeIndex]?.id !== "audience") return;
     if (audienceSeeded.current) return;
     audienceSeeded.current = true;
+    if (campaignAIGenerated) return;
     audienceChat.current = true;
     // Previously seeded the Segment agent's cuts thread here:
     // setChatTopic(audienceCutsTopic(setup.goal));
@@ -422,7 +427,7 @@ export default function CampaignCreationOverlay({
     setFollowUpSeq(0);
     setChatSession((n) => n + 1);
     setChatOpen(true);
-  }, [open, activeIndex, setup.goal]);
+  }, [open, introOpen, generating, activeIndex, campaignAIGenerated, setup.goal]);
 
   // The audience thread belongs to its step. Moving on to Content or Schedule
   // closes it rather than carrying an answered conversation into work it has
@@ -556,11 +561,11 @@ export default function CampaignCreationOverlay({
   const applyAIGeneratedCampaign = () => {
     setCampaignName("Re-engage Multi-View Shoppers — Free Shipping");
     setCampaignAIGenerated(true);
-    // The audience step's own effect already opened the co-marketer and
-    // flagged it as that step's thread (so leaving audience would close it).
-    // This chat is the one that drafted the whole campaign, though — it
-    // should ride along through Message and Schedule instead of getting
-    // dismissed the moment the user expands the next card.
+    // Landing on Audience normally opens the co-marketer by default, but a
+    // draft that arrived pre-built has nothing left to open a thread about —
+    // that auto-open is skipped for an AI-generated campaign (see the
+    // `campaignAIGenerated` check in the audience-seed effect). Clearing this
+    // ref too guards against a stale `true` left over from a previous open.
     audienceChat.current = false;
     setAudience({
       ...EMPTY_AUDIENCE,
@@ -1116,7 +1121,7 @@ export default function CampaignCreationOverlay({
               <span aria-hidden="true" className="snake-border" />
               <img src={sparkle} alt="" className="relative z-[1] h-5 w-5" />
               <span className="relative z-[1] font-manrope text-xs font-semibold tracking-[0.42px] text-ash">
-                Audit campaign
+                Review with audit agent
               </span>
             </button>
           </div>
