@@ -13,6 +13,8 @@ import {
   ChevronsRight,
   Code2,
   Copy,
+  Eye,
+  FlaskConical,
   FolderInput,
   Info,
   LayoutGrid,
@@ -25,7 +27,6 @@ import {
   Replace,
   RotateCcw,
   Search,
-  Send,
   SlidersHorizontal,
   Smartphone,
   Sparkles,
@@ -44,6 +45,7 @@ import folderIcon from "/campaign-assets/ic-template-folder.svg";
 import { ActionMenu, ActionMenuContent, ActionMenuTrigger } from "@/components/ui/action-menu";
 import StepCard from "./StepCard";
 import TemplateCard, { CardMenuItem, TemplateThumbnail } from "./TemplateCard";
+import TemplatePreviewOverlay from "./TemplatePreviewOverlay";
 import {
   emailTemplates,
   savedTemplateFolders,
@@ -395,6 +397,8 @@ function TemplatePreviewPanel({
   onDeviceChange: (device: "desktop" | "mobile") => void;
   onChangeTemplate: () => void;
 }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   return (
     <div className="mt-10">
       <div className="mb-4 flex items-center justify-between gap-4">
@@ -430,18 +434,58 @@ function TemplatePreviewPanel({
         </div>
 
         <div className="flex items-center gap-2">
-          <button type="button" className="dc-btn dc-btn-secondary">
-            <Pencil className="size-4" strokeWidth={2} />
-            Edit
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="flex h-8 items-center gap-2 rounded-lg border border-[#e3e3e3] bg-white px-3 font-manrope text-sm font-medium tracking-[0.4px] text-[#6f6f8d] transition-colors hover:bg-[#f8f8f8]"
+          >
+            <Eye className="size-4" strokeWidth={2} />
+            Preview
           </button>
-          <button type="button" className="dc-btn dc-btn-secondary">
-            <Send className="size-4" strokeWidth={2} />
+          <button
+            type="button"
+            className="flex h-8 items-center gap-2 rounded-lg border border-[#e3e3e3] bg-white px-3 font-manrope text-sm font-medium tracking-[0.4px] text-[#6f6f8d] transition-colors hover:bg-[#f8f8f8]"
+          >
+            <FlaskConical className="size-4" strokeWidth={2} />
             Send a test email
           </button>
-          <button type="button" onClick={onChangeTemplate} className="dc-btn dc-btn-secondary">
-            <Replace className="size-4" strokeWidth={2} />
-            Change template
-          </button>
+          {/* Edit + the kebab's one action (Change template) as a single grouped
+              control — same visual weight as the standalone buttons beside it,
+              but the two things you'd do to the template itself share one pill. */}
+          <div className="flex h-8 items-center overflow-hidden rounded-lg border border-[#e3e3e3] bg-white">
+            <button
+              type="button"
+              className="flex h-full items-center gap-2 px-3 font-manrope text-sm font-medium tracking-[0.4px] text-[#6f6f8d] transition-colors hover:bg-[#f8f8f8]"
+            >
+              <Pencil className="size-4" strokeWidth={2} />
+              Edit
+            </button>
+            <span className="h-4 w-px shrink-0 bg-[#e3e3e3]" />
+            <ActionMenu>
+              <ActionMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="More template actions"
+                  className="grid h-full w-8 shrink-0 place-items-center text-[#6f6f8d] transition-colors hover:bg-[#f8f8f8]"
+                >
+                  <MoreVertical className="size-4" strokeWidth={2} />
+                </button>
+              </ActionMenuTrigger>
+              <ActionMenuContent
+                align="end"
+                side="bottom"
+                sideOffset={4}
+                className="z-[120] w-[200px] gap-0 overflow-hidden rounded-lg border-[#DDE2EE] p-0 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+              >
+                <CardMenuItem icon={Copy} onSelect={() => {}}>
+                  Edit a copy instead
+                </CardMenuItem>
+                <CardMenuItem icon={Replace} onSelect={onChangeTemplate}>
+                  Change template
+                </CardMenuItem>
+              </ActionMenuContent>
+            </ActionMenu>
+          </div>
         </div>
       </div>
 
@@ -474,6 +518,10 @@ function TemplatePreviewPanel({
           </div>
         </div>
       </div>
+
+      {previewOpen && (
+        <TemplatePreviewOverlay template={template} onClose={() => setPreviewOpen(false)} />
+      )}
     </div>
   );
 }
