@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Info, UserCheck, X } from "lucide-react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
@@ -9,6 +10,8 @@ import StepCard from "./StepCard";
 import ConditionAttributePicker, {
   COUNTABLE_ATTRIBUTES,
   DEFAULT_VALUE_BY_TYPE,
+  NON_CORPORATE_NON_GMAIL,
+  OPERATORS_BY_ATTRIBUTE,
   OPERATORS_BY_TYPE,
   type AttributeType,
   type ConditionAttribute,
@@ -37,8 +40,6 @@ export interface AudienceValues {
   table: string;
   excludeEnabled: boolean;
   excludeSegments: SegmentRef[];
-  domainEnabled: boolean;
-  domains: string[];
   /** Cohort currently plotted from the co-marketer, if any. */
   cohortId: string;
 }
@@ -51,8 +52,6 @@ export const EMPTY_AUDIENCE: AudienceValues = {
   table: "",
   excludeEnabled: false,
   excludeSegments: [],
-  domainEnabled: false,
-  domains: [],
   cohortId: "",
 };
 
@@ -67,7 +66,6 @@ const FILTER_MODES: { id: AudienceMode; label: string }[] = [
 ];
 
 const DATA_TABLES = ["orders_master", "loyalty_tier", "app_events_daily", "product_catalogue"];
-const EMAIL_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"];
 
 const nf = new Intl.NumberFormat("en-US");
 
@@ -149,15 +147,36 @@ function Dropdown({
   widthClass?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (!wrapRef.current?.contains(target) && !panelRef.current?.contains(target)) {
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  // Portalled to <body> and positioned by rect rather than plain absolute —
+  // the accordion's height-animation wrapper clips overflow, which would
+  // otherwise crop a long option list (e.g. "Email domain"'s operators)
+  // instead of letting it scroll.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => wrapRef.current && setRect(wrapRef.current.getBoundingClientRect());
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
   }, [open]);
 
   return (
@@ -179,28 +198,35 @@ function Dropdown({
           strokeWidth={2}
         />
       </button>
-      {open && (
-        <div className="absolute left-0 top-full z-20 mt-1 max-h-[240px] w-full min-w-max overflow-y-auto rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
-          {options.map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => {
-                onChange(o);
-                setOpen(false);
-              }}
-              className={cn(
-                "block w-full whitespace-nowrap px-3 py-2 text-left font-manrope text-[13px] transition-colors",
-                o === value
-                  ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]"
-                  : "text-[#17173A] hover:bg-[#F7F9FC]"
-              )}
-            >
-              {o}
-            </button>
-          ))}
-        </div>
-      )}
+      {open &&
+        rect &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, minWidth: rect.width }}
+            className="scroll-slim z-[120] max-h-[240px] w-max overflow-y-auto rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+          >
+            {options.map((o) => (
+              <button
+                key={o}
+                type="button"
+                onClick={() => {
+                  onChange(o);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "block w-full whitespace-nowrap px-3 py-2 text-left font-manrope text-[13px] transition-colors",
+                  o === value
+                    ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]"
+                    : "text-[#17173A] hover:bg-[#F7F9FC]"
+                )}
+              >
+                {o}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -303,11 +329,6 @@ export function reachFor(v: AudienceValues): number {
     const overlap = Math.min(Math.round(union(v.excludeSegments) * 0.6), Math.round(base * 0.25));
     base = Math.max(0, base - overlap);
   }
-  if (v.domainEnabled && v.domains.length > 0) {
-    // Rough domain mix — gmail carries most of a typical base, the rest a tail.
-    const share = v.domains.reduce((a, d) => a + (d === "gmail.com" ? 0.54 : 0.09), 0);
-    base = Math.round(base * Math.min(1, share));
-  }
   return base;
 }
 
@@ -338,7 +359,7 @@ export default function CampaignAudienceStep({
   const conditionFor = (a: ConditionAttribute): AdhocCondition => ({
     attribute: a.label,
     type: a.type,
-    operator: OPERATORS_BY_TYPE[a.type][0],
+    operator: (OPERATORS_BY_ATTRIBUTE[a.label] ?? OPERATORS_BY_TYPE[a.type])[0],
     value: DEFAULT_VALUE_BY_TYPE[a.type],
   });
 
@@ -477,25 +498,36 @@ export default function CampaignAudienceStep({
                   )}
                   <Dropdown
                     value={c.operator}
-                    options={OPERATORS_BY_TYPE[c.type]}
+                    options={OPERATORS_BY_ATTRIBUTE[c.attribute] ?? OPERATORS_BY_TYPE[c.type]}
                     onChange={(v) =>
-                      setCondition(i, { operator: v, count: v === "in the last" ? c.count : undefined })
+                      setCondition(i, {
+                        operator: v,
+                        count: v === "in the last" ? c.count : undefined,
+                        // No value to type against the canned rule — clear
+                        // whatever was there so a stale value can't linger.
+                        value: v === NON_CORPORATE_NON_GMAIL ? "" : c.value,
+                      })
                     }
-                    widthClass="w-[130px]"
+                    widthClass="w-[190px]"
                   />
                   {c.type === "boolean" ? (
                     <Dropdown
                       value={c.value}
                       options={["True", "False"]}
                       onChange={(v) => setCondition(i, { value: v })}
-                      widthClass="w-[110px]"
+                      widthClass="w-[140px]"
                     />
                   ) : (
                     <input
                       type="text"
-                      value={c.value}
+                      value={c.operator === NON_CORPORATE_NON_GMAIL ? "" : c.value}
+                      disabled={c.operator === NON_CORPORATE_NON_GMAIL}
                       onChange={(e) => setCondition(i, { value: e.target.value })}
-                      className={cn(chipSelectClass, "w-[80px]")}
+                      className={cn(
+                        chipSelectClass,
+                        "w-[140px]",
+                        c.operator === NON_CORPORATE_NON_GMAIL && "cursor-not-allowed bg-[#F7F9FC] text-[#8A8AA3]"
+                      )}
                     />
                   )}
                   <button
@@ -546,38 +578,6 @@ export default function CampaignAudienceStep({
           onChange={(excludeSegments) => onChange({ excludeSegments })}
         />
         <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">Select upto 15 list / segment</p>
-      </FilterSection>
-
-      <FilterSection
-        title="Domain"
-        info="Include specific email domains from your audience."
-        checked={values.domainEnabled}
-        onChange={(v) => onChange({ domainEnabled: v })}
-      >
-        <div className="flex flex-wrap gap-2">
-          {EMAIL_DOMAINS.map((d) => {
-            const on = values.domains.includes(d);
-            return (
-              <button
-                key={d}
-                type="button"
-                onClick={() =>
-                  onChange({
-                    domains: on ? values.domains.filter((x) => x !== d) : [...values.domains, d],
-                  })
-                }
-                className={cn(
-                  "rounded-full border px-3 py-1.5 font-manrope text-[13px] font-medium transition-colors",
-                  on
-                    ? "border-[#2F68E5] bg-[#F4F8FF] text-[#2F68E5]"
-                    : "border-[#DDE2EE] bg-white text-[#17173A] hover:bg-[#F7F9FC]"
-                )}
-              >
-                {d}
-              </button>
-            );
-          })}
-        </div>
       </FilterSection>
     </StepCard>
   );

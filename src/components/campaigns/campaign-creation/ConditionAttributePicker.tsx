@@ -73,6 +73,7 @@ const CATEGORIES: AttributeCategory[] = [
     icon: Target,
     attributes: [
       { label: "Email", type: "text" },
+      { label: "Email domain", type: "text" },
       { label: "Phone number", type: "text" },
       { label: "City", type: "text" },
       { label: "Country", type: "text" },
@@ -151,6 +152,27 @@ export const OPERATORS_BY_TYPE: Record<AttributeType, string[]> = {
   number: ["is greater than", "is less than", "equals"],
   text: ["is", "is not", "contains"],
   boolean: ["is", "is not"],
+};
+
+/** The self-contained rule that needs no typed value — picking it disables
+ *  the value field instead of asking for one. */
+export const NON_CORPORATE_NON_GMAIL = "Non Corporate Non Gmail";
+
+/** Per-attribute operator overrides, for attributes whose comparisons don't
+ *  match the rest of their type — "Email domain" gets string-matching ops
+ *  plus a canned rule, rather than the generic text set. Keyed by label
+ *  since a condition only carries the attribute's name, not the full picker
+ *  object. */
+export const OPERATORS_BY_ATTRIBUTE: Partial<Record<string, string[]>> = {
+  "Email domain": [
+    "Is",
+    "Is Not",
+    "Contains",
+    "Does Not Contain",
+    "Starts With",
+    "Ends With",
+    NON_CORPORATE_NON_GMAIL,
+  ],
 };
 
 export const DEFAULT_VALUE_BY_TYPE: Record<AttributeType, string> = {
