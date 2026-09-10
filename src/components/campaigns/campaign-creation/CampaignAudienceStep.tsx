@@ -16,6 +16,7 @@ import ConditionAttributePicker, {
   type AttributeType,
   type ConditionAttribute,
 } from "./ConditionAttributePicker";
+import type { SetupValues } from "./CampaignSetupStep";
 
 export type AudienceMode = "all" | "segments" | "adhoc" | "table";
 
@@ -71,6 +72,54 @@ const nf = new Intl.NumberFormat("en-US");
 
 const chipSelectClass =
   "h-8 rounded-md border border-[#DDE2EE] bg-white px-2 font-manrope text-[13px] text-[#17173A] outline-none focus:border-[#2F68E5]";
+
+const fieldClass =
+  "h-10 w-full rounded-md border border-[#DDE2EE] bg-[#F7F9FC] px-3 font-manrope text-sm text-[#17173A] outline-none transition-colors placeholder:text-[#A0A0A0] focus:border-[#2F68E5] focus:bg-white";
+
+/** The tracking fields live on the campaign's setup, but are edited here
+ *  alongside who the send goes to rather than off in a settings drawer. */
+export type TrackingValues = Pick<SetupValues, "gaTracking" | "conversionTracking" | "conversionEvent">;
+
+/** Account-level UTM defaults shown on hover of the GA-tracking pill. */
+const GA_ACCOUNT_UTMS = [
+  { label: "Source (utm_source)", value: "netcore" },
+  { label: "Medium (utm_medium)", value: "email" },
+  { label: "Campaign (utm_campaign)", value: "summer_sale_2026" },
+  { label: "Content (utm_content)", value: "hero_cta" },
+  { label: "Key 1, Value 1", value: "coupon, SAVE20" },
+];
+
+function GaConfigPill() {
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            tabIndex={0}
+            className="inline-flex cursor-default items-center rounded-full border border-[#D6E2FF] bg-[#EDF1FF] px-2 py-0.5 font-manrope text-[11px] font-medium leading-4 text-[#2F68E5]"
+          >
+            Pre-filled from account config
+          </span>
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          align="start"
+          className="max-w-[280px] border border-[#DDE2EE] bg-white p-3 text-[#17173A] shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+        >
+          <ul className="space-y-1.5 font-manrope text-xs leading-[18px]">
+            {GA_ACCOUNT_UTMS.map((row) => (
+              <li key={row.label}>
+                <span className="text-[#6F6F8D]">{row.label}</span>
+                <span className="text-[#6F6F8D]"> — </span>
+                <span className="font-semibold text-[#17173A]">{row.value}</span>
+              </li>
+            ))}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 /** A smaller toggle than the shared Switch — used for the Exclude/Domain
  *  filter rows, which sit next to compact label text. */
@@ -263,36 +312,45 @@ export function AudienceReachStat({ reach }: { reach: number }) {
   );
 }
 
-/** A bordered toggle row — switch, label, optional info tooltip — and
- *  whatever the switch reveals underneath. */
+/** A bordered toggle row — switch, label, optional info tooltip and badge —
+ *  and whatever the switch reveals underneath, if anything. */
 function FilterSection({
   title,
   info,
+  badge,
   checked,
   onChange,
+  flash,
   children,
 }: {
   title: string;
   info?: string;
+  /** Extra chip sitting next to the title, e.g. a "pre-filled" pill. */
+  badge?: ReactNode;
   checked: boolean;
   onChange: (v: boolean) => void;
-  children: ReactNode;
+  /** Briefly flashed after the co-marketer plots this field. */
+  flash?: boolean;
+  children?: ReactNode;
 }) {
   return (
-    <div className="mt-8">
-      <div className="flex items-center gap-2">
+    <div className="mt-5">
+      <div className={cn("flex flex-wrap items-center gap-2", flash && "cmk-field-flash")}>
         <MiniSwitch checked={checked} onCheckedChange={onChange} />
         <p className="font-manrope text-sm font-semibold text-[#17173A]">{title}</p>
         {info && <InfoDot label={info} />}
+        {badge}
       </div>
 
-      <div className="t-acc" data-open={checked ? "true" : "false"}>
-        <div className="t-acc-panel">
-          <div className="t-acc-panel-inner">
-            <div className="pt-4">{children}</div>
+      {children && (
+        <div className="t-acc" data-open={checked ? "true" : "false"}>
+          <div className="t-acc-panel">
+            <div className="t-acc-panel-inner">
+              <div className="pt-4">{children}</div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -341,11 +399,18 @@ export default function CampaignAudienceStep({
   values,
   onChange,
   highlight,
+  tracking,
+  onTrackingChange,
+  trackingHighlight,
 }: {
   values: AudienceValues;
   onChange: (patch: Partial<AudienceValues>) => void;
   /** Briefly flashed after the co-marketer plots a cohort. */
   highlight?: boolean;
+  tracking: TrackingValues;
+  onTrackingChange: (patch: Partial<TrackingValues>) => void;
+  /** Tracking field keys just written by a co-marketer apply — briefly flashed. */
+  trackingHighlight?: Partial<Record<keyof TrackingValues, boolean>>;
 }) {
   /** Any hand edit invalidates a count that came from the co-marketer's segment. */
   const setConditions = (conditions: AdhocCondition[]) =>
@@ -578,6 +643,32 @@ export default function CampaignAudienceStep({
           onChange={(excludeSegments) => onChange({ excludeSegments })}
         />
         <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">Select upto 15 list / segment</p>
+      </FilterSection>
+
+      <FilterSection
+        title="Include GA tracking"
+        badge={<GaConfigPill />}
+        info="Track performance of your campaign with UTM parameters."
+        checked={tracking.gaTracking}
+        onChange={(v) => onTrackingChange({ gaTracking: v })}
+        flash={trackingHighlight?.gaTracking}
+      />
+
+      <FilterSection
+        title="Conversion tracking"
+        info="Activity which represents a conversion for this campaign."
+        checked={tracking.conversionTracking}
+        onChange={(v) => onTrackingChange({ conversionTracking: v })}
+        flash={trackingHighlight?.conversionTracking}
+      >
+        <input
+          type="text"
+          value={tracking.conversionEvent}
+          onChange={(e) => onTrackingChange({ conversionEvent: e.target.value })}
+          placeholder="Select conversion event"
+          aria-label="Select conversion event"
+          className={cn(fieldClass, trackingHighlight?.conversionEvent && "cmk-field-flash")}
+        />
       </FilterSection>
     </StepCard>
   );

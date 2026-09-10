@@ -60,6 +60,7 @@ import CampaignScheduleStep, {
 } from "./CampaignScheduleStep";
 import { emailTemplates } from "./emailTemplates.data";
 import { SEGMENT_STARTERS } from "@/components/campaigns/SegmentSuggestions";
+import AllContactsNudge from "@/components/campaigns/AllContactsNudge";
 import SegmentCreationOverlay from "@/components/campaigns/segment-creation/SegmentCreationOverlay";
 import { buildFindings, type Finding } from "./previewFindings.data";
 import CampaignPreview from "./CampaignPreview";
@@ -199,6 +200,7 @@ const EMPTY_SETUP: SetupValues = {
   conversionTracking: false,
   conversionEvent: "",
   audienceSuggestion: "",
+  avoidDuplicateComms: false,
 };
 
 /**
@@ -265,14 +267,19 @@ export default function CampaignCreationOverlay({
   // Brief pop-up shown the moment "Launch" is clicked, before handing off
   // to the listing page — skips the Preview/review screen entirely.
   const [launching, setLaunching] = useState(false);
-  // Which accordion card is open. -1 means every card is collapsed, which the
-  // header toggle allows — the stepper's "current step" is now just this.
-  const [activeIndex, setActiveIndex] = useState(0);
+  // Which accordion cards are expanded — each opens and closes independently,
+  // so opening one never collapses the others. Empty means every card is
+  // collapsed.
+  const [openStepIds, setOpenStepIds] = useState<Set<string>>(new Set());
+  // The step most recently opened — separate from openStepIds, since a few
+  // side effects (the co-marketer rail, the audience auto-open, scrolling)
+  // still need a single "current" step rather than the whole open set.
+  const [focusStepId, setFocusStepId] = useState<string | null>(null);
   // Steps the user has tapped "Done" on. Only these show the green check and
   // the inline summary when collapsed, same rule as the objective v2 flow.
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   // The step the co-marketer rail is answering for. Tracked separately from
-  // activeIndex so collapsing every card doesn't blank the suggestions.
+  // focusStepId so collapsing every card doesn't blank the suggestions.
   const [railStepId, setRailStepId] = useState<string>("audience");
   // The campaign's own name — set once per open and only ever changed by the
   // navbar rename, so picking a goal no longer retitles the draft.
@@ -314,6 +321,12 @@ export default function CampaignCreationOverlay({
   const audienceSeeded = useRef(false);
   // Whether the open chat is the audience thread — it closes when the step does.
   const audienceChat = useRef(false);
+  // "All contacts" warning — fires once, the first time Send to is completed
+  // with that mode still picked. Once shown (or dismissed), never again for
+  // this draft, even if the user leaves and re-completes the step.
+  const [allContactsNudgeOpen, setAllContactsNudgeOpen] = useState(false);
+  const allContactsNudgeSeen = useRef(false);
+  const allContactsNudgeAnchor = useRef<HTMLDivElement>(null);
   // Scroll container + per-card nodes, so opening a card can bring its header
   // up to the top of the canvas.
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -341,7 +354,8 @@ export default function CampaignCreationOverlay({
       setGenerating(false);
       setCampaignAIGenerated(false);
       setLaunching(false);
-      setActiveIndex(0);
+      setOpenStepIds(new Set());
+      setFocusStepId(null);
       setCompletedSteps(new Set());
       setRailStepId("audience");
       setSetup(EMPTY_SETUP);
@@ -352,6 +366,8 @@ export default function CampaignCreationOverlay({
       setSchedule({ ...EMPTY_SCHEDULE, sendAt: defaultSendAt() });
       setAudienceFlash(false);
       audienceSeeded.current = false;
+      allContactsNudgeSeen.current = false;
+      setAllContactsNudgeOpen(false);
       setAiReady(false);
       setHighlight({});
     }, SLIDE_MS);
@@ -377,8 +393,8 @@ export default function CampaignCreationOverlay({
 
   // Keep the rail pointed at the last card the user opened.
   useEffect(() => {
-    if (activeIndex >= 0) setRailStepId(STEPS[activeIndex].id);
-  }, [activeIndex]);
+    if (focusStepId) setRailStepId(focusStepId);
+  }, [focusStepId]);
 
   // Co-marketer suggestions skeleton in while the goal is new, then reveal.
   useEffect(() => {
@@ -413,7 +429,7 @@ export default function CampaignCreationOverlay({
   // "Build from scratch", which still gets the co-marketer by default.
   useEffect(() => {
     if (!open || introOpen || generating) return;
-    if (STEPS[activeIndex]?.id !== "audience") return;
+    if (focusStepId !== "audience") return;
     if (audienceSeeded.current) return;
     audienceSeeded.current = true;
     if (campaignAIGenerated) return;
@@ -427,23 +443,22 @@ export default function CampaignCreationOverlay({
     setFollowUpSeq(0);
     setChatSession((n) => n + 1);
     setChatOpen(true);
-  }, [open, introOpen, generating, activeIndex, campaignAIGenerated, setup.goal]);
+  }, [open, introOpen, generating, focusStepId, campaignAIGenerated, setup.goal]);
 
   // The audience thread belongs to its step. Moving on to Content or Schedule
   // closes it rather than carrying an answered conversation into work it has
   // nothing to say about — the suggestion rail takes over there. A chat the
   // user opened themselves from the navbar is left alone.
   useEffect(() => {
-    const openId = STEPS[activeIndex]?.id;
     // Every card collapsed isn't "moved on" — the thread stays until another
     // step is actually opened.
-    if (!open || !openId || openId === "audience" || !audienceChat.current) return;
+    if (!open || !focusStepId || focusStepId === "audience" || !audienceChat.current) return;
     audienceChat.current = false;
     setChatOpen(false);
     setChatTopic(null);
     setFollowUpTopic(null);
     setFollowUpSeq(0);
-  }, [open, activeIndex]);
+  }, [open, focusStepId]);
 
   if (!mounted) return null;
 
@@ -615,41 +630,61 @@ export default function CampaignCreationOverlay({
   };
 
   /** Accordion header: open that card, or shut it if it's already open —
-   *  except "Send to", the fallback home step, which can't collapse itself.
-   *  Collapsing Message or Schedule & tracking lands back on "Send to"
-   *  rather than leaving nothing open. */
+   *  each card is independent, so opening one never closes the others. */
   const toggleStep = (index: number) => {
-    setActiveIndex((current) => {
-      if (current !== index) return index;
-      if (STEPS[index].id === "audience") return current;
-      const audienceIndex = STEPS.findIndex((s) => s.id === "audience");
-      return audienceIndex >= 0 ? audienceIndex : current;
+    const id = STEPS[index].id;
+    const isOpen = openStepIds.has(id);
+    setOpenStepIds((prev) => {
+      const next = new Set(prev);
+      if (isOpen) next.delete(id);
+      else next.add(id);
+      return next;
     });
+    if (!isOpen) setFocusStepId(id);
   };
 
-  /** Navbar stepper: jump straight to a step, rather than toggling it shut
-   *  the way clicking its own accordion header would. */
+  /** Navbar stepper: make sure a step is open and scroll to it, rather than
+   *  toggling it shut the way clicking its own accordion header would. */
   const selectStep = (id: string) => {
     const index = STEPS.findIndex((s) => s.id === id);
     if (index < 0) return;
-    setActiveIndex(index);
+    setOpenStepIds((prev) => new Set(prev).add(id));
+    setFocusStepId(id);
     window.setTimeout(() => scrollToStep(id), 380);
   };
 
   /** Steps the navbar stepper shows. */
   const navbarSteps = STEPS.map((s) => ({ id: s.id, label: s.label }));
 
-  /** "Done" on a card: mark it finished and open the next one. */
+  /** "Done" on a card: mark it finished, close it, and open the next one. */
   const completeStep = (index: number) => {
-    setCompletedSteps((prev) => new Set(prev).add(STEPS[index].id));
+    const id = STEPS[index].id;
+    setCompletedSteps((prev) => new Set(prev).add(id));
+    let nudging = false;
+    if (id === "audience" && audience.mode === "all" && !allContactsNudgeSeen.current) {
+      allContactsNudgeSeen.current = true;
+      setAllContactsNudgeOpen(true);
+      nudging = true;
+    }
     const next = index + 1;
-    if (next >= STEPS.length) {
-      setActiveIndex(-1);
+    const nextId = next < STEPS.length ? STEPS[next].id : null;
+    setOpenStepIds((prev) => {
+      const nextSet = new Set(prev);
+      nextSet.delete(id);
+      if (nextId) nextSet.add(nextId);
+      return nextSet;
+    });
+    if (!nextId) {
+      setFocusStepId(null);
       return;
     }
-    setActiveIndex(next);
+    setFocusStepId(nextId);
+    // The nudge hangs off "Send to"'s own reach pill — chasing the next step
+    // would carry that pill up near the navbar, leaving the nudge no room to
+    // sit below it. Leave the scroll position alone while it's showing.
+    if (nudging) return;
     // Let the collapse/expand transition run before chasing the new position.
-    window.setTimeout(() => scrollToStep(STEPS[next].id), 380);
+    window.setTimeout(() => scrollToStep(nextId), 380);
   };
 
   /** Has this step got enough on it to read as done? */
@@ -890,7 +925,6 @@ export default function CampaignCreationOverlay({
   ) : null;
 
   const Icon = CHANNEL_ICONS[channel] ?? Mail;
-  const activeStep = STEPS[activeIndex];
   const goal = goalLabel(setup.goal);
   // The suggestion rail stays closed until the campaign has a goal — before
   // that there's nothing for the co-marketer to be relevant about — and stands
@@ -945,8 +979,8 @@ export default function CampaignCreationOverlay({
           onBack={() => setPreviewOpen(false)}
           onPublish={onClose}
           onEditStep={(stepId) => {
-            const index = STEPS.findIndex((s) => s.id === stepId);
-            if (index >= 0) setActiveIndex(index);
+            setOpenStepIds((prev) => new Set(prev).add(stepId));
+            setFocusStepId(stepId);
             setPreviewOpen(false);
           }}
           onAskCoMarketer={openFreshChat}
@@ -968,7 +1002,7 @@ export default function CampaignCreationOverlay({
         askCoMarketerLabel={channel === "Email" ? "Co-marketer" : "Ask co-marketer"}
         onClose={onClose}
         steps={navbarSteps}
-        activeStepId={activeIndex >= 0 ? STEPS[activeIndex]?.id ?? null : null}
+        activeStepId={focusStepId}
         onSelectStep={selectStep}
       />
 
@@ -999,7 +1033,7 @@ export default function CampaignCreationOverlay({
           <div className="cc-accordion ov2-accordion">
             {STEPS.map((step, index) => {
               const StepIcon = step.icon;
-              const active = index === activeIndex;
+              const active = openStepIds.has(step.id);
               const complete =
                 !active && completedSteps.has(step.id) && isStepComplete(step.id);
               const state = active ? "active" : complete ? "complete" : "idle";
@@ -1044,8 +1078,19 @@ export default function CampaignCreationOverlay({
                     {/* Only while collapsed — once expanded, the same count
                         moves into the card body next to the mode picker. */}
                     {step.id === "audience" && !active && (
-                      <div onClick={(e) => e.stopPropagation()}>
+                      <div
+                        ref={allContactsNudgeAnchor}
+                        className="relative"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <AudienceReachablePill reach={reachFor(audience)} />
+                        {allContactsNudgeOpen && (
+                          <AllContactsNudge
+                            reach={reachFor(audience)}
+                            anchorRef={allContactsNudgeAnchor}
+                            onClose={() => setAllContactsNudgeOpen(false)}
+                          />
+                        )}
                       </div>
                     )}
                     <ChevronDown className="ov2-chevron" />
@@ -1061,6 +1106,13 @@ export default function CampaignCreationOverlay({
                                 values={audience}
                                 highlight={audienceFlash}
                                 onChange={(patch) => setAudience((a) => ({ ...a, ...patch }))}
+                                tracking={{
+                                  gaTracking: setup.gaTracking,
+                                  conversionTracking: setup.conversionTracking,
+                                  conversionEvent: setup.conversionEvent,
+                                }}
+                                onTrackingChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
+                                trackingHighlight={highlight}
                               />
                             </div>
                             {/* Sits outside CampaignAudienceStep's own StepCard so
