@@ -20,6 +20,7 @@ import {
   LayoutGrid,
   Mail,
   Monitor,
+  Moon,
   MoreVertical,
   Paperclip,
   Pencil,
@@ -28,8 +29,10 @@ import {
   RotateCcw,
   Search,
   SlidersHorizontal,
+  SplitSquareHorizontal,
   Smartphone,
   Sparkles,
+  Sun,
   ThumbsDown,
   ThumbsUp,
   Trash2,
@@ -390,11 +393,15 @@ function TemplatePreviewPanel({
   template,
   device,
   onDeviceChange,
+  theme,
+  onThemeChange,
   onChangeTemplate,
 }: {
   template: EmailTemplate | null;
   device: "desktop" | "mobile";
   onDeviceChange: (device: "desktop" | "mobile") => void;
+  theme: "light" | "dark";
+  onThemeChange: (theme: "light" | "dark") => void;
   onChangeTemplate: () => void;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -402,35 +409,69 @@ function TemplatePreviewPanel({
   return (
     <div className="mt-10">
       <div className="mb-4 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-1 rounded-md border border-[#DDE2EE] bg-white p-1">
-          <button
-            type="button"
-            aria-label="Desktop preview"
-            aria-pressed={device === "desktop"}
-            onClick={() => onDeviceChange("desktop")}
-            className={cn(
-              "grid size-8 place-items-center rounded-md transition-colors",
-              device === "desktop"
-                ? "bg-[#F0F3F9] text-[#17173A]"
-                : "text-[#8A8AA3] hover:text-[#17173A]"
-            )}
-          >
-            <Monitor className="size-4" strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            aria-label="Mobile preview"
-            aria-pressed={device === "mobile"}
-            onClick={() => onDeviceChange("mobile")}
-            className={cn(
-              "grid size-8 place-items-center rounded-md transition-colors",
-              device === "mobile"
-                ? "bg-[#F0F3F9] text-[#17173A]"
-                : "text-[#8A8AA3] hover:text-[#17173A]"
-            )}
-          >
-            <Smartphone className="size-4" strokeWidth={2} />
-          </button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 rounded-md border border-[#DDE2EE] bg-white p-1">
+            <button
+              type="button"
+              aria-label="Desktop preview"
+              aria-pressed={device === "desktop"}
+              onClick={() => onDeviceChange("desktop")}
+              className={cn(
+                "grid size-8 place-items-center rounded-md transition-colors",
+                device === "desktop"
+                  ? "bg-[#F0F3F9] text-[#17173A]"
+                  : "text-[#8A8AA3] hover:text-[#17173A]"
+              )}
+            >
+              <Monitor className="size-4" strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              aria-label="Mobile preview"
+              aria-pressed={device === "mobile"}
+              onClick={() => onDeviceChange("mobile")}
+              className={cn(
+                "grid size-8 place-items-center rounded-md transition-colors",
+                device === "mobile"
+                  ? "bg-[#F0F3F9] text-[#17173A]"
+                  : "text-[#8A8AA3] hover:text-[#17173A]"
+              )}
+            >
+              <Smartphone className="size-4" strokeWidth={2} />
+            </button>
+          </div>
+
+          <div className="rounded-md border border-[#DDE2EE] bg-white p-1">
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={theme === "dark" ? "View template in light mode" : "View template in dark mode"}
+                    aria-pressed={theme === "dark"}
+                    onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}
+                    className="grid size-8 place-items-center rounded-md text-[#8A8AA3] transition-colors hover:text-[#17173A]"
+                  >
+                    {theme === "dark" ? (
+                      <Sun className="size-4" strokeWidth={2} />
+                    ) : (
+                      <Moon className="size-4" strokeWidth={2} />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  sideOffset={8}
+                  className="overflow-visible rounded-lg border-0 bg-black px-3 py-2.5 text-white shadow-none"
+                >
+                  <p className="font-manrope text-xs leading-[18px]">
+                    {theme === "dark" ? "View template in light mode" : "View template in dark mode"}
+                  </p>
+                  <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -489,20 +530,32 @@ function TemplatePreviewPanel({
         </div>
       </div>
 
-      <div className="flex justify-center rounded-xl border border-[#DDE2EE] bg-[#F7F9FC] p-8">
+      <div
+        className={cn(
+          "flex justify-center rounded-xl border p-8 transition-colors duration-300",
+          theme === "dark" ? "border-[#2A2F3E] bg-[#12141C]" : "border-[#DDE2EE] bg-[#F7F9FC]"
+        )}
+      >
         <div
           className={cn(
-            "overflow-hidden rounded-lg border border-[#DDE2EE] bg-white shadow-[0_8px_24px_rgba(23,23,58,0.08)] transition-all duration-300 ease-in-out",
+            "overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(23,23,58,0.08)] transition-all duration-300 ease-in-out",
+            theme === "dark" ? "border-[#2A2F3E] bg-[#1B1E29]" : "border-[#DDE2EE] bg-white",
             device === "desktop" ? "w-[900px]" : "w-[380px]"
           )}
         >
-          <div className="h-9 border-b border-[#EEF1F7] bg-[#F7F9FC]" />
+          <div
+            className={cn(
+              "h-9 border-b transition-colors duration-300",
+              theme === "dark" ? "border-[#2A2F3E] bg-[#1B1E29]" : "border-[#EEF1F7] bg-[#F7F9FC]"
+            )}
+          />
           {/* The frame is a fixed viewport, not the template's own height — this
               scrollbar (unlike the wizard canvas behind it) stays visible, so
               it's clear there's more of the template to see below the fold. */}
           <div
             className={cn(
-              "overflow-y-auto bg-white transition-all duration-300 ease-in-out",
+              "overflow-y-auto transition-all duration-300 ease-in-out",
+              theme === "dark" ? "bg-[#1B1E29]" : "bg-white",
               device === "desktop" ? "h-[560px]" : "h-[640px]"
             )}
           >
@@ -793,6 +846,65 @@ function VariantTab({
         </>
       )}
     </div>
+  );
+}
+
+/** Test allocation opens in its own right-side drawer instead of expanding
+ *  inline — the split/winner controls need more breathing room than an
+ *  accordion squeezed between the variant tabs and the From field. Mirrors
+ *  CampaignSettingsDrawer's slide-in treatment. */
+function TestAllocationDrawer({
+  open,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setShown(false);
+      return;
+    }
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, [open]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex justify-end">
+      <div
+        className={cn(
+          "absolute inset-0 bg-black/40 transition-opacity duration-300",
+          shown ? "opacity-100" : "opacity-0"
+        )}
+        onClick={onClose}
+      />
+      <div
+        className={cn(
+          "relative flex h-full w-full max-w-[600px] flex-col bg-white shadow-[-20px_0_60px_rgba(23,23,58,0.15)] transition-transform duration-300 ease-out",
+          shown ? "translate-x-0" : "translate-x-full"
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-[#DDE2EE] px-6 py-5">
+          <h2 className="font-manrope text-lg font-bold text-[#17173A]">Test allocation</h2>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className="grid size-8 place-items-center rounded-full text-[#8A8AA3] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+          >
+            <X className="size-5" strokeWidth={2} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-6">{children}</div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1187,6 +1299,11 @@ export default function CampaignContentStep({
   const [sourceTab, setSourceTab] = useState<TemplateSourceTab>("saved");
   const [foldersExpanded, setFoldersExpanded] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("mobile");
+  const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light");
+  // Test settings sit right under the variant tabs once there's a real test
+  // to configure — closed by default so a fresh A/B test doesn't dump the
+  // whole split/winner panel on the user immediately.
+  const [testAllocationOpen, setTestAllocationOpen] = useState(false);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1341,42 +1458,195 @@ export default function CampaignContentStep({
             return (
               <div>
                 <div className="mb-5 flex items-center gap-2">
-                  {values.variants.map((v) => (
-                    <VariantTab
-                      key={v}
-                      letter={v}
-                      active={values.activeVariant === v}
-                      showMenu={values.variants.length > 1}
-                      onSelect={() => onChange({ activeVariant: v })}
-                      onCopy={() => copyVariant()}
-                      onDelete={() => deleteVariant(v)}
-                    />
-                  ))}
-                  {values.variants.length < MAX_VARIANTS && (
-                    <TooltipProvider delayDuration={150}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            aria-label="Add variant"
-                            onClick={addVariant}
-                            className="grid size-9 shrink-0 place-items-center rounded border border-[#DDE2EE] text-[#6F6F8D] transition-colors hover:bg-[#F7F9FC] hover:text-[#17173A]"
-                          >
-                            <Plus className="size-4" strokeWidth={2.4} />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          sideOffset={8}
-                          className="overflow-visible rounded-lg border-0 bg-black px-3 py-2.5 text-white shadow-none"
-                        >
-                          <p className="font-manrope text-xs leading-[18px]">Add variant</p>
-                          <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                  {values.variants.length === 1 ? (
+                    // Nothing to compare yet with just "A" — offer to start the
+                    // test instead of a lone, unlabelled tab. Starting it adds
+                    // "B" straight onto the shared content fields, so it opens
+                    // already holding what "A" has.
+                    <button
+                      type="button"
+                      onClick={addVariant}
+                      className="dc-btn dc-btn-secondary"
+                    >
+                      <SplitSquareHorizontal className="size-4" strokeWidth={2} />
+                      Create A/B test
+                    </button>
+                  ) : (
+                    <>
+                      {values.variants.map((v) => (
+                        <VariantTab
+                          key={v}
+                          letter={v}
+                          active={values.activeVariant === v}
+                          showMenu={values.variants.length > 1}
+                          onSelect={() => onChange({ activeVariant: v })}
+                          onCopy={() => copyVariant()}
+                          onDelete={() => deleteVariant(v)}
+                        />
+                      ))}
+                      {values.variants.length < MAX_VARIANTS && (
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label="Add variant"
+                                onClick={addVariant}
+                                className="grid size-9 shrink-0 place-items-center rounded border border-[#DDE2EE] text-[#6F6F8D] transition-colors hover:bg-[#F7F9FC] hover:text-[#17173A]"
+                              >
+                                <Plus className="size-4" strokeWidth={2.4} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              sideOffset={8}
+                              className="overflow-visible rounded-lg border-0 bg-black px-3 py-2.5 text-white shadow-none"
+                            >
+                              <p className="font-manrope text-xs leading-[18px]">Add variant</p>
+                              <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </>
+                  )}
+
+                  {values.variants.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setTestAllocationOpen(true)}
+                      className="ml-auto flex h-9 items-center rounded-md border border-[#DDE2EE] bg-white px-3 font-manrope text-sm font-semibold text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+                    >
+                      Test allocation
+                    </button>
                   )}
                 </div>
+
+                {values.variants.length > 1 && (
+                  <TestAllocationDrawer
+                    open={testAllocationOpen}
+                    onClose={() => setTestAllocationOpen(false)}
+                  >
+                    <div>
+                      <p className="font-manrope text-sm font-semibold text-[#17173A]">
+                        User distribution
+                      </p>
+                      <p className="mt-0.5 font-manrope text-xs text-[#6F6F8D]">
+                        Set the percentage of users for each variant.
+                      </p>
+
+                      <div className="mt-4 flex flex-col items-start gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                          {values.variants.map((v) => {
+                            const color = VARIANT_COLORS[v] ?? VARIANT_COLORS.A;
+                            return (
+                              <label
+                                key={v}
+                                className="flex h-11 cursor-text items-center gap-2 rounded-full border border-[#DDE2EE] bg-white py-1 pl-1 pr-4 transition-colors focus-within:border-[#2F68E5]"
+                              >
+                                <span
+                                  className="grid size-8 shrink-0 place-items-center rounded-full font-manrope text-xs font-bold"
+                                  style={{ background: color.bg, color: color.text }}
+                                >
+                                  {v}
+                                </span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  aria-label={`Percentage for variant ${v}`}
+                                  value={values.variantSplit[v] ?? 0}
+                                  onChange={(e) => setVariantShare(v, Number(e.target.value))}
+                                  className="cc-plain-number w-7 bg-transparent text-right font-manrope text-sm font-bold text-[#17173A] outline-none"
+                                />
+                                <span className="font-manrope text-sm text-[#8A8AA3]">%</span>
+                              </label>
+                            );
+                          })}
+
+                          {values.decideWinner && (
+                            <label className="flex h-11 cursor-text items-center gap-2 rounded-full border border-[#DDE2EE] bg-white py-1 pl-1 pr-4 transition-colors focus-within:border-[#2F68E5]">
+                              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#F5C542]">
+                                <Trophy className="size-4 text-[#8A6100]" strokeWidth={2} />
+                              </span>
+                              <span className="font-manrope text-sm font-bold text-[#17173A]">
+                                Winner
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                aria-label="Percentage for the winning variant"
+                                value={winnerShare}
+                                onChange={(e) => setWinnerShare(Number(e.target.value))}
+                                className="cc-plain-number w-7 bg-transparent text-right font-manrope text-sm font-bold text-[#17173A] outline-none"
+                              />
+                              <span className="font-manrope text-sm text-[#8A8AA3]">%</span>
+                            </label>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={splitEvenly}
+                          className="font-manrope text-sm font-bold text-[#2F68E5] transition-colors hover:text-[#2455C0]"
+                        >
+                          Split evenly
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex items-center gap-2">
+                      <MiniSwitch
+                        checked={values.decideWinner}
+                        onCheckedChange={toggleDecideWinner}
+                      />
+                      <p className="font-manrope text-sm font-semibold text-[#17173A]">
+                        Decide a winner variant
+                      </p>
+                    </div>
+
+                    {values.decideWinner && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2 font-manrope text-sm text-[#17173A]">
+                        <span>Decide winner on basis of</span>
+                        <div className="w-[130px]">
+                          <Dropdown
+                            value={values.winningMetric}
+                            options={["Open", "Clicks", "Conversion"]}
+                            onChange={(v) =>
+                              onChange({ winningMetric: v as ContentValues["winningMetric"] })
+                            }
+                          />
+                        </div>
+                        <span>after</span>
+                        <div className="w-[90px]">
+                          <Dropdown
+                            value={values.testDurationValue}
+                            options={durationOptionsFor(values.testDurationUnit)}
+                            onChange={(v) => onChange({ testDurationValue: v })}
+                          />
+                        </div>
+                        <div className="w-[100px]">
+                          <Dropdown
+                            value={values.testDurationUnit}
+                            options={[...DURATION_UNITS]}
+                            onChange={(v) => {
+                              const unit = v as ContentValues["testDurationUnit"];
+                              const options = durationOptionsFor(unit);
+                              onChange({
+                                testDurationUnit: unit,
+                                testDurationValue: options.includes(values.testDurationValue)
+                                  ? values.testDurationValue
+                                  : options[0],
+                              });
+                            }}
+                          />
+                        </div>
+                        <span>.</span>
+                      </div>
+                    )}
+                  </TestAllocationDrawer>
+                )}
 
                 <FieldRow label="From" trailing={fromTrailing}>
                   <input
@@ -1620,6 +1890,8 @@ export default function CampaignContentStep({
           template={selectedTemplate}
           device={previewDevice}
           onDeviceChange={setPreviewDevice}
+          theme={previewTheme}
+          onThemeChange={setPreviewTheme}
           onChangeTemplate={() => onChange({ templateId: null })}
         />
       ) : (
@@ -1816,122 +2088,6 @@ export default function CampaignContentStep({
         </>
       )}
 
-      {values.variants.length > 1 && (
-        <>
-          <div className="my-8 h-px bg-[#E8ECF4]" />
-          <h3 className="mb-5 font-manrope text-base font-bold text-[#17173A]">Test settings</h3>
-
-          <div>
-            <p className="font-manrope text-sm font-semibold text-[#17173A]">User distribution</p>
-            <p className="mt-0.5 font-manrope text-xs text-[#6F6F8D]">
-              Set the percentage of users for each variant.
-            </p>
-
-            <div className="mt-4 flex flex-col items-start gap-3">
-              <div className="flex flex-wrap items-center gap-3">
-                {values.variants.map((v) => {
-                  const color = VARIANT_COLORS[v] ?? VARIANT_COLORS.A;
-                  return (
-                    <label
-                      key={v}
-                      className="flex h-11 cursor-text items-center gap-2 rounded-full border border-[#DDE2EE] bg-white py-1 pl-1 pr-4 transition-colors focus-within:border-[#2F68E5]"
-                    >
-                      <span
-                        className="grid size-8 shrink-0 place-items-center rounded-full font-manrope text-xs font-bold"
-                        style={{ background: color.bg, color: color.text }}
-                      >
-                        {v}
-                      </span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        aria-label={`Percentage for variant ${v}`}
-                        value={values.variantSplit[v] ?? 0}
-                        onChange={(e) => setVariantShare(v, Number(e.target.value))}
-                        className="cc-plain-number w-9 bg-transparent text-right font-manrope text-sm font-bold text-[#17173A] outline-none"
-                      />
-                      <span className="font-manrope text-sm text-[#8A8AA3]">%</span>
-                    </label>
-                  );
-                })}
-
-                {values.decideWinner && (
-                  <label className="flex h-11 cursor-text items-center gap-2 rounded-full border border-[#DDE2EE] bg-white py-1 pl-1 pr-4 transition-colors focus-within:border-[#2F68E5]">
-                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#F5C542]">
-                      <Trophy className="size-4 text-[#8A6100]" strokeWidth={2} />
-                    </span>
-                    <span className="font-manrope text-sm font-bold text-[#17173A]">Winner</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      aria-label="Percentage for the winning variant"
-                      value={winnerShare}
-                      onChange={(e) => setWinnerShare(Number(e.target.value))}
-                      className="cc-plain-number w-9 bg-transparent text-right font-manrope text-sm font-bold text-[#17173A] outline-none"
-                    />
-                    <span className="font-manrope text-sm text-[#8A8AA3]">%</span>
-                  </label>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={splitEvenly}
-                className="font-manrope text-sm font-bold text-[#2F68E5] transition-colors hover:text-[#2455C0]"
-              >
-                Split evenly
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-6 flex items-center gap-2">
-            <MiniSwitch checked={values.decideWinner} onCheckedChange={toggleDecideWinner} />
-            <p className="font-manrope text-sm font-semibold text-[#17173A]">
-              Decide a winner variant
-            </p>
-          </div>
-
-          {values.decideWinner && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 font-manrope text-sm text-[#17173A]">
-              <span>Decide winner on basis of</span>
-              <div className="w-[130px]">
-                <Dropdown
-                  value={values.winningMetric}
-                  options={["Open", "Clicks", "Conversion"]}
-                  onChange={(v) => onChange({ winningMetric: v as ContentValues["winningMetric"] })}
-                />
-              </div>
-              <span>after</span>
-              <div className="w-[90px]">
-                <Dropdown
-                  value={values.testDurationValue}
-                  options={durationOptionsFor(values.testDurationUnit)}
-                  onChange={(v) => onChange({ testDurationValue: v })}
-                />
-              </div>
-              <div className="w-[100px]">
-                <Dropdown
-                  value={values.testDurationUnit}
-                  options={[...DURATION_UNITS]}
-                  onChange={(v) => {
-                    const unit = v as ContentValues["testDurationUnit"];
-                    const options = durationOptionsFor(unit);
-                    onChange({
-                      testDurationUnit: unit,
-                      testDurationValue: options.includes(values.testDurationValue)
-                        ? values.testDurationValue
-                        : options[0],
-                    });
-                  }}
-                />
-              </div>
-              <span>.</span>
-            </div>
-          )}
-        </>
-      )}
     </StepCard>
   );
 }

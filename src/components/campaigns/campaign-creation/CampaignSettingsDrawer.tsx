@@ -14,15 +14,6 @@ import { parseTags, type SetupValues } from "./CampaignSetupStep";
 const fieldClass =
   "h-10 w-full rounded-md border border-[#DDE2EE] bg-[#F7F9FC] px-3 font-manrope text-sm text-[#17173A] outline-none transition-colors placeholder:text-[#A0A0A0] focus:border-[#2F68E5] focus:bg-white";
 
-/** Account-level UTM defaults shown on hover of the GA-tracking pill. */
-const GA_ACCOUNT_UTMS = [
-  { label: "Source (utm_source)", value: "netcore" },
-  { label: "Medium (utm_medium)", value: "email" },
-  { label: "Campaign (utm_campaign)", value: "summer_sale_2026" },
-  { label: "Content (utm_content)", value: "hero_cta" },
-  { label: "Key 1, Value 1", value: "coupon, SAVE20" },
-];
-
 /** A smaller toggle than the shared Switch — matches the compact toggle+text
  *  rows used elsewhere in the wizard (e.g. Audience's "Don't include"). */
 function MiniSwitch({
@@ -40,38 +31,6 @@ function MiniSwitch({
     >
       <SwitchPrimitives.Thumb className="pointer-events-none block h-3 w-3 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3 data-[state=unchecked]:translate-x-0" />
     </SwitchPrimitives.Root>
-  );
-}
-
-function GaConfigPill() {
-  return (
-    <TooltipProvider delayDuration={150}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span
-            tabIndex={0}
-            className="inline-flex cursor-default items-center rounded-full border border-[#D6E2FF] bg-[#EDF1FF] px-2 py-0.5 font-manrope text-[11px] font-medium leading-4 text-[#2F68E5]"
-          >
-            Pre-filled from account config
-          </span>
-        </TooltipTrigger>
-        <TooltipContent
-          side="top"
-          align="start"
-          className="max-w-[280px] border border-[#DDE2EE] bg-white p-3 text-[#17173A] shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
-        >
-          <ul className="space-y-1.5 font-manrope text-xs leading-[18px]">
-            {GA_ACCOUNT_UTMS.map((row) => (
-              <li key={row.label}>
-                <span className="text-[#6F6F8D]">{row.label}</span>
-                <span className="text-[#6F6F8D]"> — </span>
-                <span className="font-semibold text-[#17173A]">{row.value}</span>
-              </li>
-            ))}
-          </ul>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   );
 }
 
@@ -128,8 +87,7 @@ function ToggleRow({
 }
 
 /** Settings icon in the navbar opens this — a right-side drawer over the
- *  wizard, for campaign-level settings that don't belong to any one step,
- *  plus the campaign's tracking configuration. */
+ *  wizard, for campaign-level settings that don't belong to any one step. */
 export default function CampaignSettingsDrawer({
   open,
   values,
@@ -175,7 +133,7 @@ export default function CampaignSettingsDrawer({
         )}
       >
         <div className="flex items-center justify-between border-b border-[#DDE2EE] px-6 py-5">
-          <h2 className="font-manrope text-lg font-bold text-[#17173A]">Settings & tracking</h2>
+          <h2 className="font-manrope text-lg font-bold text-[#17173A]">Settings</h2>
           <button
             type="button"
             aria-label="Close"
@@ -219,62 +177,13 @@ export default function CampaignSettingsDrawer({
           )}
 
           <div className="mt-8 border-t border-[#DDE2EE] pt-6">
-            <h2 className="font-manrope text-base font-bold text-[#17173A]">Tracking</h2>
-            <p className="mt-1 font-manrope text-sm leading-5 text-[#6F6F8D]">
-              Add UTM parameters to track campaign performance. Set default values in{" "}
-              <a
-                href="https://pr1r.netcoresmartech.com/qa_manual1/admin/index.php/admin/acc_config#ga_tracking"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#2F68E5]"
-              >
-                global advanced settings
-              </a>
-              .
-            </p>
-
-            <div className="mt-4 space-y-3">
-              <ToggleRow
-                title="GA tracking"
-                badge={<GaConfigPill />}
-                info={
-                  <>
-                    Track performance of your campaign with UTM parameters{" "}
-                    <a href="#" className="text-[#2F68E5]">
-                      learn more
-                    </a>
-                  </>
-                }
-                checked={values.gaTracking}
-                onChange={(v) => onChange({ gaTracking: v })}
-                flash={highlight?.gaTracking}
-              />
-              <ToggleRow
-                title="Conversion tracking"
-                info="Activity which represents a conversion for this campaign."
-                checked={values.conversionTracking}
-                onChange={(v) => onChange({ conversionTracking: v })}
-                flash={highlight?.conversionTracking}
-              />
-            </div>
-
-            {values.conversionTracking && (
-              <div
-                className={cn(
-                  "mt-3",
-                  highlight?.conversionEvent && "cmk-field-flash rounded-md"
-                )}
-              >
-                <input
-                  type="text"
-                  value={values.conversionEvent}
-                  onChange={(e) => onChange({ conversionEvent: e.target.value })}
-                  placeholder="Select conversion event"
-                  aria-label="Select conversion event"
-                  className={fieldClass}
-                />
-              </div>
-            )}
+            <ToggleRow
+              title="Avoid duplicate communications"
+              info="Holds back this send from anyone who's already received a campaign from this account within the dedup window."
+              checked={values.avoidDuplicateComms}
+              onChange={(v) => onChange({ avoidDuplicateComms: v })}
+              flash={highlight?.avoidDuplicateComms}
+            />
           </div>
         </div>
       </div>

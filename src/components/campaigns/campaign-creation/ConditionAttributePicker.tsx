@@ -73,7 +73,6 @@ const CATEGORIES: AttributeCategory[] = [
     icon: Target,
     attributes: [
       { label: "Email", type: "text" },
-      { label: "Email domain", type: "text" },
       { label: "Phone number", type: "text" },
       { label: "City", type: "text" },
       { label: "Country", type: "text" },
@@ -118,10 +117,9 @@ const CATEGORIES: AttributeCategory[] = [
     label: "Contacts",
     icon: Contact,
     attributes: [
-      { label: "In segment", type: "text" },
-      { label: "In list", type: "text" },
-      { label: "Subscription status", type: "text" },
-      { label: "Contact source", type: "text" },
+      { label: "List", type: "text" },
+      { label: "Segment", type: "text" },
+      { label: "Email domain", type: "text" },
     ],
   },
   {

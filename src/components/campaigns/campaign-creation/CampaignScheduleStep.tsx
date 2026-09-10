@@ -17,15 +17,18 @@ import StepCard from "./StepCard";
 function MiniSwitch({
   checked,
   onCheckedChange,
+  disabled,
 }: {
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <SwitchPrimitives.Root
       checked={checked}
       onCheckedChange={onCheckedChange}
-      className="peer inline-flex h-4 w-7 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=checked]:bg-[#00C48C] data-[state=unchecked]:bg-input"
+      disabled={disabled}
+      className="peer inline-flex h-4 w-7 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=checked]:bg-[#00C48C] data-[state=unchecked]:bg-input disabled:cursor-not-allowed disabled:opacity-50"
     >
       <SwitchPrimitives.Thumb className="pointer-events-none block h-3 w-3 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3 data-[state=unchecked]:translate-x-0" />
     </SwitchPrimitives.Root>
@@ -243,6 +246,14 @@ const DAY_LABEL: Record<Weekday, string> = {
 export interface ScheduleValues {
   /** On = this campaign ignores the account's frequency cap. */
   skipFrequencyCap: boolean;
+  /** "Send now or later" only — caps how many of the selection can be
+   *  reached in a single day. */
+  limitDailyRecipients: boolean;
+  dailyRecipientLimit: string;
+  /** Held back from the send entirely, as a % of the selection, so its
+   *  performance can be measured against contacts who never got it. */
+  controlGroupEnabled: boolean;
+  controlGroupPercent: number;
   mode: SendMode;
   /** `datetime-local` value for "Send later". */
   sendAt: string;
@@ -484,6 +495,10 @@ export function sliceSummaryLabel(values: ScheduleValues, audienceCount: number)
 
 export const EMPTY_SCHEDULE: ScheduleValues = {
   skipFrequencyCap: false,
+  limitDailyRecipients: false,
+  dailyRecipientLimit: "",
+  controlGroupEnabled: false,
+  controlGroupPercent: 10,
   mode: "optimize",
   sendAt: defaultSendAt(),
   sliceSize: 12_000,
@@ -1061,33 +1076,6 @@ export default function CampaignScheduleStep({
         </p>
       </div>
 
-      <div>
-        <div className="flex items-center gap-2">
-          <MiniSwitch
-            checked={values.skipFrequencyCap}
-            onCheckedChange={(v) => onChange({ skipFrequencyCap: v })}
-          />
-          <p className="font-manrope text-sm font-semibold text-[#17173A]">Frequency cap</p>
-        </div>
-
-        <div className="t-acc" data-open={values.skipFrequencyCap ? "true" : "false"}>
-          <div className="t-acc-panel">
-            <div className="t-acc-panel-inner">
-              <div className="mt-4 flex gap-3 rounded-md bg-[#FFF8E5] p-4">
-                <AlertTriangle
-                  className="mt-0.5 size-[18px] shrink-0 text-[#E9A400]"
-                  strokeWidth={2}
-                />
-                <p className="font-manrope text-sm leading-6 text-[#17173A]">
-                  Running 2 consecutive campaigns within 30 minutes time-frame could potentially
-                  bypass the frequency cap check due to data synchronisation delay.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="mt-6">
         <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
           When to send
@@ -1158,6 +1146,55 @@ export default function CampaignScheduleStep({
           </div>
         )}
 
+        {(values.mode === "now" || values.mode === "later") && (
+          <div className="mt-5">
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex w-fit items-center gap-2">
+                    <MiniSwitch
+                      checked={values.limitDailyRecipients}
+                      onCheckedChange={(v) => onChange({ limitDailyRecipients: v })}
+                      disabled={values.skipFrequencyCap}
+                    />
+                    <p
+                      className={cn(
+                        "font-manrope text-sm font-semibold text-[#17173A]",
+                        values.skipFrequencyCap && "text-[#A0A0A0]"
+                      )}
+                    >
+                      Limit daily recipients
+                    </p>
+                  </div>
+                </TooltipTrigger>
+                {values.skipFrequencyCap && (
+                  <TooltipContent side="top" align="start">
+                    <p className="font-manrope text-xs leading-[18px]">
+                      Turn off Frequency cap to set a daily recipient limit.
+                    </p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+
+            {values.limitDailyRecipients && (
+              <div className="mt-4 max-w-[320px]">
+                <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
+                  Set contact limit <span className="text-[#FC5E02]">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={values.dailyRecipientLimit}
+                  onChange={(e) => onChange({ dailyRecipientLimit: e.target.value })}
+                  placeholder="Enter value"
+                  className={fieldClass}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {values.mode === "slice" && (
           <SliceAndSend values={values} onChange={onChange} audienceCount={audienceCount} />
         )}
@@ -1174,6 +1211,112 @@ export default function CampaignScheduleStep({
                 options={OPTIMIZE_WINDOWS.map((w) => ({ label: w }))}
                 onChange={(label) => onChange({ optimizeWindow: label })}
               />
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4">
+          <div className="flex items-center gap-2">
+            <MiniSwitch
+              checked={values.controlGroupEnabled}
+              onCheckedChange={(v) => onChange({ controlGroupEnabled: v })}
+            />
+            <p className="font-manrope text-sm font-semibold text-[#17173A]">Add control group</p>
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="About control group"
+                    className="grid size-5 shrink-0 place-items-center text-[#8A8AA3] transition-colors hover:text-[#6F6F8D]"
+                  >
+                    <Info className="size-3.5" strokeWidth={2} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  align="start"
+                  className="max-w-[260px] border border-[#DDE2EE] bg-white px-3 py-2 text-[#17173A] shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+                >
+                  <p className="font-manrope text-xs leading-[18px] text-[#6F6F8D]">
+                    Holds back this percentage of the selection from the send, so its performance
+                    can be measured against contacts who never received it.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          <div className="t-acc" data-open={values.controlGroupEnabled ? "true" : "false"}>
+            <div className="t-acc-panel">
+              <div className="t-acc-panel-inner">
+                <div className="relative mt-4 w-[140px]">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={values.controlGroupPercent}
+                    onChange={(e) => {
+                      const n = e.target.value === "" ? 0 : Number(e.target.value);
+                      onChange({ controlGroupPercent: Math.min(100, Math.max(0, n)) });
+                    }}
+                    className="h-10 w-full rounded-md border border-[#DDE2EE] bg-white py-2 pl-3 pr-8 font-manrope text-sm text-[#17173A] outline-none transition-colors focus:border-[#2F68E5] [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-manrope text-sm text-[#8A8AA3]">
+                    %
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {values.mode !== "slice" && (
+          <div className="mt-4">
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex w-fit items-center gap-2">
+                    <MiniSwitch
+                      checked={values.skipFrequencyCap}
+                      onCheckedChange={(v) => onChange({ skipFrequencyCap: v })}
+                      disabled={values.limitDailyRecipients}
+                    />
+                    <p
+                      className={cn(
+                        "font-manrope text-sm font-semibold text-[#17173A]",
+                        values.limitDailyRecipients && "text-[#A0A0A0]"
+                      )}
+                    >
+                      Frequency cap
+                    </p>
+                  </div>
+                </TooltipTrigger>
+                {values.limitDailyRecipients && (
+                  <TooltipContent side="top" align="start">
+                    <p className="font-manrope text-xs leading-[18px]">
+                      Turn off Limit daily recipients to change the frequency cap.
+                    </p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+
+            <div className="t-acc" data-open={values.skipFrequencyCap ? "true" : "false"}>
+              <div className="t-acc-panel">
+                <div className="t-acc-panel-inner">
+                  <div className="mt-4 flex gap-3 rounded-md bg-[#FFF8E5] p-4">
+                    <AlertTriangle
+                      className="mt-0.5 size-[18px] shrink-0 text-[#E9A400]"
+                      strokeWidth={2}
+                    />
+                    <p className="font-manrope text-sm leading-6 text-[#17173A]">
+                      Running 2 consecutive campaigns within 30 minutes time-frame could potentially
+                      bypass the frequency cap check due to data synchronisation delay.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

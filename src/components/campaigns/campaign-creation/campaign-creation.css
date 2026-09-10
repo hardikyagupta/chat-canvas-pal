@@ -158,6 +158,10 @@
   padding: 0;
 }
 
+/* Toggle rows here sit much closer together than the objective flow's own
+   spacing calls for, so the last one doesn't leave a big gap above Done. */
+.cc-accordion .ov2-card-actions { padding-top: 10px; }
+
 /* Percentage inputs that sit inside a pill — the browser's spinners would
    collide with the "%" suffix. */
 .cc-plain-number {

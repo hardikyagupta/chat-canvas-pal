@@ -9,6 +9,9 @@ export interface SetupValues {
   conversionTracking: boolean;
   conversionEvent: string;
   audienceSuggestion: string;
+  /** Holds back a send to anyone who already got a campaign from this
+   *  account within the dedup window, regardless of list/segment overlap. */
+  avoidDuplicateComms: boolean;
 }
 
 export function parseTags(value: string): string[] {
