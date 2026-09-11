@@ -445,20 +445,24 @@ export default function CampaignCreationOverlay({
     setChatOpen(true);
   }, [open, introOpen, generating, focusStepId, campaignAIGenerated, setup.goal]);
 
-  // The audience thread belongs to its step. Moving on to Content or Schedule
-  // closes it rather than carrying an answered conversation into work it has
-  // nothing to say about — the suggestion rail takes over there. A chat the
-  // user opened themselves from the navbar is left alone.
+  // The audience thread belongs to its step. Actually leaving Audience —
+  // its card closes, not just another one opening alongside it — closes the
+  // thread rather than carrying an answered conversation into work it has
+  // nothing to say about. A chat the user opened themselves from the navbar
+  // is left alone.
   useEffect(() => {
     // Every card collapsed isn't "moved on" — the thread stays until another
-    // step is actually opened.
+    // step is actually opened. Nor is opening Message or Schedule while
+    // Audience stays expanded alongside it — only Audience itself closing
+    // counts as moving away.
     if (!open || !focusStepId || focusStepId === "audience" || !audienceChat.current) return;
+    if (openStepIds.has("audience")) return;
     audienceChat.current = false;
     setChatOpen(false);
     setChatTopic(null);
     setFollowUpTopic(null);
     setFollowUpSeq(0);
-  }, [open, focusStepId]);
+  }, [open, focusStepId, openStepIds]);
 
   if (!mounted) return null;
 
@@ -955,9 +959,12 @@ export default function CampaignCreationOverlay({
           onRenameCampaign={setCampaignName}
           onContinue={() => {
             setIntroOpen(false);
-            // Co-marketer stays open by default going into the wizard —
-            // the intro screen was already a co-marketer prompt.
-            openFreshChat();
+            // Land on Audience open by default, same as the co-marketer
+            // being up already — the intro screen was already a co-marketer
+            // prompt. The auto-open effect below ties the thread to the
+            // audience step once it sees the focus land here.
+            setOpenStepIds((prev) => new Set(prev).add("audience"));
+            setFocusStepId("audience");
           }}
           onGenerate={handleGenerateFromPrompt}
           onClose={onClose}
