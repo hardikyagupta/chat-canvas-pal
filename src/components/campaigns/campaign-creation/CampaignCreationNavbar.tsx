@@ -1,4 +1,5 @@
-import { Settings, Sparkles, X, type LucideIcon } from "lucide-react";
+import { Settings, Sparkles, X } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,7 @@ export default function CampaignCreationNavbar({
   campaignName,
   aiGenerated,
   icon: Icon,
+  channelLabel = "Email",
   onRenameCampaign,
   onOpenSettings,
   onLaunch,
@@ -28,7 +30,9 @@ export default function CampaignCreationNavbar({
   campaignName: string;
   /** Flags a campaign the AI drafted end-to-end from a typed goal. */
   aiGenerated?: boolean;
-  icon: LucideIcon;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  /** Tooltip on the channel icon — the channel this campaign is being built for. */
+  channelLabel?: string;
   onRenameCampaign?: (name: string) => void;
   onOpenSettings?: () => void;
   onLaunch?: () => void;
@@ -76,10 +80,10 @@ export default function CampaignCreationNavbar({
             <TooltipTrigger asChild>
               <span
                 tabIndex={0}
-                aria-label="Email"
+                aria-label={channelLabel}
                 className="grid h-8 w-8 shrink-0 cursor-default place-items-center rounded bg-[#E7EDFF]"
               >
-                <Icon className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />
+                <Icon className="h-5 w-5 text-[#2F68E5]" strokeWidth={2} />
               </span>
             </TooltipTrigger>
             <TooltipContent
@@ -88,7 +92,7 @@ export default function CampaignCreationNavbar({
               sideOffset={8}
               className="overflow-visible rounded-lg border-0 bg-black px-3 py-1.5 text-white shadow-none"
             >
-              <p className="font-manrope text-xs leading-[18px]">Email</p>
+              <p className="font-manrope text-xs leading-[18px]">{channelLabel}</p>
               <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
             </TooltipContent>
           </Tooltip>

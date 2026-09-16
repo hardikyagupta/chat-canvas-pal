@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
 import {
   BarChart3,
-  Bell,
   Calendar,
   Check,
   ChevronDown,
@@ -11,6 +10,7 @@ import {
   MessageCircle,
   MessageSquare,
   Monitor,
+  Package,
   Percent,
   Sparkles,
   Tag,
@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import CampaignCreationNavbar from "./CampaignCreationNavbar";
+import AppPushIcon from "@/components/AppPushIcon";
 import CampaignSettingsDrawer from "./CampaignSettingsDrawer";
 import CampaignCreationIntro from "./CampaignCreationIntro";
 import CampaignAIGenerating from "./CampaignAIGenerating";
@@ -38,6 +39,7 @@ import CampaignSetupStep, {
   mergeTags,
   type SetupValues,
 } from "./CampaignSetupStep";
+import CampaignAssetsStep, { EMPTY_ASSETS, type AssetsValues } from "./CampaignAssetsStep";
 import CampaignAudienceStep, {
   AudienceReachablePill,
   AudienceReachStat,
@@ -90,22 +92,34 @@ const SLIDE_MS = 380;
 /** Ring around freshly-plotted audience fields; matches .cmk-plot-flash. */
 const AUDIENCE_FLASH_MS = 2200;
 
-const CHANNEL_ICONS: Record<string, LucideIcon> = {
+/** Lucide icons and hand-drawn channel glyphs both fit this — just an SVG
+ *  component taking the usual className/strokeWidth presentation props. */
+type ChannelIconComponent = ComponentType<SVGProps<SVGSVGElement>>;
+
+const CHANNEL_ICONS: Record<string, ChannelIconComponent> = {
   Email: Mail,
   SMS: MessageSquare,
   Whatsapp: MessageCircle,
-  "App Push Notification": Bell,
+  "App Push Notification": AppPushIcon,
   "Web Push Notification": Monitor,
   "In-app Message": MessageSquare,
   "Web Message": Monitor,
 };
 
-/** Canonical order — do not reorder; every channel shares it. */
-const STEPS: Step[] = [
-  { id: "audience", label: "Send to", icon: Users },
-  { id: "content", label: "Message", icon: FileText },
-  { id: "schedule", label: "Schedule", icon: Calendar },
-];
+/** Temporarily hide Assets without removing its configuration or UI. */
+const SHOW_ASSETS_STEP = false;
+
+/** Canonical order — Assets can be restored ahead of the shared three steps. */
+function stepsFor(channel: string): Step[] {
+  const base: Step[] = [
+    { id: "audience", label: "Send to", icon: Users },
+    { id: "content", label: "Message", icon: FileText },
+    { id: "schedule", label: "Schedule", icon: Calendar },
+  ];
+  return SHOW_ASSETS_STEP && channel !== "Email"
+    ? [{ id: "assets", label: "Assets", icon: Package }, ...base]
+    : base;
+}
 
 /**
  * Contextual co-marketer chips per step — what "Ask co-marketer" opens with
@@ -178,6 +192,7 @@ const STEP_GREETINGS: Record<string, string> = {
 
 /** Sub-line under each accordion header, before the step has a summary. */
 const STEP_DESCRIPTIONS: Record<string, string> = {
+  assets: "Select the app(s) this campaign's assets belong to.",
   audience: "Select the target audience.",
   content: "Design the message which would go to your selected contacts.",
   schedule: "Decide when this do you want to send this campaign.",
@@ -251,6 +266,8 @@ export default function CampaignCreationOverlay({
    *  closes — the listing page uses this to add the row, toast, and confetti. */
   onLaunched?: (info: { name: string; aiGenerated: boolean }) => void;
 }) {
+  // Which cards this channel's accordion has — see stepsFor's own comment.
+  const STEPS = stepsFor(channel);
   // `mounted` keeps the panel in the DOM through its exit slide; `shown` drives
   // the transform. Same mount → enter → leave → unmount dance the docked chat
   // on the campaigns page uses.
@@ -285,6 +302,7 @@ export default function CampaignCreationOverlay({
   // navbar rename, so picking a goal no longer retitles the draft.
   const [campaignName, setCampaignName] = useState(newCampaignName);
   const [setup, setSetup] = useState<SetupValues>(EMPTY_SETUP);
+  const [assets, setAssets] = useState<AssetsValues>(EMPTY_ASSETS);
   const [audience, setAudience] = useState<AudienceValues>(EMPTY_AUDIENCE);
   const [content, setContent] = useState<ContentValues>(EMPTY_CONTENT);
   const [schedule, setSchedule] = useState<ScheduleValues>(EMPTY_SCHEDULE);
@@ -359,6 +377,7 @@ export default function CampaignCreationOverlay({
       setCompletedSteps(new Set());
       setRailStepId("audience");
       setSetup(EMPTY_SETUP);
+      setAssets(EMPTY_ASSETS);
       setAudience(EMPTY_AUDIENCE);
       setContent(EMPTY_CONTENT);
       setPreviewOpen(false);
@@ -694,6 +713,8 @@ export default function CampaignCreationOverlay({
   /** Has this step got enough on it to read as done? */
   const isStepComplete = (id: string): boolean => {
     switch (id) {
+      case "assets":
+        return assets.selectedAssets.length > 0;
       case "audience":
         return reachFor(audience) > 0;
       case "content":
@@ -710,6 +731,10 @@ export default function CampaignCreationOverlay({
   /** One-line recap shown on a finished card while it's collapsed. */
   const summaryFor = (id: string): ReactNode => {
     switch (id) {
+      case "assets": {
+        const n = assets.selectedAssets.length;
+        return n === 0 ? "No app selected" : `${n} app${n === 1 ? "" : "s"} selected`;
+      }
       case "audience": {
         const reachable = `${reachFor(audience).toLocaleString()} reachable`;
         if (audience.mode === "segments") {
@@ -1001,6 +1026,7 @@ export default function CampaignCreationOverlay({
         campaignName={campaignName}
         aiGenerated={campaignAIGenerated}
         icon={Icon}
+        channelLabel={channel}
         onRenameCampaign={setCampaignName}
         onOpenSettings={() => setSettingsOpen(true)}
         onLaunch={() => setLaunching(true)}
@@ -1023,10 +1049,8 @@ export default function CampaignCreationOverlay({
       />
       */}
 
-      {/* Opening the docked chat shifts this row left rather than shrinking
-          the accordion cards inside it — left padding drops by exactly the
-          chat column's own width (474px) + the row gap, so the canvas keeps
-          the same width open or closed. */}
+      {/* Keep the canvas beside the docked chat with only the shared row gap.
+          Any spare width belongs on the left, not between the two panels. */}
       <div
         className={cn(
           "flex min-h-0 flex-1 gap-5",
@@ -1035,7 +1059,10 @@ export default function CampaignCreationOverlay({
       >
         <div
           ref={canvasRef}
-          className="scroll-hidden mx-auto min-w-0 max-w-[1044px] flex-1 overflow-y-auto py-6"
+          className={cn(
+            "scroll-hidden min-w-0 max-w-[1044px] flex-1 overflow-y-auto py-6",
+            chatOpen ? "ml-auto mr-0" : "mx-auto"
+          )}
         >
           <div className="cc-accordion ov2-accordion">
             {STEPS.map((step, index) => {
@@ -1070,7 +1097,8 @@ export default function CampaignCreationOverlay({
                     </span>
                     <span className="ov2-card-label">
                       <strong>{step.label}</strong>
-                      {step.id === "audience" ||
+                      {step.id === "assets" ||
+                      step.id === "audience" ||
                       step.id === "content" ||
                       step.id === "schedule" ? (
                         active && (
@@ -1082,8 +1110,17 @@ export default function CampaignCreationOverlay({
                         <span className="ov2-card-desc">{STEP_DESCRIPTIONS[step.id]}</span>
                       )}
                     </span>
-                    {/* Only while collapsed — once expanded, the same count
-                        moves into the card body next to the mode picker. */}
+                    {/* App Push keeps expanded reach beside the header chevron. */}
+                    {step.id === "audience" && active && channel === "App Push Notification" && (
+                      <div
+                        className="shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
+                        <AudienceReachStat reach={reachFor(audience)} />
+                      </div>
+                    )}
+                    {/* Collapsed reach stays in its existing pill for every channel. */}
                     {step.id === "audience" && !active && (
                       <div
                         ref={allContactsNudgeAnchor}
@@ -1106,6 +1143,12 @@ export default function CampaignCreationOverlay({
                   <div className={`ov2-card-bodywrap${active ? " open" : ""}`}>
                     <div className="ov2-card-bodywrap-inner">
                       <div className="ov2-card-body">
+                        {step.id === "assets" && (
+                          <CampaignAssetsStep
+                            values={assets}
+                            onChange={(patch) => setAssets((a) => ({ ...a, ...patch }))}
+                          />
+                        )}
                         {step.id === "audience" && (
                           <div className="flex items-start justify-between gap-6">
                             <div className="min-w-0 flex-1">
@@ -1120,14 +1163,17 @@ export default function CampaignCreationOverlay({
                                 }}
                                 onTrackingChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
                                 trackingHighlight={highlight}
+                                channel={channel}
                               />
                             </div>
                             {/* Sits outside CampaignAudienceStep's own StepCard so
                                 it reaches the accordion row's true right edge
                                 instead of being capped by the card's own max-width. */}
-                            <div className="shrink-0">
-                              <AudienceReachStat reach={reachFor(audience)} />
-                            </div>
+                            {channel !== "App Push Notification" && (
+                              <div className="shrink-0">
+                                <AudienceReachStat reach={reachFor(audience)} />
+                              </div>
+                            )}
                           </div>
                         )}
                         {step.id === "content" && (
@@ -1137,6 +1183,7 @@ export default function CampaignCreationOverlay({
                             onChange={(patch) => setContent((c) => ({ ...c, ...patch }))}
                             reach={reachFor(audience)}
                             aiGenerated={campaignAIGenerated}
+                            channel={channel}
                           />
                         )}
                         {step.id === "schedule" && (

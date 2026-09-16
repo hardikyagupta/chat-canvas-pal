@@ -26,15 +26,12 @@ import {
   Pencil,
   Plus,
   Replace,
-  RotateCcw,
   Search,
   SlidersHorizontal,
   SplitSquareHorizontal,
   Smartphone,
   Sparkles,
   Sun,
-  ThumbsDown,
-  ThumbsUp,
   Trash2,
   Trophy,
   Upload,
@@ -48,14 +45,20 @@ import folderIcon from "/campaign-assets/ic-template-folder.svg";
 import { ActionMenu, ActionMenuContent, ActionMenuTrigger } from "@/components/ui/action-menu";
 import StepCard from "./StepCard";
 import TemplateCard, { CardMenuItem, TemplateThumbnail } from "./TemplateCard";
+import AppPushTemplateCard from "./AppPushTemplateCard";
 import TemplatePreviewOverlay from "./TemplatePreviewOverlay";
+import AiSuggestPopover from "./AiSuggestPopover";
 import {
   emailTemplates,
   savedTemplateFolders,
   templateLibrary,
   type EmailTemplate,
+  type PushPreviewKey,
   type TemplateFolder,
 } from "./emailTemplates.data";
+import { appPushTemplates } from "./appPushTemplates.data";
+import { AppleIcon, AndroidIcon } from "./PlatformIcons";
+import CarouselTemplateEditor from "./CarouselTemplateEditor";
 
 export interface ContentValues {
   senderName: string;
@@ -203,6 +206,23 @@ const EMAIL_FORMATS: { id: "html" | "amp"; label: string; icon: LucideIcon }[] =
   { id: "amp", label: "AMP email", icon: Zap },
 ];
 
+/** App Push's own "Create new" list — flat, no submenu, no icons. The
+ *  notification layouts a push message can take, rather than an editor
+ *  format/tool choice like Email's two-level menu. */
+const APP_PUSH_LAYOUTS: { id: string; label: string }[] = [
+  { id: "regular", label: "Regular layout" },
+  { id: "overlay-image", label: "Overlay on image" },
+  { id: "timer", label: "Timer" },
+  { id: "carousel-e2e", label: "Carousel (E2E)" },
+  { id: "edge-to-edge", label: "Edge to edge" },
+  { id: "rating", label: "Rating" },
+  { id: "small-image", label: "Small image" },
+  { id: "progress-bar", label: "Progress bar" },
+  { id: "multi-icon", label: "Multi-icon" },
+  { id: "quick-reply", label: "Quick reply" },
+  { id: "product-set", label: "Product set" },
+];
+
 type TemplateSourceTab = "library" | "saved";
 
 const TEMPLATE_SOURCE_TABS: { id: TemplateSourceTab; label: string }[] = [
@@ -236,12 +256,20 @@ function MiniSwitch({
   );
 }
 
-/** "Create new" — a menu button whose two rows (HTML/AMP email) each open a
- *  submenu of the same three editors on hover, flyout-style. Portalled to
- *  <body> and positioned by rect, same as this file's other dropdowns —
+/** "Create new" — for Email, a menu button whose two rows (HTML/AMP email)
+ *  each open a submenu of the same three editors on hover, flyout-style; for
+ *  App Push, a flat list of notification layouts instead — there's no
+ *  format/editor choice to make, just which layout the push takes. Portalled
+ *  to <body> and positioned by rect, same as this file's other dropdowns —
  *  the accordion's height-animation wrapper clips overflow, which would
  *  otherwise crop the flyout instead of letting it float free. */
-function CreateNewMenu({ onPick }: { onPick: (starterId: string) => void }) {
+function CreateNewMenu({
+  onPick,
+  channel = "Email",
+}: {
+  onPick: (starterId: string) => void;
+  channel?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState<"html" | "amp" | null>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -297,47 +325,58 @@ function CreateNewMenu({ onPick }: { onPick: (starterId: string) => void }) {
           <div
             ref={panelRef}
             style={{ position: "fixed", top: rect.bottom + 4, left: rect.right - 190, width: 190 }}
-            className="z-[80] rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+            className="scroll-slim z-[80] max-h-[280px] overflow-y-auto rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
           >
-            {EMAIL_FORMATS.map((fmt) => (
-              <div
-                key={fmt.id}
-                className="relative"
-                onMouseEnter={() => setHovered(fmt.id)}
-                onMouseLeave={() => setHovered((h) => (h === fmt.id ? null : h))}
-              >
-                <button
-                  type="button"
-                  className={cn(
-                    "flex w-full items-center justify-between gap-2 px-3 py-2 text-left font-manrope text-sm transition-colors",
-                    hovered === fmt.id
-                      ? "bg-[#F4F8FF] text-[#2F68E5]"
-                      : "text-[#17173A] hover:bg-[#F7F9FC]"
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <fmt.icon className="size-4" strokeWidth={2} />
-                    {fmt.label}
-                  </span>
-                  <ChevronRight className="size-3.5 text-[#8A8AA3]" strokeWidth={2} />
-                </button>
-                {hovered === fmt.id && (
-                  <div className="absolute left-full top-0 z-[80] -ml-px w-[190px] rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
-                    {EDITOR_OPTIONS.map((o) => (
-                      <button
-                        key={o.id}
-                        type="button"
-                        onClick={() => pick(o.id)}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left font-manrope text-sm text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
-                      >
-                        <o.icon className="size-4 text-[#6F6F8D]" strokeWidth={2} />
-                        {o.label}
-                      </button>
-                    ))}
+            {channel === "Email"
+              ? EMAIL_FORMATS.map((fmt) => (
+                  <div
+                    key={fmt.id}
+                    className="relative"
+                    onMouseEnter={() => setHovered(fmt.id)}
+                    onMouseLeave={() => setHovered((h) => (h === fmt.id ? null : h))}
+                  >
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex w-full items-center justify-between gap-2 px-3 py-2 text-left font-manrope text-sm transition-colors",
+                        hovered === fmt.id
+                          ? "bg-[#F4F8FF] text-[#2F68E5]"
+                          : "text-[#17173A] hover:bg-[#F7F9FC]"
+                      )}
+                    >
+                      <span className="flex items-center gap-2">
+                        <fmt.icon className="size-4" strokeWidth={2} />
+                        {fmt.label}
+                      </span>
+                      <ChevronRight className="size-3.5 text-[#8A8AA3]" strokeWidth={2} />
+                    </button>
+                    {hovered === fmt.id && (
+                      <div className="absolute left-full top-0 z-[80] -ml-px w-[190px] rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
+                        {EDITOR_OPTIONS.map((o) => (
+                          <button
+                            key={o.id}
+                            type="button"
+                            onClick={() => pick(o.id)}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left font-manrope text-sm text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+                          >
+                            <o.icon className="size-4 text-[#6F6F8D]" strokeWidth={2} />
+                            {o.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                ))
+              : APP_PUSH_LAYOUTS.map((layout) => (
+                  <button
+                    key={layout.id}
+                    type="button"
+                    onClick={() => pick(layout.id)}
+                    className="flex w-full items-center px-3 py-2 text-left font-manrope text-sm text-[#17173A] transition-colors hover:bg-[#F7F9FC]"
+                  >
+                    {layout.label}
+                  </button>
+                ))}
           </div>,
           document.body
         )}
@@ -386,92 +425,178 @@ function FolderCard({ folder }: { folder: TemplateFolder }) {
   );
 }
 
+/** Two-way segmented toggle — one bordered pill split into contiguous
+ *  segments, active one in brand blue. Same treatment as the audience step's
+ *  "Segments/Lists | Conditions | User data table" filter-mode picker, sized
+ *  down to h-8 so it sits level with the row of buttons beside it here.
+ *  An option with an `icon` renders that glyph instead of its label — the
+ *  label still backs the button's accessible name. */
+function SegmentedTabs<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string; icon?: LucideIcon | typeof AppleIcon }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="inline-flex">
+      {options.map((o, i) => {
+        const active = value === o.value;
+        const Icon = o.icon;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            aria-pressed={active}
+            aria-label={Icon ? o.label : undefined}
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "flex h-8 items-center border font-manrope text-sm font-medium transition-colors",
+              Icon ? "w-9 justify-center" : "px-3",
+              i > 0 && "-ml-px",
+              i === 0 && "rounded-l-md",
+              i === options.length - 1 && "rounded-r-md",
+              active
+                ? "relative z-[1] border-[#2F68E5] bg-[#F4F8FF] text-[#2F68E5]"
+                : "border-[#DDE2EE] text-[#17173A] hover:bg-[#F7F9FC]"
+            )}
+          >
+            {Icon ? <Icon className="size-4" /> : o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Replaces the whole "Select a template" picker once one's been picked —
  *  a laptop/mobile preview of the chosen template, plus the three things
  *  you can do with it from here. */
 function TemplatePreviewPanel({
   template,
+  channel,
   device,
   onDeviceChange,
   theme,
   onThemeChange,
+  os,
+  onOSChange,
+  expanded,
+  onExpandedChange,
   onChangeTemplate,
 }: {
   template: EmailTemplate | null;
+  channel: string;
   device: "desktop" | "mobile";
   onDeviceChange: (device: "desktop" | "mobile") => void;
   theme: "light" | "dark";
   onThemeChange: (theme: "light" | "dark") => void;
+  os: "ios" | "android";
+  onOSChange: (os: "ios" | "android") => void;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
   onChangeTemplate: () => void;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const isPush = channel !== "Email";
+  // Only templates rendered for every OS/expanded combination carry a real
+  // mock for each — everything else still falls back to the one flat image.
+  const pushPreviewKey: PushPreviewKey = `${os}-${expanded ? "expanded" : "collapsed"}`;
+  const resolvedImage = isPush
+    ? template?.pushPreviews?.[pushPreviewKey] ?? template?.image
+    : template?.image;
 
   return (
     <div className="mt-10">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 rounded-md border border-[#DDE2EE] bg-white p-1">
-            <button
-              type="button"
-              aria-label="Desktop preview"
-              aria-pressed={device === "desktop"}
-              onClick={() => onDeviceChange("desktop")}
-              className={cn(
-                "grid size-8 place-items-center rounded-md transition-colors",
-                device === "desktop"
-                  ? "bg-[#F0F3F9] text-[#17173A]"
-                  : "text-[#8A8AA3] hover:text-[#17173A]"
-              )}
-            >
-              <Monitor className="size-4" strokeWidth={2} />
-            </button>
-            <button
-              type="button"
-              aria-label="Mobile preview"
-              aria-pressed={device === "mobile"}
-              onClick={() => onDeviceChange("mobile")}
-              className={cn(
-                "grid size-8 place-items-center rounded-md transition-colors",
-                device === "mobile"
-                  ? "bg-[#F0F3F9] text-[#17173A]"
-                  : "text-[#8A8AA3] hover:text-[#17173A]"
-              )}
-            >
-              <Smartphone className="size-4" strokeWidth={2} />
-            </button>
-          </div>
-
-          <div className="rounded-md border border-[#DDE2EE] bg-white p-1">
-            <TooltipProvider delayDuration={150}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={theme === "dark" ? "View template in light mode" : "View template in dark mode"}
-                    aria-pressed={theme === "dark"}
-                    onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}
-                    className="grid size-8 place-items-center rounded-md text-[#8A8AA3] transition-colors hover:text-[#17173A]"
-                  >
-                    {theme === "dark" ? (
-                      <Sun className="size-4" strokeWidth={2} />
-                    ) : (
-                      <Moon className="size-4" strokeWidth={2} />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="top"
-                  sideOffset={8}
-                  className="overflow-visible rounded-lg border-0 bg-black px-3 py-2.5 text-white shadow-none"
+          {isPush ? (
+            <>
+              <SegmentedTabs
+                options={[
+                  { value: "ios", label: "iOS", icon: AppleIcon },
+                  { value: "android", label: "Android", icon: AndroidIcon },
+                ]}
+                value={os}
+                onChange={onOSChange}
+              />
+              <SegmentedTabs
+                options={[
+                  { value: "expanded", label: "Expanded" },
+                  { value: "collapsed", label: "Collapsed" },
+                ]}
+                value={expanded ? "expanded" : "collapsed"}
+                onChange={(v) => onExpandedChange(v === "expanded")}
+              />
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-1 rounded-md border border-[#DDE2EE] bg-white p-1">
+                <button
+                  type="button"
+                  aria-label="Desktop preview"
+                  aria-pressed={device === "desktop"}
+                  onClick={() => onDeviceChange("desktop")}
+                  className={cn(
+                    "grid size-8 place-items-center rounded-md transition-colors",
+                    device === "desktop"
+                      ? "bg-[#F0F3F9] text-[#17173A]"
+                      : "text-[#8A8AA3] hover:text-[#17173A]"
+                  )}
                 >
-                  <p className="font-manrope text-xs leading-[18px]">
-                    {theme === "dark" ? "View template in light mode" : "View template in dark mode"}
-                  </p>
-                  <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+                  <Monitor className="size-4" strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Mobile preview"
+                  aria-pressed={device === "mobile"}
+                  onClick={() => onDeviceChange("mobile")}
+                  className={cn(
+                    "grid size-8 place-items-center rounded-md transition-colors",
+                    device === "mobile"
+                      ? "bg-[#F0F3F9] text-[#17173A]"
+                      : "text-[#8A8AA3] hover:text-[#17173A]"
+                  )}
+                >
+                  <Smartphone className="size-4" strokeWidth={2} />
+                </button>
+              </div>
+
+              <div className="rounded-md border border-[#DDE2EE] bg-white p-1">
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={theme === "dark" ? "View template in light mode" : "View template in dark mode"}
+                        aria-pressed={theme === "dark"}
+                        onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}
+                        className="grid size-8 place-items-center rounded-md text-[#8A8AA3] transition-colors hover:text-[#17173A]"
+                      >
+                        {theme === "dark" ? (
+                          <Sun className="size-4" strokeWidth={2} />
+                        ) : (
+                          <Moon className="size-4" strokeWidth={2} />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      sideOffset={8}
+                      className="overflow-visible rounded-lg border-0 bg-black px-3 py-2.5 text-white shadow-none"
+                    >
+                      <p className="font-manrope text-xs leading-[18px]">
+                        {theme === "dark" ? "View template in light mode" : "View template in dark mode"}
+                      </p>
+                      <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -488,7 +613,7 @@ function TemplatePreviewPanel({
             className="flex h-8 items-center gap-2 rounded-lg border border-[#e3e3e3] bg-white px-3 font-manrope text-sm font-medium tracking-[0.4px] text-[#6f6f8d] transition-colors hover:bg-[#f8f8f8]"
           >
             <FlaskConical className="size-4" strokeWidth={2} />
-            Send a test email
+            {isPush ? "Send test notification" : "Send a test email"}
           </button>
           {/* Edit + the kebab's one action (Change template) as a single grouped
               control — same visual weight as the standalone buttons beside it,
@@ -533,38 +658,53 @@ function TemplatePreviewPanel({
       <div
         className={cn(
           "flex justify-center rounded-xl border p-8 transition-colors duration-300",
-          theme === "dark" ? "border-[#2A2F3E] bg-[#12141C]" : "border-[#DDE2EE] bg-[#F7F9FC]"
+          !isPush && theme === "dark" ? "border-[#2A2F3E] bg-[#12141C]" : "border-[#DDE2EE] bg-[#F7F9FC]"
         )}
       >
         <div
           className={cn(
-            "overflow-hidden rounded-lg border shadow-[0_8px_24px_rgba(23,23,58,0.08)] transition-all duration-300 ease-in-out",
-            theme === "dark" ? "border-[#2A2F3E] bg-[#1B1E29]" : "border-[#DDE2EE] bg-white",
-            device === "desktop" ? "w-[900px]" : "w-[380px]"
+            "overflow-hidden rounded-lg transition-all duration-300 ease-in-out",
+            !isPush && "border shadow-[0_8px_24px_rgba(23,23,58,0.08)]",
+            isPush
+              ? ""
+              : theme === "dark"
+                ? "border-[#2A2F3E] bg-[#1B1E29]"
+                : "border-[#DDE2EE] bg-white",
+            isPush ? "w-[320px]" : device === "mobile" ? "w-[380px]" : "w-[900px]"
           )}
         >
+          {/* Push's own phone mock already draws its status bar and notch —
+              this toolbar strip is only for email's browser-chrome illusion. */}
+          {!isPush && (
+            <div
+              className={cn(
+                "h-9 border-b transition-colors duration-300",
+                theme === "dark" ? "border-[#2A2F3E] bg-[#1B1E29]" : "border-[#EEF1F7] bg-[#F7F9FC]"
+              )}
+            />
+          )}
+          {/* Email's frame is a fixed viewport shorter than the template, so it
+              scrolls to reveal the rest. Push's own mock is shown in full —
+              one fixed box for both expanded and collapsed, the image scaled
+              to fit inside it rather than cropped. */}
           <div
             className={cn(
-              "h-9 border-b transition-colors duration-300",
-              theme === "dark" ? "border-[#2A2F3E] bg-[#1B1E29]" : "border-[#EEF1F7] bg-[#F7F9FC]"
-            )}
-          />
-          {/* The frame is a fixed viewport, not the template's own height — this
-              scrollbar (unlike the wizard canvas behind it) stays visible, so
-              it's clear there's more of the template to see below the fold. */}
-          <div
-            className={cn(
-              "overflow-y-auto transition-all duration-300 ease-in-out",
-              theme === "dark" ? "bg-[#1B1E29]" : "bg-white",
-              device === "desktop" ? "h-[560px]" : "h-[640px]"
+              "transition-all duration-300 ease-in-out",
+              isPush ? "flex items-center justify-center overflow-hidden" : "overflow-y-auto",
+              !isPush && (theme === "dark" ? "bg-[#1B1E29]" : "bg-white"),
+              isPush ? "h-[540px]" : device === "desktop" ? "h-[560px]" : "h-[640px]"
             )}
           >
             {!template ? (
               <div className="grid h-full place-items-center font-manrope text-sm text-[#6F6F8D]">
                 Template not found.
               </div>
-            ) : template.image ? (
-              <img src={template.image} alt="" className="block h-auto w-full" />
+            ) : resolvedImage ? (
+              <img
+                src={resolvedImage}
+                alt=""
+                className={isPush ? "h-full w-full object-contain" : "block h-auto w-full"}
+              />
             ) : (
               <TemplateThumbnail kind={template.preview} />
             )}
@@ -1063,112 +1203,6 @@ function AttachmentsModal({
   );
 }
 
-/** The AI sparkle on Subject/Pre-header — a dark suggestion popover, three
- *  picks at a time, Retry cycling to the next three from the same pool. */
-function AiSuggestPopover({ pool, onPick }: { pool: string[]; onPick: (text: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  const shown = [0, 1, 2].map((i) => pool[(offset + i) % pool.length]);
-
-  return (
-    <div ref={wrapRef} className="relative">
-      <button
-        type="button"
-        aria-label="Suggest with AI"
-        onClick={() => setOpen((o) => !o)}
-        className={cn(
-          "grid size-7 place-items-center rounded-md transition-colors",
-          open ? "bg-[#F3F0FF]" : "hover:bg-[#F3F0FF]"
-        )}
-      >
-        <img src={sparkle} alt="" className="size-4 shrink-0" />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-[320px] rounded-lg border border-[#DDE2EE] bg-white p-3 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
-          <div className="flex items-center justify-between gap-2 px-1">
-            <span className="font-manrope text-[13px] font-bold text-[#17173A]">
-              Here are some options for you
-            </span>
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={() => setOpen(false)}
-              className="grid size-5 shrink-0 place-items-center rounded-full text-[#8A8AA3] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
-            >
-              <X className="size-3.5" strokeWidth={2.2} />
-            </button>
-          </div>
-
-          <div className="mt-2 flex flex-col gap-2">
-            {shown.map((text, i) => (
-              <button
-                key={text}
-                type="button"
-                style={{ animationDelay: `${i * 50}ms` }}
-                onClick={() => {
-                  onPick(text);
-                  setOpen(false);
-                }}
-                className="cmk-reveal group flex items-center gap-2.5 rounded-lg border border-[#DDE2EE] bg-white p-2.5 text-left transition-colors hover:border-[#2F68E5] hover:bg-[#F7F9FF]"
-              >
-                <span className="min-w-0 flex-1 font-manrope text-[13px] font-medium leading-[18px] text-[#17173A]">
-                  {text}
-                </span>
-                <ChevronRight
-                  className="size-4 shrink-0 text-[#A0A0B8] transition-colors group-hover:text-[#2F68E5]"
-                  strokeWidth={2}
-                />
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-2 flex items-center justify-between border-t border-[#EEF1F7] px-1 pt-2.5">
-            <button
-              type="button"
-              onClick={() => setOffset((o) => o + 3)}
-              className="flex items-center gap-1.5 font-manrope text-[12px] font-semibold text-[#2F68E5] transition-colors hover:text-[#1F51BE]"
-            >
-              <RotateCcw className="size-3.5" strokeWidth={2.2} />
-              Retry
-            </button>
-            <div className="flex items-center gap-1 text-[#8A8AA3]">
-              <button
-                type="button"
-                aria-label="Good suggestion"
-                className="grid size-6 place-items-center rounded-full transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
-              >
-                <ThumbsUp className="size-3.5" strokeWidth={2} />
-              </button>
-              <button
-                type="button"
-                aria-label="Bad suggestion"
-                className="grid size-6 place-items-center rounded-full transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
-              >
-                <ThumbsDown className="size-3.5" strokeWidth={2} />
-              </button>
-            </div>
-          </div>
-          <p className="mt-1.5 flex items-start gap-1.5 px-1 font-manrope text-[11px] leading-[16px] text-[#8A8AA3]">
-            <Info className="mt-px size-3.5 shrink-0" strokeWidth={2} />
-            Review generated results for accuracy.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /** Pools the Subject/Pre-header sparkle draws from — three shown at a time. */
 const SUBJECT_SUGGESTIONS = [
@@ -1279,6 +1313,7 @@ export default function CampaignContentStep({
   highlight,
   reach = 0,
   aiGenerated = false,
+  channel = "Email",
 }: {
   values: ContentValues;
   onChange: (patch: Partial<ContentValues>) => void;
@@ -1289,6 +1324,9 @@ export default function CampaignContentStep({
   /** Swaps the Subject/Pre-header AI suggestions for ones on-theme with the
    *  goal this campaign was drafted from. */
   aiGenerated?: boolean;
+  /** From/Subject/Pre-header are email-specific header fields — every other
+   *  channel skips straight to the rest of the step. */
+  channel?: string;
 }) {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -1300,25 +1338,36 @@ export default function CampaignContentStep({
   const [foldersExpanded, setFoldersExpanded] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("mobile");
   const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light");
+  // Push has no desktop rendering and no light/dark chrome — instead the
+  // preview's own toggles are the OS it's mocked up for and whether the
+  // notification is shown expanded or collapsed.
+  const [previewOS, setPreviewOS] = useState<"ios" | "android">("ios");
+  const [previewExpanded, setPreviewExpanded] = useState(true);
   // Test settings sit right under the variant tabs once there's a real test
   // to configure — closed by default so a fresh A/B test doesn't dump the
   // whole split/winner panel on the user immediately.
   const [testAllocationOpen, setTestAllocationOpen] = useState(false);
 
+  // App Push has its own small saved-template set — a different channel
+  // entirely, so it never shows email templates or vice versa.
+  const templatePool = channel === "Email" ? emailTemplates : appPushTemplates;
+
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return emailTemplates;
-    return emailTemplates.filter(
+    if (!q) return templatePool;
+    return templatePool.filter(
       (t) => t.name.toLowerCase().includes(q) || String(t.id).includes(q)
     );
-  }, [query]);
+  }, [query, templatePool]);
 
   const pageCount = Math.max(1, Math.ceil(matches.length / perPage));
   const current = Math.min(page, pageCount);
   const shown = matches.slice((current - 1) * perPage, current * perPage);
   const extrasOpen = values.replyEnabled || values.copyEnabled || values.attachmentsEnabled;
   const selectedTemplate =
-    [...emailTemplates, ...templateLibrary].find((t) => t.id === values.templateId) ?? null;
+    [...emailTemplates, ...templateLibrary, ...appPushTemplates].find(
+      (t) => t.id === values.templateId
+    ) ?? null;
 
   const nextUnusedLetter = (variants: string[]) => {
     for (let i = 0; i < MAX_VARIANTS; i++) {
@@ -1648,94 +1697,98 @@ export default function CampaignContentStep({
                   </TestAllocationDrawer>
                 )}
 
-                <FieldRow label="From" trailing={fromTrailing}>
-                  <input
-                    type="text"
-                    value={values.senderName}
-                    onChange={(e) => onChange({ senderName: e.target.value })}
-                    placeholder="Sender name"
-                    className={cn(lineInputClass, highlight?.senderName && "cmk-field-flash")}
-                  />
-                  <div className="relative flex shrink-0 items-center">
-                    <select
-                      value={values.domain}
-                      onChange={(e) => onChange({ domain: e.target.value })}
-                      className="appearance-none bg-transparent pr-6 font-manrope text-sm font-semibold text-[#17173A] outline-none"
+                {channel === "Email" && (
+                  <>
+                    <FieldRow label="From" trailing={fromTrailing}>
+                      <input
+                        type="text"
+                        value={values.senderName}
+                        onChange={(e) => onChange({ senderName: e.target.value })}
+                        placeholder="Sender name"
+                        className={cn(lineInputClass, highlight?.senderName && "cmk-field-flash")}
+                      />
+                      <div className="relative flex shrink-0 items-center">
+                        <select
+                          value={values.domain}
+                          onChange={(e) => onChange({ domain: e.target.value })}
+                          className="appearance-none bg-transparent pr-6 font-manrope text-sm font-semibold text-[#17173A] outline-none"
+                        >
+                          {DOMAINS.map((d) => (
+                            <option key={d} value={d}>{`@${d}`}</option>
+                          ))}
+                        </select>
+                        <ChevronDown
+                          className="pointer-events-none absolute right-0 size-4 text-[#8A8AA3]"
+                          strokeWidth={2}
+                        />
+                      </div>
+                    </FieldRow>
+
+                    {values.ccEnabled && (
+                      <FieldRow label="Cc" trailing={ccTrailing}>
+                        <input
+                          type="text"
+                          autoFocus
+                          value={values.ccEmails}
+                          onChange={(e) => onChange({ ccEmails: e.target.value })}
+                          placeholder="Cc email"
+                          className={lineInputClass}
+                        />
+                      </FieldRow>
+                    )}
+
+                    {values.bccEnabled && (
+                      <FieldRow label="Bcc" trailing={bccTrailing}>
+                        <input
+                          type="text"
+                          autoFocus
+                          value={values.bccEmails}
+                          onChange={(e) => onChange({ bccEmails: e.target.value })}
+                          placeholder="Bcc email"
+                          className={lineInputClass}
+                        />
+                      </FieldRow>
+                    )}
+
+                    <FieldRow
+                      label="Subject"
+                      required
+                      info="The line this campaign gets opened on — keep it under 60 characters."
+                      trailing={
+                        <AiSuggestPopover
+                          pool={aiGenerated ? AI_GENERATED_SUBJECT_SUGGESTIONS : SUBJECT_SUGGESTIONS}
+                          onPick={(text) => onChange({ subject: text })}
+                        />
+                      }
                     >
-                      {DOMAINS.map((d) => (
-                        <option key={d} value={d}>{`@${d}`}</option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      className="pointer-events-none absolute right-0 size-4 text-[#8A8AA3]"
-                      strokeWidth={2}
-                    />
-                  </div>
-                </FieldRow>
+                      <input
+                        type="text"
+                        value={values.subject}
+                        onChange={(e) => onChange({ subject: e.target.value })}
+                        placeholder="Subject line"
+                        className={cn(lineInputClass, highlight?.subject && "cmk-field-flash")}
+                      />
+                    </FieldRow>
 
-                {values.ccEnabled && (
-                  <FieldRow label="Cc" trailing={ccTrailing}>
-                    <input
-                      type="text"
-                      autoFocus
-                      value={values.ccEmails}
-                      onChange={(e) => onChange({ ccEmails: e.target.value })}
-                      placeholder="Cc email"
-                      className={lineInputClass}
-                    />
-                  </FieldRow>
+                    <FieldRow
+                      label="Pre-header"
+                      trailing={
+                        <AiSuggestPopover
+                          pool={aiGenerated ? AI_GENERATED_PREHEADER_SUGGESTIONS : PREHEADER_SUGGESTIONS}
+                          onPick={(text) => onChange({ preHeader: text })}
+                        />
+                      }
+                    >
+                      <input
+                        type="text"
+                        value={values.preHeader}
+                        onChange={(e) => onChange({ preHeader: e.target.value })}
+                        placeholder="Pre-header"
+                        className={cn(lineInputClass, highlight?.preHeader && "cmk-field-flash")}
+                      />
+                    </FieldRow>
+                  </>
                 )}
-
-                {values.bccEnabled && (
-                  <FieldRow label="Bcc" trailing={bccTrailing}>
-                    <input
-                      type="text"
-                      autoFocus
-                      value={values.bccEmails}
-                      onChange={(e) => onChange({ bccEmails: e.target.value })}
-                      placeholder="Bcc email"
-                      className={lineInputClass}
-                    />
-                  </FieldRow>
-                )}
-
-                <FieldRow
-                  label="Subject"
-                  required
-                  info="The line this campaign gets opened on — keep it under 60 characters."
-                  trailing={
-                    <AiSuggestPopover
-                      pool={aiGenerated ? AI_GENERATED_SUBJECT_SUGGESTIONS : SUBJECT_SUGGESTIONS}
-                      onPick={(text) => onChange({ subject: text })}
-                    />
-                  }
-                >
-                  <input
-                    type="text"
-                    value={values.subject}
-                    onChange={(e) => onChange({ subject: e.target.value })}
-                    placeholder="Subject line"
-                    className={cn(lineInputClass, highlight?.subject && "cmk-field-flash")}
-                  />
-                </FieldRow>
-
-                <FieldRow
-                  label="Pre-header"
-                  trailing={
-                    <AiSuggestPopover
-                      pool={aiGenerated ? AI_GENERATED_PREHEADER_SUGGESTIONS : PREHEADER_SUGGESTIONS}
-                      onPick={(text) => onChange({ preHeader: text })}
-                    />
-                  }
-                >
-                  <input
-                    type="text"
-                    value={values.preHeader}
-                    onChange={(e) => onChange({ preHeader: e.target.value })}
-                    placeholder="Pre-header"
-                    className={cn(lineInputClass, highlight?.preHeader && "cmk-field-flash")}
-                  />
-                </FieldRow>
               </div>
             );
           })()}
@@ -1885,13 +1938,20 @@ export default function CampaignContentStep({
         </>
       )}
 
-      {values.templateId !== null ? (
+      {values.starterId === "carousel-e2e" ? (
+        <CarouselTemplateEditor onBack={() => onChange({ starterId: "" })} />
+      ) : values.templateId !== null ? (
         <TemplatePreviewPanel
           template={selectedTemplate}
+          channel={channel}
           device={previewDevice}
           onDeviceChange={setPreviewDevice}
           theme={previewTheme}
           onThemeChange={setPreviewTheme}
+          os={previewOS}
+          onOSChange={setPreviewOS}
+          expanded={previewExpanded}
+          onExpandedChange={setPreviewExpanded}
           onChangeTemplate={() => onChange({ templateId: null })}
         />
       ) : (
@@ -1899,7 +1959,9 @@ export default function CampaignContentStep({
       {/* Template picker — same panel, its own heading, exactly as sender
           details and the template list sit together in the reference. */}
       <div className="mb-4 mt-10 flex items-center justify-between gap-4">
-        <h2 className="font-manrope text-base font-bold text-[#17173A]">Select a template</h2>
+        <h2 className="font-manrope text-base font-bold text-[#17173A]">
+          {channel === "Email" ? "Select a template" : "Select a template or create new"}
+        </h2>
 
         <div className="flex items-center gap-2">
           {searchOpen ? (
@@ -1945,82 +2007,39 @@ export default function CampaignContentStep({
             <SlidersHorizontal className="size-4" strokeWidth={2} />
             Filters
           </button>
-          <CreateNewMenu onPick={(starterId) => onChange({ starterId, templateId: null })} />
+          <CreateNewMenu
+            channel={channel}
+            onPick={(starterId) => onChange({ starterId, templateId: null })}
+          />
         </div>
       </div>
 
-      <div className="mb-6 flex items-center gap-6 border-b border-[#E8ECF4]">
-        {TEMPLATE_SOURCE_TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setSourceTab(t.id)}
-            className={cn(
-              "relative pb-2.5 font-manrope text-sm transition-colors",
-              sourceTab === t.id
-                ? "font-bold text-[#2F68E5]"
-                : "font-medium text-[#6F6F8D] hover:text-[#17173A]"
-            )}
-          >
-            {t.label}
-            {sourceTab === t.id && (
-              <span className="absolute -bottom-px left-0 h-[3px] w-full rounded-[1.5px] bg-[#2F68E5]" />
-            )}
-          </button>
-        ))}
-      </div>
-
-      {sourceTab === "library" ? (
-        <div className="grid grid-cols-5 gap-4">
-          {templateLibrary.map((t) => (
-            <TemplateCard
-              key={t.id}
-              template={t}
-              selected={values.templateId === t.id}
-              onSelect={() =>
-                onChange({ templateId: values.templateId === t.id ? null : t.id })
-              }
-            />
-          ))}
-        </div>
-      ) : (
+      {channel === "Email" ? (
         <>
-          <div className="mb-8">
-            <h3 className="mb-4 font-manrope text-sm font-bold text-[#17173A]">Folders</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {(foldersExpanded
-                ? savedTemplateFolders
-                : savedTemplateFolders.slice(0, FOLDERS_COLLAPSED_COUNT)
-              ).map((f) => (
-                <FolderCard key={f.id} folder={f} />
-              ))}
-            </div>
-            {savedTemplateFolders.length > FOLDERS_COLLAPSED_COUNT && (
+          <div className="mb-6 flex items-center gap-6 border-b border-[#E8ECF4]">
+            {TEMPLATE_SOURCE_TABS.map((t) => (
               <button
+                key={t.id}
                 type="button"
-                onClick={() => setFoldersExpanded((o) => !o)}
-                className="mt-3 flex items-center gap-1.5 font-manrope text-sm font-semibold text-[#2F68E5] transition-colors hover:text-[#255ad2]"
+                onClick={() => setSourceTab(t.id)}
+                className={cn(
+                  "relative pb-2.5 font-manrope text-sm transition-colors",
+                  sourceTab === t.id
+                    ? "font-bold text-[#2F68E5]"
+                    : "font-medium text-[#6F6F8D] hover:text-[#17173A]"
+                )}
               >
-                {foldersExpanded ? "View less" : "View more"}
-                <ChevronDown
-                  className={cn("size-4 transition-transform", foldersExpanded && "rotate-180")}
-                  strokeWidth={2}
-                />
+                {t.label}
+                {sourceTab === t.id && (
+                  <span className="absolute -bottom-px left-0 h-[3px] w-full rounded-[1.5px] bg-[#2F68E5]" />
+                )}
               </button>
-            )}
+            ))}
           </div>
 
-          <h3 className="mb-4 font-manrope text-sm font-bold text-[#17173A]">
-            Unorganized templates
-          </h3>
-
-          {shown.length === 0 ? (
-            <p className="py-16 text-center font-manrope text-sm text-[#6F6F8D]">
-              No template matches “{query}”.
-            </p>
-          ) : (
+          {sourceTab === "library" ? (
             <div className="grid grid-cols-5 gap-4">
-              {shown.map((t) => (
+              {templateLibrary.map((t) => (
                 <TemplateCard
                   key={t.id}
                   template={t}
@@ -2031,59 +2050,126 @@ export default function CampaignContentStep({
                 />
               ))}
             </div>
-          )}
+          ) : (
+            <>
+              <div className="mb-8">
+                <h3 className="mb-4 font-manrope text-sm font-bold text-[#17173A]">Folders</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {(foldersExpanded
+                    ? savedTemplateFolders
+                    : savedTemplateFolders.slice(0, FOLDERS_COLLAPSED_COUNT)
+                  ).map((f) => (
+                    <FolderCard key={f.id} folder={f} />
+                  ))}
+                </div>
+                {savedTemplateFolders.length > FOLDERS_COLLAPSED_COUNT && (
+                  <button
+                    type="button"
+                    onClick={() => setFoldersExpanded((o) => !o)}
+                    className="mt-3 flex items-center gap-1.5 font-manrope text-sm font-semibold text-[#2F68E5] transition-colors hover:text-[#255ad2]"
+                  >
+                    {foldersExpanded ? "View less" : "View more"}
+                    <ChevronDown
+                      className={cn("size-4 transition-transform", foldersExpanded && "rotate-180")}
+                      strokeWidth={2}
+                    />
+                  </button>
+                )}
+              </div>
 
-          <div className="mt-6 flex items-center justify-between">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setPerPageOpen((o) => !o)}
-                className="flex h-10 w-[215px] items-center justify-between rounded-[5px] border border-[#DDE2EE] bg-white px-2.5 font-manrope text-sm text-[#17173A]"
-              >
-                {perPage} per page
-                <ChevronDown
-                  className={cn(
-                    "h-5 w-5 text-[#6F6F8D] transition-transform",
-                    perPageOpen && "rotate-180"
-                  )}
-                  strokeWidth={1.8}
-                />
-              </button>
-              {perPageOpen && (
-                <div className="absolute bottom-11 left-0 z-20 w-[215px] overflow-hidden rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
-                  {PER_PAGE_OPTIONS.map((n) => {
-                    const enabled = PER_PAGE_ENABLED.includes(n);
-                    return (
-                      <button
-                        key={n}
-                        type="button"
-                        disabled={!enabled}
-                        onClick={() => {
-                          if (!enabled) return;
-                          setPerPage(n);
-                          setPage(1);
-                          setPerPageOpen(false);
-                        }}
-                        className={cn(
-                          "block w-full px-3 py-2 text-left font-manrope text-sm transition-colors",
-                          !enabled
-                            ? "cursor-not-allowed text-[#B9BAC7]"
-                            : n === perPage
-                              ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]"
-                              : "text-[#17173A] hover:bg-[#F7F9FC]"
-                        )}
-                      >
-                        {n} per page
-                      </button>
-                    );
-                  })}
+              <h3 className="mb-4 font-manrope text-sm font-bold text-[#17173A]">
+                Unorganized templates
+              </h3>
+
+              {shown.length === 0 ? (
+                <p className="py-16 text-center font-manrope text-sm text-[#6F6F8D]">
+                  No template matches “{query}”.
+                </p>
+              ) : (
+                <div className="grid grid-cols-5 gap-4">
+                  {shown.map((t) => (
+                    <TemplateCard
+                      key={t.id}
+                      template={t}
+                      selected={values.templateId === t.id}
+                      onSelect={() =>
+                        onChange({ templateId: values.templateId === t.id ? null : t.id })
+                      }
+                    />
+                  ))}
                 </div>
               )}
-            </div>
 
-            <Pager page={current} pageCount={pageCount} onPage={setPage} />
-          </div>
+              <div className="mt-6 flex items-center justify-between">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setPerPageOpen((o) => !o)}
+                    className="flex h-10 w-[215px] items-center justify-between rounded-[5px] border border-[#DDE2EE] bg-white px-2.5 font-manrope text-sm text-[#17173A]"
+                  >
+                    {perPage} per page
+                    <ChevronDown
+                      className={cn(
+                        "h-5 w-5 text-[#6F6F8D] transition-transform",
+                        perPageOpen && "rotate-180"
+                      )}
+                      strokeWidth={1.8}
+                    />
+                  </button>
+                  {perPageOpen && (
+                    <div className="absolute bottom-11 left-0 z-20 w-[215px] overflow-hidden rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]">
+                      {PER_PAGE_OPTIONS.map((n) => {
+                        const enabled = PER_PAGE_ENABLED.includes(n);
+                        return (
+                          <button
+                            key={n}
+                            type="button"
+                            disabled={!enabled}
+                            onClick={() => {
+                              if (!enabled) return;
+                              setPerPage(n);
+                              setPage(1);
+                              setPerPageOpen(false);
+                            }}
+                            className={cn(
+                              "block w-full px-3 py-2 text-left font-manrope text-sm transition-colors",
+                              !enabled
+                                ? "cursor-not-allowed text-[#B9BAC7]"
+                                : n === perPage
+                                  ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]"
+                                  : "text-[#17173A] hover:bg-[#F7F9FC]"
+                            )}
+                          >
+                            {n} per page
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <Pager page={current} pageCount={pageCount} onPage={setPage} />
+              </div>
+            </>
+          )}
         </>
+      ) : shown.length === 0 ? (
+        <p className="py-16 text-center font-manrope text-sm text-[#6F6F8D]">
+          No template matches “{query}”.
+        </p>
+      ) : (
+        <div className="grid grid-cols-4 gap-4">
+          {shown.map((t) => (
+            <AppPushTemplateCard
+              key={t.id}
+              template={t}
+              selected={values.templateId === t.id}
+              onSelect={() =>
+                onChange({ templateId: values.templateId === t.id ? null : t.id })
+              }
+            />
+          ))}
+        </div>
       )}
         </>
       )}

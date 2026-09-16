@@ -61,8 +61,6 @@ const SECTIONS: QuickCreateSection[] = [
         label: "App Push Notification",
         icon: iconAppPush,
         inset: "6.47% 7.14% 5.95% 5.36%",
-        hasSubmenu: true,
-        disabled: true,
       },
       { label: "Web Push Notification", icon: iconWebPush, inset: "6.47% 6.52% 4.93% 5.53%", disabled: true },
       { label: "Whatsapp", icon: iconWhatsapp, inset: "5.21%", disabled: true },
