@@ -17,6 +17,8 @@ import ConditionAttributePicker, {
   type ConditionAttribute,
 } from "./ConditionAttributePicker";
 import type { SetupValues } from "./CampaignSetupStep";
+import MultiSelectDropdown from "./MultiSelectDropdown";
+import { APP_OPTIONS } from "./appOptions.data";
 
 export type AudienceMode = "all" | "segments" | "adhoc" | "table";
 
@@ -43,6 +45,8 @@ export interface AudienceValues {
   excludeSegments: SegmentRef[];
   /** Cohort currently plotted from the co-marketer, if any. */
   cohortId: string;
+  /** Push only — which registered apps this send targets. */
+  selectedApps: string[];
 }
 
 export const EMPTY_AUDIENCE: AudienceValues = {
@@ -54,6 +58,7 @@ export const EMPTY_AUDIENCE: AudienceValues = {
   excludeEnabled: false,
   excludeSegments: [],
   cohortId: "",
+  selectedApps: [],
 };
 
 /** Reachable base for "All contacts" — everyone with a valid email address. */
@@ -402,6 +407,7 @@ export default function CampaignAudienceStep({
   tracking,
   onTrackingChange,
   trackingHighlight,
+  channel = "Email",
 }: {
   values: AudienceValues;
   onChange: (patch: Partial<AudienceValues>) => void;
@@ -411,6 +417,7 @@ export default function CampaignAudienceStep({
   onTrackingChange: (patch: Partial<TrackingValues>) => void;
   /** Tracking field keys just written by a co-marketer apply — briefly flashed. */
   trackingHighlight?: Partial<Record<keyof TrackingValues, boolean>>;
+  channel?: string;
 }) {
   /** Any hand edit invalidates a count that came from the co-marketer's segment. */
   const setConditions = (conditions: AdhocCondition[]) =>
@@ -441,6 +448,17 @@ export default function CampaignAudienceStep({
 
   return (
     <StepCard wide>
+      {channel !== "Email" && (
+        <div className="mb-6">
+          <MultiSelectDropdown
+            label="Target platforms"
+            required
+            options={APP_OPTIONS}
+            value={values.selectedApps}
+            onChange={(selectedApps) => onChange({ selectedApps })}
+          />
+        </div>
+      )}
       <div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <button

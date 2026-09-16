@@ -201,6 +201,80 @@ export function TemplateThumbnail({ kind }: { kind: TemplatePreview }) {
     );
   }
 
+  if (kind === "push-regular") {
+    return (
+      <div className="flex h-full flex-col bg-white p-1.5">
+        <div className="flex items-center gap-1">
+          <span className="size-2.5 shrink-0 rounded-full bg-[#8B3A3A]" />
+          <p className="font-manrope text-[5px] font-bold text-[#17173A]">TrendyGems</p>
+        </div>
+        <p className="mt-1 font-manrope text-[6.5px] font-bold leading-[8px] text-[#17173A]">
+          Herbal creams @20% OFF
+        </p>
+        <p className="mt-0.5 font-manrope text-[4.5px] leading-[6px] text-[#6F6F8D]">
+          Reply and know more about the offer…
+        </p>
+        <div className="mt-1 flex flex-1 items-center justify-center gap-1 rounded-[2px] bg-[#F3EFE7] px-1.5">
+          <span className="h-[70%] w-[35%] rounded-[1px] bg-[#5C4A3A]" />
+          <span className="h-[55%] w-[25%] rounded-[1px] bg-[#8B6F4E]" />
+        </div>
+        <p className="mt-1 text-center font-manrope text-[4.5px] font-bold uppercase tracking-[0.3px] text-[#17173A]">
+          Reply now
+        </p>
+      </div>
+    );
+  }
+
+  if (kind === "push-carousel") {
+    const swatches = ["#DCE9D6", "#F0E4D3", "#8B6F4E", "#E7DCCB", "#D9C7A8"];
+    return (
+      <div className="flex h-full flex-col bg-white p-1.5">
+        <div className="flex items-center gap-1">
+          <span className="size-2.5 shrink-0 rounded-full bg-gradient-to-br from-[#F5C542] to-[#FC5E02]" />
+          <p className="font-manrope text-[5px] font-bold text-[#17173A]">VogueLux</p>
+        </div>
+        <p className="mt-1 font-manrope text-[6px] font-bold leading-[7px] text-[#17173A]">
+          Don't worry we got you covered
+        </p>
+        <p className="mt-0.5 font-manrope text-[4.5px] leading-[6px] text-[#6F6F8D]">
+          Explore our latest collection
+        </p>
+        <div className="mt-1 flex flex-1 items-end gap-[1.5px]">
+          {swatches.map((tone, i) => (
+            <span
+              key={i}
+              className="h-[80%] flex-1 rounded-[1px]"
+              style={{ background: tone }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === "push-timer") {
+    return (
+      <div className="relative flex h-full flex-col overflow-hidden bg-gradient-to-br from-[#FC5E02] to-[#F5C542] p-1.5">
+        <div className="flex items-center justify-between gap-1">
+          <p className="font-manrope text-[4.5px] font-bold uppercase leading-[6px] text-white">
+            5 days to sale!
+          </p>
+          <span className="shrink-0 rounded-[1px] bg-[#17173A] px-1 py-[1px] font-manrope text-[4px] font-bold text-white">
+            03:00:00
+          </span>
+        </div>
+        <div className="mt-1 flex flex-1 flex-col items-center justify-center gap-1">
+          <p className="text-center font-manrope text-[7px] font-black italic leading-[8px] text-white">
+            Summer fashion sale
+          </p>
+          <span className="rounded-[1px] border border-white px-1 py-[1px] font-manrope text-[4.5px] font-bold text-white">
+            Up to 70% off
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return <EmptyFrame className="h-full" />;
 }
 

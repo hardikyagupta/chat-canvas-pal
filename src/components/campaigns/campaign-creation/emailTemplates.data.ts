@@ -36,7 +36,20 @@ export type TemplatePreview =
   | "giftset"
   | "text"
   | "receipt"
-  | "skincare";
+  | "skincare"
+  // App Push's own drawn mockups — a push notification card rather than an
+  // email screenshot, but the same picker/card shell as everything above.
+  | "push-regular"
+  | "push-carousel"
+  | "push-timer";
+
+/** App Push's preview panel toggles between OS and expanded/collapsed — a
+ *  template can carry a real mock for each combination it's been rendered for. */
+export type PushPreviewKey =
+  | "ios-expanded"
+  | "ios-collapsed"
+  | "android-expanded"
+  | "android-collapsed";
 
 export interface EmailTemplate {
   id: number;
@@ -48,6 +61,9 @@ export interface EmailTemplate {
   aiGenerated?: boolean;
   /** Already running in a live campaign — badged on the thumbnail. */
   inUse?: boolean;
+  /** App Push only — real mocks per OS/expanded combination. Falls back to
+   *  `image` for any combination not covered here. */
+  pushPreviews?: Partial<Record<PushPreviewKey, string>>;
 }
 
 /** The most recently touched templates — these carry real thumbnails. */
