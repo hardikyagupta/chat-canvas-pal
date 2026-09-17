@@ -451,7 +451,7 @@ export default function CampaignAudienceStep({
       {channel !== "Email" && (
         <div className="mb-6">
           <MultiSelectDropdown
-            label="Target platforms"
+            label="Target app(s)"
             required
             options={APP_OPTIONS}
             value={values.selectedApps}

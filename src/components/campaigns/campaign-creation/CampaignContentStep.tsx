@@ -48,6 +48,7 @@ import TemplateCard, { CardMenuItem, TemplateThumbnail } from "./TemplateCard";
 import AppPushTemplateCard from "./AppPushTemplateCard";
 import TemplatePreviewOverlay from "./TemplatePreviewOverlay";
 import AiSuggestPopover from "./AiSuggestPopover";
+import ErrorToast from "./ErrorToast";
 import {
   emailTemplates,
   savedTemplateFolders,
@@ -1314,6 +1315,7 @@ export default function CampaignContentStep({
   reach = 0,
   aiGenerated = false,
   channel = "Email",
+  hasTargetApps = true,
 }: {
   values: ContentValues;
   onChange: (patch: Partial<ContentValues>) => void;
@@ -1327,6 +1329,9 @@ export default function CampaignContentStep({
   /** From/Subject/Pre-header are email-specific header fields — every other
    *  channel skips straight to the rest of the step. */
   channel?: string;
+  /** Whether the Send to step's "Target app(s)" field has a selection yet —
+   *  push channels can't use or create a template until it does. */
+  hasTargetApps?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -1347,6 +1352,22 @@ export default function CampaignContentStep({
   // to configure — closed by default so a fresh A/B test doesn't dump the
   // whole split/winner panel on the user immediately.
   const [testAllocationOpen, setTestAllocationOpen] = useState(false);
+  const [blockedActionToast, setBlockedActionToast] = useState<string | null>(null);
+  // Carousel (E2E) opens as its own full-screen overlay rather than inline —
+  // tracked separately from starterId so closing it can either keep the
+  // configuration (Use) or discard it (X) without the overlay popping back
+  // open on its own.
+  const [carouselEditorOpen, setCarouselEditorOpen] = useState(false);
+
+  const requireTargetApp = (action: "use" | "create") => {
+    if (channel === "Email" || hasTargetApps) return false;
+    setBlockedActionToast(
+      action === "use"
+        ? "Select a target app to use a template."
+        : "Select a target app to create a template."
+    );
+    return true;
+  };
 
   // App Push has its own small saved-template set — a different channel
   // entirely, so it never shows email templates or vice versa.
@@ -1444,6 +1465,9 @@ export default function CampaignContentStep({
             description: "Define sender details to be used for sending the email",
           })}
     >
+      {blockedActionToast && (
+        <ErrorToast message={blockedActionToast} onDismiss={() => setBlockedActionToast(null)} />
+      )}
       {CONTENT_LAYOUT_V2 ? (
         <>
           {(() => {
@@ -1938,8 +1962,14 @@ export default function CampaignContentStep({
         </>
       )}
 
-      {values.starterId === "carousel-e2e" ? (
-        <CarouselTemplateEditor onBack={() => onChange({ starterId: "" })} />
+      {carouselEditorOpen ? (
+        <CarouselTemplateEditor
+          onClose={() => {
+            setCarouselEditorOpen(false);
+            onChange({ starterId: "" });
+          }}
+          onUse={() => setCarouselEditorOpen(false)}
+        />
       ) : values.templateId !== null ? (
         <TemplatePreviewPanel
           template={selectedTemplate}
@@ -2009,7 +2039,11 @@ export default function CampaignContentStep({
           </button>
           <CreateNewMenu
             channel={channel}
-            onPick={(starterId) => onChange({ starterId, templateId: null })}
+            onPick={(starterId) => {
+              if (requireTargetApp("create")) return;
+              onChange({ starterId, templateId: null });
+              if (starterId === "carousel-e2e") setCarouselEditorOpen(true);
+            }}
           />
         </div>
       </div>
@@ -2164,9 +2198,10 @@ export default function CampaignContentStep({
               key={t.id}
               template={t}
               selected={values.templateId === t.id}
-              onSelect={() =>
-                onChange({ templateId: values.templateId === t.id ? null : t.id })
-              }
+              onSelect={() => {
+                if (requireTargetApp("use")) return;
+                onChange({ templateId: values.templateId === t.id ? null : t.id });
+              }}
             />
           ))}
         </div>
