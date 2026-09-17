@@ -464,7 +464,11 @@ function SegmentedTabs<T extends string>({
                 : "border-[#DDE2EE] text-[#17173A] hover:bg-[#F7F9FC]"
             )}
           >
-            {Icon ? <Icon className="size-4" /> : o.label}
+            {Icon ? (
+              <Icon className={cn("size-4", o.value === "android" && "text-[#78C257]")} />
+            ) : (
+              o.label
+            )}
           </button>
         );
       })}
@@ -714,7 +718,13 @@ function TemplatePreviewPanel({
       </div>
 
       {previewOpen && (
-        <TemplatePreviewOverlay template={template} onClose={() => setPreviewOpen(false)} />
+        <TemplatePreviewOverlay
+          template={template}
+          channel={channel}
+          initialOS={os}
+          initialExpanded={expanded}
+          onClose={() => setPreviewOpen(false)}
+        />
       )}
     </div>
   );

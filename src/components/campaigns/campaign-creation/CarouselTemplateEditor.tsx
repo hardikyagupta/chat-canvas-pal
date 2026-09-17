@@ -824,7 +824,11 @@ export default function CarouselTemplateEditor({
                       : "border-[#DDE2EE] text-[#17173A] hover:bg-[#F7F9FC]"
                   )}
                 >
-                  {o === "android" ? <AndroidIcon className="size-4" /> : <AppleIcon className="size-4" />}
+                  {o === "android" ? (
+                    <AndroidIcon className="size-4 text-[#78C257]" />
+                  ) : (
+                    <AppleIcon className="size-4" />
+                  )}
                 </button>
               ))}
             </div>
