@@ -19,6 +19,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import CampaignCreationNavbar from "./CampaignCreationNavbar";
 import AppPushIcon from "@/components/AppPushIcon";
@@ -355,6 +357,13 @@ export default function CampaignCreationOverlay({
       setMounted(true);
       // Each new draft gets its own timestamped name.
       setCampaignName(newCampaignName());
+      // Email lands here via its own intro screen, which opens Audience on
+      // continue — every other channel skips that screen, so open Send to
+      // itself here instead of starting with every card collapsed.
+      if (channel !== "Email") {
+        setOpenStepIds(new Set(["audience"]));
+        setFocusStepId("audience");
+      }
       return;
     }
     setShown(false);
@@ -1065,27 +1074,32 @@ export default function CampaignCreationOverlay({
           )}
         >
           <div className="cc-accordion ov2-accordion">
-            {STEPS.map((step, index) => {
-              const StepIcon = step.icon;
-              const active = openStepIds.has(step.id);
-              const complete =
-                !active && completedSteps.has(step.id) && isStepComplete(step.id);
-              const state = active ? "active" : complete ? "complete" : "idle";
+            {/* Push channels can't configure Message/Schedule before at least
+                one target app is picked in Send to — those two cards stay
+                locked (and explain why on hover) until then. */}
+            {(() => {
+              const targetAppSelectionRequired =
+                channel !== "Email" && audience.selectedApps.length === 0;
 
-              return (
-                <section
-                  key={step.id}
-                  ref={(el) => (cardRefs.current[step.id] = el)}
-                  data-step-id={step.id}
-                  className={`ov2-card ${state}`}
-                >
+              return STEPS.map((step, index) => {
+                const StepIcon = step.icon;
+                const active = openStepIds.has(step.id);
+                const complete =
+                  !active && completedSteps.has(step.id) && isStepComplete(step.id);
+                const state = active ? "active" : complete ? "complete" : "idle";
+                const locked =
+                  targetAppSelectionRequired && (step.id === "content" || step.id === "schedule");
+
+                const header = (
                   <div
                     role="button"
-                    tabIndex={0}
-                    className="ov2-card-header"
+                    tabIndex={locked ? -1 : 0}
+                    aria-disabled={locked}
+                    className={cn("ov2-card-header", locked && "cursor-not-allowed opacity-50")}
                     aria-expanded={active}
-                    onClick={() => toggleStep(index)}
+                    onClick={() => !locked && toggleStep(index)}
                     onKeyDown={(e) => {
+                      if (locked) return;
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         toggleStep(index);
@@ -1139,6 +1153,35 @@ export default function CampaignCreationOverlay({
                     )}
                     <ChevronDown className="ov2-chevron" />
                   </div>
+                );
+
+                return (
+                  <section
+                    key={step.id}
+                    ref={(el) => (cardRefs.current[step.id] = el)}
+                    data-step-id={step.id}
+                    className={`ov2-card ${state}`}
+                  >
+                    {locked ? (
+                      <TooltipProvider delayDuration={150}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>{header}</TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            align="start"
+                            sideOffset={8}
+                            className="overflow-visible rounded-lg border-0 bg-black px-3 py-1.5 text-white shadow-none"
+                          >
+                            <p className="font-manrope text-xs leading-[18px]">
+                              Select a target app to proceed ahead.
+                            </p>
+                            <TooltipPrimitive.Arrow className="fill-black" width={10} height={6} />
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      header
+                    )}
 
                   <div className={`ov2-card-bodywrap${active ? " open" : ""}`}>
                     <div className="ov2-card-bodywrap-inner">
@@ -1214,7 +1257,8 @@ export default function CampaignCreationOverlay({
                   </div>
                 </section>
               );
-            })}
+            });
+          })()}
           </div>
 
           {/* Same treatment as the navbar's "Ask co-marketer" CTA — white fill,

@@ -1,8 +1,56 @@
 import { useMemo, useState } from "react";
-import { Check, Monitor, Search, Smartphone, X } from "lucide-react";
+import { Check, Monitor, Search, Smartphone, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TemplateThumbnail } from "./TemplateCard";
-import type { EmailTemplate } from "./emailTemplates.data";
+import { AppleIcon, AndroidIcon } from "./PlatformIcons";
+import type { EmailTemplate, PushPreviewKey } from "./emailTemplates.data";
+
+/** Same segmented OS/Expanded-Collapsed toggle used beside the template
+ *  panel outside this overlay — duplicated here rather than imported to
+ *  avoid a circular import (CampaignContentStep opens this overlay). */
+function SegmentedTabs<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string; icon?: LucideIcon | typeof AppleIcon }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="inline-flex">
+      {options.map((o, i) => {
+        const active = value === o.value;
+        const Icon = o.icon;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            aria-pressed={active}
+            aria-label={Icon ? o.label : undefined}
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "flex h-8 items-center border font-manrope text-sm font-medium transition-colors",
+              Icon ? "w-9 justify-center" : "px-3",
+              i > 0 && "-ml-px",
+              i === 0 && "rounded-l-md",
+              i === options.length - 1 && "rounded-r-md",
+              active
+                ? "relative z-[1] border-[#2F68E5] bg-[#F4F8FF] text-[#2F68E5]"
+                : "border-[#DDE2EE] text-[#17173A] hover:bg-[#F7F9FC]"
+            )}
+          >
+            {Icon ? (
+              <Icon className={cn("size-4", o.value === "android" && "text-[#78C257]")} />
+            ) : (
+              o.label
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 interface PreviewProfile {
   email: string;
@@ -65,12 +113,27 @@ const rowKey = (p: PreviewProfile, i: number) => `${p.email}-${p.productPreferen
  */
 export default function TemplatePreviewOverlay({
   template,
+  channel = "Email",
+  initialOS = "ios",
+  initialExpanded = true,
   onClose,
 }: {
   template: EmailTemplate | null;
+  /** Push channels swap the Desktop/Mobile toggle for OS + Expanded/Collapsed,
+   *  matching the template panel this overlay opens from. */
+  channel?: string;
+  initialOS?: "ios" | "android";
+  initialExpanded?: boolean;
   onClose: () => void;
 }) {
+  const isPush = channel !== "Email";
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const [os, setOs] = useState(initialOS);
+  const [expanded, setExpanded] = useState(initialExpanded);
+  const pushPreviewKey: PushPreviewKey = `${os}-${expanded ? "expanded" : "collapsed"}`;
+  const resolvedImage = isPush
+    ? template?.pushPreviews?.[pushPreviewKey] ?? template?.image
+    : template?.image;
   const [query, setQuery] = useState("");
   // Set once a suggested email is clicked — that's what reveals the record
   // table below. Typing again (see the input's onChange) clears it, so the
@@ -128,56 +191,86 @@ export default function TemplatePreviewOverlay({
 
         <div className="flex min-h-0 flex-1">
           <div className="scroll-slim flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-8 py-8">
-            <div className="mb-6 flex items-center gap-1 rounded-md border border-[#DDE2EE] bg-white p-1">
-              <button
-                type="button"
-                aria-label="Desktop preview"
-                aria-pressed={device === "desktop"}
-                onClick={() => setDevice("desktop")}
-                className={cn(
-                  "grid size-8 place-items-center rounded-md transition-colors",
-                  device === "desktop"
-                    ? "bg-[#F0F3F9] text-[#17173A]"
-                    : "text-[#8A8AA3] hover:text-[#17173A]"
-                )}
-              >
-                <Monitor className="size-4" strokeWidth={2} />
-              </button>
-              <button
-                type="button"
-                aria-label="Mobile preview"
-                aria-pressed={device === "mobile"}
-                onClick={() => setDevice("mobile")}
-                className={cn(
-                  "grid size-8 place-items-center rounded-md transition-colors",
-                  device === "mobile"
-                    ? "bg-[#F0F3F9] text-[#17173A]"
-                    : "text-[#8A8AA3] hover:text-[#17173A]"
-                )}
-              >
-                <Smartphone className="size-4" strokeWidth={2} />
-              </button>
-            </div>
+            {isPush ? (
+              <div className="mb-6 flex items-center gap-2">
+                <SegmentedTabs
+                  options={[
+                    { value: "ios", label: "iOS", icon: AppleIcon },
+                    { value: "android", label: "Android", icon: AndroidIcon },
+                  ]}
+                  value={os}
+                  onChange={setOs}
+                />
+                <SegmentedTabs
+                  options={[
+                    { value: "expanded", label: "Expanded" },
+                    { value: "collapsed", label: "Collapsed" },
+                  ]}
+                  value={expanded ? "expanded" : "collapsed"}
+                  onChange={(v) => setExpanded(v === "expanded")}
+                />
+              </div>
+            ) : (
+              <div className="mb-6 flex items-center gap-1 rounded-md border border-[#DDE2EE] bg-white p-1">
+                <button
+                  type="button"
+                  aria-label="Desktop preview"
+                  aria-pressed={device === "desktop"}
+                  onClick={() => setDevice("desktop")}
+                  className={cn(
+                    "grid size-8 place-items-center rounded-md transition-colors",
+                    device === "desktop"
+                      ? "bg-[#F0F3F9] text-[#17173A]"
+                      : "text-[#8A8AA3] hover:text-[#17173A]"
+                  )}
+                >
+                  <Monitor className="size-4" strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Mobile preview"
+                  aria-pressed={device === "mobile"}
+                  onClick={() => setDevice("mobile")}
+                  className={cn(
+                    "grid size-8 place-items-center rounded-md transition-colors",
+                    device === "mobile"
+                      ? "bg-[#F0F3F9] text-[#17173A]"
+                      : "text-[#8A8AA3] hover:text-[#17173A]"
+                  )}
+                >
+                  <Smartphone className="size-4" strokeWidth={2} />
+                </button>
+              </div>
+            )}
 
             <div
               className={cn(
-                "overflow-hidden rounded-lg border border-[#DDE2EE] bg-white shadow-[0_8px_24px_rgba(23,23,58,0.08)] transition-all duration-300 ease-in-out",
-                device === "desktop" ? "w-[720px]" : "w-[380px]"
+                "overflow-hidden rounded-lg transition-all duration-300 ease-in-out",
+                !isPush && "border border-[#DDE2EE] bg-white shadow-[0_8px_24px_rgba(23,23,58,0.08)]",
+                isPush ? "w-[320px]" : device === "desktop" ? "w-[720px]" : "w-[380px]"
               )}
             >
-              <div className="h-9 border-b border-[#EEF1F7] bg-[#F7F9FC]" />
+              {/* Push's own reference image already includes the phone chrome
+                  and status bar — this toolbar strip is only for email's
+                  browser-chrome illusion. */}
+              {!isPush && <div className="h-9 border-b border-[#EEF1F7] bg-[#F7F9FC]" />}
               <div
                 className={cn(
-                  "overflow-y-auto bg-white transition-all duration-300 ease-in-out",
-                  device === "desktop" ? "h-[560px]" : "h-[640px]"
+                  "transition-all duration-300 ease-in-out",
+                  isPush ? "flex items-center justify-center overflow-hidden" : "overflow-y-auto bg-white",
+                  isPush ? "h-[540px]" : device === "desktop" ? "h-[560px]" : "h-[640px]"
                 )}
               >
                 {!template ? (
                   <div className="grid h-full place-items-center font-manrope text-sm text-[#6F6F8D]">
                     Template not found.
                   </div>
-                ) : template.image ? (
-                  <img src={template.image} alt="" className="block h-auto w-full" />
+                ) : resolvedImage ? (
+                  <img
+                    src={resolvedImage}
+                    alt=""
+                    className={isPush ? "h-full w-full object-contain" : "block h-auto w-full"}
+                  />
                 ) : (
                   <TemplateThumbnail kind={template.preview} />
                 )}

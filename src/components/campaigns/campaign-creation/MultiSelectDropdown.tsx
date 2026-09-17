@@ -77,8 +77,19 @@ export default function MultiSelectDropdown({
 
       <div ref={wrapRef} className="relative">
         <div
+          role="button"
+          tabIndex={0}
+          aria-label={label}
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          onKeyDown={(e) => {
+            if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              setOpen((o) => !o);
+            }
+          }}
           className={cn(
-            "flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-md border bg-white px-2.5 py-1.5 transition-colors",
+            "flex min-h-10 w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-md border bg-white px-2.5 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F68E5] focus-visible:ring-offset-2",
             open ? "border-[#2F68E5]" : "border-[#DDE2EE]"
           )}
         >
@@ -98,25 +109,25 @@ export default function MultiSelectDropdown({
               <button
                 type="button"
                 aria-label={`Remove ${o.name}`}
-                onClick={() => toggleOption(o.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleOption(o.id);
+                }}
                 className="grid size-4 shrink-0 place-items-center rounded-full text-[#8A8AA3] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
               >
                 <X className="size-3" strokeWidth={2.4} />
               </button>
             </span>
           ))}
-          <button
-            type="button"
-            aria-label={open ? "Close" : "Open"}
-            aria-expanded={open}
-            onClick={() => setOpen((o) => !o)}
+          <span
+            aria-hidden="true"
             className="ml-auto grid size-6 shrink-0 place-items-center rounded text-[#8A8AA3] transition-colors hover:text-[#17173A]"
           >
             <ChevronDown
               className={cn("size-4 transition-transform", open && "rotate-180")}
               strokeWidth={2}
             />
-          </button>
+          </span>
         </div>
 
         {open &&
