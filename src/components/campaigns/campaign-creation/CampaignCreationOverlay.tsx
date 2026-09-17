@@ -1184,6 +1184,7 @@ export default function CampaignCreationOverlay({
                             reach={reachFor(audience)}
                             aiGenerated={campaignAIGenerated}
                             channel={channel}
+                            hasTargetApps={audience.selectedApps.length > 0}
                           />
                         )}
                         {step.id === "schedule" && (

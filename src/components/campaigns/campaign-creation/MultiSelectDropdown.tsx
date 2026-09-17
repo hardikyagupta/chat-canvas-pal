@@ -87,7 +87,13 @@ export default function MultiSelectDropdown({
               key={o.id}
               className="inline-flex items-center gap-1.5 rounded-full border border-[#DDE2EE] bg-white py-1 pl-2.5 pr-1.5 font-manrope text-[13px] text-[#17173A]"
             >
-              <PlatformIcon platform={o.platform} className="size-3 shrink-0 text-[#6F6F8D]" />
+              <PlatformIcon
+                platform={o.platform}
+                className={cn(
+                  "size-3 shrink-0",
+                  o.platform === "android" ? "text-[#78C257]" : "text-[#6F6F8D]"
+                )}
+              />
               {o.name}
               <button
                 type="button"
