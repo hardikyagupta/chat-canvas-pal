@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
 import {
   BarChart3,
+  BellRing,
   Calendar,
   Check,
   ChevronDown,
@@ -12,9 +13,11 @@ import {
   Monitor,
   Package,
   Percent,
+  ShoppingCart,
   Sparkles,
   Tag,
   Target,
+  Timer,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -189,6 +192,77 @@ const STEP_CHIPS: Record<string, StarterChip[]> = {
     },
   ],
 };
+
+/** App Push's own Message-step chips — notification copy (a short title and
+ *  body, an emoji, a call to action) rather than an email's subject line and
+ *  body. Audience and Schedule have their own push-aware sets below/above. */
+const PUSH_STEP_CHIPS: Record<string, StarterChip[]> = {
+  ...STEP_CHIPS,
+  content: [
+    {
+      label: "Offer 50% off",
+      icon: Percent,
+      header: "Write a 50% off push notification",
+      prompts: [
+        "Write a push title and message for a 50% off sale.",
+        "Draft a body under 100 characters for a 50% off push.",
+        "Suggest an emoji and call to action that lifts taps on a 50% off push.",
+      ],
+    },
+    {
+      label: "Cart reminder",
+      icon: ShoppingCart,
+      header: "Write an abandoned-cart push",
+      prompts: [
+        "Write a push title and message nudging someone to finish their cart.",
+        "Draft a cart reminder that offers free shipping to complete the order.",
+        "What's the best delay before sending a cart reminder push?",
+      ],
+    },
+    {
+      label: "Flash sale countdown",
+      icon: Timer,
+      header: "Write a flash-sale countdown push",
+      prompts: [
+        "Write a push title and message for a flash sale that ends tonight.",
+        "Draft a countdown-timer push that creates urgency without sounding spammy.",
+        "Suggest a rich-media image style for a flash-sale push.",
+      ],
+    },
+    {
+      label: "Back in stock alert",
+      icon: BellRing,
+      header: "Write a back-in-stock push",
+      prompts: [
+        "Write a push title and message telling someone a product they wanted is back in stock.",
+        "Draft a back-in-stock push that names the product and links straight to it.",
+        "Which deep link should a back-in-stock push open?",
+      ],
+    },
+  ],
+};
+
+/** App Push's audience pills — app behaviour and lifecycle cuts. "Welcome new
+ *  customers" keeps its wording because its prompt already has a scripted
+ *  segment flow behind it; the rest are answered by the generic segment build. */
+const PUSH_AUDIENCE_STARTERS: { title: string; prompt: string }[] = [
+  {
+    title: "Re-engage lapsed app users",
+    prompt: "Find users who haven't opened the app in the last 30 days",
+  },
+  {
+    title: "Recover abandoned carts",
+    prompt: "Find users who added products to their cart but haven't purchased in the last 3 days",
+  },
+  {
+    title: "Welcome new customers",
+    prompt: "Create a segment of new customers who joined within the last 60 days",
+  },
+  {
+    title: "Notify product viewers",
+    prompt: "Find users who viewed or wishlisted a product in the last 30 days",
+  },
+];
 
 /** Empty-state greeting for the docked chat, per open step — replaces the
  *  generic "Good afternoon, Amit" with a question about what that step is
@@ -576,7 +650,9 @@ export default function CampaignCreationOverlay({
    * Picking one replays the Segment agent's thread for that ask in the docked
    * chat, so the wizard stays exactly where it is.
    */
-  const audienceChips: StarterChip[] = SEGMENT_STARTERS.map((starter) => ({
+  const isPushChannel = channel === "App Push Notification";
+  const audienceStarters = isPushChannel ? PUSH_AUDIENCE_STARTERS : SEGMENT_STARTERS;
+  const audienceChips: StarterChip[] = audienceStarters.map((starter) => ({
     label: starter.title,
     icon: Users,
     onSelect: () => {
@@ -944,7 +1020,11 @@ export default function CampaignCreationOverlay({
         docked
         conversationVariant={chatVariant}
         initialMessage={chatMessage}
-        starterChipSet={railStepId === "audience" ? audienceChips : STEP_CHIPS[railStepId]}
+        starterChipSet={
+          railStepId === "audience"
+            ? audienceChips
+            : (isPushChannel ? PUSH_STEP_CHIPS : STEP_CHIPS)[railStepId]
+        }
         emptyStateGreeting={STEP_GREETINGS[railStepId]}
         initialTopic={chatTopic ?? undefined}
         // A segment the agent built — its rules land on the Conditions tab as

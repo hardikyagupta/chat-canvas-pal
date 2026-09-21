@@ -32,7 +32,10 @@ type Tab = (typeof TABS)[number];
 const SEARCH_HINTS = ["Search “Email”", "Search “App push”", "Search “Journey”"];
 
 interface QuickCreateItem {
+  /** What the menu reports on select — for channels, the id the wizard keys off. */
   label: string;
+  /** What the row shows, when it should read differently from `label`. */
+  display?: string;
   icon: string;
   /** Leaf insets from Figma, preserving each glyph's designed geometry. */
   inset: string;
@@ -59,10 +62,11 @@ const SECTIONS: QuickCreateSection[] = [
       { label: "SMS", icon: iconSms, inset: "5.57% 5.36% 5.73% 5.87%", disabled: true },
       {
         label: "App Push Notification",
+        display: "App push",
         icon: iconAppPush,
         inset: "6.47% 7.14% 5.95% 5.36%",
       },
-      { label: "Web Push Notification", icon: iconWebPush, inset: "6.47% 6.52% 4.93% 5.53%", disabled: true },
+      { label: "Web Push Notification", display: "Web push", icon: iconWebPush, inset: "6.47% 6.52% 4.93% 5.53%", disabled: true },
       { label: "Whatsapp", icon: iconWhatsapp, inset: "5.21%", disabled: true },
     ],
   },
@@ -123,7 +127,7 @@ export default function QuickCreateMenu({ onSelect }: { onSelect?: (label: strin
     const q = query.trim().toLowerCase();
     if (!q) return tabSections;
     return tabSections
-      .map((s) => ({ ...s, items: s.items.filter((i) => i.label.toLowerCase().includes(q)) }))
+      .map((s) => ({ ...s, items: s.items.filter((i) => (i.display ?? i.label).toLowerCase().includes(q)) }))
       .filter((s) => s.items.length > 0);
   }, [query, activeTab]);
 
@@ -210,7 +214,7 @@ export default function QuickCreateMenu({ onSelect }: { onSelect?: (label: strin
                   <>
                     <ItemIcon src={item.icon} inset={item.inset} />
                     <span className="flex-1 text-[14px] font-semibold leading-[18px] text-[#17173A]">
-                      {item.label}
+                      {item.display ?? item.label}
                     </span>
                     {item.hasSubmenu && (
                       <span className="grid size-[16px] shrink-0 place-items-center">
