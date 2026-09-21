@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType, type SVGProps } from "react";
 import { Check, Loader2, Mail, X } from "lucide-react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { Progress } from "@/components/ui/progress";
@@ -20,10 +20,12 @@ const PHASES = [
  * way everywhere it happens.
  */
 export default function CampaignAIGenerating({
+  icon: ChannelIcon = Mail,
   campaignName,
   onClose,
   onDone,
 }: {
+  icon?: ComponentType<SVGProps<SVGSVGElement>>;
   campaignName: string;
   onClose: () => void;
   /** Fires once the phase checklist finishes. */
@@ -50,7 +52,7 @@ export default function CampaignAIGenerating({
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#DDE2EE] bg-white px-14">
         <div className="flex items-center gap-3">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-[#E7EDFF]">
-            <Mail className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />
+            <ChannelIcon className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />
           </span>
           <CampaignNameField campaignName={campaignName} />
         </div>

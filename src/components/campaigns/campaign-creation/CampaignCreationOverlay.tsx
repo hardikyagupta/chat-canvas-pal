@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import ErrorToast from "./ErrorToast";
 import CampaignCreationNavbar from "./CampaignCreationNavbar";
 import AppPushIcon from "@/components/AppPushIcon";
 import CampaignSettingsDrawer from "./CampaignSettingsDrawer";
@@ -63,6 +64,7 @@ import CampaignScheduleStep, {
   type ScheduleValues,
 } from "./CampaignScheduleStep";
 import { emailTemplates } from "./emailTemplates.data";
+import { pushScenarioFor } from "./pushAIScenarios.data";
 import { SEGMENT_STARTERS } from "@/components/campaigns/SegmentSuggestions";
 import AllContactsNudge from "@/components/campaigns/AllContactsNudge";
 import SegmentCreationOverlay from "@/components/campaigns/segment-creation/SegmentCreationOverlay";
@@ -107,6 +109,10 @@ const CHANNEL_ICONS: Record<string, ChannelIconComponent> = {
   "In-app Message": MessageSquare,
   "Web Message": Monitor,
 };
+
+/** Channels that open on the prompt screen and can draft a whole campaign
+ *  from a typed goal — every other channel goes straight to the wizard. */
+const hasAIFlow = (channel: string) => channel === "Email" || channel === "App Push Notification";
 
 /** Temporarily hide Assets without removing its configuration or UI. */
 const SHOW_ASSETS_STEP = false;
@@ -278,6 +284,10 @@ export default function CampaignCreationOverlay({
   // The Email flow opens on a goal prompt before the step-by-step wizard;
   // "Start from scratch" (or submitting a goal) is what gets past it.
   const [introOpen, setIntroOpen] = useState(true);
+  // Done on Send to without a target app: the toast says so, and the field
+  // keeps a red message until an app is picked.
+  const [appRequiredToast, setAppRequiredToast] = useState<string | null>(null);
+  const [appRequiredTried, setAppRequiredTried] = useState(false);
   // Shown between submitting a goal on the intro and landing on the wizard —
   // the phase checklist animates while the AI draft is applied underneath.
   const [generating, setGenerating] = useState(false);
@@ -357,10 +367,11 @@ export default function CampaignCreationOverlay({
       setMounted(true);
       // Each new draft gets its own timestamped name.
       setCampaignName(newCampaignName());
-      // Email lands here via its own intro screen, which opens Audience on
-      // continue — every other channel skips that screen, so open Send to
-      // itself here instead of starting with every card collapsed.
-      if (channel !== "Email") {
+      // Channels with a prompt screen land here via it, and its "Build from
+      // scratch" opens Audience on continue — every other channel skips that
+      // screen, so open Send to itself here instead of starting with every
+      // card collapsed.
+      if (!hasAIFlow(channel)) {
         setOpenStepIds(new Set(["audience"]));
         setFocusStepId("audience");
       }
@@ -398,6 +409,8 @@ export default function CampaignCreationOverlay({
       setAllContactsNudgeOpen(false);
       setAiReady(false);
       setHighlight({});
+      setAppRequiredTried(false);
+      setAppRequiredToast(null);
     }, SLIDE_MS);
     return () => clearTimeout(id);
   }, [open]);
@@ -457,6 +470,10 @@ export default function CampaignCreationOverlay({
   // "Build from scratch", which still gets the co-marketer by default.
   useEffect(() => {
     if (!open || introOpen || generating) return;
+    // Only Email opens the co-marketer here by default — App Push's wizard
+    // has never had it pop open on its own, and coming through the prompt
+    // screen doesn't change that.
+    if (channel !== "Email") return;
     if (focusStepId !== "audience") return;
     if (audienceSeeded.current) return;
     audienceSeeded.current = true;
@@ -471,7 +488,7 @@ export default function CampaignCreationOverlay({
     setFollowUpSeq(0);
     setChatSession((n) => n + 1);
     setChatOpen(true);
-  }, [open, introOpen, generating, focusStepId, campaignAIGenerated, setup.goal]);
+  }, [open, introOpen, generating, focusStepId, campaignAIGenerated, setup.goal, channel]);
 
   // The audience thread belongs to its step. Actually leaving Audience —
   // its card closes, not just another one opening alongside it — closes the
@@ -605,8 +622,7 @@ export default function CampaignCreationOverlay({
    * generating screen covers the wizard while this runs, so there's nothing
    * to stagger: every field can land in one pass.
    */
-  const applyAIGeneratedCampaign = () => {
-    setCampaignName("Re-engage Multi-View Shoppers — Free Shipping");
+  const applyAIGeneratedCampaign = (prompt: string) => {
     setCampaignAIGenerated(true);
     // Landing on Audience normally opens the co-marketer by default, but a
     // draft that arrived pre-built has nothing left to open a thread about —
@@ -614,6 +630,29 @@ export default function CampaignCreationOverlay({
     // `campaignAIGenerated` check in the audience-seed effect). Clearing this
     // ref too guards against a stale `true` left over from a previous open.
     audienceChat.current = false;
+    if (channel === "App Push Notification") {
+      // Each push goal drafts its own audience, notification and send time.
+      // Target apps are filled in too — without them Message and Schedule
+      // stay locked.
+      const scenario = pushScenarioFor(prompt);
+      setCampaignName(scenario.campaignName);
+      setAudience({
+        ...EMPTY_AUDIENCE,
+        mode: "adhoc",
+        selectedApps: scenario.apps,
+        conditions: scenario.conditions,
+        conditionsReach: scenario.reach,
+      });
+      setContent({ ...EMPTY_CONTENT, templateId: scenario.templateId });
+      setSchedule({
+        ...EMPTY_SCHEDULE,
+        sendAt: defaultSendAt(),
+        mode: "optimize",
+        ...scenario.sendAt?.(),
+      });
+      return;
+    }
+    setCampaignName("Re-engage Multi-View Shoppers — Free Shipping");
     setAudience({
       ...EMPTY_AUDIENCE,
       mode: "adhoc",
@@ -635,8 +674,8 @@ export default function CampaignCreationOverlay({
 
   /** "Send" on the intro's prompt box — unlike "Build from scratch", this one
    *  hands the goal to the AI draft instead of an empty wizard. */
-  const handleGenerateFromPrompt = () => {
-    applyAIGeneratedCampaign();
+  const handleGenerateFromPrompt = (prompt: string) => {
+    applyAIGeneratedCampaign(prompt);
     setIntroOpen(false);
     setGenerating(true);
   };
@@ -691,6 +730,11 @@ export default function CampaignCreationOverlay({
   /** "Done" on a card: mark it finished, close it, and open the next one. */
   const completeStep = (index: number) => {
     const id = STEPS[index].id;
+    if (id === "audience" && channel !== "Email" && audience.selectedApps.length === 0) {
+      setAppRequiredTried(true);
+      setAppRequiredToast("Application is required.");
+      return;
+    }
     setCompletedSteps((prev) => new Set(prev).add(id));
     let nudging = false;
     if (id === "audience" && audience.mode === "all" && !allContactsNudgeSeen.current) {
@@ -986,9 +1030,14 @@ export default function CampaignCreationOverlay({
       {launching && (
         <CampaignLaunchingModal campaignName={campaignName} onDone={handleLaunchDone} />
       )}
+      {appRequiredToast && (
+        <ErrorToast message={appRequiredToast} onDismiss={() => setAppRequiredToast(null)} />
+      )}
 
-      {channel === "Email" && introOpen ? (
+      {hasAIFlow(channel) && introOpen ? (
         <CampaignCreationIntro
+          channel={channel}
+          icon={Icon}
           campaignName={campaignName}
           onRenameCampaign={setCampaignName}
           onContinue={() => {
@@ -1003,8 +1052,9 @@ export default function CampaignCreationOverlay({
           onGenerate={handleGenerateFromPrompt}
           onClose={onClose}
         />
-      ) : channel === "Email" && generating ? (
+      ) : hasAIFlow(channel) && generating ? (
         <CampaignAIGenerating
+          icon={Icon}
           campaignName={campaignName}
           onClose={onClose}
           onDone={() => setGenerating(false)}
@@ -1207,6 +1257,11 @@ export default function CampaignCreationOverlay({
                                 onTrackingChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
                                 trackingHighlight={highlight}
                                 channel={channel}
+                                appsError={
+                                  appRequiredTried && audience.selectedApps.length === 0
+                                    ? "Select at least one target app."
+                                    : undefined
+                                }
                               />
                             </div>
                             {/* Sits outside CampaignAudienceStep's own StepCard so

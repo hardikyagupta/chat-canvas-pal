@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType, type SVGProps } from "react";
 import {
+  BellRing,
   Mail,
   PenLine,
+  Rocket,
   Send,
   Sparkles,
   Tag,
   User,
   Users,
   ShoppingCart,
+  Timer,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,6 +52,45 @@ const STARTERS: { label: string; icon: typeof Tag; prompt: string }[] = [
   },
 ];
 
+/** App Push's typed-out examples while the box is empty. */
+const PUSH_ROTATING_PROMPTS = [
+  "Create a push notification for users who added products to their cart but haven’t completed the purchase.",
+  "Re-engage users who haven’t opened the app in the last 30 days with a personalized offer to bring them back.",
+  "Create a Diwali push campaign for customers who purchased from us last year with an exclusive 20% discount.",
+  "Send a personalized push to users who recently viewed running shoes, recommending similar products and offering 10% off.",
+  "Send a personalized push to users who searched for flights to Goa but didn’t complete their booking.",
+];
+
+/** App Push's "Get started" cards — each drops its prompt into the box. The
+ *  limited-time-deals one uses the coupon-expiry prompt, so it lands on the
+ *  draft built for it. */
+const PUSH_STARTERS: { label: string; icon: typeof Tag; prompt: string }[] = [
+  {
+    label: "Promote limited-time deals",
+    icon: Timer,
+    prompt:
+      "Remind users that their ₹1000 coupon expires tonight and encourage them to use it before midnight.",
+  },
+  {
+    label: "Recover abandoned carts",
+    icon: ShoppingCart,
+    prompt:
+      "Create a push notification for users who added products to their cart but haven’t completed the purchase.",
+  },
+  {
+    label: "Alert when items are back in stock",
+    icon: BellRing,
+    prompt:
+      "Notify users when a product they viewed or added to their wishlist is back in stock.",
+  },
+  {
+    label: "Drive app feature adoption",
+    icon: Rocket,
+    prompt:
+      "Encourage users who haven’t tried our new app features to explore them with a quick walkthrough.",
+  },
+];
+
 const TYPE_MS = 38;
 const DELETE_MS = 22;
 const HOLD_MS = 1600;
@@ -56,7 +98,9 @@ const NEXT_DELAY_MS = 300;
 
 /** Types a prompt out, holds it, deletes it, then moves to the next one. */
 function useTypewriter(prompts: string[], paused: boolean) {
-  const [promptIndex, setPromptIndex] = useState(0);
+  // Counts finished type→hold→delete rounds; the prompt is picked from it, so
+  // a list of one still restarts instead of stalling on an unchanged index.
+  const [cycle, setCycle] = useState(0);
   const [display, setDisplay] = useState("");
 
   useEffect(() => {
@@ -68,7 +112,7 @@ function useTypewriter(prompts: string[], paused: boolean) {
 
     const tick = () => {
       if (!alive) return;
-      const full = prompts[promptIndex];
+      const full = prompts[cycle % prompts.length];
       if (!deleting) {
         charCount++;
         setDisplay(full.slice(0, charCount));
@@ -85,7 +129,7 @@ function useTypewriter(prompts: string[], paused: boolean) {
         setDisplay(full.slice(0, charCount));
         if (charCount <= 0) {
           timeoutId = setTimeout(() => {
-            setPromptIndex((i) => (i + 1) % prompts.length);
+            setCycle((c) => c + 1);
           }, NEXT_DELAY_MS);
           return;
         }
@@ -98,11 +142,11 @@ function useTypewriter(prompts: string[], paused: boolean) {
       alive = false;
       clearTimeout(timeoutId);
     };
-    // Restarting on every keystroke would fight the timers; only the prompt
-    // index (which only advances once a full type→hold→delete cycle finishes)
-    // and the paused flag should ever re-run this.
+    // Restarting on every keystroke would fight the timers; only the round
+    // counter (which only advances once a full type→hold→delete cycle
+    // finishes) and the paused flag should ever re-run this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [promptIndex, paused]);
+  }, [cycle, paused]);
 
   return display;
 }
@@ -114,12 +158,18 @@ function useTypewriter(prompts: string[], paused: boolean) {
  * the same wizard for now; there's no goal-driven build yet to hand it to.
  */
 export default function CampaignCreationIntro({
+  channel = "Email",
+  icon: ChannelIcon = Mail,
   campaignName,
   onRenameCampaign,
   onContinue,
   onGenerate,
   onClose,
 }: {
+  /** Picks the prompts and starters offered — Email and App Push each build
+   *  their AI draft around their own goal. */
+  channel?: string;
+  icon?: ComponentType<SVGProps<SVGSVGElement>>;
   campaignName: string;
   onRenameCampaign?: (name: string) => void;
   onContinue: () => void;
@@ -129,7 +179,9 @@ export default function CampaignCreationIntro({
   onClose: () => void;
 }) {
   const [text, setText] = useState("");
-  const typed = useTypewriter(ROTATING_PROMPTS, Boolean(text));
+  const isEmail = channel === "Email";
+  const typed = useTypewriter(isEmail ? ROTATING_PROMPTS : PUSH_ROTATING_PROMPTS, Boolean(text));
+  const starters = isEmail ? STARTERS : PUSH_STARTERS;
 
   const submit = () => {
     if (!text.trim()) return;
@@ -141,7 +193,7 @@ export default function CampaignCreationIntro({
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#DDE2EE] bg-white px-14">
         <div className="flex items-center gap-3">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-[#E7EDFF]">
-            <Mail className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />
+            <ChannelIcon className="h-4 w-4 text-[#2F68E5]" strokeWidth={2} />
           </span>
           <CampaignNameField campaignName={campaignName} onRenameCampaign={onRenameCampaign} />
         </div>
@@ -159,7 +211,7 @@ export default function CampaignCreationIntro({
         <div className="w-full max-w-[640px]">
           <div className="flex flex-col items-center text-center">
             <div className="relative mb-5 grid h-20 w-20 place-items-center rounded-full bg-[#E7EDFF]">
-              <Mail className="h-9 w-9 text-[#2F68E5]" strokeWidth={2} />
+              <ChannelIcon className="h-9 w-9 text-[#2F68E5]" strokeWidth={2} />
               <Sparkles
                 className="absolute -right-1.5 -top-1 h-5 w-5 text-[#7B5CFA]"
                 strokeWidth={2}
@@ -225,8 +277,8 @@ export default function CampaignCreationIntro({
           <p className="mt-6 text-center font-manrope text-sm font-semibold text-[#6F6F8D]">
             Get started with a campaign to
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {STARTERS.map((s) => {
+          <div className={cn("mt-3 grid gap-3", starters.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
+            {starters.map((s) => {
               const StarterIcon = s.icon;
               return (
                 <button
