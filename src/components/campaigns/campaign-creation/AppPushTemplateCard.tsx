@@ -1,4 +1,4 @@
-import { Check, MoreVertical, Pencil, Send } from "lucide-react";
+import { Check, MoreVertical, Pencil, Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ActionMenu,
@@ -157,6 +157,15 @@ export default function AppPushTemplateCard({
             <RegularNotification />
           )}
         </PhoneMock>
+      )}
+
+      {template.aiGenerated && (
+        <span
+          aria-label="AI-generated"
+          className="pointer-events-none absolute left-2 top-2 grid size-6 place-items-center rounded-full bg-white/95 shadow-[0_1px_4px_rgba(23,23,58,0.16)]"
+        >
+          <Sparkles className="size-3.5 text-[#7B5CFA]" strokeWidth={2.2} />
+        </span>
       )}
 
       {selected && (

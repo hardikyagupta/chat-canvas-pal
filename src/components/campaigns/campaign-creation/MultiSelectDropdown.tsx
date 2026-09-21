@@ -18,6 +18,7 @@ export default function MultiSelectDropdown({
   options,
   value,
   onChange,
+  error,
 }: {
   label: string;
   required?: boolean;
@@ -25,6 +26,8 @@ export default function MultiSelectDropdown({
   options: AppOption[];
   value: string[];
   onChange: (ids: string[]) => void;
+  /** Shown under the field in red, which also turns its border red. */
+  error?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -90,7 +93,7 @@ export default function MultiSelectDropdown({
           }}
           className={cn(
             "flex min-h-10 w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-md border bg-white px-2.5 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F68E5] focus-visible:ring-offset-2",
-            open ? "border-[#2F68E5]" : "border-[#DDE2EE]"
+            open ? "border-[#2F68E5]" : error ? "border-[#E5484D]" : "border-[#DDE2EE]"
           )}
         >
           {selected.map((o) => (
@@ -129,6 +132,12 @@ export default function MultiSelectDropdown({
             />
           </span>
         </div>
+
+        {error && (
+          <p role="alert" className="mt-1 font-manrope text-xs font-medium text-[#E5484D]">
+            {error}
+          </p>
+        )}
 
         {open &&
           rect &&

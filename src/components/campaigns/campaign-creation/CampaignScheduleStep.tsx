@@ -308,7 +308,7 @@ function stamp(d: Date): string {
 }
 
 /** `datetime-local` needs a local-clock string, not an ISO instant. */
-function toLocalInput(d: Date): string {
+export function toLocalInput(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return (
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +

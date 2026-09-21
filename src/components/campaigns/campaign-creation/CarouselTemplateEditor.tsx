@@ -7,6 +7,7 @@ import {
   Copy,
   FlaskConical,
   Plus,
+  Trash2,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -354,6 +355,28 @@ function newOSConfig(): OSConfig {
   };
 }
 
+/** Every carousel keeps at least two images — tabs only get a remove cross
+ *  while there are more than that — and the total is capped. */
+const DEFAULT_IMAGE_COUNT = 2;
+const MAX_IMAGES = 5;
+
+interface CustomPair {
+  id: string;
+  key: string;
+  value: string;
+  forAndroid: boolean;
+  forIos: boolean;
+}
+
+/** Custom key-value pairs are capped; the ADD NEW button shows how many
+ *  slots are left. */
+const MAX_CUSTOM_PAIRS = 50;
+const EMPTY_PAIR_FIELDS = { key: "", value: "", forAndroid: false, forIos: false };
+
+function newCustomPair(): CustomPair {
+  return { id: `pair-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...EMPTY_PAIR_FIELDS };
+}
+
 const TRANSITION_EFFECTS = ["None", "Slide", "Fade", "Zoom"];
 const TRANSITION_RATES = ["1s", "2s", "3s", "5s"];
 const CTA_TYPES: CTAType[] = ["Deeplink", "Open app", "Web URL"];
@@ -420,7 +443,9 @@ export default function CarouselTemplateEditor({
   const [android, setAndroid] = useState<OSConfig>(newOSConfig);
   const [ios, setIos] = useState<OSConfig>(newOSConfig);
   const [overwriteWithCollapseKey, setOverwriteWithCollapseKey] = useState(false);
+  const [collapseKey, setCollapseKey] = useState("");
   const [customKeyValue, setCustomKeyValue] = useState(false);
+  const [customPairs, setCustomPairs] = useState<CustomPair[]>(() => [newCustomPair()]);
   const [primaryKey, setPrimaryKey] = useState("");
 
   const cfg = os === "android" ? android : ios;
@@ -434,9 +459,29 @@ export default function CarouselTemplateEditor({
     });
 
   const addImage = () => {
+    if (cfg.images.length >= MAX_IMAGES) return;
     const img = newImage(cfg.images.length + 1);
     patchCfg({ images: [...cfg.images, img], activeImageId: img.id });
   };
+
+  // Removing the open tab falls back to its left neighbour (or the first).
+  const removeImage = (id: string) => {
+    const index = cfg.images.findIndex((i) => i.id === id);
+    if (index < 0 || cfg.images.length <= DEFAULT_IMAGE_COUNT) return;
+    const images = cfg.images.filter((i) => i.id !== id);
+    patchCfg({
+      images,
+      activeImageId:
+        cfg.activeImageId === id ? images[Math.max(0, index - 1)].id : cfg.activeImageId,
+    });
+  };
+
+  const patchPair = (id: string, patch: Partial<CustomPair>) =>
+    setCustomPairs((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  const addPair = () =>
+    setCustomPairs((ps) => (ps.length >= MAX_CUSTOM_PAIRS ? ps : [...ps, newCustomPair()]));
+  const removePair = (id: string) =>
+    setCustomPairs((ps) => (ps.length > 1 ? ps.filter((p) => p.id !== id) : ps));
 
   const copyFromOther = () => {
     const source = os === "android" ? ios : android;
@@ -605,29 +650,51 @@ export default function CarouselTemplateEditor({
 
                 <div className="py-4">
                   <div className="flex items-center gap-1 border-b border-[#EEF1F7]">
-                    {cfg.images.map((img, i) => (
+                    {cfg.images.map((img, i) => {
+                      const isActive = img.id === activeImage.id;
+                      const removable = cfg.images.length > DEFAULT_IMAGE_COUNT;
+                      return (
+                        <div
+                          key={img.id}
+                          className={cn(
+                            "-mb-px flex items-center rounded-t-md border border-b-0 transition-colors",
+                            isActive ? "border-[#DDE2EE] bg-white" : "border-transparent"
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => patchCfg({ activeImageId: img.id })}
+                            className={cn(
+                              "whitespace-nowrap py-2 pl-4 font-manrope text-sm font-bold uppercase tracking-[0.4px] transition-colors",
+                              removable ? "pr-1.5" : "pr-4",
+                              isActive ? "text-[#2F68E5]" : "text-[#8A8AA3] hover:text-[#17173A]"
+                            )}
+                          >
+                            Image {i + 1}
+                          </button>
+                          {removable && (
+                            <button
+                              type="button"
+                              aria-label={`Remove image ${i + 1}`}
+                              onClick={() => removeImage(img.id)}
+                              className="mr-2 grid size-5 place-items-center rounded-full text-[#8A8AA3] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+                            >
+                              <X className="size-3" strokeWidth={2.4} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {cfg.images.length < MAX_IMAGES && (
                       <button
-                        key={img.id}
                         type="button"
-                        onClick={() => patchCfg({ activeImageId: img.id })}
-                        className={cn(
-                          "-mb-px rounded-t-md border border-b-0 px-4 py-2 font-manrope text-sm font-bold uppercase tracking-[0.4px] transition-colors",
-                          img.id === activeImage.id
-                            ? "border-[#DDE2EE] bg-white text-[#2F68E5]"
-                            : "border-transparent text-[#8A8AA3] hover:text-[#17173A]"
-                        )}
+                        onClick={addImage}
+                        className="ml-2 flex items-center gap-1 self-center font-manrope text-sm font-bold text-[#2F68E5] hover:text-[#2455C0]"
                       >
-                        Image {i + 1}
+                        <Plus className="size-3.5" strokeWidth={2.4} />
+                        ADD
                       </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={addImage}
-                      className="mb-2 ml-2 flex items-center gap-1 font-manrope text-sm font-bold text-[#2F68E5] hover:text-[#2455C0]"
-                    >
-                      <Plus className="size-3.5" strokeWidth={2.4} />
-                      ADD
-                    </button>
+                    )}
                   </div>
 
                   <div className="mt-5 space-y-5">
@@ -786,17 +853,144 @@ export default function CarouselTemplateEditor({
             {section === "addon" && (
               <>
                 <h2 className="font-manrope text-xl font-bold text-[#17173A]">Add-on options</h2>
-                <div>
-                  <ToggleRow
-                    label="Overwrite content with collapse key"
-                    checked={overwriteWithCollapseKey}
-                    onChange={setOverwriteWithCollapseKey}
-                  />
-                  <ToggleRow
-                    label="Custom key - value"
-                    checked={customKeyValue}
-                    onChange={setCustomKeyValue}
-                  />
+                <div className="divide-y divide-[#EEF1F7] rounded-lg border border-[#DDE2EE] px-4">
+                  <div>
+                    <ToggleRow
+                      label="Overwrite content with collapse key"
+                      checked={overwriteWithCollapseKey}
+                      onChange={setOverwriteWithCollapseKey}
+                    />
+                    {overwriteWithCollapseKey && (
+                      <div className="pb-4">
+                        <Field label="Enter collapse key">
+                          <input
+                            value={collapseKey}
+                            onChange={(e) => setCollapseKey(e.target.value)}
+                            placeholder="Enter collapse key"
+                            className={fieldClass}
+                          />
+                        </Field>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <ToggleRow
+                      label="Custom key - value"
+                      checked={customKeyValue}
+                      onChange={setCustomKeyValue}
+                    />
+                    {customKeyValue && (
+                      <div className="pb-4">
+                        <div className="space-y-3">
+                          {customPairs.map((pair, i) => {
+                            const isOnly = customPairs.length === 1;
+                            const isEmpty =
+                              !pair.key && !pair.value && !pair.forAndroid && !pair.forIos;
+                            return (
+                              <div key={pair.id} className="flex items-end gap-4">
+                                <div className="min-w-0 flex-1">
+                                  {i === 0 ? (
+                                    <Field label="Key" required>
+                                      <input
+                                        value={pair.key}
+                                        onChange={(e) => patchPair(pair.id, { key: e.target.value })}
+                                        placeholder="Key"
+                                        className={fieldClass}
+                                      />
+                                    </Field>
+                                  ) : (
+                                    <input
+                                      aria-label="Key"
+                                      value={pair.key}
+                                      onChange={(e) => patchPair(pair.id, { key: e.target.value })}
+                                      placeholder="Key"
+                                      className={fieldClass}
+                                    />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  {i === 0 ? (
+                                    <Field label="Value" required>
+                                      <input
+                                        value={pair.value}
+                                        onChange={(e) => patchPair(pair.id, { value: e.target.value })}
+                                        placeholder="Value"
+                                        className={fieldClass}
+                                      />
+                                    </Field>
+                                  ) : (
+                                    <input
+                                      aria-label="Value"
+                                      value={pair.value}
+                                      onChange={(e) => patchPair(pair.id, { value: e.target.value })}
+                                      placeholder="Value"
+                                      className={fieldClass}
+                                    />
+                                  )}
+                                </div>
+                                <div className="flex h-10 shrink-0 items-center gap-2">
+                                  <span className="font-manrope text-sm font-semibold text-[#6F6F8D]">For</span>
+                                  {(["android", "ios"] as const).map((o) => {
+                                    const on = o === "android" ? pair.forAndroid : pair.forIos;
+                                    return (
+                                      <button
+                                        key={o}
+                                        type="button"
+                                        aria-label={o === "android" ? "Android" : "iOS"}
+                                        aria-pressed={on}
+                                        onClick={() =>
+                                          patchPair(
+                                            pair.id,
+                                            o === "android"
+                                              ? { forAndroid: !pair.forAndroid }
+                                              : { forIos: !pair.forIos }
+                                          )
+                                        }
+                                        className={cn(
+                                          "grid size-10 place-items-center rounded-md border transition-colors",
+                                          on
+                                            ? "border-[#2F68E5] bg-[#F4F8FF]"
+                                            : "border-[#DDE2EE] bg-[#F7F9FC] hover:bg-[#F0F3F9]"
+                                        )}
+                                      >
+                                        {o === "android" ? (
+                                          <AndroidIcon className="size-4 text-[#78C257]" />
+                                        ) : (
+                                          <AppleIcon
+                                            className={cn("size-4", on ? "text-[#2F68E5]" : "text-[#6F6F8D]")}
+                                          />
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                  <button
+                                    type="button"
+                                    aria-label={isOnly ? "Clear key-value" : "Remove key-value"}
+                                    disabled={isOnly && isEmpty}
+                                    onClick={() => (isOnly ? patchPair(pair.id, EMPTY_PAIR_FIELDS) : removePair(pair.id))}
+                                    className="ml-2 grid size-10 place-items-center rounded-md border border-[#DDE2EE] text-[#8A8AA3] transition-colors enabled:hover:bg-[#F0F3F9] enabled:hover:text-[#17173A] disabled:cursor-not-allowed disabled:border-[#EEF1F7] disabled:text-[#C3CAD9]"
+                                  >
+                                    <Trash2 className="size-4" strokeWidth={2} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {customPairs.length < MAX_CUSTOM_PAIRS && (
+                          <button
+                            type="button"
+                            onClick={addPair}
+                            className="dc-btn dc-btn-secondary mt-4 font-bold"
+                          >
+                            <Plus strokeWidth={2.4} />
+                            ADD NEW ({MAX_CUSTOM_PAIRS - customPairs.length})
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             )}

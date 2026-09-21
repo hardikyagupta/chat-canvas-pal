@@ -408,6 +408,7 @@ export default function CampaignAudienceStep({
   onTrackingChange,
   trackingHighlight,
   channel = "Email",
+  appsError,
 }: {
   values: AudienceValues;
   onChange: (patch: Partial<AudienceValues>) => void;
@@ -418,6 +419,8 @@ export default function CampaignAudienceStep({
   /** Tracking field keys just written by a co-marketer apply — briefly flashed. */
   trackingHighlight?: Partial<Record<keyof TrackingValues, boolean>>;
   channel?: string;
+  /** Red message under the Target app(s) field — set when Done was tried without one. */
+  appsError?: string;
 }) {
   /** Any hand edit invalidates a count that came from the co-marketer's segment. */
   const setConditions = (conditions: AdhocCondition[]) =>
@@ -456,6 +459,7 @@ export default function CampaignAudienceStep({
             options={APP_OPTIONS}
             value={values.selectedApps}
             onChange={(selectedApps) => onChange({ selectedApps })}
+            error={appsError}
           />
         </div>
       )}
