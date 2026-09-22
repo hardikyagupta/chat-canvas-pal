@@ -293,9 +293,13 @@ function newCampaignName() {
 const EMPTY_SETUP: SetupValues = {
   goal: "",
   tags: "",
-  gaTracking: false,
+  // On by default for every new campaign — see the toggle's own copy for why.
+  gaTracking: true,
   conversionTracking: false,
   conversionEvent: "",
+  conversionWindowValue: "1",
+  conversionWindowUnit: "Days",
+  revenueParameter: "",
   audienceSuggestion: "",
   avoidDuplicateComms: false,
 };
@@ -726,6 +730,14 @@ export default function CampaignCreationOverlay({
         mode: "optimize",
         ...scenario.sendAt?.(),
       });
+      setSetup((s) => ({
+        ...s,
+        conversionTracking: true,
+        conversionEvent: scenario.conversionEvent,
+        conversionWindowValue: scenario.conversionWindowValue,
+        conversionWindowUnit: scenario.conversionWindowUnit,
+        revenueParameter: scenario.revenueParameter,
+      }));
       return;
     }
     setCampaignName("Re-engage Multi-View Shoppers — Free Shipping");
@@ -746,6 +758,14 @@ export default function CampaignCreationOverlay({
       templateId: 9101,
     });
     setSchedule({ ...EMPTY_SCHEDULE, sendAt: defaultSendAt(), mode: "optimize" });
+    setSetup((s) => ({
+      ...s,
+      conversionTracking: true,
+      conversionEvent: "Purchase",
+      conversionWindowValue: "7",
+      conversionWindowUnit: "Days",
+      revenueParameter: "Order value",
+    }));
   };
 
   /** "Send" on the intro's prompt box — unlike "Build from scratch", this one
@@ -754,6 +774,10 @@ export default function CampaignCreationOverlay({
     applyAIGeneratedCampaign(prompt);
     setIntroOpen(false);
     setGenerating(true);
+    // Same as "Build from scratch" — land on Send to open rather than every
+    // card collapsed, since there's now a filled-in draft worth looking at.
+    setOpenStepIds((prev) => new Set(prev).add("audience"));
+    setFocusStepId("audience");
   };
 
   /** The launching pop-up's own timer calls this — hands the finished
@@ -1333,6 +1357,9 @@ export default function CampaignCreationOverlay({
                                   gaTracking: setup.gaTracking,
                                   conversionTracking: setup.conversionTracking,
                                   conversionEvent: setup.conversionEvent,
+                                  conversionWindowValue: setup.conversionWindowValue,
+                                  conversionWindowUnit: setup.conversionWindowUnit,
+                                  revenueParameter: setup.revenueParameter,
                                 }}
                                 onTrackingChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
                                 trackingHighlight={highlight}

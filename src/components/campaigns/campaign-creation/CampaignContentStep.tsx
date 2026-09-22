@@ -611,7 +611,7 @@ function TemplatePreviewPanel({
             className="flex h-8 items-center gap-2 rounded-lg border border-[#e3e3e3] bg-white px-3 font-manrope text-sm font-medium tracking-[0.4px] text-[#6f6f8d] transition-colors hover:bg-[#f8f8f8]"
           >
             <Eye className="size-4" strokeWidth={2} />
-            Preview
+            Preview as
           </button>
           <button
             type="button"

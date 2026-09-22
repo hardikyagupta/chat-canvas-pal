@@ -83,7 +83,15 @@ const fieldClass =
 
 /** The tracking fields live on the campaign's setup, but are edited here
  *  alongside who the send goes to rather than off in a settings drawer. */
-export type TrackingValues = Pick<SetupValues, "gaTracking" | "conversionTracking" | "conversionEvent">;
+export type TrackingValues = Pick<
+  SetupValues,
+  | "gaTracking"
+  | "conversionTracking"
+  | "conversionEvent"
+  | "conversionWindowValue"
+  | "conversionWindowUnit"
+  | "revenueParameter"
+>;
 
 /** Account-level UTM defaults shown on hover of the GA-tracking pill. */
 const GA_ACCOUNT_UTMS = [
@@ -284,6 +292,130 @@ function Dropdown({
     </div>
   );
 }
+
+/** A labelled, full-width version of Dropdown — for the conversion-goal
+ *  fields, which read as form fields (bold label, optional asterisk) rather
+ *  than the compact inline filter chips Dropdown is normally used for. */
+function FieldSelect({
+  label,
+  required,
+  value,
+  placeholder,
+  options,
+  onChange,
+  flash,
+}: {
+  label: string;
+  required?: boolean;
+  value: string;
+  placeholder?: string;
+  options: string[];
+  onChange: (v: string) => void;
+  flash?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!wrapRef.current?.contains(target) && !panelRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => wrapRef.current && setRect(wrapRef.current.getBoundingClientRect());
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open]);
+
+  return (
+    <div>
+      {label && (
+        <label className="mb-1.5 flex items-center gap-1 font-manrope text-sm font-semibold text-[#17173A]">
+          {label}
+          {required && <span className="text-[#FC5E02]">*</span>}
+        </label>
+      )}
+      <div ref={wrapRef} className={cn("relative", flash && "cmk-field-flash")}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={cn(
+            "flex h-10 w-full items-center justify-between gap-2 rounded-md border bg-[#F7F9FC] px-3 font-manrope text-sm outline-none transition-colors focus:bg-white",
+            open ? "border-[#2F68E5] bg-white" : "border-[#DDE2EE]",
+            value ? "text-[#17173A]" : "text-[#A0A0A0]"
+          )}
+        >
+          <span className="truncate">{value || placeholder}</span>
+          <ChevronDown
+            className={cn("size-4 shrink-0 text-[#8A8AA3] transition-transform", open && "rotate-180")}
+            strokeWidth={2}
+          />
+        </button>
+        {open &&
+          rect &&
+          createPortal(
+            <div
+              ref={panelRef}
+              style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, width: rect.width }}
+              className="scroll-slim z-[120] max-h-[240px] overflow-y-auto rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+            >
+              {options.map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => {
+                    onChange(o);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "block w-full px-3 py-2 text-left font-manrope text-sm transition-colors",
+                    o === value
+                      ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]"
+                      : "text-[#17173A] hover:bg-[#F7F9FC]"
+                  )}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>,
+            document.body
+          )}
+      </div>
+    </div>
+  );
+}
+
+/** Behaviour events a conversion can be defined against — the same
+ *  vocabulary as the Conditions attribute picker's own "Behaviour" group. */
+const CONVERSION_EVENT_OPTIONS = [
+  "Purchase",
+  "Added to cart",
+  "Product viewed",
+  "App opened",
+  "Page visited",
+  "Coupon issued",
+  "Coupon redeemed",
+  "Viewed or wishlisted a product",
+];
+
+const CONVERSION_WINDOW_VALUES = ["1", "3", "7", "14", "30", "60", "90"];
+const CONVERSION_WINDOW_UNITS = ["Hours", "Days", "Weeks"];
+const REVENUE_PARAMETER_OPTIONS = ["Order value", "Revenue", "Cart value", "Custom attribute"];
 
 /** The reachable-contacts count for the Audience step's own accordion
  *  header — shown only while the step is collapsed, since the expanded
@@ -655,7 +787,7 @@ export default function CampaignAudienceStep({
       </div>
 
       <FilterSection
-        title="Don't include"
+        title="Exclude contacts"
         info="Contacts in these segments are held back even if they match your targeting."
         checked={values.excludeEnabled}
         onChange={(v) => onChange({ excludeEnabled: v })}
@@ -668,7 +800,7 @@ export default function CampaignAudienceStep({
       </FilterSection>
 
       <FilterSection
-        title="Include GA tracking"
+        title="Include tracking parameters"
         badge={<GaConfigPill />}
         info="Track performance of your campaign with UTM parameters."
         checked={tracking.gaTracking}
@@ -683,14 +815,49 @@ export default function CampaignAudienceStep({
         onChange={(v) => onTrackingChange({ conversionTracking: v })}
         flash={trackingHighlight?.conversionTracking}
       >
-        <input
-          type="text"
-          value={tracking.conversionEvent}
-          onChange={(e) => onTrackingChange({ conversionEvent: e.target.value })}
-          placeholder="Select conversion event"
-          aria-label="Select conversion event"
-          className={cn(fieldClass, trackingHighlight?.conversionEvent && "cmk-field-flash")}
-        />
+        <div className="grid grid-cols-3 gap-4">
+          <FieldSelect
+            label="Event name"
+            required
+            value={tracking.conversionEvent}
+            placeholder="Select event"
+            options={CONVERSION_EVENT_OPTIONS}
+            onChange={(conversionEvent) => onTrackingChange({ conversionEvent })}
+            flash={trackingHighlight?.conversionEvent}
+          />
+          <div>
+            <label className="mb-1.5 flex items-center gap-1 font-manrope text-sm font-semibold text-[#17173A]">
+              Conversion window
+              <span className="text-[#FC5E02]">*</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <FieldSelect
+                  label=""
+                  value={tracking.conversionWindowValue}
+                  options={CONVERSION_WINDOW_VALUES}
+                  onChange={(conversionWindowValue) => onTrackingChange({ conversionWindowValue })}
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <FieldSelect
+                  label=""
+                  value={tracking.conversionWindowUnit}
+                  options={CONVERSION_WINDOW_UNITS}
+                  onChange={(conversionWindowUnit) => onTrackingChange({ conversionWindowUnit })}
+                />
+              </div>
+            </div>
+          </div>
+          <FieldSelect
+            label="Revenue parameter"
+            required
+            value={tracking.revenueParameter}
+            placeholder="parameter"
+            options={REVENUE_PARAMETER_OPTIONS}
+            onChange={(revenueParameter) => onTrackingChange({ revenueParameter })}
+          />
+        </div>
       </FilterSection>
     </StepCard>
   );

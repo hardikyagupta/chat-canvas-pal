@@ -7,7 +7,13 @@ export interface SetupValues {
   tags: string;
   gaTracking: boolean;
   conversionTracking: boolean;
+  /** Event name — which behaviour counts as a conversion. */
   conversionEvent: string;
+  /** How long after the event it still counts, e.g. "7" + "Days". */
+  conversionWindowValue: string;
+  conversionWindowUnit: string;
+  /** Which attribute on the conversion event holds the revenue figure. */
+  revenueParameter: string;
   audienceSuggestion: string;
   /** Holds back a send to anyone who already got a campaign from this
    *  account within the dedup window, regardless of list/segment overlap. */

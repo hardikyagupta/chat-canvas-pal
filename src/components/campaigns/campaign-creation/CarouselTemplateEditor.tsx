@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
 import {
   ArrowRight,
+  Check,
   ChevronDown,
   Copy,
   FlaskConical,
@@ -405,6 +406,15 @@ function newTemplateName() {
   );
 }
 
+/** "now" under a minute, then "N minute(s) ago" up to 59, then a clock time
+ *  once it's been over an hour. */
+function formatLastSaved(savedAt: number, now: number): string {
+  const minutes = Math.floor((now - savedAt) / 60_000);
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  return new Date(savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 /** The phone mockup on the preview column — a real rendered reference image
  *  per OS/expanded state (not a live CSS mock), the same treatment as every
  *  other push preview surface in this wizard. */
@@ -447,6 +457,45 @@ export default function CarouselTemplateEditor({
   const [customKeyValue, setCustomKeyValue] = useState(false);
   const [customPairs, setCustomPairs] = useState<CustomPair[]>(() => [newCustomPair()]);
   const [primaryKey, setPrimaryKey] = useState("");
+
+  // Dummy autosave — nothing is actually persisted yet, but every edit still
+  // flips the header through a brief "Saving" state so it reads like a real
+  // autosaving document. "Save as a template" is the one that would matter.
+  const [saving, setSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  // Last snapshot of the watched fields, seeded synchronously (not from an
+  // effect) so the very first render never reads as "changed" — including
+  // under StrictMode's double-invoked effects in dev.
+  const savedSnapshot = JSON.stringify({
+    title,
+    description,
+    landingPage,
+    android,
+    ios,
+    overwriteWithCollapseKey,
+    collapseKey,
+    customKeyValue,
+    customPairs,
+  });
+  const lastSnapshotRef = useRef(savedSnapshot);
+
+  // Keeps "Last saved: …" ticking forward without needing an edit.
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 15_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (savedSnapshot === lastSnapshotRef.current) return;
+    lastSnapshotRef.current = savedSnapshot;
+    setSaving(true);
+    const id = window.setTimeout(() => {
+      setSaving(false);
+      setLastSavedAt(Date.now());
+    }, 700);
+    return () => window.clearTimeout(id);
+  }, [savedSnapshot]);
 
   const cfg = os === "android" ? android : ios;
   const setCfg = os === "android" ? setAndroid : setIos;
@@ -515,11 +564,31 @@ export default function CarouselTemplateEditor({
           <CampaignNameField campaignName={templateName} onRenameCampaign={setTemplateName} />
         </div>
         <div className="flex shrink-0 items-center gap-3">
+          <span className="flex shrink-0 items-center gap-1.5 border-r border-[#DDE2EE] pr-3 font-manrope text-xs text-[#6F6F8D]">
+            {saving ? (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-[#00C48C] border-t-transparent"
+                />
+                Saving
+              </>
+            ) : (
+              <>
+                <Check className="size-3 shrink-0 text-[#00C48C]" strokeWidth={3} />
+                Last saved: {formatLastSaved(lastSavedAt, now)}
+              </>
+            )}
+          </span>
           <button type="button" className="dc-btn dc-btn-secondary">
             Save as a template
           </button>
+          <button type="button" className="dc-btn dc-btn-secondary">
+            <FlaskConical className="size-4" strokeWidth={2} />
+            Test
+          </button>
           <button type="button" onClick={onUse} className="dc-btn dc-btn-primary">
-            Use
+            Done
           </button>
           <button
             type="button"
@@ -1046,14 +1115,6 @@ export default function CarouselTemplateEditor({
                 </button>
               ))}
             </div>
-
-            <button
-              type="button"
-              className="flex h-8 shrink-0 items-center justify-center gap-2 rounded-md border border-[#DDE2EE] bg-white px-3 font-manrope text-sm font-semibold text-[#2F68E5] transition-colors hover:bg-[#F7F9FC]"
-            >
-              <FlaskConical className="size-4" strokeWidth={2} />
-              Test
-            </button>
           </div>
 
           <div className="mt-6">
