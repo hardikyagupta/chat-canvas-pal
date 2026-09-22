@@ -24,6 +24,11 @@ export interface PushAIScenario {
   templateId: number;
   /** Omitted = optimised send time. */
   sendAt?: () => { mode: "later"; sendAt: string };
+  /** Conversion goal the draft ships with — event, window and revenue field. */
+  conversionEvent: string;
+  conversionWindowValue: string;
+  conversionWindowUnit: string;
+  revenueParameter: string;
 }
 
 const CONSUMER_APPS = ["neww_1", "cart_recovery_android"];
@@ -48,6 +53,10 @@ export const PUSH_AI_SCENARIOS: PushAIScenario[] = [
     ],
     reach: 21_380,
     templateId: PRICE_DROP_TEMPLATE_ID,
+    conversionEvent: "Purchase",
+    conversionWindowValue: "7",
+    conversionWindowUnit: "Days",
+    revenueParameter: "Order value",
   },
   {
     id: "coupon-expiry",
@@ -71,6 +80,10 @@ export const PUSH_AI_SCENARIOS: PushAIScenario[] = [
       if (d.getTime() < Date.now() + 15 * 60 * 1000) d.setTime(Date.now() + 17 * 60 * 1000);
       return { mode: "later", sendAt: toLocalInput(d) };
     },
+    conversionEvent: "Coupon redeemed",
+    conversionWindowValue: "1",
+    conversionWindowUnit: "Days",
+    revenueParameter: "Order value",
   },
 ];
 
