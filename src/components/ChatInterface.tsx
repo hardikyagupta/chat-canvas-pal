@@ -230,6 +230,9 @@ interface ChatInterfaceProps {
    *  wizard asks a step-specific question instead, since a docked thread
    *  opened onto a particular step already knows what it's there to help with. */
   emptyStateGreeting?: string;
+  /** Replaces the empty-state composer's "How can I help you today?"
+   *  placeholder — paired with `emptyStateGreeting` for the same reason. */
+  emptyStatePlaceholder?: string;
 }
 
 /** A contextual starter chip: the pill's label, its icon, and the prompts it
@@ -374,7 +377,7 @@ const DockedBodySkeleton = ({
   );
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, artifactActionLabel, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId, starterChipSet, onAskFinding, emptyStateGreeting }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, artifactActionLabel, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId, starterChipSet, onAskFinding, emptyStateGreeting, emptyStatePlaceholder }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   // The scripted storyline this interface plays. Home (`/`) uses 'default';
@@ -4026,6 +4029,7 @@ The content has been updated across all channels to reflect your changes.`;
                       <div className="w-full flex flex-col gap-[16px] items-center">
                         <ChatInput
                           key={composerSeed.key}
+                          placeholder={emptyStatePlaceholder}
                           initialValue={composerSeed.value}
                           initialDeepResearch={composerSeed.deepResearch}
                           initialAgentMenuOpen={composerSeed.agentMenu}

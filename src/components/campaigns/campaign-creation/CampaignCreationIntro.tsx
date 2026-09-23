@@ -25,10 +25,13 @@ const ROTATING_PROMPTS = [
   "Help me drive repeat purchases from recent buyers.",
   "Create a campaign to promote our summer sale.",
   "Create a campaign for high-value customers with an exclusive offer.",
+  "Bring back users who watched a series but haven't returned in the last 7 days. Remind them to continue watching their series and highlight the latest episode.",
 ];
 
 /** "Try asking" starters — clicking one drops its prompt into the box rather
- *  than submitting straight away, so there's still a chance to edit it. */
+ *  than submitting straight away, so there's still a chance to edit it. The
+ *  series-watchers one uses the continue-watching prompt, so it lands on the
+ *  draft built for it. */
 const STARTERS: { label: string; icon: typeof Tag; prompt: string }[] = [
   {
     label: "Promote our summer sale",
