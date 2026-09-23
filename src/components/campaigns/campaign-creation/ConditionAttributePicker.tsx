@@ -92,6 +92,7 @@ const CATEGORIES: AttributeCategory[] = [
       { label: "Viewed or wishlisted a product", type: "recency" },
       { label: "Coupon issued", type: "recency" },
       { label: "Coupon redeemed", type: "recency" },
+      { label: "Series watched", type: "recency", countable: true },
       { label: "App opened", type: "recency", countable: true },
       { label: "Page visited", type: "recency", countable: true },
     ],

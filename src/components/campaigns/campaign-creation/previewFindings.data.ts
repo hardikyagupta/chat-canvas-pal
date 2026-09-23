@@ -32,6 +32,7 @@ export interface Finding {
     kind: SetupApplyKind;
     schedulePatch?: Partial<ScheduleValues>;
     contentPatch?: Partial<ContentValues>;
+    setupPatch?: Partial<SetupValues>;
   };
   /** The card's one CTA, written as what the user is asking for. Doubles as
    *  the opening message of the thread it starts. */
@@ -272,4 +273,79 @@ export function groupFindings(findings: Finding[]): { category: FindingCategory;
   return order
     .map((category) => ({ category, items: findings.filter((f) => f.category === category) }))
     .filter((g) => g.items.length > 0);
+}
+
+// — A scripted review for one specific demo campaign ————————————————————
+// "High-Intent Re-Engagers" segment + the "Exclusive Deals — Gold Members"
+// template — canned rather than computed, since it's a fixed walkthrough
+// rather than a claim about the account's real history.
+
+const EXCLUSIVE_DEALS_SEGMENT_ID = "630";
+const EXCLUSIVE_DEALS_TEMPLATE_ID = 868;
+
+export function isExclusiveDealsReviewScenario({
+  audience,
+  content,
+}: Pick<CampaignDraft, "audience" | "content">): boolean {
+  return (
+    content.templateId === EXCLUSIVE_DEALS_TEMPLATE_ID &&
+    audience.mode === "segments" &&
+    audience.segments.some((s) => s.id === EXCLUSIVE_DEALS_SEGMENT_ID)
+  );
+}
+
+/** Opening line for the scripted "Exclusive Deals" review thread. */
+export const EXCLUSIVE_DEALS_REVIEW_REPLY =
+  "🔍 I reviewed your campaign and found 3 opportunities that could improve engagement:";
+
+export function exclusiveDealsReviewFindings(): Finding[] {
+  return [
+    {
+      id: "exclusive-deals-conversion-goal",
+      category: "Audience",
+      title: "Consider adding a conversion goal 🎯",
+      verdict: "NEEDS ATTENTION",
+      impact: "+18% attributed purchases",
+      detail:
+        "Purchase is the most common conversion goal for your product campaigns. Recommended goal: Purchase.",
+      evidence:
+        "24 similar campaigns · Last 90 days — campaigns with conversion tracking enabled generated 18% more attributed purchases on average.",
+      action: {
+        label: "Set conversion goal",
+        kind: "conversion",
+        setupPatch: { conversionTracking: true, conversionEvent: "Purchase" },
+      },
+      askLabel: "Set conversion goal",
+      link: { stepId: "audience", stepLabel: "Send to", field: "Conversion tracking" },
+    },
+    {
+      id: "exclusive-deals-generic-subject",
+      category: "Content",
+      title: "Your subject line could perform better 📝",
+      verdict: "NEEDS ATTENTION",
+      impact: "+16% opens",
+      detail: "Your subject line is generic.",
+      evidence:
+        "In your last 12 similar campaigns, product-led subject lines generated 16% higher opens.",
+      action: {
+        label: "Use my recommended line",
+        kind: "subject",
+        contentPatch: { subject: "Discover our latest arrivals ✨" },
+      },
+      askLabel: "Write me a better subject line",
+      link: { stepId: "content", stepLabel: "Content", field: "Subject" },
+    },
+    {
+      id: "exclusive-deals-product-sections",
+      category: "Content",
+      title: "Your product sections may be doing too much 👀",
+      verdict: "NEEDS ATTENTION",
+      impact: "+18% clicks",
+      detail: "Similar campaigns with fewer product sections have seen 18% higher click-through rates.",
+      evidence:
+        'Consider keeping one "New arrivals" section and using the remaining space for a stronger CTA or personalized recommendations.',
+      askLabel: "Help me simplify this template",
+      link: { stepId: "content", stepLabel: "Content", field: "Template" },
+    },
+  ];
 }

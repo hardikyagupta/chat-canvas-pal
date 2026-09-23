@@ -9,6 +9,7 @@ import thumbPanchpushp from "/campaign-assets/template-thumbs/tpl-panchpushp.jpg
 import thumbFragranceNotes from "/campaign-assets/template-thumbs/tpl-fragrance-notes.jpg";
 import thumbCologneLaunch from "/campaign-assets/template-thumbs/tpl-cologne-launch.jpg";
 import thumbAIWinbackShipping from "/campaign-assets/template-thumbs/tpl-ai-winback-shipping.png";
+import thumbContinueWatching from "/campaign-assets/template-thumbs/tpl-continue-watching.png";
 import thumbLibFlashSale from "/campaign-assets/template-thumbs/tpl-lib-flash-sale.png";
 import thumbLibStreetwear from "/campaign-assets/template-thumbs/tpl-lib-streetwear.png";
 import thumbLibBeautyGlow from "/campaign-assets/template-thumbs/tpl-lib-beauty-glow.png";
@@ -66,8 +67,18 @@ export interface EmailTemplate {
   pushPreviews?: Partial<Record<PushPreviewKey, string>>;
 }
 
+/** The template the AI flow drafts for the "continue watching" prompt. */
+export const CONTINUE_WATCHING_TEMPLATE_ID = 9102;
+
 /** The most recently touched templates — these carry real thumbnails. */
 const RECENT: EmailTemplate[] = [
+  {
+    id: CONTINUE_WATCHING_TEMPLATE_ID,
+    name: "Continue Watching — Viva One",
+    preview: "none",
+    image: thumbContinueWatching,
+    aiGenerated: true,
+  },
   {
     id: 9101,
     name: "Still Thinking About It? — Free Shipping",

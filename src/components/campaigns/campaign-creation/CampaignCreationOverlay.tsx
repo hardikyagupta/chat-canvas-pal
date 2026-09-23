@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode, type SVGProps } from "react";
 import {
-  BarChart3,
   BellRing,
   Calendar,
   Check,
@@ -16,7 +15,6 @@ import {
   ShoppingCart,
   Sparkles,
   Tag,
-  Target,
   Timer,
   Users,
   type LucideIcon,
@@ -68,10 +66,17 @@ import CampaignScheduleStep, {
 } from "./CampaignScheduleStep";
 import { emailTemplates } from "./emailTemplates.data";
 import { pushScenarioFor } from "./pushAIScenarios.data";
+import { emailScenarioFor } from "./emailAIScenarios.data";
 import { SEGMENT_STARTERS } from "@/components/campaigns/SegmentSuggestions";
 import AllContactsNudge from "@/components/campaigns/AllContactsNudge";
 import SegmentCreationOverlay from "@/components/campaigns/segment-creation/SegmentCreationOverlay";
-import { buildFindings, type Finding } from "./previewFindings.data";
+import {
+  buildFindings,
+  isExclusiveDealsReviewScenario,
+  exclusiveDealsReviewFindings,
+  EXCLUSIVE_DEALS_REVIEW_REPLY,
+  type Finding,
+} from "./previewFindings.data";
 import CampaignPreview from "./CampaignPreview";
 import ChatInterface, {
   type SeededTopic,
@@ -139,55 +144,33 @@ function stepsFor(channel: string): Step[] {
 const STEP_CHIPS: Record<string, StarterChip[]> = {
   content: [
     {
-      label: "Offer 50% off",
+      label: "Promote a new offer",
       icon: Percent,
-      header: "Write a 50% off email",
+      header: "Find templates for a new offer",
       prompts: [
-        "Write a subject line and email for a 50% off sale.",
-        "Draft the body copy for a 50% off offer email.",
-        "Suggest a pre-header that boosts opens for a 50% off email.",
+        "Recommend a template for promoting a new offer.",
+        "Which template gets the most opens for a discount promotion?",
+        "Suggest a subject line to go with a new-offer template.",
       ],
     },
     {
-      label: "End of season sale",
+      label: "Announce a seasonal sale",
       icon: Tag,
-      header: "Write an end-of-season sale email",
+      header: "Find templates for a seasonal sale",
       prompts: [
-        "Write a subject line for an end-of-season sale email.",
-        "Draft the body copy for an end-of-season clearance email.",
-        "What template style fits an end-of-season sale best?",
+        "Recommend a template for a seasonal sale announcement.",
+        "Which of our templates fits an end-of-season clearance best?",
+        "Suggest a subject line to go with a seasonal-sale template.",
       ],
     },
     {
-      label: "Announce season sale",
+      label: "Launch a new product",
       icon: Megaphone,
-      header: "Announce the season sale",
+      header: "Find templates for a product launch",
       prompts: [
-        "Write an announcement email for our new season sale.",
-        "Draft a subject line that builds excitement for the season sale.",
-        "Suggest a pre-header for a season sale announcement.",
-      ],
-    },
-  ],
-  schedule: [
-    {
-      label: "Tracking recommendation",
-      icon: BarChart3,
-      header: "Get this campaign tracked",
-      prompts: [
-        "Do I need GA tracking on for this campaign?",
-        "Which UTM parameters should this campaign carry?",
-        "What will I lose in reporting if I leave tracking off?",
-      ],
-    },
-    {
-      label: "Track conversion goal",
-      icon: Target,
-      header: "Pick the conversion to measure",
-      prompts: [
-        "What conversion goal should I set for this campaign?",
-        "Which event counts as success for a send like this?",
-        "Should conversion tracking be on for this campaign?",
+        "Recommend a template for launching a new product.",
+        "Which template best builds excitement for a product launch?",
+        "Suggest a subject line to go with a product-launch template.",
       ],
     },
   ],
@@ -266,10 +249,20 @@ const PUSH_AUDIENCE_STARTERS: { title: string; prompt: string }[] = [
 
 /** Empty-state greeting for the docked chat, per open step — replaces the
  *  generic "Good afternoon, Amit" with a question about what that step is
- *  actually for. Schedule has none, so it falls back to the generic one. */
+ *  actually for. A step missing here falls back to the generic one. */
 const STEP_GREETINGS: Record<string, string> = {
   audience: "What type of segment would you like to create?",
-  content: "What type of template would you like to create?",
+  content: "What are you planning to send?",
+  schedule: "Want help choosing a send time?",
+};
+
+/** Paired with STEP_GREETINGS — replaces the docked composer's default
+ *  placeholder for the same steps. Content asks for the goal because the
+ *  co-marketer recommends existing templates here rather than building one
+ *  from scratch. */
+const STEP_PLACEHOLDERS: Record<string, string> = {
+  content: "Tell me what you're looking for",
+  schedule: "Recommend a best time based on the audience and message",
 };
 
 /** Sub-line under each accordion header, before the step has a summary. */
@@ -740,6 +733,36 @@ export default function CampaignCreationOverlay({
       }));
       return;
     }
+    // A typed goal that matches one of Email's own scenarios gets that
+    // specific draft; anything else still falls through to the one default
+    // draft below, same as every prompt got before scenarios existed.
+    const emailScenario = emailScenarioFor(prompt);
+    if (emailScenario) {
+      setCampaignName(emailScenario.campaignName);
+      setAudience({
+        ...EMPTY_AUDIENCE,
+        mode: "adhoc",
+        conditions: emailScenario.conditions,
+        conditionsReach: emailScenario.reach,
+      });
+      setContent({
+        ...EMPTY_CONTENT,
+        senderName: emailScenario.senderName,
+        subject: emailScenario.subject,
+        preHeader: emailScenario.preHeader,
+        templateId: emailScenario.templateId,
+      });
+      setSchedule({ ...EMPTY_SCHEDULE, sendAt: defaultSendAt(), mode: "optimize" });
+      setSetup((s) => ({
+        ...s,
+        conversionTracking: true,
+        conversionEvent: emailScenario.conversionEvent,
+        conversionWindowValue: emailScenario.conversionWindowValue,
+        conversionWindowUnit: emailScenario.conversionWindowUnit,
+        revenueParameter: emailScenario.revenueParameter,
+      }));
+      return;
+    }
     setCampaignName("Re-engage Multi-View Shoppers — Free Shipping");
     setAudience({
       ...EMPTY_AUDIENCE,
@@ -979,6 +1002,7 @@ export default function CampaignCreationOverlay({
     const patchText = () => {
       const sp = action?.schedulePatch;
       const cp = action?.contentPatch;
+      const stp = action?.setupPatch;
       if (sp?.mode === "optimize") return "Optimised per contact, inside the next 24 hours";
       if (sp?.mode === "later" && sp.sendAt) return describeSlot(sp.sendAt);
       if (sp?.skipFrequencyCap === false) return "Respect the account frequency cap";
@@ -988,6 +1012,7 @@ export default function CampaignCreationOverlay({
         const t = emailTemplates.find((x) => x.id === cp.templateId);
         return t ? `${t.name} (Id: ${t.id})` : "Recommended template";
       }
+      if (stp?.conversionEvent) return stp.conversionEvent;
       return undefined;
     };
 
@@ -1009,6 +1034,7 @@ export default function CampaignCreationOverlay({
             text: patchText(),
             contentPatch: action.contentPatch,
             schedulePatch: action.schedulePatch,
+            patch: action.setupPatch,
           }
         : undefined,
     };
@@ -1030,6 +1056,32 @@ export default function CampaignCreationOverlay({
   });
 
   const handleAuditCampaign = () => {
+    // An AI-built campaign was already drafted against the account's best-
+    // performing patterns — there's nothing left for the audit to flag, so
+    // skip running it and say so instead of surfacing manual-build findings.
+    if (campaignAIGenerated) {
+      openTopic({
+        prompt: "Audit this campaign before I publish it.",
+        navLabel: "Audit",
+        reply:
+          "I've taken a look at your campaign and checked for potential issues. Everything looks good to go!🚀",
+        findings: [],
+      });
+      return;
+    }
+    // A scripted walkthrough for one specific demo setup — the "High-Intent
+    // Re-Engagers" segment with the "Exclusive Deals" template — rather than
+    // the computed audit, so the same three findings show every time.
+    if (isExclusiveDealsReviewScenario({ audience, content })) {
+      applyContent({ senderName: "promotions" });
+      openTopic({
+        prompt: "Audit this campaign before I publish it.",
+        navLabel: "Audit",
+        reply: EXCLUSIVE_DEALS_REVIEW_REPLY,
+        findings: exclusiveDealsReviewFindings(),
+      });
+      return;
+    }
     openTopic(auditTopic(buildFindings({ setup, audience, content, schedule })));
   };
 
@@ -1047,9 +1099,14 @@ export default function CampaignCreationOverlay({
         starterChipSet={
           railStepId === "audience"
             ? audienceChips
-            : (isPushChannel ? PUSH_STEP_CHIPS : STEP_CHIPS)[railStepId]
+            // Schedule has no starter chips of its own — an empty array (not
+            // undefined) so the chat doesn't fall back to the generic set.
+            : railStepId === "schedule"
+              ? []
+              : (isPushChannel ? PUSH_STEP_CHIPS : STEP_CHIPS)[railStepId]
         }
         emptyStateGreeting={STEP_GREETINGS[railStepId]}
+        emptyStatePlaceholder={STEP_PLACEHOLDERS[railStepId]}
         initialTopic={chatTopic ?? undefined}
         // A segment the agent built — its rules land on the Conditions tab as
         // editable rows, rather than as a read-only segment the user can't
