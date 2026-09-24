@@ -835,6 +835,12 @@ export default function CampaignCreationOverlay({
       return next;
     });
     if (!isOpen) setFocusStepId(id);
+    // Opening Message or Schedule by hand brings the co-marketer back if it
+    // was closed, primed for that step's recommendations. An AI-built draft
+    // arrives finished, so it stays out of the way.
+    if (!isOpen && (id === "content" || id === "schedule") && !chatOpen && !campaignAIGenerated) {
+      openFreshChat();
+    }
   };
 
   /** Navbar stepper: make sure a step is open and scroll to it, rather than
