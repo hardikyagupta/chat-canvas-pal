@@ -82,7 +82,7 @@ export default function CoMarketerReviewBanner({
               />
             </div>
             <p className="shrink-0 whitespace-nowrap break-words font-manrope text-[14px] font-medium tracking-[0.2917px] text-[#17173A]">
-              The co-marketer has a new campaign for you to review
+              Cori has a new campaign for you to review
             </p>
           </div>
 

@@ -10,6 +10,7 @@ export default function StepCard({
   description,
   action,
   wide,
+  full,
   children,
 }: {
   /** Omitted on steps whose heading lives on the accordion header instead. */
@@ -20,16 +21,19 @@ export default function StepCard({
   action?: ReactNode;
   /** Steps whose content is a full-width surface rather than a form column. */
   wide?: boolean;
+  /** No width cap at all — content fills whatever the accordion card gives
+   *  it, instead of stopping short on wide windows. */
+  full?: boolean;
   children?: ReactNode;
 }) {
   return (
     <div
       className={cn(
         "cc-step-card w-full rounded-lg border border-[#DDE2EE] bg-white p-8",
-        wide ? "max-w-[1044px]" : "max-w-[704px]"
+        full ? "" : wide ? "max-w-[1044px]" : "max-w-[704px]"
       )}
     >
-      <div className={cn(wide ? "max-w-[980px]" : "max-w-[640px]")}>
+      <div className={cn(full ? "" : wide ? "max-w-[980px]" : "max-w-[640px]")}>
         {(title || action) && (
           <div className="mb-6 flex items-start justify-between gap-6">
             {title && (

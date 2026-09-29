@@ -60,6 +60,49 @@ import {
 import { appPushTemplates } from "./appPushTemplates.data";
 import { AppleIcon, AndroidIcon } from "./PlatformIcons";
 import CarouselTemplateEditor from "./CarouselTemplateEditor";
+import SendTestMailDrawer from "./SendTestMailDrawer";
+
+/** Envelope-with-reply-arrow mark for the From row's reply-to button —
+ *  stroke="currentColor" so it picks up the button's own hover color like
+ *  the lucide icons beside it. */
+function ReplyEmailIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M15.1062 2.47393L9.48559 6.4058C9.06228 6.70175 8.53898 6.86269 7.99999 6.86269C7.46101 6.86269 6.93771 6.70175 6.51439 6.4058L0.894017 2.47407M0.894017 2.47407C1.00627 2.07814 1.23978 1.71542 1.57132 1.42735C1.97463 1.07692 2.49943 0.857453 3.0608 0.804444C4.6556 0.65648 6.308 0.5 8 0.5C9.692 0.5 11.3444 0.655416 12.9392 0.802315C13.5006 0.855739 14.0253 1.07548 14.4286 1.42605C14.7603 1.71447 14.9939 2.07758 15.1062 2.47393C15.1304 2.55933 15.1489 2.64629 15.1616 2.73437C15.332 3.95214 15.5 5.21144 15.5 6.49947C15.5 7.00458 15.4742 7.50495 15.4326 8M0.894017 2.47407C0.869719 2.55978 0.851101 2.64703 0.8384 2.73543C0.668 3.95214 0.5 5.21144 0.5 6.49947C0.5 7.7875 0.668 9.04679 0.8384 10.2646C0.91019 10.7612 1.16855 11.2219 1.57179 11.5722C1.97502 11.9226 2.49958 12.1422 3.0608 12.1956C4.22183 12.304 5.41274 12.4159 6.628 12.4688"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.29273 14.4044C9.91462 15.1348 10.9573 15.5 12 15.5C13.0427 15.5 14.0854 15.1348 14.7073 14.4044C15.2344 13.7854 15.5005 12.8937 15.5 11.9991C15.4995 11.1127 15.2371 10.2235 14.7073 9.59382C14.6096 9.47778 14.5029 9.37056 14.3871 9.27379C13.7696 8.75793 12.8848 8.5 12 8.5C11.1152 8.5 10.2305 8.75793 9.61293 9.27379C9.49709 9.37056 9.39037 9.47779 9.29273 9.59382C8.7629 10.2235 8.50053 11.1127 8.5 11.9991C8.49946 12.8937 8.76563 13.7854 9.29273 14.4044Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.2728 12.8182C12.8486 12.8182 12.9096 12.8153 12.5263 12.8096C11.7707 12.7984 11.1354 12.5535 11.0502 12.2394C11.0206 12.1299 11 12.0187 11 11.9061C11 11.7934 11.0206 11.6822 11.0502 11.5727C11.1354 11.2586 11.7707 11.0137 12.5263 11.0025C12.9096 10.9968 12.8486 11.0025 13.2728 11.0025"
+        stroke="currentColor"
+        strokeWidth="0.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12.3636 12.1363C12.7402 12.3222 13.0761 12.5702 13.2727 12.8182C13.0761 13.0662 12.7402 13.3141 12.3636 13.5"
+        stroke="currentColor"
+        strokeWidth="0.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export interface ContentValues {
   senderName: string;
@@ -491,6 +534,9 @@ function TemplatePreviewPanel({
   expanded,
   onExpandedChange,
   onChangeTemplate,
+  defaultSubject,
+  defaultSenderName,
+  defaultDomain,
 }: {
   template: EmailTemplate | null;
   channel: string;
@@ -503,8 +549,13 @@ function TemplatePreviewPanel({
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   onChangeTemplate: () => void;
+  /** Pre-filled onto the "Send a test email" drawer — Email only. */
+  defaultSubject: string;
+  defaultSenderName: string;
+  defaultDomain: string;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [sendTestOpen, setSendTestOpen] = useState(false);
   const isPush = channel !== "Email";
   // Only templates rendered for every OS/expanded combination carry a real
   // mock for each — everything else still falls back to the one flat image.
@@ -615,6 +666,9 @@ function TemplatePreviewPanel({
           </button>
           <button
             type="button"
+            onClick={() => {
+              if (!isPush) setSendTestOpen(true);
+            }}
             className="flex h-8 items-center gap-2 rounded-lg border border-[#e3e3e3] bg-white px-3 font-manrope text-sm font-medium tracking-[0.4px] text-[#6f6f8d] transition-colors hover:bg-[#f8f8f8]"
           >
             <FlaskConical className="size-4" strokeWidth={2} />
@@ -724,6 +778,16 @@ function TemplatePreviewPanel({
           initialOS={os}
           initialExpanded={expanded}
           onClose={() => setPreviewOpen(false)}
+        />
+      )}
+
+      {!isPush && (
+        <SendTestMailDrawer
+          open={sendTestOpen}
+          onClose={() => setSendTestOpen(false)}
+          defaultSubject={defaultSubject}
+          defaultSenderName={defaultSenderName}
+          defaultDomain={defaultDomain}
         />
       )}
     </div>
@@ -1214,6 +1278,237 @@ function AttachmentsModal({
   );
 }
 
+/** Inboxes the account can reply from — stand-in for real mailbox config. */
+const REPLY_TO_EMAIL_OPTIONS = [
+  "yogesh.badgujar@pranaglow.com",
+  "suhesh.patil@pranaglow.com",
+  "sarvesh.mahashabde@pranaglow.com",
+  "prashant.pawar@pranaglow.com",
+  "jaideep.jambhale@pranaglow.com",
+  "abhaykant.nirala@pranaglow.com",
+];
+
+/** Single-select for the reply-to modal — a combobox: the trigger becomes a
+ *  live search field once open, and typing something that matches nothing
+ *  offers to add it as a new reply-to address. Portalled at z-[95] since it
+ *  opens from inside a z-[90] modal rather than the accordion. */
+function ReplyToSelect({
+  value,
+  onChange,
+  extraOptions,
+  onCreate,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  /** Addresses created earlier in this session, offered alongside the fixed list. */
+  extraOptions: string[];
+  onCreate: (email: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!wrapRef.current?.contains(t) && !panelRef.current?.contains(t)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => wrapRef.current && setRect(wrapRef.current.getBoundingClientRect());
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open]);
+
+  const openWithSearch = () => {
+    setQuery("");
+    setOpen(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const pick = (email: string) => {
+    onChange(email);
+    setOpen(false);
+    setQuery("");
+  };
+
+  const allOptions = [...REPLY_TO_EMAIL_OPTIONS, ...extraOptions];
+  const q = query.trim();
+  const matches = q ? allOptions.filter((o) => o.toLowerCase().includes(q.toLowerCase())) : allOptions;
+  const exactMatch = allOptions.some((o) => o.toLowerCase() === q.toLowerCase());
+  const canCreate = q.length > 0 && !exactMatch;
+
+  return (
+    <div ref={wrapRef} className="relative w-full">
+      {open ? (
+        <div className="flex h-10 w-full items-center gap-2 rounded-md border border-[#2F68E5] bg-white px-3">
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Select email ID"
+            className="min-w-0 flex-1 bg-transparent font-manrope text-sm text-[#17173A] outline-none placeholder:text-[#A0A0A0]"
+          />
+          <Search className="size-4 shrink-0 text-[#8A8AA3]" strokeWidth={2} />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={openWithSearch}
+          className={cn(
+            "flex h-10 w-full items-center justify-between gap-2 rounded-md border bg-white px-3 font-manrope text-sm outline-none transition-colors",
+            "border-[#DDE2EE]",
+            value ? "text-[#17173A]" : "text-[#A0A0A0]"
+          )}
+        >
+          <span className="truncate">{value || "Select email ID"}</span>
+          <ChevronDown className="size-4 shrink-0 text-[#8A8AA3]" strokeWidth={2} />
+        </button>
+      )}
+      {open &&
+        rect &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, width: rect.width }}
+            className="scroll-slim z-[95] max-h-[280px] overflow-y-auto rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
+          >
+            {matches.map((o) => (
+              <button
+                key={o}
+                type="button"
+                onClick={() => pick(o)}
+                className={cn(
+                  "flex w-full items-center justify-between gap-2 px-3 py-2 text-left font-manrope text-sm transition-colors",
+                  o === value
+                    ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]"
+                    : "text-[#17173A] hover:bg-[#F7F9FC]"
+                )}
+              >
+                <span className="truncate">{o}</span>
+                {o === value && <Check className="size-4 shrink-0" strokeWidth={2.4} />}
+              </button>
+            ))}
+            {matches.length === 0 && !canCreate && (
+              <p className="px-3 py-4 text-center font-manrope text-[13px] text-[#6F6F8D]">
+                No email ID matches that.
+              </p>
+            )}
+            {canCreate && (
+              <button
+                type="button"
+                onClick={() => {
+                  onCreate(q);
+                  pick(q);
+                }}
+                className="flex w-full items-center gap-1.5 px-3 py-2 text-left font-manrope text-sm font-semibold text-[#2F68E5] transition-colors hover:bg-[#F4F8FF]"
+              >
+                <Plus className="size-4 shrink-0" strokeWidth={2.4} />
+                <span className="truncate">Create '{q}'</span>
+              </button>
+            )}
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
+
+/** Pop-up for picking which inbox replies to this campaign land in — one at a
+ *  time, reached from the From row's reply-to icon. */
+function ReplyToEmailModal({
+  open,
+  initial,
+  extraOptions,
+  onCreate,
+  onCancel,
+  onSave,
+}: {
+  open: boolean;
+  initial: string;
+  extraOptions: string[];
+  onCreate: (email: string) => void;
+  onCancel: () => void;
+  onSave: (email: string) => void;
+}) {
+  const [selected, setSelected] = useState(initial);
+
+  // Stays mounted between opens (renders null while closed), so the draft
+  // has to be reset from the saved value each time — otherwise a cancelled
+  // pick would still be sitting there next open.
+  useEffect(() => {
+    if (open) setSelected(initial);
+  }, [open, initial]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="relative w-full max-w-[440px] rounded-lg bg-white p-6 shadow-[0_20px_60px_rgba(23,23,58,0.25)]">
+        <div className="flex items-start justify-between">
+          <h2 className="font-manrope text-xl font-bold text-[#17173A]">Reply-to email ID</h2>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onCancel}
+            className="grid size-8 place-items-center rounded-full text-[#8A8AA3] hover:bg-[#F0F3F9] hover:text-[#17173A]"
+          >
+            <X className="size-5" strokeWidth={2} />
+          </button>
+        </div>
+        <p className="mt-1 font-manrope text-sm text-[#6F6F8D]">
+          Replies to this campaign land in the inbox you pick here.
+        </p>
+
+        <div className="mt-5">
+          <label className="mb-1.5 block font-manrope text-sm font-semibold text-[#17173A]">
+            Email ID
+          </label>
+          <ReplyToSelect
+            value={selected}
+            onChange={setSelected}
+            extraOptions={extraOptions}
+            onCreate={onCreate}
+          />
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-10 items-center rounded-md border border-[#2F68E5] px-5 font-manrope text-sm font-bold uppercase tracking-[0.4px] text-[#2F68E5] transition-colors hover:bg-[#F4F8FF]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!selected}
+            onClick={() => onSave(selected)}
+            className="inline-flex h-10 items-center rounded-md bg-[#2F68E5] px-5 font-manrope text-sm font-bold uppercase tracking-[0.4px] text-white transition-colors enabled:hover:bg-[#255ad2] disabled:cursor-not-allowed disabled:bg-[#C3CAD9]"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 /** Pools the Subject/Pre-header sparkle draws from — three shown at a time. */
 const SUBJECT_SUGGESTIONS = [
@@ -1349,6 +1644,10 @@ export default function CampaignContentStep({
   const [page, setPage] = useState(1);
   const [perPageOpen, setPerPageOpen] = useState(false);
   const [attachModalOpen, setAttachModalOpen] = useState(false);
+  const [replyToModalOpen, setReplyToModalOpen] = useState(false);
+  // Addresses added via "Create" in the reply-to picker — kept for the rest
+  // of this session so a re-opened picker still offers them.
+  const [customReplyEmails, setCustomReplyEmails] = useState<string[]>([]);
   const [sourceTab, setSourceTab] = useState<TemplateSourceTab>("saved");
   const [foldersExpanded, setFoldersExpanded] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("mobile");
@@ -1467,7 +1766,7 @@ export default function CampaignContentStep({
 
   return (
     <StepCard
-      wide
+      full
       {...(CONTENT_LAYOUT_V2
         ? {}
         : {
@@ -1517,6 +1816,21 @@ export default function CampaignContentStep({
                 )}
               </button>
             );
+            const replyToButton = (
+              <button
+                type="button"
+                aria-label="Reply-to email ID"
+                onClick={() => setReplyToModalOpen(true)}
+                className="relative grid size-7 place-items-center rounded-md text-[#6F6F8D] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+              >
+                <ReplyEmailIcon className="size-4" />
+                {values.replyEmail && (
+                  <span className="absolute -right-1 -top-1 grid size-3.5 place-items-center rounded-full bg-[#00C48C] text-white">
+                    <Check className="size-2" strokeWidth={3} />
+                  </span>
+                )}
+              </button>
+            );
             const removeButton = (label: string, onRemove: () => void) => (
               <button
                 type="button"
@@ -1533,6 +1847,7 @@ export default function CampaignContentStep({
                 {ccToggle}
                 {bccToggle}
                 {attachmentButton}
+                {replyToButton}
               </div>
             );
             const ccTrailing = removeButton("Cc", () => onChange({ ccEnabled: false }));
@@ -1839,6 +2154,20 @@ export default function CampaignContentStep({
               setAttachModalOpen(false);
             }}
           />
+
+          <ReplyToEmailModal
+            open={replyToModalOpen}
+            initial={values.replyEmail}
+            extraOptions={customReplyEmails}
+            onCreate={(email) =>
+              setCustomReplyEmails((prev) => (prev.includes(email) ? prev : [...prev, email]))
+            }
+            onCancel={() => setReplyToModalOpen(false)}
+            onSave={(email) => {
+              onChange({ replyEmail: email });
+              setReplyToModalOpen(false);
+            }}
+          />
         </>
       ) : (
         <>
@@ -1993,6 +2322,9 @@ export default function CampaignContentStep({
           expanded={previewExpanded}
           onExpandedChange={setPreviewExpanded}
           onChangeTemplate={() => onChange({ templateId: null })}
+          defaultSubject={values.subject}
+          defaultSenderName={values.senderName}
+          defaultDomain={values.domain}
         />
       ) : (
         <>

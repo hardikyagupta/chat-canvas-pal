@@ -1,6 +1,97 @@
 import { cn } from "@/lib/utils";
 import StepCard from "./StepCard";
 
+/** One row of the UTM parameter table — whether it's appended to the link,
+ *  and which campaign value it's mapped to. */
+export interface UtmParamConfig {
+  enabled: boolean;
+  value: string;
+}
+
+export interface UtmParameters {
+  source: UtmParamConfig;
+  medium: UtmParamConfig;
+  campaign: UtmParamConfig;
+  term: UtmParamConfig;
+}
+
+export const DEFAULT_UTM_PARAMETERS: UtmParameters = {
+  source: { enabled: true, value: "Netcore" },
+  medium: { enabled: true, value: "" },
+  campaign: { enabled: false, value: "" },
+  term: { enabled: false, value: "" },
+};
+
+/** Same shape as DEFAULT_UTM_PARAMETERS, but with medium and campaign filled
+ *  in from the draft actually being created — the channel it's going out on
+ *  and the name it currently has — rather than left blank. Used whenever a
+ *  channel and campaign name are known, i.e. everywhere but the brief reset
+ *  between one draft closing and the next one's own open effect running. */
+export function defaultUtmParameters(channel: string, campaignName: string): UtmParameters {
+  return {
+    ...DEFAULT_UTM_PARAMETERS,
+    medium: { enabled: true, value: channel },
+    campaign: { enabled: false, value: campaignName },
+  };
+}
+
+/** One custom UTM key-value pair — Email-only, appended alongside the fixed
+ *  parameters above. */
+export interface UtmKeyValuePair {
+  id: string;
+  key: string;
+  value: string;
+}
+
+export interface KeyValueParameters {
+  enabled: boolean;
+  pairs: UtmKeyValuePair[];
+}
+
+/** Custom keys are capped; the ADD CUSTOM KEY button shows how many slots
+ *  are left. */
+export const MAX_CUSTOM_KEYS = 5;
+
+export function newUtmKeyValuePair(): UtmKeyValuePair {
+  return { id: `kv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, key: "", value: "" };
+}
+
+export const DEFAULT_KEY_VALUE_PARAMETERS: KeyValueParameters = {
+  enabled: false,
+  pairs: [],
+};
+
+/** One filter on the conversion event's own payload — e.g. only count it
+ *  when Product_Checkout equals a given value. */
+export interface ConversionPayloadParam {
+  id: string;
+  attribute: string;
+  operator: string;
+  value: string;
+}
+
+export interface ConversionPayloadParameters {
+  enabled: boolean;
+  pairs: ConversionPayloadParam[];
+}
+
+/** Payload filters are capped the same way custom UTM keys are. */
+export const MAX_CONVERSION_PAYLOAD_PARAMS = 5;
+
+export function newConversionPayloadParam(): ConversionPayloadParam {
+  return {
+    id: `cp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    attribute: "",
+    operator: "Equal to",
+    value: "",
+  };
+}
+
+export const DEFAULT_CONVERSION_PAYLOAD_PARAMETERS: ConversionPayloadParameters = {
+  enabled: false,
+  pairs: [],
+};
+
 export interface SetupValues {
   /** What this campaign is for. Nothing else in the step opens until it's set. */
   goal: string;
@@ -18,6 +109,9 @@ export interface SetupValues {
   /** Holds back a send to anyone who already got a campaign from this
    *  account within the dedup window, regardless of list/segment overlap. */
   avoidDuplicateComms: boolean;
+  utmParameters: UtmParameters;
+  keyValueParameters: KeyValueParameters;
+  conversionPayloadParameters: ConversionPayloadParameters;
 }
 
 export function parseTags(value: string): string[] {

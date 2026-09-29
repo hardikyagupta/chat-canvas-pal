@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Info, UserCheck, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, Info, Pencil, UserCheck, X } from "lucide-react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,9 +16,16 @@ import ConditionAttributePicker, {
   type AttributeType,
   type ConditionAttribute,
 } from "./ConditionAttributePicker";
-import type { SetupValues } from "./CampaignSetupStep";
+import type {
+  SetupValues,
+  UtmParameters,
+  KeyValueParameters,
+  ConversionPayloadParameters,
+} from "./CampaignSetupStep";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 import { APP_OPTIONS } from "./appOptions.data";
+import UtmParametersDrawer from "./UtmParametersDrawer";
+import ConversionGoalDrawer from "./ConversionGoalDrawer";
 
 export type AudienceMode = "all" | "segments" | "adhoc" | "table";
 
@@ -91,6 +98,9 @@ export type TrackingValues = Pick<
   | "conversionWindowValue"
   | "conversionWindowUnit"
   | "revenueParameter"
+  | "utmParameters"
+  | "keyValueParameters"
+  | "conversionPayloadParameters"
 >;
 
 /** Account-level UTM defaults shown on hover of the GA-tracking pill. */
@@ -101,6 +111,96 @@ const GA_ACCOUNT_UTMS = [
   { label: "Content (utm_content)", value: "hero_cta" },
   { label: "Key 1, Value 1", value: "coupon, SAVE20" },
 ];
+
+/** One substituted value inside the tracking summary sentence — bold and
+ *  dark against the sentence's own grey, the same weight the account-config
+ *  tooltip gives its own utm_source=Netcore example. */
+function SummaryTerm({ children }: { children: ReactNode }) {
+  return <span className="font-semibold text-[#17173A]">{children}</span>;
+}
+
+/** Plain-language readout of what "Customize tracking parameters" will
+ *  stamp onto this campaign's links — source/content/term stay the account
+ *  default (Netcore/test/Campaign), medium and campaign follow the send
+ *  itself, and any custom keys the user added tack onto the end. */
+function TrackingSummaryText({
+  channel,
+  campaignName,
+  pairs,
+}: {
+  channel: string;
+  campaignName: string;
+  pairs: { key: string; value: string }[];
+}) {
+  const validPairs = pairs.filter((p) => p.key.trim() && p.value.trim());
+  return (
+    <>
+      Tracking parameters with <SummaryTerm>Netcore</SummaryTerm> as the source,{" "}
+      <SummaryTerm>{channel}</SummaryTerm> as the medium, and <SummaryTerm>{campaignName}</SummaryTerm>{" "}
+      as the campaign, <SummaryTerm>test</SummaryTerm> as the content, <SummaryTerm>Campaign</SummaryTerm>{" "}
+      as the term
+      {validPairs.length > 0 && (
+        <>
+          , and the key-value pairs{" "}
+          {validPairs.map((p, i) => (
+            <span key={`${p.key}-${i}`}>
+              <SummaryTerm>
+                {p.key}; {p.value}
+              </SummaryTerm>
+              {i < validPairs.length - 1 ? ", " : " "}
+            </span>
+          ))}
+          included
+        </>
+      )}
+      .
+    </>
+  );
+}
+
+/** "7" + "Days" -> "7 days", "1" + "Days" -> "1 day" — the window value/unit
+ *  pair reads as a plain English duration inside the conversion-goal sentence
+ *  rather than echoing the dropdown's own capitalized, always-plural label. */
+function windowPhrase(value: string, unit: string): string {
+  const singular = unit.slice(0, -1).toLowerCase();
+  const plural = unit.toLowerCase();
+  return `${value} ${value === "1" ? singular : plural}`;
+}
+
+/** Plain-language readout of the conversion goal, mirroring
+ *  TrackingSummaryText's own bold-term treatment. Before an event is picked
+ *  there's nothing to describe yet, so it just prompts for one. */
+function ConversionGoalSummaryText({
+  conversionEvent,
+  conversionWindowValue,
+  conversionWindowUnit,
+  revenueParameter,
+}: {
+  conversionEvent: string;
+  conversionWindowValue: string;
+  conversionWindowUnit: string;
+  revenueParameter: string;
+}) {
+  if (!conversionEvent) {
+    return <>Conversion goal enabled. Select an event to continue.</>;
+  }
+  const window = windowPhrase(conversionWindowValue, conversionWindowUnit);
+  if (revenueParameter) {
+    return (
+      <>
+        Track <SummaryTerm>{conversionEvent}</SummaryTerm> as the conversion goal within{" "}
+        <SummaryTerm>{window}</SummaryTerm> of delivery, with revenue attributed to{" "}
+        <SummaryTerm>{revenueParameter}</SummaryTerm>.
+      </>
+    );
+  }
+  return (
+    <>
+      Track <SummaryTerm>{conversionEvent}</SummaryTerm> as a conversion within{" "}
+      <SummaryTerm>{window}</SummaryTerm> of delivery.
+    </>
+  );
+}
 
 function GaConfigPill() {
   return (
@@ -293,137 +393,29 @@ function Dropdown({
   );
 }
 
-/** A labelled, full-width version of Dropdown — for the conversion-goal
- *  fields, which read as form fields (bold label, optional asterisk) rather
- *  than the compact inline filter chips Dropdown is normally used for. */
-function FieldSelect({
-  label,
-  required,
-  value,
-  placeholder,
-  options,
-  onChange,
-  flash,
-}: {
-  label: string;
-  required?: boolean;
-  value: string;
-  placeholder?: string;
-  options: string[];
-  onChange: (v: string) => void;
-  flash?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [rect, setRect] = useState<DOMRect | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!wrapRef.current?.contains(target) && !panelRef.current?.contains(target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    const update = () => wrapRef.current && setRect(wrapRef.current.getBoundingClientRect());
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [open]);
-
+/** Flags a collapsed step whose required fields aren't all filled in —
+ *  conversion tracking on with no goal picked, so far. Shown ambiently
+ *  whenever that's true, not just after a failed "Done". */
+export function ConfigPendingPill({ count }: { count: number }) {
+  if (count <= 0) return null;
   return (
-    <div>
-      {label && (
-        <label className="mb-1.5 flex items-center gap-1 font-manrope text-sm font-semibold text-[#17173A]">
-          {label}
-          {required && <span className="text-[#FC5E02]">*</span>}
-        </label>
-      )}
-      <div ref={wrapRef} className={cn("relative", flash && "cmk-field-flash")}>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className={cn(
-            "flex h-10 w-full items-center justify-between gap-2 rounded-md border bg-[#F7F9FC] px-3 font-manrope text-sm outline-none transition-colors focus:bg-white",
-            open ? "border-[#2F68E5] bg-white" : "border-[#DDE2EE]",
-            value ? "text-[#17173A]" : "text-[#A0A0A0]"
-          )}
-        >
-          <span className="truncate">{value || placeholder}</span>
-          <ChevronDown
-            className={cn("size-4 shrink-0 text-[#8A8AA3] transition-transform", open && "rotate-180")}
-            strokeWidth={2}
-          />
-        </button>
-        {open &&
-          rect &&
-          createPortal(
-            <div
-              ref={panelRef}
-              style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, width: rect.width }}
-              className="scroll-slim z-[120] max-h-[240px] overflow-y-auto rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
-            >
-              {options.map((o) => (
-                <button
-                  key={o}
-                  type="button"
-                  onClick={() => {
-                    onChange(o);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "block w-full px-3 py-2 text-left font-manrope text-sm transition-colors",
-                    o === value
-                      ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]"
-                      : "text-[#17173A] hover:bg-[#F7F9FC]"
-                  )}
-                >
-                  {o}
-                </button>
-              ))}
-            </div>,
-            document.body
-          )}
-      </div>
+    <div className="flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-[#E5484D] bg-white pl-2.5 pr-3">
+      <AlertTriangle className="size-3.5 shrink-0 text-[#E5484D]" strokeWidth={2.2} />
+      <span className="font-manrope text-[13px] font-medium text-[#E5484D]">
+        {count} configuration{count === 1 ? "" : "s"} pending
+      </span>
     </div>
   );
 }
-
-/** Behaviour events a conversion can be defined against — the same
- *  vocabulary as the Conditions attribute picker's own "Behaviour" group. */
-const CONVERSION_EVENT_OPTIONS = [
-  "Purchase",
-  "Added to cart",
-  "Product viewed",
-  "App opened",
-  "Page visited",
-  "Coupon issued",
-  "Coupon redeemed",
-  "Viewed or wishlisted a product",
-];
-
-const CONVERSION_WINDOW_VALUES = ["1", "3", "7", "14", "30", "60", "90"];
-const CONVERSION_WINDOW_UNITS = ["Hours", "Days", "Weeks"];
-const REVENUE_PARAMETER_OPTIONS = ["Order value", "Revenue", "Cart value", "Custom attribute"];
 
 /** The reachable-contacts count for the Audience step's own accordion
  *  header — shown only while the step is collapsed, since the expanded
  *  body shows the fuller AudienceReachStat instead. */
 export function AudienceReachablePill({ reach }: { reach: number }) {
   return (
-    <div className="flex h-8 items-center gap-2 rounded-full border border-[#DDE2EE] bg-white pl-2 pr-3">
-      <UserCheck className="size-4 text-[#8A8AA3]" strokeWidth={2} />
+    <div className="flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-[#DDE2EE] bg-white pl-2 pr-3">
+      <UserCheck className="size-4 shrink-0 text-[#8A8AA3]" strokeWidth={2} />
       <span className="font-manrope text-[13px] text-[#6F6F8D]">
         Potential reach: <span className="font-bold text-[#17173A]">{nf.format(reach)}</span>
       </span>
@@ -540,7 +532,9 @@ export default function CampaignAudienceStep({
   onTrackingChange,
   trackingHighlight,
   channel = "Email",
+  campaignName,
   appsError,
+  conversionEventError,
 }: {
   values: AudienceValues;
   onChange: (patch: Partial<AudienceValues>) => void;
@@ -551,9 +545,22 @@ export default function CampaignAudienceStep({
   /** Tracking field keys just written by a co-marketer apply — briefly flashed. */
   trackingHighlight?: Partial<Record<keyof TrackingValues, boolean>>;
   channel?: string;
+  /** This campaign's own name — folded into the customize-tracking summary
+   *  sentence as the utm_campaign value. */
+  campaignName?: string;
   /** Red message under the Target app(s) field — set when Done was tried without one. */
   appsError?: string;
+  /** Red message under Event name — set when Done was tried with conversion
+   *  tracking on but no goal picked. */
+  conversionEventError?: string;
 }) {
+  // Collapses the filter-mode tabs (and whichever one's fields) once the user
+  // has them set up, without losing the picked mode — reopened from the same
+  // chevron, not by re-picking "Filter by".
+  const [filterExpanded, setFilterExpanded] = useState(true);
+  const [utmDrawerOpen, setUtmDrawerOpen] = useState(false);
+  const [conversionGoalDrawerOpen, setConversionGoalDrawerOpen] = useState(false);
+
   /** Any hand edit invalidates a count that came from the co-marketer's segment. */
   const setConditions = (conditions: AdhocCondition[]) =>
     onChange({ conditions, conditionsReach: undefined });
@@ -582,7 +589,7 @@ export default function CampaignAudienceStep({
   };
 
   return (
-    <StepCard wide>
+    <StepCard full>
       {channel !== "Email" && (
         <div className="mb-6">
           <MultiSelectDropdown
@@ -630,158 +637,171 @@ export default function CampaignAudienceStep({
         </div>
 
         {values.mode !== "all" && (
-          <div className="mt-4 flex items-center gap-2">
-            <ChevronDown className="size-4 shrink-0 text-[#8A8AA3]" strokeWidth={2} />
-            <div className="inline-flex">
-              {FILTER_MODES.map((m, i) => {
-                const active = values.mode === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => onChange({ mode: m.id })}
-                    className={cn(
-                      "border px-4 py-2 font-manrope text-sm font-medium transition-colors",
-                      i > 0 && "-ml-px",
-                      i === 0 && "rounded-l-md",
-                      i === FILTER_MODES.length - 1 && "rounded-r-md",
-                      active
-                        ? "relative z-[1] border-[#2F68E5] bg-[#F4F8FF] text-[#2F68E5]"
-                        : "border-[#DDE2EE] text-[#17173A] hover:bg-[#F7F9FC]"
-                    )}
-                  >
-                    {m.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {values.mode === "segments" && (
-          <div className="mt-4">
-            <div className="mb-1.5 flex items-center gap-2">
-              <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
-                Contacts which are in
-              </span>
-            </div>
-            <div className={cn(highlight && "cmk-plot-flash")}>
-              <SegmentSelect
-                value={values.segments}
-                onChange={(segments) => onChange({ segments })}
+          <div className="mt-4 flex items-start gap-2">
+            <button
+              type="button"
+              aria-label={filterExpanded ? "Collapse filter" : "Expand filter"}
+              aria-expanded={filterExpanded}
+              onClick={() => setFilterExpanded((v) => !v)}
+              className="mt-1.5 grid size-5 shrink-0 place-items-center rounded text-[#8A8AA3] transition-colors hover:bg-[#F0F3F9] hover:text-[#17173A]"
+            >
+              <ChevronDown
+                className={cn("size-4 transition-transform", !filterExpanded && "-rotate-90")}
+                strokeWidth={2}
               />
-            </div>
-            <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">
-              Select upto 15 list / segment
-            </p>
-          </div>
-        )}
-
-        {values.mode === "adhoc" && (
-          <div className="mt-4">
-            <div className={cn("space-y-2", highlight && "cmk-plot-flash")}>
-              {values.conditions.map((c, i) => (
-                <div key={i} className="flex flex-wrap items-center gap-1">
-                  <span className="w-[90px] shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
-                    {i === 0 ? "Contacts who" : "And"}
-                  </span>
-                  <ConditionAttributePicker
-                    variant="chip"
-                    value={c.attribute}
-                    onSelect={(a) => replaceAttribute(i, a)}
-                  />
-                  {c.type === "recency" && COUNTABLE_ATTRIBUTES.has(c.attribute) && c.operator === "in the last" && (
-                    <>
-                      <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
-                        at least
-                      </span>
-                      <input
-                        type="number"
-                        min={1}
-                        value={c.count ?? ""}
-                        onChange={(e) =>
-                          setCondition(i, {
-                            count: e.target.value ? Math.max(1, parseInt(e.target.value, 10)) : undefined,
-                          })
-                        }
-                        placeholder="1"
-                        className={cn(
-                          chipSelectClass,
-                          "w-[44px] px-1 text-center [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        )}
-                      />
-                      <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
-                        times
-                      </span>
-                    </>
-                  )}
-                  <Dropdown
-                    value={c.operator}
-                    options={OPERATORS_BY_ATTRIBUTE[c.attribute] ?? OPERATORS_BY_TYPE[c.type]}
-                    onChange={(v) =>
-                      setCondition(i, {
-                        operator: v,
-                        count: v === "in the last" ? c.count : undefined,
-                        // No value to type against the canned rule — clear
-                        // whatever was there so a stale value can't linger.
-                        value: v === NON_CORPORATE_NON_GMAIL ? "" : c.value,
-                      })
-                    }
-                    widthClass="w-[190px]"
-                  />
-                  {c.type === "boolean" ? (
-                    <Dropdown
-                      value={c.value}
-                      options={["True", "False"]}
-                      onChange={(v) => setCondition(i, { value: v })}
-                      widthClass="w-[140px]"
-                    />
-                  ) : (
-                    <input
-                      type="text"
-                      value={c.operator === NON_CORPORATE_NON_GMAIL ? "" : c.value}
-                      disabled={c.operator === NON_CORPORATE_NON_GMAIL}
-                      onChange={(e) => setCondition(i, { value: e.target.value })}
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="inline-flex">
+                {FILTER_MODES.map((m, i) => {
+                  const active = values.mode === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => onChange({ mode: m.id })}
                       className={cn(
-                        chipSelectClass,
-                        "w-[140px]",
-                        c.operator === NON_CORPORATE_NON_GMAIL && "cursor-not-allowed bg-[#F7F9FC] text-[#8A8AA3]"
+                        "border px-4 py-2 font-manrope text-sm font-medium transition-colors",
+                        i > 0 && "-ml-px",
+                        i === 0 && "rounded-l-md",
+                        i === FILTER_MODES.length - 1 && "rounded-r-md",
+                        active
+                          ? "relative z-[1] border-[#2F68E5] bg-[#F4F8FF] text-[#2F68E5]"
+                          : "border-[#DDE2EE] text-[#17173A] hover:bg-[#F7F9FC]"
                       )}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {filterExpanded && values.mode === "segments" && (
+                <div className="mt-4">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
+                      Contacts which are in
+                    </span>
+                  </div>
+                  <div className={cn(highlight && "cmk-plot-flash")}>
+                    <SegmentSelect
+                      value={values.segments}
+                      onChange={(segments) => onChange({ segments })}
                     />
-                  )}
-                  <button
-                    type="button"
-                    aria-label="Remove condition"
-                    onClick={() => setConditions(values.conditions.filter((_, x) => x !== i))}
-                    className="grid size-7 place-items-center rounded-md text-[#8A8AA3] hover:bg-[#F0F3F9] hover:text-[#17173A]"
-                  >
-                    <X className="size-4" strokeWidth={2.2} />
-                  </button>
+                  </div>
+                  <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">
+                    Select upto 15 list / segment
+                  </p>
                 </div>
-              ))}
-            </div>
-            <div className={cn(values.conditions.length > 0 && "mt-3")}>
-              <ConditionAttributePicker onSelect={addCondition} />
-              {values.conditions.length === 0 && (
-                <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">
-                  Get started by adding a condition
-                </p>
+              )}
+
+              {filterExpanded && values.mode === "adhoc" && (
+                <div className="mt-4">
+                  <div className={cn("space-y-2", highlight && "cmk-plot-flash")}>
+                    {values.conditions.map((c, i) => (
+                      <div key={i} className="flex flex-wrap items-center gap-1">
+                        <span className="w-[90px] shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
+                          {i === 0 ? "Contacts who" : "And"}
+                        </span>
+                        <ConditionAttributePicker
+                          variant="chip"
+                          value={c.attribute}
+                          onSelect={(a) => replaceAttribute(i, a)}
+                        />
+                        {c.type === "recency" && COUNTABLE_ATTRIBUTES.has(c.attribute) && c.operator === "in the last" && (
+                          <>
+                            <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
+                              at least
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              value={c.count ?? ""}
+                              onChange={(e) =>
+                                setCondition(i, {
+                                  count: e.target.value ? Math.max(1, parseInt(e.target.value, 10)) : undefined,
+                                })
+                              }
+                              placeholder="1"
+                              className={cn(
+                                chipSelectClass,
+                                "w-[44px] px-1 text-center [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              )}
+                            />
+                            <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
+                              times
+                            </span>
+                          </>
+                        )}
+                        <Dropdown
+                          value={c.operator}
+                          options={OPERATORS_BY_ATTRIBUTE[c.attribute] ?? OPERATORS_BY_TYPE[c.type]}
+                          onChange={(v) =>
+                            setCondition(i, {
+                              operator: v,
+                              count: v === "in the last" ? c.count : undefined,
+                              // No value to type against the canned rule — clear
+                              // whatever was there so a stale value can't linger.
+                              value: v === NON_CORPORATE_NON_GMAIL ? "" : c.value,
+                            })
+                          }
+                          widthClass="w-[190px]"
+                        />
+                        {c.type === "boolean" ? (
+                          <Dropdown
+                            value={c.value}
+                            options={["True", "False"]}
+                            onChange={(v) => setCondition(i, { value: v })}
+                            widthClass="w-[140px]"
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={c.operator === NON_CORPORATE_NON_GMAIL ? "" : c.value}
+                            disabled={c.operator === NON_CORPORATE_NON_GMAIL}
+                            onChange={(e) => setCondition(i, { value: e.target.value })}
+                            className={cn(
+                              chipSelectClass,
+                              "w-[140px]",
+                              c.operator === NON_CORPORATE_NON_GMAIL && "cursor-not-allowed bg-[#F7F9FC] text-[#8A8AA3]"
+                            )}
+                          />
+                        )}
+                        <button
+                          type="button"
+                          aria-label="Remove condition"
+                          onClick={() => setConditions(values.conditions.filter((_, x) => x !== i))}
+                          className="grid size-7 place-items-center rounded-md text-[#8A8AA3] hover:bg-[#F0F3F9] hover:text-[#17173A]"
+                        >
+                          <X className="size-4" strokeWidth={2.2} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className={cn(values.conditions.length > 0 && "mt-3")}>
+                    <ConditionAttributePicker onSelect={addCondition} />
+                    {values.conditions.length === 0 && (
+                      <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">
+                        Get started by adding a condition
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {filterExpanded && values.mode === "table" && (
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
+                    Contacts which are in
+                  </span>
+                  <Dropdown
+                    value={values.table || "Select a table"}
+                    options={["Select a table", ...DATA_TABLES]}
+                    onChange={(v) => onChange({ table: v === "Select a table" ? "" : v })}
+                    widthClass="w-[240px]"
+                  />
+                </div>
               )}
             </div>
-          </div>
-        )}
-
-        {values.mode === "table" && (
-          <div className="mt-4 flex items-center gap-2">
-            <span className="shrink-0 font-manrope text-[13px] font-semibold text-[#6F6F8D]">
-              Contacts which are in
-            </span>
-            <Dropdown
-              value={values.table || "Select a table"}
-              options={["Select a table", ...DATA_TABLES]}
-              onChange={(v) => onChange({ table: v === "Select a table" ? "" : v })}
-              widthClass="w-[240px]"
-            />
           </div>
         )}
       </div>
@@ -806,6 +826,40 @@ export default function CampaignAudienceStep({
         checked={tracking.gaTracking}
         onChange={(v) => onTrackingChange({ gaTracking: v })}
         flash={trackingHighlight?.gaTracking}
+      >
+        <div className="ml-7 flex items-start gap-3 rounded-lg border border-[#DDE2EE] bg-[#F7F9FC] p-4">
+          <p className="min-w-0 flex-1 font-manrope text-sm leading-[22px] text-[#6F6F8D]">
+            <TrackingSummaryText
+              channel={channel}
+              campaignName={campaignName || "this campaign"}
+              pairs={tracking.keyValueParameters.pairs}
+            />
+          </p>
+          <button
+            type="button"
+            aria-label="Edit tracking parameters"
+            onClick={() => setUtmDrawerOpen(true)}
+            className="grid size-8 shrink-0 place-items-center rounded-md text-[#6F6F8D] transition-colors hover:bg-white hover:text-[#17173A]"
+          >
+            <Pencil className="size-4" strokeWidth={2} />
+          </button>
+        </div>
+      </FilterSection>
+
+      <UtmParametersDrawer
+        open={utmDrawerOpen}
+        channel={channel}
+        values={tracking.utmParameters}
+        onChange={(patch) =>
+          onTrackingChange({ utmParameters: { ...tracking.utmParameters, ...patch } as UtmParameters })
+        }
+        keyValueParameters={tracking.keyValueParameters}
+        onKeyValueChange={(patch) =>
+          onTrackingChange({
+            keyValueParameters: { ...tracking.keyValueParameters, ...patch } as KeyValueParameters,
+          })
+        }
+        onClose={() => setUtmDrawerOpen(false)}
       />
 
       <FilterSection
@@ -815,50 +869,53 @@ export default function CampaignAudienceStep({
         onChange={(v) => onTrackingChange({ conversionTracking: v })}
         flash={trackingHighlight?.conversionTracking}
       >
-        <div className="grid grid-cols-3 gap-4">
-          <FieldSelect
-            label="Event name"
-            required
-            value={tracking.conversionEvent}
-            placeholder="Select event"
-            options={CONVERSION_EVENT_OPTIONS}
-            onChange={(conversionEvent) => onTrackingChange({ conversionEvent })}
-            flash={trackingHighlight?.conversionEvent}
-          />
-          <div>
-            <label className="mb-1.5 flex items-center gap-1 font-manrope text-sm font-semibold text-[#17173A]">
-              Conversion window
-              <span className="text-[#FC5E02]">*</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <FieldSelect
-                  label=""
-                  value={tracking.conversionWindowValue}
-                  options={CONVERSION_WINDOW_VALUES}
-                  onChange={(conversionWindowValue) => onTrackingChange({ conversionWindowValue })}
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <FieldSelect
-                  label=""
-                  value={tracking.conversionWindowUnit}
-                  options={CONVERSION_WINDOW_UNITS}
-                  onChange={(conversionWindowUnit) => onTrackingChange({ conversionWindowUnit })}
-                />
-              </div>
-            </div>
+        <div className="ml-7 flex items-center gap-3 rounded-lg border border-[#DDE2EE] bg-[#F7F9FC] p-4">
+          <div className="min-w-0 flex-1">
+            <p className="font-manrope text-sm leading-[22px] text-[#6F6F8D]">
+              <ConversionGoalSummaryText
+                conversionEvent={tracking.conversionEvent}
+                conversionWindowValue={tracking.conversionWindowValue}
+                conversionWindowUnit={tracking.conversionWindowUnit}
+                revenueParameter={tracking.revenueParameter}
+              />
+            </p>
+            {conversionEventError && (
+              <p role="alert" className="mt-1.5 font-manrope text-xs font-medium text-[#E5484D]">
+                {conversionEventError}
+              </p>
+            )}
           </div>
-          <FieldSelect
-            label="Revenue parameter"
-            required
-            value={tracking.revenueParameter}
-            placeholder="parameter"
-            options={REVENUE_PARAMETER_OPTIONS}
-            onChange={(revenueParameter) => onTrackingChange({ revenueParameter })}
-          />
+          <button
+            type="button"
+            aria-label="Edit conversion goal"
+            onClick={() => setConversionGoalDrawerOpen(true)}
+            className="grid size-8 shrink-0 place-items-center rounded-md text-[#6F6F8D] transition-colors hover:bg-white hover:text-[#17173A]"
+          >
+            <Pencil className="size-4" strokeWidth={2} />
+          </button>
         </div>
       </FilterSection>
+
+      <ConversionGoalDrawer
+        open={conversionGoalDrawerOpen}
+        conversionEvent={tracking.conversionEvent}
+        onConversionEventChange={(conversionEvent) => onTrackingChange({ conversionEvent })}
+        conversionWindowValue={tracking.conversionWindowValue}
+        conversionWindowUnit={tracking.conversionWindowUnit}
+        onConversionWindowChange={(patch) => onTrackingChange(patch)}
+        revenueParameter={tracking.revenueParameter}
+        onRevenueParameterChange={(revenueParameter) => onTrackingChange({ revenueParameter })}
+        payloadParameters={tracking.conversionPayloadParameters}
+        onPayloadParametersChange={(patch) =>
+          onTrackingChange({
+            conversionPayloadParameters: {
+              ...tracking.conversionPayloadParameters,
+              ...patch,
+            } as ConversionPayloadParameters,
+          })
+        }
+        onClose={() => setConversionGoalDrawerOpen(false)}
+      />
     </StepCard>
   );
 }

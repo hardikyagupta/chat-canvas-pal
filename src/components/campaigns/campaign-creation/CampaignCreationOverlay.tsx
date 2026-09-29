@@ -41,11 +41,16 @@ import CampaignAIPanel, {
 import CampaignSetupStep, {
   goalLabel,
   mergeTags,
+  DEFAULT_UTM_PARAMETERS,
+  DEFAULT_KEY_VALUE_PARAMETERS,
+  DEFAULT_CONVERSION_PAYLOAD_PARAMETERS,
+  defaultUtmParameters,
   type SetupValues,
 } from "./CampaignSetupStep";
 import CampaignAssetsStep, { EMPTY_ASSETS, type AssetsValues } from "./CampaignAssetsStep";
 import CampaignAudienceStep, {
   AudienceReachablePill,
+  ConfigPendingPill,
   AudienceReachStat,
   EMPTY_AUDIENCE,
   reachFor,
@@ -68,7 +73,6 @@ import { emailTemplates } from "./emailTemplates.data";
 import { pushScenarioFor } from "./pushAIScenarios.data";
 import { emailScenarioFor } from "./emailAIScenarios.data";
 import { SEGMENT_STARTERS } from "@/components/campaigns/SegmentSuggestions";
-import AllContactsNudge from "@/components/campaigns/AllContactsNudge";
 import SegmentCreationOverlay from "@/components/campaigns/segment-creation/SegmentCreationOverlay";
 import {
   buildFindings,
@@ -295,6 +299,9 @@ const EMPTY_SETUP: SetupValues = {
   revenueParameter: "",
   audienceSuggestion: "",
   avoidDuplicateComms: false,
+  utmParameters: DEFAULT_UTM_PARAMETERS,
+  keyValueParameters: DEFAULT_KEY_VALUE_PARAMETERS,
+  conversionPayloadParameters: DEFAULT_CONVERSION_PAYLOAD_PARAMETERS,
 };
 
 /**
@@ -359,6 +366,7 @@ export default function CampaignCreationOverlay({
   // keeps a red message until an app is picked.
   const [appRequiredToast, setAppRequiredToast] = useState<string | null>(null);
   const [appRequiredTried, setAppRequiredTried] = useState(false);
+  const [conversionTried, setConversionTried] = useState(false);
   // Shown between submitting a goal on the intro and landing on the wizard —
   // the phase checklist animates while the AI draft is applied underneath.
   const [generating, setGenerating] = useState(false);
@@ -422,12 +430,6 @@ export default function CampaignCreationOverlay({
   const audienceSeeded = useRef(false);
   // Whether the open chat is the audience thread — it closes when the step does.
   const audienceChat = useRef(false);
-  // "All contacts" warning — fires once, the first time Send to is completed
-  // with that mode still picked. Once shown (or dismissed), never again for
-  // this draft, even if the user leaves and re-completes the step.
-  const [allContactsNudgeOpen, setAllContactsNudgeOpen] = useState(false);
-  const allContactsNudgeSeen = useRef(false);
-  const allContactsNudgeAnchor = useRef<HTMLDivElement>(null);
   // Scroll container + per-card nodes, so opening a card can bring its header
   // up to the top of the canvas.
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -436,8 +438,12 @@ export default function CampaignCreationOverlay({
   useEffect(() => {
     if (open) {
       setMounted(true);
-      // Each new draft gets its own timestamped name.
-      setCampaignName(newCampaignName());
+      // Each new draft gets its own timestamped name — the tracking drawer's
+      // medium/campaign defaults follow it, rather than sitting blank until
+      // the user opens that drawer and fills them in by hand.
+      const freshName = newCampaignName();
+      setCampaignName(freshName);
+      setSetup((s) => ({ ...s, utmParameters: defaultUtmParameters(channel, freshName) }));
       // Channels with a prompt screen land here via it, and its "Build from
       // scratch" opens Audience on continue — every other channel skips that
       // screen, so open Send to itself here instead of starting with every
@@ -476,12 +482,11 @@ export default function CampaignCreationOverlay({
       setSchedule({ ...EMPTY_SCHEDULE, sendAt: defaultSendAt() });
       setAudienceFlash(false);
       audienceSeeded.current = false;
-      allContactsNudgeSeen.current = false;
-      setAllContactsNudgeOpen(false);
       setAiReady(false);
       setHighlight({});
       setAppRequiredTried(false);
       setAppRequiredToast(null);
+      setConversionTried(false);
     }, SLIDE_MS);
     return () => clearTimeout(id);
   }, [open]);
@@ -666,6 +671,22 @@ export default function CampaignCreationOverlay({
     },
   }));
 
+  // Renaming from the navbar (or the Settings drawer) should carry through to
+  // the tracking drawer's own campaign value — but only while that value is
+  // still just mirroring the old name; once the user has typed something else
+  // in there themselves, a rename shouldn't clobber it.
+  const renameCampaign = (name: string) => {
+    setCampaignName(name);
+    setSetup((s) =>
+      s.utmParameters.campaign.value === campaignName
+        ? {
+            ...s,
+            utmParameters: { ...s.utmParameters, campaign: { ...s.utmParameters.campaign, value: name } },
+          }
+        : s
+    );
+  };
+
   const applySetup = (patch: Partial<SetupValues>) => {
     setSetup((s) => {
       const next = { ...s, ...patch };
@@ -730,6 +751,10 @@ export default function CampaignCreationOverlay({
         conversionWindowValue: scenario.conversionWindowValue,
         conversionWindowUnit: scenario.conversionWindowUnit,
         revenueParameter: scenario.revenueParameter,
+        utmParameters: {
+          ...s.utmParameters,
+          campaign: { ...s.utmParameters.campaign, value: scenario.campaignName },
+        },
       }));
       return;
     }
@@ -760,10 +785,15 @@ export default function CampaignCreationOverlay({
         conversionWindowValue: emailScenario.conversionWindowValue,
         conversionWindowUnit: emailScenario.conversionWindowUnit,
         revenueParameter: emailScenario.revenueParameter,
+        utmParameters: {
+          ...s.utmParameters,
+          campaign: { ...s.utmParameters.campaign, value: emailScenario.campaignName },
+        },
       }));
       return;
     }
-    setCampaignName("Re-engage Multi-View Shoppers — Free Shipping");
+    const fallbackCampaignName = "Re-engage Multi-View Shoppers — Free Shipping";
+    setCampaignName(fallbackCampaignName);
     setAudience({
       ...EMPTY_AUDIENCE,
       mode: "adhoc",
@@ -788,6 +818,10 @@ export default function CampaignCreationOverlay({
       conversionWindowValue: "7",
       conversionWindowUnit: "Days",
       revenueParameter: "Order value",
+      utmParameters: {
+        ...s.utmParameters,
+        campaign: { ...s.utmParameters.campaign, value: fallbackCampaignName },
+      },
     }));
   };
 
@@ -864,31 +898,26 @@ export default function CampaignCreationOverlay({
       setAppRequiredToast("Application is required.");
       return;
     }
-    setCompletedSteps((prev) => new Set(prev).add(id));
-    let nudging = false;
-    if (id === "audience" && audience.mode === "all" && !allContactsNudgeSeen.current) {
-      allContactsNudgeSeen.current = true;
-      setAllContactsNudgeOpen(true);
-      nudging = true;
+    if (id === "audience" && setup.conversionTracking && !setup.conversionEvent.trim()) {
+      setConversionTried(true);
+      setAppRequiredToast("Conversion goal is not selected.");
+      return;
     }
+    setCompletedSteps((prev) => new Set(prev).add(id));
     const next = index + 1;
     const nextId = next < STEPS.length ? STEPS[next].id : null;
-    setOpenStepIds((prev) => {
-      const nextSet = new Set(prev);
-      nextSet.delete(id);
-      if (nextId) nextSet.add(nextId);
-      return nextSet;
-    });
+    // Done marks the card finished and opens the next one, but leaves this
+    // card open rather than collapsing it — the next step should be one more
+    // thing to fill in, not a reason to lose sight of what was just set up.
+    if (nextId) {
+      setOpenStepIds((prev) => new Set(prev).add(nextId));
+    }
     if (!nextId) {
       setFocusStepId(null);
       return;
     }
     setFocusStepId(nextId);
-    // The nudge hangs off "Send to"'s own reach pill — chasing the next step
-    // would carry that pill up near the navbar, leaving the nudge no room to
-    // sit below it. Leave the scroll position alone while it's showing.
-    if (nudging) return;
-    // Let the collapse/expand transition run before chasing the new position.
+    // Let the expand transition run before chasing the new position.
     window.setTimeout(() => scrollToStep(nextId), 380);
   };
 
@@ -1206,7 +1235,7 @@ export default function CampaignCreationOverlay({
           channel={channel}
           icon={Icon}
           campaignName={campaignName}
-          onRenameCampaign={setCampaignName}
+          onRenameCampaign={renameCampaign}
           onContinue={() => {
             setIntroOpen(false);
             // Land on Audience open by default, same as the co-marketer
@@ -1253,12 +1282,12 @@ export default function CampaignCreationOverlay({
         aiGenerated={campaignAIGenerated}
         icon={Icon}
         channelLabel={channel}
-        onRenameCampaign={setCampaignName}
+        onRenameCampaign={renameCampaign}
         onOpenSettings={() => setSettingsOpen(true)}
         onLaunch={() => setLaunching(true)}
         onAskCoMarketer={openFreshChat}
         // Only Email drops the verb — every other channel keeps "Ask co-marketer".
-        askCoMarketerLabel={channel === "Email" ? "Co-marketer" : "Ask co-marketer"}
+        askCoMarketerLabel={channel === "Email" ? "Cori" : "Ask Cori"}
         onClose={onClose}
         steps={navbarSteps}
         activeStepId={focusStepId}
@@ -1285,10 +1314,7 @@ export default function CampaignCreationOverlay({
       >
         <div
           ref={canvasRef}
-          className={cn(
-            "scroll-hidden min-w-0 max-w-[1044px] flex-1 overflow-y-auto py-6",
-            chatOpen ? "ml-auto mr-0" : "mx-auto"
-          )}
+          className="scroll-hidden min-w-0 flex-1 overflow-y-auto py-6"
         >
           <div className="cc-accordion ov2-accordion">
             {/* Push channels can't configure Message/Schedule before at least
@@ -1354,18 +1380,13 @@ export default function CampaignCreationOverlay({
                     {/* Collapsed reach stays in its existing pill for every channel. */}
                     {step.id === "audience" && !active && (
                       <div
-                        ref={allContactsNudgeAnchor}
-                        className="relative"
+                        className="relative flex shrink-0 items-center gap-2"
                         onClick={(e) => e.stopPropagation()}
                       >
+                        <ConfigPendingPill
+                          count={setup.conversionTracking && !setup.conversionEvent.trim() ? 1 : 0}
+                        />
                         <AudienceReachablePill reach={reachFor(audience)} />
-                        {allContactsNudgeOpen && (
-                          <AllContactsNudge
-                            reach={reachFor(audience)}
-                            anchorRef={allContactsNudgeAnchor}
-                            onClose={() => setAllContactsNudgeOpen(false)}
-                          />
-                        )}
                       </div>
                     )}
                     <ChevronDown className="ov2-chevron" />
@@ -1377,7 +1398,7 @@ export default function CampaignCreationOverlay({
                     key={step.id}
                     ref={(el) => (cardRefs.current[step.id] = el)}
                     data-step-id={step.id}
-                    className={`ov2-card ${state}`}
+                    className={cn("ov2-card", state)}
                   >
                     {locked ? (
                       <TooltipProvider delayDuration={150}>
@@ -1410,35 +1431,52 @@ export default function CampaignCreationOverlay({
                           />
                         )}
                         {step.id === "audience" && (
-                          <div className="flex items-start justify-between gap-6">
-                            <div className="min-w-0 flex-1">
-                              <CampaignAudienceStep
-                                values={audience}
-                                highlight={audienceFlash}
-                                onChange={(patch) => setAudience((a) => ({ ...a, ...patch }))}
-                                tracking={{
-                                  gaTracking: setup.gaTracking,
-                                  conversionTracking: setup.conversionTracking,
-                                  conversionEvent: setup.conversionEvent,
-                                  conversionWindowValue: setup.conversionWindowValue,
-                                  conversionWindowUnit: setup.conversionWindowUnit,
-                                  revenueParameter: setup.revenueParameter,
-                                }}
-                                onTrackingChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
-                                trackingHighlight={highlight}
-                                channel={channel}
-                                appsError={
-                                  appRequiredTried && audience.selectedApps.length === 0
-                                    ? "Select at least one target app."
-                                    : undefined
-                                }
-                              />
-                            </div>
-                            {/* Sits outside CampaignAudienceStep's own StepCard so
-                                it reaches the accordion row's true right edge
-                                instead of being capped by the card's own max-width. */}
+                          <div className="relative">
+                            <CampaignAudienceStep
+                              values={audience}
+                              highlight={audienceFlash}
+                              onChange={(patch) => setAudience((a) => ({ ...a, ...patch }))}
+                              tracking={{
+                                gaTracking: setup.gaTracking,
+                                conversionTracking: setup.conversionTracking,
+                                conversionEvent: setup.conversionEvent,
+                                conversionWindowValue: setup.conversionWindowValue,
+                                conversionWindowUnit: setup.conversionWindowUnit,
+                                revenueParameter: setup.revenueParameter,
+                                utmParameters: setup.utmParameters,
+                                keyValueParameters: setup.keyValueParameters,
+                                conversionPayloadParameters: setup.conversionPayloadParameters,
+                              }}
+                              onTrackingChange={(patch) => setSetup((s) => ({ ...s, ...patch }))}
+                              trackingHighlight={highlight}
+                              channel={channel}
+                              campaignName={campaignName}
+                              appsError={
+                                appRequiredTried && audience.selectedApps.length === 0
+                                  ? "Select at least one target app."
+                                  : undefined
+                              }
+                              conversionEventError={
+                                conversionTried &&
+                                setup.conversionTracking &&
+                                !setup.conversionEvent.trim()
+                                  ? "Conversion goal is not selected."
+                                  : undefined
+                              }
+                            />
+                            {/* Pinned over the card's own top-right corner rather than
+                                sat beside it as a full-height flex column — a full-height
+                                column made every row below the first one lose that same
+                                width, even though only the top row shares this space.
+                                right-0/top-0, not right-8/top-8: campaign-creation.css
+                                zeroes StepCard's own border+p-8 inside the accordion body
+                                (avoids a double border/padding look), so this "relative"
+                                wrapper's edges already sit flush with the card's real
+                                content edges — an 8-unit inset would double-count padding
+                                that isn't actually there and misalign from the tracking
+                                box/dropdown below it. */}
                             {channel !== "App Push Notification" && (
-                              <div className="shrink-0">
+                              <div className="absolute right-0 top-0">
                                 <AudienceReachStat reach={reachFor(audience)} />
                               </div>
                             )}

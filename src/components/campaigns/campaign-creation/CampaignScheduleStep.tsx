@@ -1068,7 +1068,7 @@ export default function CampaignScheduleStep({
   }, []);
 
   return (
-    <StepCard wide>
+    <StepCard full>
       <div className="mb-6 flex items-center gap-2">
         <Clock className="size-4 shrink-0 text-[#6F6F8D]" strokeWidth={2} />
         <p className="font-manrope text-sm text-[#6F6F8D]">

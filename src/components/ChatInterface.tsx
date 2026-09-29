@@ -1854,7 +1854,7 @@ The content has been updated across all channels to reflect your changes.`;
     const coMarketer = marketingAgents.find(agent => agent.id === 'co-marketer');
     const executionMessage: ChatMessageData = {
       type: 'chat',
-      agentName: coMarketer?.name || "Co-marketer",
+      agentName: coMarketer?.name || "Cori",
       avatarSrc: coMarketer?.avatarSrc,
       avatarIcon: coMarketer?.icon,
       avatarBgClass: coMarketer?.colorClass,
@@ -1866,7 +1866,7 @@ The content has been updated across all channels to reflect your changes.`;
         setTimeout(() => {
           const followUpMessage: ChatMessageData = {
             type: 'chat',
-            agentName: coMarketer?.name || "Co-marketer",
+            agentName: coMarketer?.name || "Cori",
             avatarSrc: coMarketer?.avatarSrc,
             avatarIcon: coMarketer?.icon,
             avatarBgClass: coMarketer?.colorClass,
@@ -3123,7 +3123,7 @@ The content has been updated across all channels to reflect your changes.`;
             const aiResponse: ChatMessageData = {
               type: 'chat',
               isAI: true,
-              agentName: coMarketer?.name || 'Co-marketer',
+              agentName: coMarketer?.name || 'Cori',
               avatarIcon: coMarketer?.icon,
               avatarBgClass: coMarketer?.colorClass,
               content:
@@ -3400,7 +3400,7 @@ The content has been updated across all channels to reflect your changes.`;
             <div className="flex items-center justify-center rounded-full overflow-hidden shrink-0 size-[24px] bg-[var(--color-plum)]">
               <img
                 src="/co-marketer-logo.gif"
-                alt="Co-marketer"
+                alt="Cori"
                 className="size-full object-cover"
               />
             </div>
@@ -3408,7 +3408,7 @@ The content has been updated across all channels to reflect your changes.`;
               className="font-bold text-[16px] leading-[20px] text-[var(--color-ink)] whitespace-nowrap"
               style={{ fontFamily: "Manrope, sans-serif" }}
             >
-              Co-marketer
+              Cori
             </span>
           </div>
         </div>
@@ -3442,7 +3442,7 @@ The content has been updated across all channels to reflect your changes.`;
       <div className="flex items-center gap-3">
         <div className="flex flex-col pl-3">
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-foreground">Co-marketer</h1>
+            <h1 className="text-lg font-semibold text-foreground">Cori</h1>
           </div>
           <p className="text-xs text-muted-foreground leading-tight">Your assistant for data-driven success</p>
         </div>
@@ -4364,7 +4364,7 @@ The content has been updated across all channels to reflect your changes.`;
                       showExecuteFlowCTA={
                         index === messages.length - 1 &&
                         mockChatCompleted &&
-                        message.agentName === "Co-marketer" &&
+                        message.agentName === "Cori" &&
                         message.content.startsWith("Here's a summary of what our team has put together:") &&
                         !isMockAgentChatActive
                       }
@@ -4573,7 +4573,7 @@ The content has been updated across all channels to reflect your changes.`;
                     ) : (
                       <div className="feedback-nudge-in inline-flex items-center gap-[10px] rounded-[12px] border border-[var(--color-line)] bg-card px-[16px] py-[10px] shadow-[0px_8px_24px_-6px_oklch(0.21_0.034_263.436_/_0.22)]">
                         <span className="text-[14px] text-[var(--color-ink)] whitespace-nowrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                          Was your Co-marketer experience helpful?
+                          Was your Cori experience helpful?
                         </span>
                         <button
                           type="button"
@@ -4688,7 +4688,7 @@ The content has been updated across all channels to reflect your changes.`;
                           className="text-[12px] text-[var(--color-grey)] text-center"
                           style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                         >
-                          Co-marketer can make mistakes. Please double check responses
+                          Cori can make mistakes. Please double check responses
                         </p>
                       </div>
                     )}
@@ -4704,7 +4704,7 @@ The content has been updated across all channels to reflect your changes.`;
                   className="text-[12px] text-[var(--color-grey)] text-center w-full max-w-[768px] px-[28px]"
                   style={{ fontFamily: "Manrope, sans-serif", fontWeight: 400 }}
                 >
-                  Co-marketer can make mistakes. Please double check responses
+                  Cori can make mistakes. Please double check responses
                 </p>
               </div>
             )}
