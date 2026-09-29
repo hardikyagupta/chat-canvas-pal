@@ -21,7 +21,7 @@ export default function CampaignAssetsStep({
   onChange: (patch: Partial<AssetsValues>) => void;
 }) {
   return (
-    <StepCard wide>
+    <StepCard full>
       <MultiSelectDropdown
         label="Select asset(s)"
         required

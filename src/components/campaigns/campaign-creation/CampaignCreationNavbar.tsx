@@ -21,7 +21,7 @@ export default function CampaignCreationNavbar({
   onOpenSettings,
   onLaunch,
   onAskCoMarketer,
-  askCoMarketerLabel = "Ask co-marketer",
+  askCoMarketerLabel = "Ask Cori",
   onClose,
   steps,
   activeStepId,

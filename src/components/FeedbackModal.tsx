@@ -21,7 +21,7 @@ const CONFIG = {
     detailsLabel: '',
     detailsRequired: false,
     placeholder: 'Share details (optional)',
-    footer: 'Your feedback helps improve Co-marketer.',
+    footer: 'Your feedback helps improve Cori.',
     submit: 'Submit',
   },
   down: {

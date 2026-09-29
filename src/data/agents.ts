@@ -26,11 +26,11 @@ export interface MarketingAgent {
 export const marketingAgents: MarketingAgent[] = [
   {
     id: "co-marketer",
-    name: "Co-marketer",
+    name: "Cori",
     description: "Helps plan and optimize marketing campaigns",
     avatarSrc: "/AgentIcons/Co-Marketer.svg",
     icon: Bot, // Lucide icon as fallback
-    initials: "CM",
+    initials: "CO",
     colorClass: pastelColorClasses[0],
   },
   {
