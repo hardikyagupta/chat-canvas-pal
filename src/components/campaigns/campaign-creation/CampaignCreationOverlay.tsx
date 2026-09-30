@@ -72,6 +72,18 @@ import CampaignScheduleStep, {
 import { emailTemplates } from "./emailTemplates.data";
 import { pushScenarioFor } from "./pushAIScenarios.data";
 import { emailScenarioFor } from "./emailAIScenarios.data";
+import {
+  WELCOME_SEGMENT_CONDITIONS,
+  WELCOME_SEGMENT_REACH,
+  welcomeSegmentTopic,
+  welcomeCraftMessageTopic,
+  welcomeTemplatesTopic,
+  welcomeSubjectOptionsTopic,
+  welcomeScheduleChoiceTopic,
+  welcomeSendTimeRecommendationTopic,
+  welcomeRecommendedSendAt,
+  welcomeSummaryTopic,
+} from "./welcomeNewCustomersFlow.data";
 import { SEGMENT_STARTERS } from "@/components/campaigns/SegmentSuggestions";
 import SegmentCreationOverlay from "@/components/campaigns/segment-creation/SegmentCreationOverlay";
 import {
@@ -658,6 +670,15 @@ export default function CampaignCreationOverlay({
     label: starter.title,
     icon: Users,
     onSelect: () => {
+      // This one chip runs the scripted, autonomous walkthrough instead of
+      // replaying the Segment agent's thread — segment straight onto the
+      // form, then a chained SeededTopic sequence through template, subject,
+      // and schedule (see welcomeNewCustomersFlow.data.ts).
+      if (!isPushChannel && starter.title === "Welcome new customers") {
+        audienceChat.current = true;
+        openTopic(welcomeSegmentTopic(), true);
+        return;
+      }
       audienceChat.current = true;
       setChatVariant("segments");
       setChatMessage(starter.prompt);
@@ -1163,10 +1184,82 @@ export default function CampaignCreationOverlay({
         followUpTopic={followUpTopic}
         followUpSeq={followUpSeq}
         onAskFinding={(finding) => openTopic(findingTopic(finding))}
-        onSetupApply={(card, cohortId) => {
-          const cohort = card.cohorts?.find((c) => c.id === cohortId);
+        onSetupApply={(card, selectedId) => {
+          const cohort = card.cohorts?.find((c) => c.id === selectedId);
           if (cohort) {
             applyCohort(cohort);
+            return;
+          }
+          // The "Welcome new customers" walkthrough's own chain — each card
+          // both patches real form state and opens the next scripted topic.
+          if (card.kind === "audience" && card.title === "Audience match") {
+            setAudience((a) => ({
+              ...a,
+              mode: "adhoc",
+              conditions: WELCOME_SEGMENT_CONDITIONS,
+              conditionsReach: WELCOME_SEGMENT_REACH,
+            }));
+            openTopic(welcomeCraftMessageTopic());
+            return;
+          }
+          if (card.kind === "cta" && card.title === "Craft the message") {
+            setOpenStepIds((prev) => new Set(prev).add("content"));
+            setFocusStepId("content");
+            window.setTimeout(() => scrollToStep("content"), 380);
+            openTopic(welcomeTemplatesTopic());
+            return;
+          }
+          if (card.templates) {
+            const tpl = card.templates.find((t) => String(t.templateId) === selectedId);
+            if (tpl) {
+              applyContent({ templateId: tpl.templateId });
+              openTopic(welcomeSubjectOptionsTopic(tpl.name));
+            }
+            return;
+          }
+          if (card.subjectOptions) {
+            const opt = card.subjectOptions[Number(selectedId)];
+            if (opt) {
+              applyContent({ subject: opt.subject, preHeader: opt.preHeader });
+              setOpenStepIds((prev) => new Set(prev).add("schedule"));
+              setFocusStepId("schedule");
+              window.setTimeout(() => scrollToStep("schedule"), 380);
+              openTopic(welcomeScheduleChoiceTopic(opt.subject));
+            }
+            return;
+          }
+          if (card.kind === "scheduleChoice") {
+            if (selectedId === "optimize") {
+              setSchedule((s) => ({ ...s, mode: "optimize", optimizeWindow: "Next 24 hours" }));
+              openTopic(welcomeSendTimeRecommendationTopic());
+            } else {
+              window.setTimeout(() => scrollToStep("schedule"), 380);
+            }
+            return;
+          }
+          if (card.kind === "sendTimeRecommendation") {
+            if (selectedId === "use") {
+              setSchedule((s) => ({ ...s, mode: "later", sendAt: welcomeRecommendedSendAt() }));
+              const templateName = emailTemplates.find((t) => t.id === content.templateId)?.name ?? "your template";
+              openTopic(
+                welcomeSummaryTopic({
+                  templateName,
+                  subject: content.subject,
+                  sendTimeLabel: "Tomorrow at 10:30 AM",
+                })
+              );
+            } else {
+              setOpenStepIds((prev) => new Set(prev).add("schedule"));
+              setFocusStepId("schedule");
+              window.setTimeout(() => scrollToStep("schedule"), 380);
+            }
+            return;
+          }
+          if (card.kind === "cta" && card.title === "Launch campaign") {
+            // Same action as the navbar's own Launch button — the launching
+            // pop-up still runs its full course before the campaign lands on
+            // the listing page, so this isn't a silent bypass of that step.
+            setLaunching(true);
             return;
           }
           if (card.contentPatch) {
