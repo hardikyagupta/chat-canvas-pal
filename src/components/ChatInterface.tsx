@@ -163,6 +163,14 @@ interface ChatMessageData {
   findings?: Finding[];
 }
 
+// Distance (px) from the true bottom still counted as "at the bottom" — for
+// deciding whether new content should auto-scroll into view or wait for an
+// explicit "scroll to latest" click. Generous on purpose: a card can land in
+// one mutation (not a typed character at a time), so the gap can jump by
+// more than a couple of lines in a single step without the user having
+// actually scrolled away to reread something.
+const NEAR_BOTTOM_PX = 400;
+
 // Props for the main ChatInterface component
 interface ChatInterfaceProps {
   onBotIconClick?: () => void; // Handler for agent selection overlay toggle in widget view
@@ -267,6 +275,11 @@ export interface SeededTopic {
    */
   agentId?: string;
   reasoningSteps?: string[];
+  /** Overrides the hand-off header's default one-line saying for this
+   *  specific topic (AgentThreadHeader's own AGENT_SAYINGS lookup otherwise
+   *  applies to every hand-off to that agent, regardless of what it's doing
+   *  this time). */
+  agentSaying?: string;
 }
 
 /** The campaign handed over by the co-marketer review banner. */
@@ -386,6 +399,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  // Whether new content should keep following to the bottom. True until the
+  // user scrolls away on their own — checked against NEAR_BOTTOM_PX, not
+  // "genuinely user-driven vs our own write", since a whole stack of cards
+  // (e.g. three template recommendations landing in one mutation) can grow
+  // the container by more than any one threshold would forgive; once stuck,
+  // it stays stuck through the whole burst rather than re-litigating each
+  // mutation against the gap it just created. programmaticScrollRef flags a
+  // scroll event this effect caused itself, so the 'scroll' listener (which
+  // also fires for our own scrollTop writes) doesn't mistake it for the user
+  // scrolling away and unstick.
+  const stickToBottomRef = useRef(true);
+  const programmaticScrollRef = useRef(false);
   const [isMockAgentChatActive, setIsMockAgentChatActive] = useState(false);
   // Briefly shimmers the input after every send (survives the empty→conversation input swap)
   const [inputShimmer, setInputShimmer] = useState(false);
@@ -1227,42 +1252,65 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   }, [messages]);
 
   const scrollToBottom = () => {
+    stickToBottomRef.current = true;
+    programmaticScrollRef.current = true;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     setShowScrollButton(false); // Hide button after scrolling
   };
 
-  // Detect if user is near bottom of chat and show/hide scroll button
+  // Detect if the user has scrolled away from the bottom on their own —
+  // once they have, new content waits for the explicit "scroll to latest"
+  // click instead of yanking their view back down.
   useEffect(() => {
     const chatContainer = chatContainerRef.current;
     if (!chatContainer) return;
 
     const handleScroll = () => {
+      // This 'scroll' event was caused by our own scrollTop write below
+      // (or scrollToBottom's scrollIntoView), not the user — consume the
+      // flag and leave stickToBottomRef exactly as we just set it.
+      if (programmaticScrollRef.current) {
+        programmaticScrollRef.current = false;
+        return;
+      }
       const { scrollTop, scrollHeight, clientHeight } = chatContainer;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < NEAR_BOTTOM_PX;
+      stickToBottomRef.current = isNearBottom;
       setShowScrollButton(!isNearBottom);
       // Reveal the top fade only once content has scrolled up under the header.
       setIsChatScrolled(scrollTop > 4);
     };
 
     chatContainer.addEventListener('scroll', handleScroll);
-    
+
     return () => chatContainer.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Monitor content changes and show scroll button when content overflows
+  // Follow new content to the bottom while the user hasn't scrolled away.
   useEffect(() => {
     const chatContainer = chatContainerRef.current;
     if (!chatContainer) return;
 
     const checkScrollButton = () => {
-      const { scrollTop, scrollHeight, clientHeight } = chatContainer;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-      
-      // Show button if content exceeds viewport and user is not at bottom
-      if (scrollHeight > clientHeight && !isNearBottom) {
-        setShowScrollButton(true);
-      } else if (isNearBottom) {
+      const { scrollHeight, clientHeight } = chatContainer;
+
+      // Stuck to the bottom — keep following through the whole burst of
+      // content (reasoning steps, streamed reply, then however many cards
+      // land with it), not just one mutation at a time. A stack of several
+      // template/subject cards can grow the container by far more than any
+      // one mutation's "was I near the bottom before this" check would
+      // forgive, so once stuck, stay stuck until the user actually scrolls
+      // away themselves (handleScroll above is what un-sticks it).
+      if (stickToBottomRef.current) {
+        if (chatContainer.scrollTop !== scrollHeight) {
+          programmaticScrollRef.current = true;
+          chatContainer.scrollTop = scrollHeight;
+        }
         setShowScrollButton(false);
+        return;
+      }
+      if (scrollHeight > clientHeight) {
+        setShowScrollButton(true);
       }
     };
 
@@ -3185,6 +3233,7 @@ The content has been updated across all channels to reflect your changes.`;
           type: 'chat', isAI: true, content: '',
           isAgentSwitch: true,
           switchAgentLabel: specialist.name,
+          switchSaying: topic.agentSaying,
           reasoningSteps: steps,
           avatarSrc: specialist.avatarSrc,
           avatarIcon: specialist.icon,
