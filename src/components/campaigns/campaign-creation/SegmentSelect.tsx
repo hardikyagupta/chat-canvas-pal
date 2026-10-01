@@ -314,13 +314,13 @@ export default function SegmentSelect({
                         }
                       }}
                       className={cn(
-                        "group flex w-full cursor-pointer items-start gap-2.5 px-3 py-2 text-left transition-colors",
+                        "group flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left transition-colors",
                         on ? "bg-[#F4F8FF]" : "hover:bg-[#F7F9FC]"
                       )}
                     >
                       <span
                         className={cn(
-                          "mt-0.5 grid size-4 shrink-0 place-items-center rounded border-2",
+                          "grid size-4 shrink-0 place-items-center rounded border-2",
                           on ? "border-[#2F68E5] bg-[#2F68E5]" : "border-[#C3CAD9] bg-white"
                         )}
                       >
@@ -336,11 +336,11 @@ export default function SegmentSelect({
                           </svg>
                         )}
                       </span>
-                      <span className="flex min-w-0 flex-1 items-start gap-1.5">
+                      <span className="flex min-w-0 flex-1 items-center gap-1.5">
                         {o.ai && (
-                          <Sparkles className="mt-0.5 size-3 shrink-0 text-[#7B5CFA]" strokeWidth={2.2} />
+                          <Sparkles className="size-3 shrink-0 text-[#7B5CFA]" strokeWidth={2.2} />
                         )}
-                        <span className="break-words font-manrope text-[13px] text-[#17173A]">
+                        <span className="break-words font-manrope text-[13px] leading-5 text-[#17173A]">
                           {o.name}{" "}
                           <span className="font-manrope text-xs text-[#6F6F8D]">
                             ({nf.format(o.reach)})
@@ -354,7 +354,7 @@ export default function SegmentSelect({
                                   e.stopPropagation();
                                   onViewSegment?.(o);
                                 }}
-                                className="ml-1 inline-grid size-5 -translate-y-px shrink-0 place-items-center rounded text-[#8A8AA3] opacity-0 transition-opacity hover:bg-[#EDF1FF] hover:text-[#2F68E5] group-hover:opacity-100 group-focus-within:opacity-100"
+                                className="ml-1 inline-grid size-5 shrink-0 translate-y-px place-items-center rounded text-[#8A8AA3] opacity-0 transition-opacity hover:bg-[#EDF1FF] hover:text-[#2F68E5] group-hover:opacity-100 group-focus-within:opacity-100"
                               >
                                 <Eye className="size-3.5" strokeWidth={2} />
                               </button>
