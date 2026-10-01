@@ -57,7 +57,7 @@ export interface AudienceValues {
 }
 
 export const EMPTY_AUDIENCE: AudienceValues = {
-  mode: "all",
+  mode: "segments",
   segments: [],
   // No condition by default — the user picks the first attribute from the picker.
   conditions: [],
@@ -812,11 +812,13 @@ export default function CampaignAudienceStep({
         checked={values.excludeEnabled}
         onChange={(v) => onChange({ excludeEnabled: v })}
       >
-        <SegmentSelect
-          value={values.excludeSegments}
-          onChange={(excludeSegments) => onChange({ excludeSegments })}
-        />
-        <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">Select upto 15 list / segment</p>
+        <div className="ml-7">
+          <SegmentSelect
+            value={values.excludeSegments}
+            onChange={(excludeSegments) => onChange({ excludeSegments })}
+          />
+          <p className="mt-1.5 font-manrope text-xs text-[#6F6F8D]">Select upto 15 list / segment</p>
+        </div>
       </FilterSection>
 
       <FilterSection
