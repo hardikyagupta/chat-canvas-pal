@@ -18,7 +18,7 @@ export interface Segment {
 export const segments: Segment[] = [
   {
     id: 635,
-    name: "before enable flexible fun_Pro ...",
+    name: "Before-enable flexible funnel — Pro plan prospects",
     createdOn: "Aug 13, 2026 12:24 PM",
     refreshedOn: "Aug 13, 2026 12:24 PM",
     userCount: 206258,
@@ -29,7 +29,7 @@ export const segments: Segment[] = [
   },
   {
     id: 634,
-    name: "before enable flexible fun_Pro ...",
+    name: "Before-enable flexible funnel — Pro trial expiring soon",
     createdOn: "Aug 13, 2026 12:22 PM",
     refreshedOn: "Aug 13, 2026 12:22 PM",
     userCount: 61,

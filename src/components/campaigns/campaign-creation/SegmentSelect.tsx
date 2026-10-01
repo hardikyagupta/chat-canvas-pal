@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Search, Sparkles, X } from "lucide-react";
+import { ChevronDown, Eye, Plus, Search, Sparkles, X } from "lucide-react";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { cn } from "@/lib/utils";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { segments } from "../segments.data";
 
 /** Why the co-marketer plotted a cut — shown on hover over its chip. */
@@ -123,11 +125,19 @@ export default function SegmentSelect({
   onChange,
   placeholder = "Select list / segment",
   max = 15,
+  onNewSegment,
+  onNewList,
+  onViewSegment,
 }: {
   value: SegmentRef[];
   onChange: (next: SegmentRef[]) => void;
   placeholder?: string;
   max?: number;
+  /** Footer shortcuts under the options — not wired to a real flow yet. */
+  onNewSegment?: () => void;
+  onNewList?: () => void;
+  /** The option row's hover-only eye icon — not wired to a real flow yet. */
+  onViewSegment?: (segment: SegmentRef) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -288,21 +298,29 @@ export default function SegmentSelect({
                   No list or segment matches that.
                 </p>
               ) : (
-                options.map((o) => {
+                <TooltipProvider delayDuration={200}>
+                {options.map((o) => {
                   const on = value.some((v) => v.id === o.id);
                   return (
-                    <button
+                    <div
                       key={o.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => toggle(o)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggle(o);
+                        }
+                      }}
                       className={cn(
-                        "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                        "group flex w-full cursor-pointer items-start gap-2.5 px-3 py-2 text-left transition-colors",
                         on ? "bg-[#F4F8FF]" : "hover:bg-[#F7F9FC]"
                       )}
                     >
                       <span
                         className={cn(
-                          "grid size-4 shrink-0 place-items-center rounded border-2",
+                          "mt-0.5 grid size-4 shrink-0 place-items-center rounded border-2",
                           on ? "border-[#2F68E5] bg-[#2F68E5]" : "border-[#C3CAD9] bg-white"
                         )}
                       >
@@ -318,21 +336,63 @@ export default function SegmentSelect({
                           </svg>
                         )}
                       </span>
-                      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <span className="flex min-w-0 flex-1 items-start gap-1.5">
                         {o.ai && (
-                          <Sparkles className="size-3 shrink-0 text-[#7B5CFA]" strokeWidth={2.2} />
+                          <Sparkles className="mt-0.5 size-3 shrink-0 text-[#7B5CFA]" strokeWidth={2.2} />
                         )}
-                        <span className="truncate font-manrope text-[13px] text-[#17173A]">
-                          {o.name}
+                        <span className="break-words font-manrope text-[13px] text-[#17173A]">
+                          {o.name}{" "}
+                          <span className="font-manrope text-xs text-[#6F6F8D]">
+                            ({nf.format(o.reach)})
+                          </span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label={`View ${o.name}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onViewSegment?.(o);
+                                }}
+                                className="ml-1 inline-grid size-5 -translate-y-px shrink-0 place-items-center rounded text-[#8A8AA3] opacity-0 transition-opacity hover:bg-[#EDF1FF] hover:text-[#2F68E5] group-hover:opacity-100 group-focus-within:opacity-100"
+                              >
+                                <Eye className="size-3.5" strokeWidth={2} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              sideOffset={6}
+                              className="overflow-visible rounded-lg border-0 bg-black px-2.5 py-1.5 text-white shadow-none"
+                            >
+                              <p className="font-manrope text-xs leading-[18px]">View segment</p>
+                              <TooltipPrimitive.Arrow className="fill-black" width={8} height={5} />
+                            </TooltipContent>
+                          </Tooltip>
                         </span>
                       </span>
-                      <span className="shrink-0 font-manrope text-xs text-[#6F6F8D]">
-                        {nf.format(o.reach)}
-                      </span>
-                    </button>
+                    </div>
                   );
-                })
+                })}
+                </TooltipProvider>
               )}
+            </div>
+            <div className="flex items-center gap-4 border-t border-[#EEF1F7] px-3 py-2.5">
+              <button
+                type="button"
+                onClick={onNewSegment}
+                className="flex items-center gap-1 font-manrope text-[13px] font-semibold text-[#2F68E5] hover:text-[#255ad2]"
+              >
+                <Plus className="size-3.5" strokeWidth={2.4} />
+                New segment
+              </button>
+              <button
+                type="button"
+                onClick={onNewList}
+                className="flex items-center gap-1 font-manrope text-[13px] font-semibold text-[#2F68E5] hover:text-[#255ad2]"
+              >
+                <Plus className="size-3.5" strokeWidth={2.4} />
+                New list
+              </button>
             </div>
           </div>,
           document.body

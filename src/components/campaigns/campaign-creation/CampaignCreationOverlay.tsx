@@ -1379,8 +1379,6 @@ export default function CampaignCreationOverlay({
         onOpenSettings={() => setSettingsOpen(true)}
         onLaunch={() => setLaunching(true)}
         onAskCoMarketer={openFreshChat}
-        // Only Email drops the verb — every other channel keeps "Ask co-marketer".
-        askCoMarketerLabel={channel === "Email" ? "Cori" : "Ask Cori"}
         onClose={onClose}
         steps={navbarSteps}
         activeStepId={focusStepId}
