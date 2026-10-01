@@ -606,21 +606,6 @@ export default function CampaignAudienceStep({
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <button
             type="button"
-            onClick={() => onChange({ mode: "all" })}
-            className="flex items-center gap-2.5 text-left"
-          >
-            <Radio checked={values.mode === "all"} />
-            <span
-              className={cn(
-                "font-manrope text-sm text-[#17173A]",
-                values.mode === "all" ? "font-semibold" : "font-medium"
-              )}
-            >
-              All contacts
-            </span>
-          </button>
-          <button
-            type="button"
             onClick={() => onChange({ mode: values.mode === "all" ? "segments" : values.mode })}
             className="flex items-center gap-2.5 text-left"
           >
@@ -632,6 +617,21 @@ export default function CampaignAudienceStep({
               )}
             >
               Filter by
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange({ mode: "all" })}
+            className="flex items-center gap-2.5 text-left"
+          >
+            <Radio checked={values.mode === "all"} />
+            <span
+              className={cn(
+                "font-manrope text-sm text-[#17173A]",
+                values.mode === "all" ? "font-semibold" : "font-medium"
+              )}
+            >
+              All contacts
             </span>
           </button>
         </div>
