@@ -529,6 +529,266 @@ export const STARTER_AGENTS: CustomAgent[] = [
     isBuiltIn: true,
     usage: { runs: 57, successRate: 92, repeatUsage: 45, avgCompletionSeconds: 134 },
   },
+  {
+    id: 'starter-journey-review',
+    name: 'Journey review agent',
+    description: 'QAs a journey against its own trigger, node and branch rules before it goes live.',
+    instructions:
+      'You are a journey QA reviewer. Walk the whole flow — trigger, every node, every Yes/No branch — and check each against its own configured rules rather than a generic checklist: is the trigger actually set with valid filters, does every node have real content (not a still-default label), do condition rules avoid contradictions, does every branch lead somewhere on purpose. Report findings as Blocker / Warning / Note, most severe first, each tied to its node’s position in the tree. End with one line: Ready to activate — YES / NO / YES WITH WARNINGS, NO only when there is a Blocker. Do not edit the journey yourself unless asked to after the review.',
+    files: [],
+    updatedAt: '1d',
+    avatarSrc: generateAgentAvatar('Journey review agent'),
+    starterPrompt: 'Review my journey before I activate it.',
+    tools: {
+      domains: { campaigns: false, journeys: true, segments: false },
+      capabilities: { generateReports: false, brandWiki: false, deepResearch: false, memory: false },
+      visibility: 'workspace',
+    },
+    starterQuestions: [
+      'Review this journey before I activate it',
+      'Is this journey ready to go live?',
+      'Check the abandoned-cart journey for gaps',
+      'Which branches in this journey are dead ends?',
+    ],
+    promptGroups: [
+      {
+        label: 'Pre-launch QA',
+        icon: 'activity',
+        header: 'Check before it goes live',
+        prompts: [
+          'Review my journey before I activate it.',
+          'Is this journey ready to go live?',
+          'What would block this journey from activating cleanly?',
+        ],
+      },
+      {
+        label: 'Trigger & conditions',
+        icon: 'search',
+        header: 'Check the setup',
+        prompts: [
+          'Is the trigger on this journey configured correctly?',
+          'Are any of the conditions in this journey contradictory?',
+          'Which nodes are still showing default, unconfigured content?',
+        ],
+      },
+      {
+        label: 'Branches',
+        icon: 'sparkles',
+        header: 'Check every path',
+        prompts: [
+          'Which branches in this journey are dead ends?',
+          'Does every Yes/No path lead somewhere intentional?',
+          'Summarize the full flow tree for this journey.',
+        ],
+      },
+    ],
+    isBuiltIn: true,
+  },
+  {
+    id: 'starter-connector-agent',
+    name: 'Connector agent',
+    description: 'Connects a journey step to an external API — no code, just a method, URL, and which response fields to use.',
+    instructions:
+      'Purpose: you are the Connector node’s agent — you let a journey step call an external API without the user writing or reading any code. You collect the API configuration directly from the user: the HTTP method (GET, POST, PUT, or DELETE), the webhook/API URL, URL parameters as key-value pairs (e.g. customer_id → {{customer.id}}), headers as key-value pairs (e.g. Content-Type → application/json), authorization as key-value pairs or configured credentials (e.g. Authorization → Bearer {{API_KEY}}), and — only when the method needs one — a request body. The user also tells you which value(s) they want back out of the response, e.g. loyalty_points.\n\nResponsibilities, in order: (1) validate the configuration — the method is one of GET/POST/PUT/DELETE, the URL is present and well-formed, required parameters/headers/authorization are set, and a body is supplied when the method needs one; (2) build the request from the selected method plus its parameters, headers, and authorization; (3) execute the request securely; (4) read and parse the response; (5) check its status; (6) on success, extract exactly the fields the user asked for and convert them into structured journey variables, preserving the response’s own field names so they show up as pickable variables when the user builds a condition afterward (e.g. a response of {"loyalty_points": 72} becomes loyalty_points = 72, usable as IF loyalty_points > 50); (7) on failure — invalid configuration, an authentication failure, a timeout, or a non-success response — report that failure clearly (status, what went wrong, which field of the config caused it if known) and do not let the journey continue on incomplete or invalid response data.\n\nAlways return, on success: API status, the parsed response, the specific fields requested, and those values in a form later journey nodes can read. Never ask the user to write code, inspect raw payloads, or debug the request themselves — they only ever provide the method, URL, parameters, headers, authorization, optional body, and the response field(s) they care about; you handle everything else.',
+    files: [],
+    updatedAt: 'now',
+    avatarSrc: generateAgentAvatar('Connector agent'),
+    starterPrompt: 'Help me connect this journey step to an external API.',
+    tools: {
+      domains: { campaigns: false, journeys: true, segments: false },
+      capabilities: { generateReports: false, brandWiki: false, deepResearch: false, memory: false },
+      visibility: 'workspace',
+    },
+    starterQuestions: [
+      'Help me connect to an external API',
+      'What do I need to provide to call my API?',
+      'How do I use the response in a condition?',
+      'Why did my API call fail?',
+    ],
+    promptGroups: [
+      {
+        label: 'Set up the call',
+        icon: 'sparkles',
+        header: 'Configure the request',
+        prompts: [
+          'Help me connect this journey step to an external API.',
+          'What do I need to provide to call my API?',
+          'How do I authenticate my request securely?',
+        ],
+      },
+      {
+        label: 'Use the response',
+        icon: 'search',
+        header: 'Work with what comes back',
+        prompts: [
+          'How do I use the response in a condition?',
+          'Which fields from my API response can I use later in the journey?',
+          'Show me an example of the structured output.',
+        ],
+      },
+      {
+        label: 'When it fails',
+        icon: 'activity',
+        header: 'Handle errors',
+        prompts: [
+          'Why did my API call fail?',
+          'What happens to the journey if the API times out?',
+          'How do I tell a bad config from an auth failure?',
+        ],
+      },
+    ],
+    isBuiltIn: true,
+  },
+  {
+    id: 'starter-audience-split',
+    name: 'Audience split agent',
+    description: 'Adds a 4-way, 40/30/20/10 audience split node to a journey — no manual setup needed.',
+    instructions:
+      'Purpose: you are the Audience Split node’s agent. The moment "Audience split" is added to a journey canvas, it automatically divides the incoming audience into four fixed paths — 40%, 30%, 20%, and 10% — with no percentages to enter and nothing to configure first. Each of the four paths opens as its own independent, extendable branch (four open connection points, the same way a Yes/No condition opens two), ready for the user to drag or "+" in whatever comes next on that path — Email, SMS, Wait, another condition, anything.\n\nUse cases: (1) weighted multivariate testing, e.g. 40% stays on the proven message while the remaining 60% is staged across three alternate treatments; (2) progressive rollout of a new offer or channel, sending the bulk of the audience (40%) through the safe path and smaller slices (30/20/10) through newer variants; (3) any journey that needs more than a binary split without hand-building multiple condition nodes and manually balancing percentages each time.\n\nWhen a user talks to you, help them decide what to put on each of the four paths given their goal — which path should carry the control/primary treatment (usually the 40%), and what the smaller paths should test or roll out. Do not suggest changing the 40/30/20/10 weighting itself unless the user explicitly asks for a different split — that ratio is this node’s fixed default, not a per-use choice.',
+    files: [],
+    updatedAt: 'now',
+    avatarSrc: generateAgentAvatar('Audience split agent'),
+    starterPrompt: 'What does the audience split node do, and how should I use its four paths?',
+    tools: {
+      domains: { campaigns: false, journeys: true, segments: true },
+      capabilities: { generateReports: false, brandWiki: false, deepResearch: false, memory: false },
+      visibility: 'workspace',
+    },
+    starterQuestions: [
+      'What does the audience split node do?',
+      'What should I put on each of the 4 paths?',
+      'Which path should carry my main treatment?',
+      'Is 40/30/20/10 right for what I’m testing?',
+    ],
+    promptGroups: [
+      {
+        label: 'How it works',
+        icon: 'sparkles',
+        header: 'Understand the node',
+        prompts: [
+          'What does the audience split node do?',
+          'Why is the split fixed at 40/30/20/10?',
+          'How do the 4 paths connect to the rest of my journey?',
+        ],
+      },
+      {
+        label: 'Plan the paths',
+        icon: 'users',
+        header: 'Fill in the 4 paths',
+        prompts: [
+          'What should I put on each of the 4 paths?',
+          'Which path should carry my main treatment?',
+          'Suggest a different action for each of the 4 paths.',
+        ],
+      },
+      {
+        label: 'Fit for purpose',
+        icon: 'trending-up',
+        header: 'Check it fits your goal',
+        prompts: [
+          'Is 40/30/20/10 right for what I’m testing?',
+          'Is my audience big enough to split 4 ways?',
+          'What should I watch once this split is live?',
+        ],
+      },
+    ],
+    isBuiltIn: true,
+  },
+  {
+    id: 'starter-journey-experiment',
+    name: 'Journey Optimization Agent',
+    description:
+      'Analyzes an existing Journey to identify optimization opportunities, explains the likely impact and cause in plain language, and helps marketers validate improvements through controlled experiments before rolling them out.',
+    instructions:
+      'You are the Journey Optimization Agent. Goal: analyze an existing Journey, identify potential optimization opportunities using the available journey/performance data, explain the impact and likely cause in simple language, and help the marketer validate improvements through controlled experiments.\n\n' +
+      'Rules: ' +
+      '(1) analyze the selected node and its surrounding journey context before making a recommendation; ' +
+      '(2) prioritize measurable optimization opportunities such as conversion drop-offs, engagement issues, timing, audience conditions, or journey-step performance; ' +
+      '(3) always explain what is happening, why it may be happening, and what could be changed; ' +
+      '(4) clearly distinguish observed data from hypotheses or recommendations; ' +
+      '(5) never fabricate metrics, customer behavior, or causal explanations when data is unavailable — say plainly that there isn\'t enough data instead; ' +
+      '(6) do not automatically apply changes to the live journey; ' +
+      '(7) treat AI recommendations as hypotheses that should be validated, not guaranteed improvements; ' +
+      '(8) use A/B experimentation when the user wants to validate a proposed change; ' +
+      '(9) keep the existing journey as the Control / Version B; ' +
+      '(10) create the proposed change as the Variant / Version A; ' +
+      '(11) allow the marketer to decide the audience split and success metric; ' +
+      '(12) ask questions one at a time and adapt the next question based on the user\'s response, rather than presenting every field at once; ' +
+      '(13) always allow the user to provide their own idea when the available options don\'t match what they want; ' +
+      '(14) before creating an experiment, show the complete experiment summary and require user confirmation; ' +
+      '(15) after the experiment runs, let the marketer compare Version A vs Version B using actual performance data before deciding whether to apply the change to the full journey.',
+    files: [],
+    updatedAt: 'now',
+    avatarSrc: generateAgentAvatar('Journey Optimization Agent'),
+    starterPrompt: 'Help me find an optimization opportunity in this journey and test it.',
+    tools: {
+      domains: { campaigns: false, journeys: true, segments: false },
+      capabilities: { generateReports: false, brandWiki: false, deepResearch: false, memory: false },
+      visibility: 'workspace',
+    },
+    starterQuestions: [
+      'What can I optimize in this journey?',
+      'Why is this email underperforming?',
+      'Help me test a shorter wait time before my email',
+      'Show me the results of my running experiment',
+    ],
+    promptGroups: [
+      {
+        label: 'Propose a change',
+        icon: 'sparkles',
+        header: 'Start an experiment',
+        prompts: [
+          'The conversion rate is low — help me test a fix.',
+          'Test reducing the wait time before my email.',
+          'What part of this journey should I experiment with?',
+        ],
+      },
+      {
+        label: 'Audience & metric',
+        icon: 'users',
+        header: 'Set up the test',
+        prompts: [
+          'What audience split should I start with?',
+          'What’s a safe percentage to test a risky change on?',
+          'Which metric should I use to judge this experiment?',
+        ],
+      },
+      {
+        label: 'Read results',
+        icon: 'trending-up',
+        header: 'Decide what’s next',
+        prompts: [
+          'Show me the results of my running experiment.',
+          'Is this difference actually significant?',
+          'Help me set up another variation to try.',
+        ],
+      },
+    ],
+    isBuiltIn: true,
+  },
+  {
+    id: 'starter-path-advisor',
+    name: 'Path Advisor',
+    description:
+      'Looks at a journey\'s branches and wait steps and suggests which path a given segment of contacts is most likely to convert on.',
+    instructions:
+      'You are Path Advisor. Goal: review a journey\'s branches (splits, waits, channel choices) and recommend which path is likely best for a given audience or goal, explaining the reasoning in plain language. Never fabricate metrics — say plainly when there isn\'t enough data.',
+    files: [],
+    updatedAt: 'now',
+    avatarSrc: generateAgentAvatar('Path Advisor'),
+    starterPrompt: 'Which path in this journey should I send my highest-intent contacts down?',
+    tools: {
+      domains: { campaigns: false, journeys: true, segments: false },
+      capabilities: { generateReports: false, brandWiki: false, deepResearch: false, memory: false },
+      visibility: 'workspace',
+    },
+    starterQuestions: [
+      'Which branch of this journey converts best?',
+      'What path should a high-intent contact take?',
+      'Where should I route contacts who don\'t open the first email?',
+    ],
+    isBuiltIn: true,
+  },
 ];
 
 /** User-created agents — empty on first load; starter agents live in STARTER_AGENTS. */

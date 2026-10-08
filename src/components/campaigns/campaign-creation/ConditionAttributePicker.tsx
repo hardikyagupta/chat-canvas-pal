@@ -142,6 +142,11 @@ const CATEGORIES: AttributeCategory[] = [
   },
 ];
 
+/** The "User attributes" category's own fields (Email, City, Lifetime
+ *  orders, …) — reused as-is by the Email node's "User attribute"
+ *  personalize menu (see PersonalizeInput.tsx) rather than a parallel list. */
+export const USER_ATTRIBUTES = CATEGORIES.find((c) => c.label === "User attributes")!.attributes;
+
 /** Attribute labels the Conditions row lets you qualify with "at least N times". */
 export const COUNTABLE_ATTRIBUTES = new Set(
   CATEGORIES.flatMap((c) => c.attributes)
@@ -215,12 +220,17 @@ export default function ConditionAttributePicker({
   value,
   onSelect,
   variant = "add",
+  categories,
 }: {
   /** Current attribute, shown on the chip variant. */
   value?: string;
   onSelect: (attribute: ConditionAttribute) => void;
   /** "add" is the blank-state trigger; "chip" edits an existing row. */
   variant?: "add" | "chip";
+  /** Restricts both the tab row and the list to these category labels
+   *  (e.g. ["Engagement", "Behaviour"] for an events-only picker) — omit
+   *  for the full attribute set (the audience-condition picker's default). */
+  categories?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("All");
@@ -285,9 +295,15 @@ export default function ConditionAttributePicker({
     }
   }, [open]);
 
+  const visibleCategories = useMemo(
+    () => (categories ? CATEGORIES.filter((c) => categories.includes(c.label)) : CATEGORIES),
+    [categories],
+  );
+
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CATEGORIES.filter((c) => tab === "All" || c.label === tab)
+    return visibleCategories
+      .filter((c) => tab === "All" || c.label === tab)
       .map((c) => ({
         ...c,
         attributes: q
@@ -295,7 +311,7 @@ export default function ConditionAttributePicker({
           : c.attributes,
       }))
       .filter((c) => c.attributes.length > 0);
-  }, [tab, query]);
+  }, [visibleCategories, tab, query]);
 
   const pick = (attribute: ConditionAttribute) => {
     onSelect(attribute);
@@ -354,8 +370,8 @@ export default function ConditionAttributePicker({
           </div>
 
           <div className="flex shrink-0 items-center overflow-x-auto border-b border-[#DDE2EE] px-2 scroll-slim">
-            {["All", ...CATEGORIES.map((c) => c.label)].map((label) => {
-              const Icon = CATEGORIES.find((c) => c.label === label)?.icon;
+            {["All", ...visibleCategories.map((c) => c.label)].map((label) => {
+              const Icon = visibleCategories.find((c) => c.label === label)?.icon;
               const active = tab === label;
               return (
                 <button

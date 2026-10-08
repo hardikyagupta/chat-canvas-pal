@@ -59,6 +59,59 @@
   color: var(--jc-ink); font-variant-numeric: tabular-nums;
 }
 
+/* ---- Floating bottom node-action toolbar (Add, or Add/Copy/Move/Delete
+   once a node is selected). Given more visual weight than the top-right
+   hand/zoom cluster — a darker hairline and a deeper shadow — since this is
+   the toolbar the user acts through, not a passive status readout; the
+   "Add" button itself is the same filled dc-btn-primary used everywhere
+   else in this app for its main action, so it reads as the obvious default
+   in both the collapsed and expanded state rather than blending into the
+   canvas. ---- */
+.jc-canvas-toolbar {
+  /* Offset clears .jc-bottom-bar below (its own real flex space, ~64px) plus
+     the usual 20px breathing room, so the two never overlap. */
+  position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 4;
+  display: flex; align-items: center; gap: 4px;
+  padding: 6px; border: 1px solid #C9D2E8; border-radius: 14px; background: #fff;
+  box-shadow: 0 10px 28px rgba(23, 23, 58, 0.16), 0 2px 6px rgba(23, 23, 58, 0.08);
+}
+.jc-canvas-toolbar .dc-btn { height: 36px; }
+.jc-toolbar-btn {
+  display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px;
+  border: 0; border-radius: 9px; background: transparent; color: var(--jc-ink);
+  font-family: 'Manrope', sans-serif; font-size: 13.5px; font-weight: 700; white-space: nowrap;
+  cursor: pointer; transition: background-color 150ms ease, color 150ms ease;
+}
+.jc-toolbar-btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.jc-toolbar-btn:hover { background: #F3F6FF; }
+.jc-toolbar-btn.active { background: #EAF1FF; color: #2F68E5; }
+.jc-toolbar-btn.danger { color: #D92D20; }
+.jc-toolbar-btn.danger:hover { background: #FDECEA; }
+.jc-toolbar-divider { width: 1px; height: 22px; background: var(--jc-border); margin: 0 2px; }
+
+/* ---- Bottom bar — a real strip stuck to the canvas panel's own bottom
+   edge (part of .jc-canvas's flex column, not a floating overlay like the
+   toolbar above), holding the co-marketer suggestion pills. Mirrors the
+   reference automation builder's bottom suggestion strip. ---- */
+.jc-bottom-bar {
+  flex: 0 0 auto; z-index: 2;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-top: 1px solid var(--jc-border); background: #fff;
+}
+.jc-ai-pill {
+  position: relative; display: inline-flex; align-items: center;
+  height: 32px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--jc-border); background: #fff;
+  font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 600; color: var(--jc-ink);
+  cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease;
+}
+.jc-ai-pill:hover { background: #FAF8FF; }
+/* The purple-to-blue "AI ring" (same .snake-border used by the Agent Node,
+   see JourneyCanvas.tsx) stays out of sight until hover, so the pill reads
+   as plain until the user's about to use it. */
+.jc-ai-pill .snake-border { opacity: 0; transition: opacity 150ms ease; }
+.jc-ai-pill:hover .snake-border { opacity: 1; }
+
 /* ---- Pannable canvas (dot grid) ---- */
 .jc-scroll {
   position: relative;
@@ -74,10 +127,17 @@
 
 .jc-sizer { position: relative; margin: 0 auto; }
 
-/* ---- Empty state: a single "Start with Trigger!" placeholder node ---- */
+/* ---- Scratch/AI-built flow: Trigger + FlowChain, or the empty-state    */
+/* placeholder before a trigger is chosen. In normal flow (not absolute) */
+/* with a size floor bigger than the scroll viewport in both dimensions, */
+/* so there's always room to pan around the flow with a trackpad — even  */
+/* a short flow that fits within the viewport gets scrollable space on   */
+/* every side, instead of only becoming scrollable once it outgrows the  */
+/* container. */
 .jc-empty {
-  position: absolute; inset: 0; display: flex;
+  position: relative; display: flex;
   align-items: center; justify-content: center; padding: 24px;
+  min-width: calc(100% + 640px); min-height: calc(100% + 640px);
 }
 .jc-start-node {
   display: grid; place-items: center;
@@ -90,6 +150,322 @@
 }
 .jc-start-node:hover { border-color: #2F68E5; color: #2F68E5; background: #F5F9FF; }
 .jc-start-node:focus-visible { outline: 2px solid #2F68E5; outline-offset: 2px; }
+
+/* ---- Scratch-flow placeholder: a single Trigger node above "End" ---- */
+.jc-pending { display: flex; flex-direction: column; align-items: center; }
+.jc-pending-node {
+  display: flex; align-items: center; gap: 14px;
+  min-width: 300px; padding: 18px 24px;
+  background: #fff; border: 1px solid var(--jc-border); border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(23, 23, 58, 0.05);
+}
+.jc-pending-node.active { border: 2px solid #2F68E5; padding: 17px 23px; }
+.jc-pending-node.clickable { cursor: pointer; transition: border-color 150ms ease, box-shadow 150ms ease; }
+.jc-pending-node.clickable:hover { border-color: #B9C4DD; box-shadow: 0 4px 14px rgba(47, 104, 229, 0.1); }
+
+/* Initial "Choose trigger" CTA card — shown until the drawer is opened. */
+.jc-pending-cta {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 16px;
+  min-width: 300px; padding: 20px 24px;
+  background: #fff; border: 1px solid var(--jc-border); border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(23, 23, 58, 0.05);
+}
+.jc-pending-cta-header { display: flex; align-items: center; gap: 12px; }
+.jc-pending-cta-header strong { font-size: 15px; font-weight: 800; color: var(--jc-ink); }
+
+/* Waiting on the co-marketer chat to finish an AI-prompt journey — same card
+   shape as the "Choose trigger" CTA above, just wider (its heading runs
+   longer) and with no action button since there's nothing to click here. */
+.jc-pending-waiting { max-width: 360px; }
+.jc-pending-waiting .jc-pending-cta-header strong { font-size: 14.5px; line-height: 20px; }
+.jc-pending-waiting-sub { font-size: 13px; color: var(--jc-muted); }
+
+/* A slim animated gradient ring around the button — a 1px "stroke" that
+   keeps drifting, so this one CTA reads as the thing to do next. */
+.jc-choose-trigger-ring {
+  display: inline-flex; border-radius: 11px; padding: 1.5px;
+  background: linear-gradient(90deg, #2F68E5, #9449DF, #2F68E5, #6EA8FE, #2F68E5);
+  background-size: 300% 100%;
+  animation: jc-gradient-run 4s linear infinite;
+}
+.jc-choose-trigger-ring .dc-btn { width: auto; border-radius: 9.5px; }
+@keyframes jc-gradient-run {
+  to { background-position: 300% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jc-choose-trigger-ring { animation: none; }
+}
+
+.jc-pending-icon {
+  width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center;
+  border-radius: 10px; background: #EAF1FF; color: #2F68E5;
+}
+.jc-pending-icon svg { width: 18px; height: 18px; }
+.jc-pending-text { display: flex; flex-direction: column; }
+.jc-pending-text strong { font-size: 15px; font-weight: 800; color: var(--jc-ink); }
+.jc-pending-text span { margin-top: 2px; font-size: 13.5px; color: var(--jc-muted); }
+.jc-pending-line { width: 1px; height: 32px; background: var(--jc-line); }
+.jc-pending-end {
+  font-size: 12px; font-weight: 700; color: var(--jc-muted);
+  background: #EEF0F6; border-radius: 999px; padding: 5px 16px;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+/* The connector + insertion point between two nodes in a from-scratch
+   chain — a "+" that's always visible (so where a new step lands is never
+   ambiguous), and the whole gap doubles as a drag-and-drop target. */
+.jc-gap {
+  position: relative; display: flex; flex-direction: column; align-items: center; height: 40px;
+  /* As wide as the node card above/below it (matches .jc-added-node's own
+     min-width and .jc-gap-frame's width) — without this, the div shrinks
+     to fit just its 1-2px connector line, so a drag only registers as
+     "over this gap" when the pointer sits almost exactly on the "+" button
+     rather than anywhere in the space between the two nodes. */
+  width: 260px;
+  transition: height 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.jc-gap-line { width: 1px; flex: 1 1 auto; background: var(--jc-line); }
+.jc-gap-add {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 22px; height: 22px; display: grid; place-items: center;
+  border-radius: 999px; border: 1.5px solid var(--jc-border); background: #fff; color: #2F68E5;
+  box-shadow: 0 1px 3px rgba(23, 23, 58, 0.08);
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease, transform 150ms ease;
+}
+.jc-gap-add svg { width: 12px; height: 12px; }
+.jc-gap:hover .jc-gap-add { border-color: #2F68E5; transform: translate(-50%, -50%) scale(1.15); }
+.jc-gap-add.armed { background: #2F68E5; border-color: #2F68E5; color: #fff; transform: translate(-50%, -50%) scale(1.15); }
+/* Dragging a node over this specific gap — a brand-new one from the side
+   panel, or an already-placed one being repositioned (see AddedNodeCard's
+   draggable). The gap itself opens up (see the height rule above) and an
+   empty dashed slot fades in behind the "+", framing exactly where the
+   node will land — same treatment either way, so the two drag sources
+   read as one consistent interaction. */
+.jc-gap.drag-over { height: 108px; }
+.jc-gap.drag-over .jc-gap-line { background: #2F68E5; width: 2px; }
+.jc-gap.drag-over .jc-gap-add { background: #2F68E5; border-color: #2F68E5; color: #fff; transform: translate(-50%, -50%) scale(1.3); }
+.jc-gap-frame {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.94);
+  width: 260px; height: 64px; border-radius: 14px;
+  border: 1.5px dashed #B9C4DD; background: rgba(47, 104, 229, 0.05);
+  opacity: 0; pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+.jc-gap.drag-over .jc-gap-frame { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+/* The toolbar's "Move" is armed — every gap becomes a drop target (amber, to
+   read distinctly from the blue add/drag-over treatment above). */
+.jc-gap.move-target .jc-gap-add {
+  background: #FCEBD2; border-color: #E8A23B; color: #B8791F;
+  animation: jc-move-pulse 1.4s ease-in-out infinite;
+}
+.jc-gap.move-target:hover .jc-gap-add { background: #E8A23B; border-color: #E8A23B; color: #fff; }
+@keyframes jc-move-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 162, 59, 0.35); }
+  50% { box-shadow: 0 0 0 5px rgba(232, 162, 59, 0); }
+}
+/* ⌘C has copied a node — every gap in every chain/branch becomes a paste
+   target (purple, distinct from blue add/drag-over and amber move) until
+   ⌘V lands on the one the mouse is over, or Escape/a new copy clears it. */
+.jc-gap.paste-target .jc-gap-add {
+  background: #F1E9FC; border-color: #9449DF; color: #7B2FC4;
+  animation: jc-paste-pulse 1.4s ease-in-out infinite;
+}
+.jc-gap.paste-target:hover .jc-gap-add { background: #9449DF; border-color: #9449DF; color: #fff; }
+@keyframes jc-paste-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(148, 73, 223, 0.35); }
+  50% { box-shadow: 0 0 0 5px rgba(148, 73, 223, 0); }
+}
+
+/* ---- The small contextual node picker a "+" opens (portaled to body,
+   fixed-positioned right under the button — see NodePickerPopup). A fixed
+   search header above a scrollable row of sections, each one separated
+   from the next by a single vertical rule instead of bare whitespace, so
+   the whole thing reads as one organized sheet rather than four floating
+   lists (Actions/Conditions/Flow Control/Agent — see POPUP_SECTIONS). ---- */
+.jc-node-popup {
+  position: fixed; z-index: 200; display: flex; flex-direction: column;
+  background: #fff; border: 1px solid var(--jc-border); border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(23, 23, 58, 0.18);
+  overflow: hidden;
+}
+.jc-node-popup-search {
+  display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+  padding: 10px 14px; border-bottom: 1px solid rgba(23, 23, 58, 0.06);
+}
+.jc-node-popup-search input {
+  flex: 1 1 auto; min-width: 0; border: none; outline: none; background: transparent;
+  font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 500; color: var(--jc-ink);
+}
+.jc-node-popup-search input::placeholder { color: var(--jc-muted); font-weight: 500; }
+.jc-node-popup-sections { display: flex; flex: 1 1 auto; overflow-y: auto; padding: 10px 14px; }
+.jc-node-popup-empty {
+  margin: 0; padding: 10px 4px; width: 100%; text-align: center;
+  font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 500; color: var(--jc-muted);
+}
+.jc-node-popup-col {
+  /* flex-basis set inline per section (see POPUP_COLUMN_WIDTH) — each
+     column is only as wide as its own longest label actually needs, not
+     an equal share of the whole popup, so Flow Control/Agent's few short
+     names don't drag the popup out to Actions' width. */
+  flex: 0 0 auto; min-width: 0; display: flex; flex-direction: column;
+  padding: 0 12px; border-right: 1px solid rgba(23, 23, 58, 0.06);
+}
+.jc-node-popup-col:first-child { padding-left: 0; }
+.jc-node-popup-col:last-child { border-right: none; padding-right: 0; }
+.jc-node-popup-heading {
+  margin: 0 0 6px; padding: 0 4px;
+  font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 800;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--jc-muted);
+}
+.jc-node-popup-subcols { display: flex; flex: 1 1 auto; gap: 8px; min-height: 0; }
+.jc-node-popup-list { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0; }
+.jc-node-popup-row {
+  display: flex; align-items: center; gap: 6px; padding: 4px; border-radius: 7px;
+  background: transparent; border: none; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  transition: background-color 150ms ease;
+}
+.jc-node-popup-row:hover { background: #F7F7FB; }
+/* The row the keyboard currently points at — Enter adds this one, and
+   ArrowUp/ArrowDown move it (see JourneyCanvas's `activeId`). Fill only,
+   no border — a stroked box read as a second, competing selection state
+   next to the hover fill above. */
+.jc-node-popup-row--active { background: #F4F8FF; }
+.jc-node-popup-icon { width: 20px; height: 20px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 6px; }
+.jc-node-popup-label {
+  font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 500; color: var(--jc-ink);
+  min-width: 0; white-space: nowrap;
+}
+
+/* A step dragged in from JourneyNodeDrawer, added below the trigger. */
+.jc-added-node {
+  display: flex; align-items: center; gap: 12px;
+  min-width: 260px; padding: 14px 16px; cursor: grab;
+  background: #fff; border: 1px solid var(--jc-border); border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(23, 23, 58, 0.05);
+  transition: border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+}
+.jc-added-node.editable:hover { border-color: #B9C4DD; box-shadow: 0 4px 14px rgba(47, 104, 229, 0.1); }
+/* The node currently being dragged to a new spot (see AddedNodeCard's
+   draggable/onDragStart) — dimmed in place while every gap's own
+   .drag-over highlight shows where it'll land. */
+.jc-added-node.dragging { opacity: 0.4; cursor: grabbing; }
+/* Selected — arms the bottom action toolbar (Add/Copy/Move/Delete). Every
+   node is selectable, not just editable ones, so this is independent of the
+   editable-hover treatment above. */
+.jc-added-node.selected { border-color: #2F68E5; box-shadow: 0 0 0 2px rgba(47, 104, 229, 0.16); }
+.jc-added-node-main {
+  display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
+  background: none; border: none; padding: 0; margin: 0; text-align: left; font: inherit; color: inherit;
+  cursor: pointer;
+}
+.jc-added-icon {
+  width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 9px;
+}
+.jc-added-icon svg { width: 17px; height: 17px; }
+.jc-added-node.tone-action .jc-added-icon { background: #EBD2FF; color: #9449DF; }
+.jc-added-node.tone-condition .jc-added-icon { background: #D5F2D6; color: #00B27E; }
+.jc-added-node.tone-flow .jc-added-icon { background: #FCEBD2; color: #B8791F; }
+/* Agent Node — AI-powered, so it reads slightly differently from the flat
+   tone colors above: a gradient icon and a faint gradient-tinted card,
+   while keeping the exact same card shape/padding/typography as every
+   other node. */
+.jc-added-node.tone-agent {
+  position: relative;
+  /* The ring below (an actual .snake-border span, not this border) is the
+     only stroke — a real border here would sit inside it and double up. */
+  border-color: transparent;
+  background-image: linear-gradient(135deg, rgba(148, 73, 223, 0.05), rgba(47, 104, 229, 0.05));
+}
+.jc-added-node.tone-agent.editable:hover { border-color: transparent; box-shadow: 0 4px 14px rgba(148, 73, 223, 0.12); }
+.jc-added-node.tone-agent.selected { border-color: transparent; box-shadow: 0 0 0 2px rgba(148, 73, 223, 0.16); }
+.jc-added-node.tone-agent .jc-added-icon { background: linear-gradient(135deg, #9449DF 0%, #2F68E5 100%); color: #fff; }
+/* Keeps the card's real content (icon/label/remove button) painting above
+   the absolutely-positioned .snake-border ring, which shares their stacking
+   context at the same z-index — same trick CoMarketerButton uses for its
+   sparkle + label. */
+.jc-added-node.tone-agent .jc-added-node-main,
+.jc-added-node.tone-agent .jc-added-remove {
+  position: relative;
+  z-index: 1;
+}
+
+/* Agent Node's running gradient stroke — reuses the exact ring the "Ask
+   co-marketer" CTA uses (.snake-border / --snake-angle / snakeSpin, defined
+   in src/index.css), just in the Agent Node's own violet-to-blue palette, so
+   it reads as the same "AI is doing something here" language across the
+   app. Rendered as a real <span class="snake-border snake-border--purple">
+   sibling (see AddedNodeCard in JourneyCanvas.tsx and AgentRow in
+   JourneyNodeDrawer.tsx), not a pseudo-element, to match that component. */
+.snake-border--purple {
+  background:
+    conic-gradient(
+      from var(--snake-angle),
+      transparent 0deg,
+      transparent 255deg,
+      rgba(148, 73, 223, 0) 280deg,
+      #9449DF 330deg,
+      #2F68E5 350deg,
+      rgba(47, 104, 229, 0) 360deg
+    ),
+    #D8C6F5;
+}
+.jc-added-remove {
+  margin-left: auto; width: 24px; height: 24px; flex: 0 0 auto; display: grid; place-items: center;
+  border-radius: 6px; color: var(--jc-muted); background: transparent;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.jc-added-remove:hover { background: #F3F6FF; color: #17173A; }
+.jc-added-remove svg { width: 14px; height: 14px; }
+
+/* ---- Condition / Flow Control branching: a Yes and a No column, each its
+   own independent chain of steps ending in its own End. ---- */
+.jc-branch-split { display: flex; align-items: flex-start; justify-content: center; }
+.jc-branch-col { position: relative; display: flex; flex-direction: column; align-items: center; padding: 0 36px; }
+.jc-branch-col::before { content: ""; position: absolute; top: 0; height: 1px; background: var(--jc-line); }
+.jc-branch-col.yes::before { left: 50%; right: 0; }
+.jc-branch-col.no::before { left: 0; right: 50%; }
+.jc-branch-tag {
+  margin-top: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--jc-muted); background: #fff; border: 1px solid var(--jc-border);
+  border-radius: 999px; padding: 3px 11px;
+  white-space: nowrap;
+}
+
+/* ---- Multi-way split (the Audience Split agent node's 4 fixed paths) —
+   same shape as the Yes/No split above, just N equal-width columns instead
+   of exactly two. The connecting line is drawn per-column rather than one
+   container-wide line: the first column's own line covers just its right
+   half (center to its own right edge), the last column's covers just its
+   left half, and every column in between draws a full-width line. Laid
+   edge-to-edge (spacing here is padding, not a flex `gap`, so there's no
+   seam between columns) these join into one continuous line that starts
+   and ends exactly at the outer columns' own centers — i.e. right on their
+   pill — regardless of column count or width, with no percentage math. ---- */
+.jc-branch-col-multi {
+  position: relative; flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; padding: 0 40px;
+}
+.jc-branch-col-multi::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--jc-line); }
+.jc-branch-col-multi:first-child::before { left: 50%; }
+.jc-branch-col-multi:last-child::before { right: 50%; }
+
+/* The Optimizer's Test Journey tag — a white pill (not the plain grey
+   .jc-branch-tag) with the co-marketer sparkle icon, violet text, and the
+   same travelling gradient stroke the Agent Node uses (.snake-border /
+   --snake-angle, defined once in src/index.css) running around just this
+   pill — not a background wash or ring over the whole column, so only the
+   tag itself is different. `position: relative` is what the ring (an
+   absolutely positioned sibling, painted first) sizes itself against; its
+   own z-index sits above this pill's flat white fill, so the icon/text
+   need their own stacking context (see the inline `relative z-[1]` on
+   both) to paint above it in turn. */
+.jc-branch-tag--ai {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 5px;
+  color: #7C3AED; background: #fff; border-color: transparent;
+}
+.jc-branch-tag--ai img { width: 15px; height: 15px; flex: 0 0 auto; }
+
 .jc-inner { position: relative; padding: 56px 72px; width: max-content; }
 
 /* ---- SVG connector layer (behind the nodes) ---- */

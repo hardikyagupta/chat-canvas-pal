@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, X } from "lucide-react";
+import { X } from "lucide-react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import sparkle from "/campaign-assets/ic-sparkle-ai.gif";
 import { Switch } from "@/components/ui/switch";
+import Dropdown from "./Dropdown";
 
 /**
  * "Create journey with AI" — a right-side drawer with the same goal fields as
@@ -44,33 +45,6 @@ function Field({
       </span>
       {children}
     </label>
-  );
-}
-
-const SELECT_CLASS =
-  "h-11 w-full appearance-none rounded-md border border-[#DDE2EE] bg-white px-3 pr-9 font-manrope text-[14px] text-[#17173A] outline-none transition-colors focus:border-[#2F68E5]";
-
-function SelectField({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-}) {
-  return (
-    <div className="relative">
-      <select value={value} onChange={(e) => onChange(e.target.value)} className={SELECT_CLASS}>
-        {options.map((o) => (
-          <option key={o}>{o}</option>
-        ))}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6F6F8D]"
-        strokeWidth={2}
-      />
-    </div>
   );
 }
 
@@ -224,19 +198,23 @@ export default function JourneyAIModal({
 
             <div className="mt-5 flex flex-col gap-5">
               <Field label="Goal" required>
-                <SelectField
+                <Dropdown
                   value={goal}
                   onChange={setGoal}
                   options={["Repeat purchase", "Acquisition", "Reactivation", "Premium grow"]}
+                  widthClass="w-full"
+                  heightClass="h-11"
                 />
               </Field>
 
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Horizon" required>
-                  <SelectField
+                  <Dropdown
                     value={horizon}
                     onChange={setHorizon}
                     options={["45 days", "60 days", "90 days", "120 days"]}
+                    widthClass="w-full"
+                    heightClass="h-11"
                   />
                 </Field>
                 <Field label="Value per conversion · relative" required>

@@ -5,6 +5,7 @@ const STYLES: Record<JourneyStatus, string> = {
   SCHEDULED: "bg-[#FBEADC] border-[#FFA26B] text-[#FFA26B]",
   STOPPED: "bg-[#F7E8FD] border-[#BE52F2] text-[#BE52F2]",
   COMPLETED: "bg-[#E7EFE7] border-[#00C48C] text-[#00C48C]",
+  ONGOING: "bg-[#D5F2D6] border-[#00B27E] text-[#00B27E]",
 };
 
 export default function JourneyStatusBadge({ status }: { status: JourneyStatus }) {

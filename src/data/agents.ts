@@ -1,5 +1,6 @@
-import { Bot, FileText, Search, Share, LightbulbIcon, Calendar, Workflow } from "lucide-react";
+import { Bot, ClipboardCheck, FileText, FlaskConical, Search, Share, LightbulbIcon, Calendar, Workflow } from "lucide-react";
 import React from 'react';
+import { generateAgentAvatar } from '@/lib/agentAvatar';
 
 // Define a list of pastel background color classes
 const pastelColorClasses = [
@@ -76,5 +77,36 @@ export const marketingAgents: MarketingAgent[] = [
     icon: Workflow, // Lucide icon (no dedicated SVG avatar yet)
     initials: "JA",
     colorClass: pastelColorClasses[5],
-  }
+  },
+  {
+    // Same identity (name + generated avatar) as the "starter-journey-review"
+    // entry in customAgents.ts's /agents catalog — this id is what the
+    // journey builder's docked co-marketer hands audit turns off to (see
+    // JourneyBuilder.tsx's buildJourneyAuditReply/handleAuditFlow), so an
+    // audit reads as the same agent whether it's opened from /agents or
+    // triggered inline from the canvas.
+    id: "journey-review-agent",
+    name: "Journey review agent",
+    description: "QAs a journey against its own trigger, node and branch rules before it goes live.",
+    avatarSrc: generateAgentAvatar('Journey review agent'),
+    icon: ClipboardCheck,
+    initials: "JR",
+    colorClass: pastelColorClasses[1],
+  },
+  {
+    // Same identity (name + generated avatar) as the "starter-journey-experiment"
+    // entry in customAgents.ts's /agents catalog — this id is what the journey
+    // builder's docked co-marketer hands "Experiment" turns off to (see
+    // JourneyBuilder.tsx's handleExperimentJourney/handleCoMarketerBeforeSend),
+    // so an experiment reads as the same agent whether it's opened from
+    // /agents or triggered inline from the canvas.
+    id: "journey-experiment-agent",
+    name: "Journey Optimization Agent",
+    description:
+      "Analyzes an existing Journey to identify optimization opportunities, explains the likely impact and cause in plain language, and helps marketers validate improvements through controlled experiments before rolling them out.",
+    avatarSrc: generateAgentAvatar('Journey Optimization Agent'),
+    icon: FlaskConical,
+    initials: "JO",
+    colorClass: pastelColorClasses[2],
+  },
 ];

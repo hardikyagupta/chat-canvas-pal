@@ -20,6 +20,11 @@ import type { InsightCardContext } from '@/types/insightCard';
 import { formatInsightContent } from '@/types/insightCard';
 import type { SetupApplyCardData } from '@/components/campaigns/campaign-creation/SetupApplyCard';
 import type { Finding } from '@/components/campaigns/campaign-creation/previewFindings.data';
+import type { ExperimentCardData, TestBranchConfig } from '@/components/ExperimentCard';
+import type { NodeInsightCardData, NodeInsightResponse } from '@/components/NodeOptimizationInsightCard';
+import type { JourneyProposalCardData } from '@/components/JourneyOptimizationProposalCard';
+import type { AudienceTestCardData } from '@/components/AudienceTestQuestionCard';
+import type { QuestionRecapEntry } from '@/components/campaigns/CoMarketerQuestionCard';
 import AgentSwitchDivider from './AgentSwitchDivider';
 import AgentThreadHeader from './AgentThreadHeader';
 import AvatarStack from './AvatarStack';
@@ -74,7 +79,7 @@ import DiscoveryBanners from './DiscoveryBanners';
 
 
 // Interface for individual chat message data
-interface ChatMessageData {
+export interface ChatMessageData {
   type: 'system' | 'chat';
   isAI?: boolean;
   content: string;
@@ -119,6 +124,9 @@ interface ChatMessageData {
   // Thinking state specific
   isThinkingState?: boolean;
   thinkingDuration?: number;
+  /** See ChatMessage's own doc — replaces "Thinking..." for a
+   *  longer-running action (e.g. building the test journey on canvas). */
+  thinkingLabel?: string;
   reasoningSteps?: string[];
   // Doc-like artifact
   artifact?: { title: string; subtitle?: string; intro?: string };
@@ -161,6 +169,40 @@ interface ChatMessageData {
   setupApplyCard?: SetupApplyCardData;
   // Co-marketer audit findings — the review rail's cards, dropped into chat.
   findings?: Finding[];
+  // Journey Optimization Agent's proposal/results card.
+  experimentCard?: ExperimentCardData;
+  // Journey Optimization Agent's node-level finding, shown before the
+  // experiment card once a marketer explores a specific node.
+  nodeInsightCard?: NodeInsightCardData;
+  // The goal-first conversation's own proposal — a shrunk read-only canvas
+  // preview of the recommended change, plus the test/make-primary/explore
+  // question. Only ever set on the LAST message of a staged reply (see
+  // SeededTopic's replySegments), same as nodeInsightCard/experimentCard.
+  journeyProposalCard?: JourneyProposalCardData;
+  // The goal-first conversation's audience-percentage question — same
+  // reuse of CoMarketerQuestionCard, attached the same way.
+  audienceTestCard?: AudienceTestCardData;
+  // A CoMarketerQuestionCard's answers, recapped as the user's own turn —
+  // bold question + plain answer per row — instead of a single joined
+  // string, once a question (or short batch) has just been answered.
+  questionRecap?: QuestionRecapEntry[];
+  // The goal-first conversation's "merge the test journey into main" CTA —
+  // a prominent standalone button (not a CoMarketerQuestionCard, since
+  // there's only one action, not a set of options) shown below this
+  // message's text. `mergeTestCtaDone` freezes it into its answered state
+  // once clicked, including across a resumed/persisted conversation.
+  mergeTestCta?: boolean;
+  mergeTestCtaDone?: boolean;
+  /** One button per answer to this message's question — clicking sends
+   *  that exact text down the same path typing it would (handleSendMessage),
+   *  so every existing typed-answer check (goalStage, pendingProposal,
+   *  pendingTestConfirmation, ...) fires identically either way; typing
+   *  the answer instead still works exactly as before. Multiple steps in
+   *  the goal-first conversation attach these instead of leaving the
+   *  marketer to type a reply. `replyOptionsSelectedValue` freezes the row
+   *  once one is picked. */
+  replyOptions?: { label: string; value: string }[];
+  replyOptionsSelectedValue?: string;
 }
 
 // Distance (px) from the true bottom still counted as "at the bottom" — for
@@ -241,6 +283,35 @@ interface ChatInterfaceProps {
   /** Replaces the empty-state composer's "How can I help you today?"
    *  placeholder — paired with `emptyStateGreeting` for the same reason. */
   emptyStatePlaceholder?: string;
+  /** Lets the host page recognize a typed message as one of its own intents
+   *  (e.g. the journey builder's "audit my flow") before it falls into this
+   *  component's own scripted routing (CAMPAIGNS_FLOW, the performance
+   *  story, etc). Returning true means the host has handled it — usually by
+   *  pushing its own reply through `followUpTopic`/`followUpSeq` — and this
+   *  component does nothing further with that message. */
+  onBeforeSend?: (message: string) => boolean;
+  /** See ChatMessage's own doc — forwarded straight through to every
+   *  message's experiment card. */
+  onCreateTest?: (config: TestBranchConfig) => void;
+  onUpdateTestSplit?: (variantPercent: number) => void;
+  onPostTestDecision?: (decision: "make-main" | "keep-existing" | "test-another") => void;
+  /** See ChatMessage's own doc — forwarded straight through to every
+   *  message's node insight card. */
+  onRespondNodeInsight?: (response: NodeInsightResponse, data: NodeInsightCardData, recap: QuestionRecapEntry[]) => void;
+  /** See ChatMessage's own doc — forwarded straight through to every
+   *  message's audience-test question card. */
+  onRespondAudienceTest?: (percent: number) => void;
+  /** Full prior transcript to resume onto (a persisted conversation the host
+   *  page is restoring, e.g. Journey Builder's test-journey session) —
+   *  replayed instantly (no re-typing animation, no thinking-timer restart)
+   *  instead of the usual empty-thread start. Omit for every normal case. */
+  initialMessages?: ChatMessageData[];
+  /** Fires whenever the message list changes, carrying the full list — lets
+   *  a host page mirror this thread into its own persisted store (see
+   *  `initialMessages`) without this component knowing that store exists. */
+  onMessagesChange?: (messages: ChatMessageData[]) => void;
+  /** "Yes, merge as main journey" CTA (see ChatMessageData's mergeTestCta). */
+  onMergeTestJourney?: () => void;
 }
 
 /** A contextual starter chip: the pill's label, its icon, and the prompts it
@@ -261,12 +332,28 @@ export interface StarterChip {
 /** A tap-to-open co-marketer thread: what the user "asked", and the answer. */
 export interface SeededTopic {
   prompt: string;
-  reply: string;
+  /** Optional only when `replySegments` is set instead — one or the other
+   *  must be present. */
+  reply?: string;
   navLabel?: string;
   setupApplyCard?: SetupApplyCardData;
   /** Co-marketer audit findings — same cards as the preview screen's review
    *  rail, rendered inline on this topic's answer. */
   findings?: Finding[];
+  /** Journey Optimization Agent's proposal/results card. */
+  experimentCard?: ExperimentCardData;
+  /** Journey Optimization Agent's node-level finding — shown first, before
+   *  experimentCard, when this topic came from exploring one specific node. */
+  nodeInsightCard?: NodeInsightCardData;
+  /** The goal-first conversation's canvas-preview + decision card — see
+   *  ChatMessageData's own doc. */
+  journeyProposalCard?: JourneyProposalCardData;
+  /** The goal-first conversation's audience-percentage question — see
+   *  ChatMessageData's own doc. */
+  audienceTestCard?: AudienceTestCardData;
+  /** Recaps the CoMarketerQuestionCard answer(s) that led to this topic, as
+   *  the user's own turn — see ChatMessageData's own doc. */
+  questionRecap?: QuestionRecapEntry[];
   /**
    * Hand the answer to a specialist rather than the co-marketer. When set, the
    * thread plays the full hand-off — switch divider, then that agent thinking
@@ -280,6 +367,32 @@ export interface SeededTopic {
    *  applies to every hand-off to that agent, regardless of what it's doing
    *  this time). */
   agentSaying?: string;
+  /** Skips the "Switched to X Agent" divider while still playing the
+   *  thinking pause and (staged) reply — for a follow-up turn that's a
+   *  continuation of an already-announced hand-off, not a fresh one. */
+  skipAgentSwitchBanner?: boolean;
+  /** Overrides the thinking pause's length (seconds) — defaults to 4 when
+   *  unset, same as before this existed. */
+  thinkingDurationSeconds?: number;
+  /** See ChatMessage's own doc — replaces "Thinking..." for this topic's
+   *  thinking pause. */
+  thinkingLabel?: string;
+  /** Reveals the reply as several separate turns, one per array entry, each
+   *  fully typed out before the next begins (with a short pause between) —
+   *  instead of one message whose whole text streams in one continuous
+   *  animation. Any cards (nodeInsightCard, journeyProposalCard, etc.) still
+   *  land on the LAST segment only. Falls back to the plain `reply` string
+   *  when unset. */
+  replySegments?: string[];
+  /** Skips pushing `prompt` as a user turn — for an agent message that
+   *  isn't answering anything the user just typed (e.g. a status summary
+   *  volunteered after reopening an already-built test). `prompt` is still
+   *  required by the type but goes unused. */
+  suppressPromptTurn?: boolean;
+  /** See ChatMessageData's own doc — attached to the last reply segment. */
+  mergeTestCta?: boolean;
+  /** See ChatMessageData's own doc — attached to the last reply segment. */
+  replyOptions?: { label: string; value: string }[];
 }
 
 /** The campaign handed over by the co-marketer review banner. */
@@ -390,13 +503,20 @@ const DockedBodySkeleton = ({
   );
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, artifactActionLabel, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId, starterChipSet, onAskFinding, emptyStateGreeting, emptyStatePlaceholder }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAgents, setEnabledAgents, onCloseInterface, initialExpanded = true, docked = false, conversationVariant = 'default', initialMessage, initialInsightCard, initialAgentChat, initialReviewCampaign, initialTopic, onReviewArtifact, artifactActionLabel, followUpTopic, followUpSeq = 0, onSetupApply, isSetupApplyApplied, appliedCohortId, starterChipSet, onAskFinding, emptyStateGreeting, emptyStatePlaceholder, onBeforeSend, onCreateTest, onUpdateTestSplit, onPostTestDecision, onRespondNodeInsight, onRespondAudienceTest, initialMessages, onMessagesChange, onMergeTestJourney }) => {
   const navigate = useNavigate();
   const { active: atmoActive } = useAtmosphere();
   // The scripted storyline this interface plays. Home (`/`) uses 'default';
   // the /campaigns docked chat passes 'campaigns'. See src/data/conversations.ts.
   const script = CONVERSATIONS[conversationVariant];
-  const [messages, setMessages] = useState<ChatMessageData[]>([]);
+  // A resumed conversation replays instantly — no re-typing animation (which
+  // would replay the whole history as if freshly generated) and no
+  // isThinkingState bubbles (which drive their own mount-time countdown and
+  // would restart "Thinking..." rather than showing the settled "Thought for
+  // Ns" they'd already reached).
+  const [messages, setMessages] = useState<ChatMessageData[]>(() =>
+    (initialMessages ?? []).filter((m) => !m.isThinkingState).map((m) => ({ ...m, animate: false })),
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   // Whether new content should keep following to the bottom. True until the
@@ -411,6 +531,43 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // scrolling away and unstick.
   const stickToBottomRef = useRef(true);
   const programmaticScrollRef = useRef(false);
+  // A resumed conversation should land on its latest turn (e.g. the pending
+  // "Yes, merge as main journey" question), not force the marketer to
+  // scroll down past the whole replayed history to find it. A single
+  // scrollIntoView right on mount isn't enough: rich cards further up the
+  // resumed thread (e.g. the proposal's own embedded JourneyCanvas) finish
+  // laying out a beat after mount, growing the scroll container's height
+  // after that first jump already landed — so this retries across a few
+  // animation frames plus a short trailing timeout to catch that late
+  // growth, then stops; it never fires again after that (a real new
+  // message already gets its own auto-scroll from stickToBottomFor).
+  const didLandOnResumedBottomRef = useRef(false);
+  useLayoutEffect(() => {
+    if (didLandOnResumedBottomRef.current) return;
+    if (!initialMessages || initialMessages.length === 0 || messages.length === 0) return;
+    didLandOnResumedBottomRef.current = true;
+    const scrollToEnd = () => messagesEndRef.current?.scrollIntoView({ block: "end" });
+    // No cleanup here on purpose — under StrictMode's dev-only double-invoke
+    // (mount, cleanup, mount again), a cleanup that cancels these would
+    // cancel every retry before it ever fires, since the guard above
+    // already makes the second invocation a no-op; letting all of them run
+    // is what actually catches the late-laying-out cards further up the
+    // resumed thread (see this effect's own doc above).
+    scrollToEnd();
+    requestAnimationFrame(() => {
+      scrollToEnd();
+      requestAnimationFrame(scrollToEnd);
+    });
+    [100, 350, 700, 1200].forEach((ms) => window.setTimeout(scrollToEnd, ms));
+  }, [messages, initialMessages]);
+  // Mirrors every message-list change out to the host page (see
+  // `onMessagesChange`'s own doc) — a ref keeps this from re-running just
+  // because the host re-created the callback identity on its own re-render.
+  const onMessagesChangeRef = useRef(onMessagesChange);
+  onMessagesChangeRef.current = onMessagesChange;
+  useEffect(() => {
+    onMessagesChangeRef.current?.(messages);
+  }, [messages]);
   const [isMockAgentChatActive, setIsMockAgentChatActive] = useState(false);
   // Briefly shimmers the input after every send (survives the empty→conversation input swap)
   const [inputShimmer, setInputShimmer] = useState(false);
@@ -422,7 +579,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   // True once the chat has actually been scrolled down — used to reveal the top
   // fade only while scrolling (not on the resting first message).
   const [isChatScrolled, setIsChatScrolled] = useState(false);
-  const [mockChatCompleted, setMockChatCompleted] = useState(false); // New state
+  const [mockChatCompleted, setMockChatCompleted] = useState(() => !!initialMessages?.length); // New state
   // Shows the suggested follow-up chips after the first output completes (until thread 2 starts)
   const [showSuggestions, setShowSuggestions] = useState(false);
   // Contextual suggested prompts driven by the campaigns agent-relay flow. When
@@ -471,6 +628,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
   const [contentGenerated, setContentGenerated] = useState(false); // New state for content generation
   const mockMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMockAgentChatActiveRef = useRef(isMockAgentChatActive);
+  // Bumped every time appendTopic starts a new specialist sequence — lets a
+  // *stale* sequence's own step() calls recognize they've been superseded
+  // and no-op instead of resuming. Needed because a step's own continuation
+  // isn't only scheduled by this file's setTimeout chain (which a fresh
+  // appendTopic call already clears) — a thinkingEntry's ThinkingState also
+  // fires its message's onAnimationComplete straight from its own internal
+  // countdown, whenever that happens to elapse, entirely independent of
+  // whether a newer sequence has since taken over. Without this guard, that
+  // late callback both clears and then immediately re-fills the shared
+  // mockMessageTimeoutRef with the OLD sequence's own next step, silently
+  // hijacking a newer append that's already mid-flight — e.g. a follow-up
+  // volunteered right as the previous turn's own thinking pause was still
+  // settling.
+  const activeSequenceIdRef = useRef(0);
   // True while the performance "story" flow is running, so re-typing restarts the
   // story instead of being captured by the Valentine collaborative continuation path.
   const isStoryFlowActiveRef = useRef(false);
@@ -1256,6 +1427,37 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onBotIconClick, enabledAg
     programmaticScrollRef.current = true;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     setShowScrollButton(false); // Hide button after scrolling
+  };
+
+  // Jumps instantly rather than animating — used right after a deliberate
+  // follow-up turn (see appendTopic), where the thread below is still
+  // growing (typing animation, a card mounting in). Sets scrollTop directly
+  // on the scroll container rather than messagesEndRef.scrollIntoView: a
+  // smooth OR instant scrollIntoView call made mid-mutation reliably landed
+  // back at its pre-call position in testing (scroll anchoring fighting the
+  // in-flight layout changes), where forcing scrollTop straight to
+  // scrollHeight does not.
+  const scrollToBottomInstant = () => {
+    const container = chatContainerRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
+    setShowScrollButton(false);
+  };
+
+  // A single scrollToBottomInstant() call made right after a message mounts
+  // lands short of true bottom when that message is still growing (the
+  // typewriter effect, a card animating in) — scrollHeight at call time
+  // isn't yet the final height. This instead keeps pinning to the bottom on
+  // every subsequent DOM mutation inside the thread for `ms`, which covers
+  // however long that turn's content takes to finish rendering.
+  const stickToBottomFor = (ms: number) => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const observer = new MutationObserver(() => {
+      container.scrollTop = container.scrollHeight;
+    });
+    observer.observe(container, { childList: true, subtree: true, characterData: true });
+    container.scrollTop = container.scrollHeight;
+    window.setTimeout(() => observer.disconnect(), ms);
   };
 
   // Detect if the user has scrolled away from the bottom on their own —
@@ -2362,6 +2564,11 @@ The content has been updated across all channels to reflect your changes.`;
   };
 
   const handleSendMessage = (message: string) => {
+    // Give the host page first refusal on a typed message — e.g. the journey
+    // builder recognizing "audit my flow" as its own audit intent — before
+    // any of this component's own scripted routing below gets a chance to
+    // play an unrelated canned flow instead.
+    if (onBeforeSend && onBeforeSend(message)) return;
     // A custom-agent chip in the composer routes the opening turn into that
     // agent's scripted thread (Switched to <agent> → thinking → reply/report),
     // so an agent can be triggered from the main input, not just its own page.
@@ -3211,14 +3418,23 @@ The content has been updated across all channels to reflect your changes.`;
    *  discovery points, both of which open the chat already on a subject. */
   const appendTopic = (topic: SeededTopic) => {
     const coMarketer = marketingAgents.find(a => a.id === 'co-marketer');
-    setMessages(prev => [...prev, {
-      type: 'chat',
-      isAI: false,
-      content: topic.prompt,
-      navLabel: topic.navLabel,
-      onAnimationComplete: () => {},
-    }]);
+    if (!topic.suppressPromptTurn) {
+      setMessages(prev => [...prev, {
+        type: 'chat',
+        isAI: false,
+        content: topic.prompt,
+        navLabel: topic.navLabel,
+        questionRecap: topic.questionRecap,
+        onAnimationComplete: () => {},
+      }]);
+    }
     setShowSuggestions(false);
+    // Jumps straight to the just-answered question (and, shortly after,
+    // whatever the agent adds below it) rather than leaving the marketer to
+    // scroll down and find it themselves — this only fires for a real
+    // follow-up turn (a deliberate action just happened), never on the
+    // panel's own initial mount.
+    stickToBottomFor(2500);
 
     // Specialist-led topic: same switch → thinking → answer sequence the
     // scripted campaign flows play, so a cut the Segment agent actually built
@@ -3228,38 +3444,59 @@ The content has been updated across all channels to reflect your changes.`;
       : undefined;
     if (specialist) {
       const steps = topic.reasoningSteps ?? [];
-      const sequence: ChatMessageData[] = [
-        {
-          type: 'chat', isAI: true, content: '',
-          isAgentSwitch: true,
-          switchAgentLabel: specialist.name,
-          switchSaying: topic.agentSaying,
-          reasoningSteps: steps,
-          avatarSrc: specialist.avatarSrc,
-          avatarIcon: specialist.icon,
-          avatarBgClass: specialist.colorClass,
-        },
-        {
-          type: 'chat', isAI: true, content: '',
-          isThinkingState: true, thinkingDuration: 4, reasoningSteps: steps,
-        },
-        {
-          type: 'chat', isAI: true,
-          agentName: specialist.name,
-          avatarSrc: specialist.avatarSrc,
-          avatarIcon: specialist.icon,
-          avatarBgClass: specialist.colorClass,
-          content: topic.reply,
-          hidePerformanceDashboard: true,
-          setupApplyCard: topic.setupApplyCard,
-          findings: topic.findings,
-        },
-      ];
+      const switchEntry: ChatMessageData = {
+        type: 'chat', isAI: true, content: '',
+        isAgentSwitch: true,
+        switchAgentLabel: specialist.name,
+        switchSaying: topic.agentSaying,
+        reasoningSteps: steps,
+        avatarSrc: specialist.avatarSrc,
+        avatarIcon: specialist.icon,
+        avatarBgClass: specialist.colorClass,
+      };
+      const thinkingEntry: ChatMessageData = {
+        type: 'chat', isAI: true, content: '',
+        isThinkingState: true, thinkingDuration: topic.thinkingDurationSeconds ?? 4, thinkingLabel: topic.thinkingLabel, reasoningSteps: steps,
+      };
+      // Staged reveal (replySegments) when set — each its own fully-typed
+      // turn before the next begins — else the usual single reply message.
+      // Only the LAST segment carries any cards, same as a single reply
+      // would.
+      const replyTexts = topic.replySegments && topic.replySegments.length > 0 ? topic.replySegments : [topic.reply ?? ''];
+      const replyEntries: ChatMessageData[] = replyTexts.map((text, i) => ({
+        type: 'chat', isAI: true,
+        agentName: specialist.name,
+        avatarSrc: specialist.avatarSrc,
+        avatarIcon: specialist.icon,
+        avatarBgClass: specialist.colorClass,
+        content: text,
+        hidePerformanceDashboard: true,
+        // The copy/thumbs row only makes sense once on a multi-segment
+        // reveal — not repeated under every intermediate line.
+        hideFeedback: i !== replyTexts.length - 1,
+        ...(i === replyTexts.length - 1
+          ? {
+              setupApplyCard: topic.setupApplyCard,
+              findings: topic.findings,
+              experimentCard: topic.experimentCard,
+              nodeInsightCard: topic.nodeInsightCard,
+              journeyProposalCard: topic.journeyProposalCard,
+              audienceTestCard: topic.audienceTestCard,
+              mergeTestCta: topic.mergeTestCta,
+              replyOptions: topic.replyOptions,
+            }
+          : {}),
+      }));
+      const sequence: ChatMessageData[] = topic.skipAgentSwitchBanner
+        ? [thinkingEntry, ...replyEntries]
+        : [switchEntry, thinkingEntry, ...replyEntries];
 
       setIsMockAgentChatActive(true);
       isMockAgentChatActiveRef.current = true;
+      const mySequenceId = ++activeSequenceIdRef.current;
 
       const step = (index: number) => {
+        if (mySequenceId !== activeSequenceIdRef.current) return;
         if (!isMockAgentChatActiveRef.current) {
           if (mockMessageTimeoutRef.current) {
             clearTimeout(mockMessageTimeoutRef.current);
@@ -3286,6 +3523,7 @@ The content has been updated across all channels to reflect your changes.`;
         // Dividers aren't ChatMessages and never fire onAnimationComplete.
         if (def.isAgentSwitch) {
           setMessages(prev => [...prev, def]);
+          stickToBottomFor(2500);
           if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
           mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 2600);
           return;
@@ -3293,10 +3531,21 @@ The content has been updated across all channels to reflect your changes.`;
         setMessages(prev => [...prev, {
           ...def,
           onAnimationComplete: () => {
+            // A ThinkingState message's onComplete fires straight from its
+            // own internal countdown, whenever that happens to elapse —
+            // entirely independent of whether a newer sequence has since
+            // taken over the shared timeout ref. Guarding here (not just at
+            // the top of step()) matters because the very next line clears
+            // and re-schedules mockMessageTimeoutRef itself — without this
+            // check, a stale callback firing after a newer append already
+            // scheduled its own next step would cancel that legitimate,
+            // still-pending timeout, silently dropping the newer sequence.
+            if (mySequenceId !== activeSequenceIdRef.current) return;
             if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
             mockMessageTimeoutRef.current = setTimeout(() => step(index + 1), 650);
           },
         }]);
+        stickToBottomFor(2500);
       };
 
       if (mockMessageTimeoutRef.current) clearTimeout(mockMessageTimeoutRef.current);
@@ -3315,12 +3564,15 @@ The content has been updated across all channels to reflect your changes.`;
         avatarSrc: coMarketer?.avatarSrc,
         avatarIcon: coMarketer?.icon,
         avatarBgClass: coMarketer?.colorClass,
-        content: topic.reply,
+        content: topic.reply ?? '',
         hidePerformanceDashboard: true,
         setupApplyCard: topic.setupApplyCard,
         findings: topic.findings,
+        experimentCard: topic.experimentCard,
+        nodeInsightCard: topic.nodeInsightCard,
         onAnimationComplete: () => setMockChatCompleted(true),
       }]);
+      stickToBottomFor(2500);
     }, 700);
   };
 
@@ -4028,6 +4280,11 @@ The content has been updated across all channels to reflect your changes.`;
 
             {/* Scrollable chat messages area */}
             <div
+              // overflow-anchor: none — without it, the browser's native scroll
+              // anchoring yanks scrollTop back up whenever content above the
+              // anchor node resizes (a card mounting in, a typing animation),
+              // fighting scrollToBottomInstant's explicit jump to the bottom.
+              style={{ overflowAnchor: "none" }}
               className={cn(
                 "relative z-0 flex-1 flex flex-col overflow-y-auto hover-scroll",
                 isExpanded ? "px-[28px]" : "p-[16px]",
@@ -4468,6 +4725,40 @@ The content has been updated across all channels to reflect your changes.`;
                           : undefined
                       }
                       findings={message.findings}
+                      experimentCard={message.experimentCard}
+                      onCreateTest={onCreateTest}
+                      onUpdateTestSplit={onUpdateTestSplit}
+                      onPostTestDecision={onPostTestDecision}
+                      nodeInsightCard={message.nodeInsightCard}
+                      onRespondNodeInsight={onRespondNodeInsight}
+                      journeyProposalCard={message.journeyProposalCard}
+                      audienceTestCard={message.audienceTestCard}
+                      onRespondAudienceTest={onRespondAudienceTest}
+                      mergeTestCta={message.mergeTestCta}
+                      mergeTestCtaDone={message.mergeTestCtaDone}
+                      onMergeTestJourney={
+                        message.mergeTestCta
+                          ? () => {
+                              setMessages(prev =>
+                                prev.map((m, i) => (i === index ? { ...m, mergeTestCtaDone: true } : m)),
+                              );
+                              onMergeTestJourney?.();
+                            }
+                          : undefined
+                      }
+                      replyOptions={message.replyOptions}
+                      replyOptionsSelectedValue={message.replyOptionsSelectedValue}
+                      onSelectReplyOption={
+                        message.replyOptions
+                          ? (value: string) => {
+                              setMessages(prev =>
+                                prev.map((m, i) => (i === index ? { ...m, replyOptionsSelectedValue: value } : m)),
+                              );
+                              handleSendMessage(value);
+                            }
+                          : undefined
+                      }
+                      questionRecap={message.questionRecap}
                       onAskFinding={onAskFinding}
                       onThumbsUp={() => setFeedbackModal('up')}
                       onThumbsDown={() => setFeedbackModal('down')}
@@ -4552,6 +4843,7 @@ The content has been updated across all channels to reflect your changes.`;
                       promptTemplateExists={promptTemplateExists}
                       isThinkingState={message.isThinkingState}
                       thinkingDuration={message.thinkingDuration}
+                      thinkingLabel={message.thinkingLabel}
                       reasoningSteps={message.reasoningSteps}
                       artifact={message.artifact}
                       onDownloadArtifact={() => {}}

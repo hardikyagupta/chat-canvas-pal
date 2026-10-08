@@ -20,6 +20,7 @@ import {
 import EngageL2 from "./EngageL2";
 import AudienceL2 from "./AudienceL2";
 import AnalyticsL2 from "./AnalyticsL2";
+import ContentL2 from "./ContentL2";
 
 /**
  * L1 left navigation rail — 48px wide, Primary/Ash (#291E30), rounded on the
@@ -93,6 +94,7 @@ export default function L1Nav({
   activeEngageItem = "campaigns",
   activeAudienceItem,
   activeAnalyticsItem,
+  activeContentItem,
   nudgeHighlightKey,
 }: {
   active?: string;
@@ -104,13 +106,16 @@ export default function L1Nav({
   /** Which Analytics L2 item renders active when that menu is open. Undefined
    *  highlights nothing — none of these have pages yet. */
   activeAnalyticsItem?: string;
+  /** Which Content L2 item renders active when that menu is open. Undefined
+   *  highlights nothing — none of these have pages yet. */
+  activeContentItem?: string;
   /** Rail entry (e.g. "decisioning", "ai-dashboard") to highlight with the
    *  pulsing discovery dot — whichever step of the sequence is currently up. */
   nudgeHighlightKey?: string;
 }) {
   const navigate = useNavigate();
   // Only one L2 drawer is ever open — opening one closes the other.
-  const [openMenu, setOpenMenu] = useState<"engage" | "audience" | "analytics" | null>(null);
+  const [openMenu, setOpenMenu] = useState<"engage" | "audience" | "content" | "analytics" | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Dismiss the open L2 menu on any click outside the rail/menu.
@@ -123,7 +128,7 @@ export default function L1Nav({
     return () => document.removeEventListener("mousedown", onDocDown);
   }, [openMenu]);
 
-  const toggleMenu = (key: "engage" | "audience" | "analytics") =>
+  const toggleMenu = (key: "engage" | "audience" | "content" | "analytics") =>
     setOpenMenu((cur) => (cur === key ? null : key));
 
   return (
@@ -143,8 +148,11 @@ export default function L1Nav({
               label={item.label}
               active={item.key === active}
               onClick={
-                item.key === "engage" || item.key === "audience" || item.key === "analytics"
-                  ? () => toggleMenu(item.key as "engage" | "audience" | "analytics")
+                item.key === "engage" ||
+                item.key === "audience" ||
+                item.key === "content" ||
+                item.key === "analytics"
+                  ? () => toggleMenu(item.key as "engage" | "audience" | "content" | "analytics")
                   : item.route
                   ? () => navigate(item.route)
                   : undefined
@@ -167,6 +175,10 @@ export default function L1Nav({
 
       {openMenu === "audience" && (
         <AudienceL2 active={activeAudienceItem} onClose={() => setOpenMenu(null)} />
+      )}
+
+      {openMenu === "content" && (
+        <ContentL2 active={activeContentItem} onClose={() => setOpenMenu(null)} />
       )}
 
       {openMenu === "analytics" && (
