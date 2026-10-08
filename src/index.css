@@ -1030,6 +1030,19 @@
   margin: 0;
 }
 
+/* Inline number/percentage emphasis (JourneyBuilder's hi() helper) — a
+   heavier weight at the surrounding text's own size, inline with the
+   sentence. Needs its own class + this override because .text-sm strong
+   above is already the block-level 18px style this same chat uses for its
+   own section headers ("What I'd test:"). */
+.text-sm strong.chat-num {
+  font-size: inherit;
+  font-weight: 700;
+  line-height: inherit;
+  letter-spacing: inherit;
+  display: inline;
+}
+
 .text-sm ul,
 .text-sm ol {
   font-family: 'Manrope', sans-serif;
@@ -1526,4 +1539,53 @@
   .seg-stage-in {
     animation: none;
   }
+}
+
+/* Products → Replenishment (ported listing/config panels) */
+@layer utilities {
+  .nc-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .nc-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .nc-scroll::-webkit-scrollbar-thumb { background-color: transparent; border-radius: 9999px; }
+  .nc-scroll:hover { scrollbar-color: #cfd7e6 transparent; }
+  .nc-scroll:hover::-webkit-scrollbar-thumb { background-color: #cfd7e6; }
+
+  .pd-vscroll::-webkit-scrollbar { width: 6px; }
+  .pd-vscroll::-webkit-scrollbar-track { background: #f0f1f5; border-radius: 9999px; }
+  .pd-vscroll::-webkit-scrollbar-thumb { background: #c9ccd7; border-radius: 9999px; }
+  .pd-hscroll::-webkit-scrollbar { height: 11px; }
+  .pd-hscroll::-webkit-scrollbar-track { background: #f4f5f8; border-radius: 9999px; }
+  .pd-hscroll::-webkit-scrollbar-thumb { background: #d8dbe4; border-radius: 9999px; }
+
+  .animate-slide-up { animation: slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-slide-down-out { animation: slide-down-out 0.4s cubic-bezier(0.55, 0, 1, 0.45) both; }
+  .animate-fade-in-up { animation: fade-in-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-drawer-in { animation: drawer-in 0.36s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-drawer-scrim { animation: drawer-scrim 0.36s ease both; }
+  .animate-blink { animation: blink-dot 1.6s ease-in-out infinite; }
+  .animate-bounce-dot { animation: bounce-dot 1.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite; }
+  .animate-pulse-ring { animation: pulse-ring 2.4s ease-in-out infinite; }
+  .animate-spin-slow { animation: spin-hex 8s linear infinite; }
+}
+
+@keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes slide-down-out { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes fade-in-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes drawer-scrim { from { opacity: 0; } to { opacity: 1; } }
+@keyframes blink-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes bounce-dot { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(-14px); opacity: 0.7; } }
+@keyframes pulse-ring { 0% { transform: scale(0.92); opacity: 0.18; } 50% { transform: scale(1.06); opacity: 0.08; } 100% { transform: scale(0.92); opacity: 0.18; } }
+@keyframes spin-hex { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Thin rule separating a co-marketer reply's own sub-sections (e.g. "What
+   I'd test:" / "Why this could help:") from the paragraph above it — each
+   is its own top-level block from splitIntoBlocks, so this renders as its
+   own line rather than sitting inside either paragraph. */
+.chat-section-divider {
+  border-top: 1px solid #EBEBF5;
+  height: 0;
+  margin: 2px 0;
 }

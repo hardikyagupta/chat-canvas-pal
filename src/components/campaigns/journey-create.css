@@ -1,0 +1,20 @@
+/* Animated gradient ring around the AI describe-box on the Create Journey
+   entry screen — a slow drifting border so that field reads as the primary,
+   "alive" action on the screen. */
+.jcm-gradient-ring {
+  padding: 1.5px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #2f68e5, #9449df, #2f68e5, #6ea8fe, #2f68e5);
+  background-size: 300% 100%;
+  animation: jcm-gradient-run 4s linear infinite;
+}
+@keyframes jcm-gradient-run {
+  to {
+    background-position: 300% 50%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jcm-gradient-ring {
+    animation: none;
+  }
+}

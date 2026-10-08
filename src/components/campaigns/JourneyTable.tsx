@@ -1,4 +1,5 @@
 import { MoreVertical } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { journeys as defaultJourneys, type Journey } from "./journeys.data";
 import JourneyStatusBadge from "./JourneyStatusBadge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -28,6 +29,7 @@ function MetricCell({ value, first }: { value: string; first?: boolean }) {
 }
 
 function JourneyRow({ j }: { j: Journey }) {
+  const navigate = useNavigate();
   const metrics = [j.sent, j.delivered, j.openedRead, j.openedRead2];
 
   return (
@@ -36,9 +38,13 @@ function JourneyRow({ j }: { j: Journey }) {
       <div className="sticky left-0 z-10 flex items-center justify-between gap-2 border-r border-[#EDF0F7] bg-white px-6 py-3 group-hover:bg-[#F5F8FF]">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
-            <p className="truncate font-manrope text-sm font-semibold tracking-[0.29px] text-[#17173A]">
+            <button
+              type="button"
+              onClick={() => navigate(`/journeys/${j.journeyId}/report`)}
+              className="truncate rounded font-manrope text-sm font-semibold tracking-[0.29px] text-[#17173A] transition-colors hover:text-[#2F68E5] hover:underline"
+            >
               {j.name}
-            </p>
+            </button>
             {j.generatedByAI && (
               <Tooltip>
                 <TooltipTrigger asChild>

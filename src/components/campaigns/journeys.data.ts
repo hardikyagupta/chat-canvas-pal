@@ -1,4 +1,4 @@
-export type JourneyStatus = "DRAFT" | "SCHEDULED" | "STOPPED" | "COMPLETED";
+export type JourneyStatus = "DRAFT" | "SCHEDULED" | "STOPPED" | "COMPLETED" | "ONGOING";
 
 export interface Journey {
   id: string;
@@ -13,11 +13,35 @@ export interface Journey {
   openedRead2: string;
   /** Marks a journey that was built via the "Create with AI" flow. */
   generatedByAI?: boolean;
+  /** A JOURNEY_TEMPLATES id (journeyTemplates.data) this journey's canvas
+   *  was actually built from — lets its report page's "Edit journey" open
+   *  the builder with this journey's real flow already on the canvas,
+   *  instead of a blank scratch one. Unset for journeys with no known
+   *  underlying template. */
+  templateId?: string;
+  /** Extra report-page-only metrics, beyond what the list table shows. */
+  clicked?: string;
+  submissions?: string;
 }
 
 const D = "--";
 
 export const journeys: Journey[] = [
+  {
+    id: "10",
+    name: "Cart_Abandonment_Ongoing",
+    status: "ONGOING",
+    journeyId: "4502",
+    startEnd: "Sep 24, 2026 09:00 AM - Never Ending",
+    lastEdited: "Sep 24, 2026 09:04 AM",
+    sent: "28,940",
+    delivered: "28,110",
+    openedRead: "14,620",
+    openedRead2: "5,960",
+    templateId: "cart-abandonment-ongoing",
+    clicked: "5,960",
+    submissions: "2,340",
+  },
   {
     id: "1",
     name: "Welcome_Series_Onboarding",
@@ -29,6 +53,7 @@ export const journeys: Journey[] = [
     delivered: "79,120",
     openedRead: "41,860",
     openedRead2: "18,230",
+    templateId: "welcome-series",
   },
   {
     id: "2",
@@ -114,12 +139,28 @@ export const journeys: Journey[] = [
     openedRead: "19,455",
     openedRead2: "7,308",
   },
+  {
+    id: "9",
+    name: "Post_Purchase_Review_Request",
+    status: "ONGOING",
+    journeyId: "4501",
+    startEnd: "Sep 22, 2026 04:32 PM - Never Ending",
+    lastEdited: "Sep 22, 2026 04:36 PM",
+    sent: "16,280",
+    delivered: "15,910",
+    openedRead: "9,845",
+    openedRead2: "4,120",
+    templateId: "post-purchase-review-request",
+    clicked: "4,120",
+    submissions: "1,486",
+  },
 ];
 
 export const journeyTabs = [
-  { label: "All", count: 8 },
+  { label: "All", count: 10 },
   { label: "Draft", count: 2 },
   { label: "Scheduled", count: 2 },
   { label: "Stopped", count: 1 },
   { label: "Completed", count: 3 },
+  { label: "Ongoing", count: 2 },
 ];

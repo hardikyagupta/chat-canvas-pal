@@ -14,8 +14,11 @@ import Settings from "./pages/Settings";
 import Campaigns from "./pages/Campaigns";
 import AudienceSegments from "./pages/AudienceSegments";
 import AnalyticsFunnel from "./pages/AnalyticsFunnel";
+import Products from "./pages/Products";
 import Journeys from "./pages/Journeys";
+import JourneyCreate from "./pages/JourneyCreate";
 import JourneyBuilder from "./pages/JourneyBuilder";
+import JourneyReport from "./pages/JourneyReport";
 import DecisioningEngine from "./pages/DecisioningEngine";
 import DecisioningEnginePreview from "./pages/DecisioningEnginePreview";
 import DecisioningConfiguration from "./pages/DecisioningConfiguration";
@@ -45,8 +48,11 @@ const App = () => (
               <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/audience/segments" element={<AudienceSegments />} />
               <Route path="/analytics/funnel" element={<AnalyticsFunnel />} />
+              <Route path="/content/products" element={<Products />} />
               <Route path="/journeys" element={<Journeys />} />
+              <Route path="/journeys/create" element={<JourneyCreate />} />
               <Route path="/journeys/new" element={<JourneyBuilder />} />
+              <Route path="/journeys/:journeyId/report" element={<JourneyReport />} />
               <Route path="/decisioning-engine" element={<DecisioningEngine />} />
               <Route path="/decisioning-engine/preview" element={<DecisioningEnginePreview />} />
               <Route path="/decisioning-engine/configuration" element={<DecisioningConfiguration />} />

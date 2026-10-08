@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, ChevronDown, Info, Pencil, UserCheck, X } from "lucide-react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import Dropdown from "../Dropdown";
 import SegmentSelect, { type SegmentRef } from "./SegmentSelect";
 import StepCard from "./StepCard";
 import ConditionAttributePicker, {
@@ -293,106 +293,6 @@ function InfoDot({ label }: { label: string }) {
     </TooltipProvider>
   );
 }
-
-/** Our own styled dropdown — a trigger button plus a floating option list —
- *  in place of a native <select> wherever the browser's own menu looks out
- *  of place next to the rest of the form. */
-function Dropdown({
-  value,
-  options,
-  onChange,
-  widthClass = "w-[180px]",
-}: {
-  value: string;
-  options: string[];
-  onChange: (v: string) => void;
-  widthClass?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [rect, setRect] = useState<DOMRect | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!wrapRef.current?.contains(target) && !panelRef.current?.contains(target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  // Portalled to <body> and positioned by rect rather than plain absolute —
-  // the accordion's height-animation wrapper clips overflow, which would
-  // otherwise crop a long option list (e.g. "Email domain"'s operators)
-  // instead of letting it scroll.
-  useLayoutEffect(() => {
-    if (!open) return;
-    const update = () => wrapRef.current && setRect(wrapRef.current.getBoundingClientRect());
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [open]);
-
-  return (
-    <div ref={wrapRef} className={cn("relative shrink-0", widthClass)}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={cn(
-          "flex h-8 w-full items-center justify-between gap-2 rounded-md border bg-white px-2.5 font-manrope text-[13px] text-[#17173A] outline-none transition-colors",
-          open ? "border-[#2F68E5]" : "border-[#DDE2EE]"
-        )}
-      >
-        <span className="truncate">{value}</span>
-        <ChevronDown
-          className={cn(
-            "size-3.5 shrink-0 text-[#8A8AA3] transition-transform",
-            open && "rotate-180"
-          )}
-          strokeWidth={2}
-        />
-      </button>
-      {open &&
-        rect &&
-        createPortal(
-          <div
-            ref={panelRef}
-            style={{ position: "fixed", top: rect.bottom + 4, left: rect.left, minWidth: rect.width }}
-            className="scroll-slim z-[120] max-h-[240px] w-max overflow-y-auto rounded-md border border-[#DDE2EE] bg-white py-1 shadow-[0_8px_24px_rgba(23,23,58,0.12)]"
-          >
-            {options.map((o) => (
-              <button
-                key={o}
-                type="button"
-                onClick={() => {
-                  onChange(o);
-                  setOpen(false);
-                }}
-                className={cn(
-                  "block w-full whitespace-nowrap px-3 py-2 text-left font-manrope text-[13px] transition-colors",
-                  o === value
-                    ? "bg-[#F4F8FF] font-semibold text-[#2F68E5]"
-                    : "text-[#17173A] hover:bg-[#F7F9FC]"
-                )}
-              >
-                {o}
-              </button>
-            ))}
-          </div>,
-          document.body
-        )}
-    </div>
-  );
-}
-
 
 /** Flags a collapsed step whose required fields aren't all filled in —
  *  conversion tracking on with no goal picked, so far. Shown ambiently
@@ -745,6 +645,7 @@ export default function CampaignAudienceStep({
                             })
                           }
                           widthClass="w-[190px]"
+                          heightClass="h-8"
                         />
                         {c.type === "boolean" ? (
                           <Dropdown
@@ -752,6 +653,7 @@ export default function CampaignAudienceStep({
                             options={["True", "False"]}
                             onChange={(v) => setCondition(i, { value: v })}
                             widthClass="w-[140px]"
+                            heightClass="h-8"
                           />
                         ) : (
                           <input
@@ -798,6 +700,7 @@ export default function CampaignAudienceStep({
                     options={["Select a table", ...DATA_TABLES]}
                     onChange={(v) => onChange({ table: v === "Select a table" ? "" : v })}
                     widthClass="w-[240px]"
+                    heightClass="h-8"
                   />
                 </div>
               )}

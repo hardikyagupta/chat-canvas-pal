@@ -119,7 +119,7 @@ export default function Journeys() {
               showAiCta
               showAiNudge={showAiNudge}
               onCloseAiNudge={() => setShowAiNudge(false)}
-              onCtaClick={() => navigate("/journeys/new")}
+              onCtaClick={() => navigate("/journeys/create")}
               onAiCtaClick={() => {
                 setShowAiNudge(false);
                 navigate("/journeys/new", { state: { openAI: true } });

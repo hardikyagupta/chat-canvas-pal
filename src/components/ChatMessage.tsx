@@ -18,7 +18,12 @@ import type { AgentArtifactCardData } from '@/data/conversations';
 import SetupApplyCard, { type SetupApplyCardData } from '@/components/campaigns/campaign-creation/SetupApplyCard';
 import { FindingsReviewList } from '@/components/campaigns/campaign-creation/FindingCard';
 import type { Finding } from '@/components/campaigns/campaign-creation/previewFindings.data';
+import ExperimentCard, { type ExperimentCardData, type TestBranchConfig } from '@/components/ExperimentCard';
+import NodeOptimizationInsightCard, { type NodeInsightCardData, type NodeInsightResponse } from '@/components/NodeOptimizationInsightCard';
+import JourneyOptimizationProposalCard, { type JourneyProposalCardData } from '@/components/JourneyOptimizationProposalCard';
+import AudienceTestQuestionCard, { type AudienceTestCardData } from '@/components/AudienceTestQuestionCard';
 import type { InsightCardContext } from '@/types/insightCard';
+import type { QuestionRecapEntry } from '@/components/campaigns/CoMarketerQuestionCard';
 import { ContentAgentResponse } from './ContentAgentResponse';
 import { ContentAgentClarification } from './ContentAgentClarification';
 import { ContentAgentQuestionChoice } from './ContentAgentQuestionChoice';
@@ -452,6 +457,9 @@ interface ChatMessageProps {
   // Thinking state specific
   isThinkingState?: boolean;
   thinkingDuration?: number;
+  /** See ThinkingState's own doc — replaces "Thinking..." for a
+   *  longer-running action. */
+  thinkingLabel?: string;
   reasoningSteps?: string[];
   // Doc-like artifact
   artifact?: DocArtifact;
@@ -474,12 +482,51 @@ interface ChatMessageProps {
    *  rail shows, dropped into this message instead. */
   findings?: Finding[];
   onAskFinding?: (finding: Finding) => void;
+  /** Journey Optimization Agent's own proposal/results card — the
+   *  conversational Q&A + experiment summary/results, shown once a node
+   *  insight has been "explored" (see nodeInsightCard below) or the
+   *  bottom-bar "Optimize journey" pill ran a whole-journey scan. */
+  experimentCard?: ExperimentCardData;
+  /** Called with the winning run's new wait time (hours) when "Create
+   *  version and apply" is tapped on the experiment card — creates a real
+   *  Journey Version from the change and makes it live. Omitted outside the
+   *  journey builder (e.g. the campaign co-marketer), where the card has
+   *  nothing to apply to. */
+  onCreateTest?: (config: TestBranchConfig, anchorStepId?: string) => void;
+  onUpdateTestSplit?: (variantPercent: number) => void;
+  onPostTestDecision?: (decision: "make-main" | "keep-existing" | "test-another") => void;
+  /** The Journey Optimization Agent's node-level finding — shown first when
+   *  a marketer asks about one specific node, before any experiment setup. */
+  nodeInsightCard?: NodeInsightCardData;
+  /** Called when "Explore this optimization" is tapped on the insight card —
+   *  hands off into the conversational experiment flow for that same node. */
+  onRespondNodeInsight?: (response: NodeInsightResponse, data: NodeInsightCardData, recap: QuestionRecapEntry[]) => void;
+  /** The goal-first conversation's canvas-preview card — see
+   *  JourneyOptimizationProposalCard's own doc. Its question is answered by
+   *  typing (see JourneyBuilder's handleCoMarketerBeforeSend), not a button
+   *  on the card itself. */
+  journeyProposalCard?: JourneyProposalCardData;
+  /** The goal-first conversation's audience-percentage question. */
+  audienceTestCard?: AudienceTestCardData;
+  onRespondAudienceTest?: (percent: number) => void;
+  /** "Yes, merge as main journey" — a standalone prominent CTA rather than a
+   *  CoMarketerQuestionCard (there's only one action, not a set of options).
+   *  `mergeTestCtaDone` freezes it into its answered state. */
+  mergeTestCta?: boolean;
+  mergeTestCtaDone?: boolean;
+  onMergeTestJourney?: () => void;
+  /** One button per answer to this message's question — see
+   *  ChatMessageData's own doc (ChatInterface.tsx). */
+  replyOptions?: { label: string; value: string }[];
+  replyOptionsSelectedValue?: string;
+  onSelectReplyOption?: (value: string) => void;
   // Feedback actions — open the matching feedback modal
   onThumbsUp?: () => void;
   onThumbsDown?: () => void;
   // Layout: widget (minimized) view is narrow, so the user bubble gets more width.
   isExpanded?: boolean;
   insightCard?: InsightCardContext;
+  questionRecap?: QuestionRecapEntry[];
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -526,6 +573,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   promptTemplateExists = true,
   isThinkingState = false,
   thinkingDuration = 3,
+  thinkingLabel,
   reasoningSteps,
   artifact,
   onDownloadArtifact,
@@ -541,9 +589,25 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   appliedCohortId,
   findings,
   onAskFinding,
+  experimentCard,
+  onCreateTest,
+  onUpdateTestSplit,
+  onPostTestDecision,
+  nodeInsightCard,
+  onRespondNodeInsight,
+  journeyProposalCard,
+  audienceTestCard,
+  onRespondAudienceTest,
+  mergeTestCta,
+  mergeTestCtaDone,
+  onMergeTestJourney,
+  replyOptions,
+  replyOptionsSelectedValue,
+  onSelectReplyOption,
   onThumbsUp,
   onThumbsDown,
   insightCard,
+  questionRecap,
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isAnimationDone, setIsAnimationDone] = useState(false);
@@ -1203,6 +1267,29 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   }, []);
 
   if (!isAI) {
+    if (questionRecap && questionRecap.length > 0) {
+      // Recaps a CoMarketerQuestionCard's answer(s) as the user's own turn
+      // — bold question, plain answer, one row per question — instead of a
+      // single joined string, so what was just picked stays legible once
+      // the thread scrolls past the question card itself.
+      return (
+        <div className="flex justify-end w-full py-2">
+          <div
+            className={cn(
+              "w-fit space-y-2 rounded-[16px] border border-[var(--color-line)] bg-card p-3",
+              isExpanded ? "max-w-[60%]" : "max-w-[85%]"
+            )}
+          >
+            {questionRecap.map((qa, i) => (
+              <div key={i}>
+                <p className="font-manrope text-[12px] font-bold leading-snug text-[var(--color-ink)]">{qa.title}</p>
+                <p className="mt-0.5 font-manrope text-[11.5px] text-[#6F6F8D]">{qa.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
     if (insightCard) {
       return (
         <div className="flex justify-end w-full py-2">
@@ -1265,6 +1352,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         thinkingDuration={thinkingDuration}
         reasoningSteps={reasoningSteps}
         onComplete={onAnimationComplete}
+        {...(thinkingLabel ? { label: thinkingLabel } : {})}
       />
     );
   }
@@ -1508,6 +1596,77 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 {findings && findings.length > 0 && isAnimationDone && (
                   <div className="py-2 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-1">
                     <FindingsReviewList findings={findings} onAsk={(f) => onAskFinding?.(f)} />
+                  </div>
+                )}
+                {nodeInsightCard && isAnimationDone && (
+                  <div className="py-2 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-1">
+                    <NodeOptimizationInsightCard data={nodeInsightCard} onRespond={onRespondNodeInsight} />
+                  </div>
+                )}
+                {journeyProposalCard && isAnimationDone && (
+                  <div className="py-2 duration-500 delay-500 ease-out animate-in fade-in slide-in-from-bottom-2 fill-mode-both">
+                    <JourneyOptimizationProposalCard data={journeyProposalCard} />
+                  </div>
+                )}
+                {audienceTestCard && isAnimationDone && (
+                  // A deliberate beat before this shows up — the agent's own
+                  // text just finished typing, so the question card
+                  // following right on its heels read as instant/jarring
+                  // rather than the agent "then" asking it.
+                  <div className="py-2 duration-500 delay-500 ease-out animate-in fade-in slide-in-from-bottom-2 fill-mode-both">
+                    <AudienceTestQuestionCard data={audienceTestCard} onSubmit={onRespondAudienceTest} />
+                  </div>
+                )}
+                {mergeTestCta && isAnimationDone && (
+                  <div className="py-2 duration-500 delay-500 ease-out animate-in fade-in slide-in-from-bottom-2 fill-mode-both">
+                    <button
+                      type="button"
+                      disabled={mergeTestCtaDone}
+                      onClick={onMergeTestJourney}
+                      className="dc-btn dc-btn-primary disabled:cursor-default disabled:opacity-60"
+                    >
+                      {mergeTestCtaDone ? "Merged as main journey" : "Yes, merge as main journey"}
+                    </button>
+                  </div>
+                )}
+                {replyOptions && replyOptions.length > 0 && isAnimationDone && (
+                  <div className="py-2 duration-500 delay-500 ease-out animate-in fade-in slide-in-from-bottom-2 fill-mode-both flex flex-wrap gap-2">
+                    {replyOptions.map((opt, index) => {
+                      const selected = replyOptionsSelectedValue === opt.value;
+                      const answered = !!replyOptionsSelectedValue;
+                      // The first option is the expected/main path (e.g.
+                      // "Continue with this goal", "Test this optimization")
+                      // and reads as the primary CTA until something's
+                      // picked — after that, whichever one was actually
+                      // picked takes over the primary styling instead.
+                      const isPrimary = answered ? selected : index === 0;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          disabled={answered}
+                          onClick={() => onSelectReplyOption?.(opt.value)}
+                          className={cn(
+                            "dc-btn",
+                            isPrimary ? "dc-btn-primary" : "dc-btn-secondary",
+                            "disabled:cursor-default",
+                            answered && !selected && "opacity-50",
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {experimentCard && isAnimationDone && (
+                  <div className="py-2 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-1">
+                    <ExperimentCard
+                      card={experimentCard}
+                      onCreateTest={(config) => onCreateTest?.(config, experimentCard.anchorStepId)}
+                      onUpdateSplit={onUpdateTestSplit}
+                      onPostTestDecision={onPostTestDecision}
+                    />
                   </div>
                 )}
                 {/* Executive Summary Content Accordion - only shown for executive summary messages */}

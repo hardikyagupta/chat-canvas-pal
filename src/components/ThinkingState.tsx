@@ -6,12 +6,17 @@ interface ThinkingStateProps {
   onComplete?: () => void;
   thinkingDuration?: number; // in seconds
   reasoningSteps?: string[]; // custom reasoning text
+  /** Replaces the "Thinking..." label shown while active — e.g. "Setting
+   *  up your test journey…" for a longer-running action, not just a plain
+   *  reasoning pause. Every existing caller keeps the default. */
+  label?: string;
 }
 
 export const ThinkingState: React.FC<ThinkingStateProps> = ({
   onComplete,
   thinkingDuration = 3,
   reasoningSteps,
+  label = "Thinking...",
 }) => {
   const [isThinking, setIsThinking] = useState(true);
   const [showText, setShowText] = useState(false);
@@ -108,7 +113,7 @@ export const ThinkingState: React.FC<ThinkingStateProps> = ({
             {/* Thinking text with shimmer - appears after dots */}
             {showText && (
               <span className="text-sm thinking-shimmer-gradient">
-                Thinking...
+                {label}
               </span>
             )}
           </div>
