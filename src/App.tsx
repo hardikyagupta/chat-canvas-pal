@@ -15,6 +15,7 @@ import Campaigns from "./pages/Campaigns";
 import AudienceSegments from "./pages/AudienceSegments";
 import AnalyticsFunnel from "./pages/AnalyticsFunnel";
 import Products from "./pages/Products";
+import ContentSms from "./pages/ContentSms";
 import Journeys from "./pages/Journeys";
 import JourneyCreate from "./pages/JourneyCreate";
 import JourneyBuilder from "./pages/JourneyBuilder";
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/audience/segments" element={<AudienceSegments />} />
               <Route path="/analytics/funnel" element={<AnalyticsFunnel />} />
               <Route path="/content/products" element={<Products />} />
+              <Route path="/content/sms" element={<ContentSms />} />
               <Route path="/journeys" element={<Journeys />} />
               <Route path="/journeys/create" element={<JourneyCreate />} />
               <Route path="/journeys/new" element={<JourneyBuilder />} />

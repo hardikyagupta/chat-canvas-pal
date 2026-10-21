@@ -19,7 +19,7 @@ import {
  * rail. Same Primary/Ash drawer treatment as <EngageL2/>, <AudienceL2/> and
  * <AnalyticsL2/> so all four read as the same surface sliding out of the rail.
  *
- * Only Products has a page so far; the rest grow a `route` as they are built.
+ * Only Products and SMS have a page so far; the rest grow a `route` as they are built.
  */
 
 interface ContentItem {
@@ -31,7 +31,7 @@ interface ContentItem {
 
 const items: ContentItem[] = [
   { key: "email", label: "Email", icon: Mail },
-  { key: "sms", label: "SMS", icon: MessageCircleMore },
+  { key: "sms", label: "SMS", icon: MessageCircleMore, route: "/content/sms" },
   { key: "app-push", label: "App push", icon: Smartphone },
   { key: "web-push", label: "Web push", icon: Monitor },
   { key: "web-message", label: "Web message", icon: AppWindow },
