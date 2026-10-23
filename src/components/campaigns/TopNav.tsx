@@ -116,7 +116,7 @@ export default function TopNav({
               </span>
             )}
             <CoMarketerButton
-              label="Ask Cori"
+              label="Ask Zeno"
               onClick={() => {
                 if (showCoMarketerNudge) dismissNudge();
                 onOpenChat?.();
