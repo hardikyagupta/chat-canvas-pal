@@ -30,7 +30,8 @@ export interface SmsTemplate {
   /** {#var#} marks a value filled in per recipient at send time. */
   body: string;
   /** Liquid expression each {{n}} in the body is filled from. */
-  variables?: Record<number, string>;
+  /** Mapping per variable slot: "1" for {{1}}, "#1" for the first DLT tag, … (see variableSlots). */
+  variables?: Record<string, string>;
 }
 
 export const smsTemplates: SmsTemplate[] = [
@@ -68,27 +69,80 @@ export const smsTemplates: SmsTemplate[] = [
   },
 ];
 
-/** DLT reserves 30 characters for every {#var#} (or {{n}}), whatever it ends up holding. */
+/** DLT reserves 30 characters for every variable — {{n}} or a DLT tag — whatever it ends up holding. */
 export const DLT_VAR_LENGTH = 30;
 
-/** Billable length of a template body, with each {#var#} counted at its DLT size. */
+/** DLT placeholder tags (with their short aliases) that stand for a value filled in per recipient. */
+export const DLT_TAGS = [
+  "var",
+  "numeric",
+  "num",
+  "number",
+  "alphanumeric",
+  "alp",
+  "url",
+  "urg",
+  "urlott",
+  "uro",
+  "cbn",
+  "email",
+  "eml",
+] as const;
+
+/** Matches one variable in a message: a numbered {{n}} (group 1) or a DLT tag (group 2). */
+const variableTokenRe = () => new RegExp(`\\{\\{(\\d+)\\}\\}|\\{#(${DLT_TAGS.join("|")})#\\}`, "g");
+
+/** Every variable token in the text, in order. */
+export function variableTokens(text: string): string[] {
+  return text.match(variableTokenRe()) ?? [];
+}
+
+export interface VariableSlot {
+  /** Key of its mapping: "1" for {{1}}, "#1" for the first DLT tag in the text, "#2" for the next, … */
+  key: string;
+  /** The token as typed, e.g. "{{1}}" or "{#numeric#}". */
+  token: string;
+  /** Row label — the token, numbered when the same tag appears more than once. */
+  label: string;
+}
+
+/**
+ * The variables a message contains, in the order they appear: one slot per distinct {{n}}
+ * and one per DLT-tag occurrence. Each slot gets a row to map to a value.
+ */
+export function variableSlots(body: string): VariableSlot[] {
+  const slots: VariableSlot[] = [];
+  const seenNumbers = new Set<string>();
+  const tagTotals: Record<string, number> = {};
+  for (const m of body.matchAll(variableTokenRe())) if (m[2]) tagTotals[m[2]] = (tagTotals[m[2]] ?? 0) + 1;
+  const tagSeen: Record<string, number> = {};
+  let tagOrdinal = 0;
+  for (const m of body.matchAll(variableTokenRe())) {
+    if (m[1] !== undefined) {
+      if (seenNumbers.has(m[1])) continue;
+      seenNumbers.add(m[1]);
+      slots.push({ key: m[1], token: m[0], label: m[0] });
+    } else {
+      tagOrdinal++;
+      tagSeen[m[2]] = (tagSeen[m[2]] ?? 0) + 1;
+      slots.push({
+        key: `#${tagOrdinal}`,
+        token: m[0],
+        label: tagTotals[m[2]] > 1 ? `${m[0]} (${tagSeen[m[2]]})` : m[0],
+      });
+    }
+  }
+  return slots;
+}
+
+/** Billable length of a template body, with each variable counted at its DLT size. */
 export function smsLength(body: string): number {
   let length = body.length;
-  for (const v of body.match(/\{#var#\}|\{\{\d+\}\}/g) ?? []) length += DLT_VAR_LENGTH - v.length;
+  for (const v of variableTokens(body)) length += DLT_VAR_LENGTH - v.length;
   return length;
 }
 
 /** Single-part SMS holds 160 characters; concatenated parts carry 153 each. */
 export function smsParts(length: number): number {
   return length <= 160 ? 1 : Math.ceil(length / 153);
-}
-
-/**
- * Seeded bodies mark per-recipient values with DLT's {#var#}; the editor works in
- * numbered {{n}} variables (each mapped to liquid), so opening one for editing
- * renumbers its {#var#}s after any {{n}} it already has.
- */
-export function toNumberedVariables(body: string): string {
-  let n = Math.max(0, ...[...body.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1])));
-  return body.replace(/\{#var#\}/g, () => `{{${++n}}}`);
 }

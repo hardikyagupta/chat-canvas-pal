@@ -356,7 +356,7 @@ export default function SetupApplyCard({
         >
           <p className="font-manrope text-sm font-bold text-[#17173A]">Send time optimizer</p>
           <p className="mt-1 font-manrope text-xs leading-[18px] text-[#6F6F8D]">
-            Let Cori choose the send time based on when this audience is most likely to engage.
+            Let Zeno choose the send time based on when this audience is most likely to engage.
           </p>
         </button>
         <button

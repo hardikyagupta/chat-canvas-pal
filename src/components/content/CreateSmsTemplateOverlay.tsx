@@ -15,7 +15,8 @@ import {
   DLT_VAR_LENGTH,
   smsLength,
   smsParts,
-  toNumberedVariables,
+  variableSlots,
+  variableTokens,
   type DltTemplateType,
   type SmsTemplate,
 } from "./smsTemplates.data";
@@ -27,7 +28,7 @@ export interface NewSmsTemplate {
   dltType: DltTemplateType;
   body: string;
   /** Liquid expression each {{n}} in the body is filled from. */
-  variables: Record<number, string>;
+  variables: Record<string, string>;
 }
 
 const NAME_ALLOWED = /^[A-Za-z0-9\-_&@:]*$/;
@@ -246,8 +247,8 @@ export default function CreateSmsTemplateOverlay({
   const [dltId, setDltId] = useState(initial?.dltId ?? "");
   const [categories, setCategories] = useState<string[]>([initial?.category ?? DEFAULT_CATEGORY]);
   const [dltType, setDltType] = useState<DltTemplateType | "">(initial?.dltType ?? "");
-  const [body, setBody] = useState(initial ? toNumberedVariables(initial.body) : "");
-  const [mappings, setMappings] = useState<Record<number, string>>(initial?.variables ?? {});
+  const [body, setBody] = useState(initial?.body ?? "");
+  const [mappings, setMappings] = useState<Record<string, string>>(initial?.variables ?? {});
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<number | null>(null);
   // Who the phone is rendered for. Nothing loads until the arrow button is clicked (until then the
@@ -295,17 +296,17 @@ export default function CreateSmsTemplateOverlay({
       category: categories[0] ?? DEFAULT_CATEGORY,
       dltType,
       body: body.trim(),
-      variables: Object.fromEntries(variables.map((n) => [n, mappings[n].trim()])),
+      variables: Object.fromEntries(slots.map((v) => [v.key, mappings[v.key].trim()])),
     });
   };
 
   const characters = smsLength(body);
-  const variables = variablesIn(body);
+  const slots = variableSlots(body);
   const previewBody = loadedPreview ? renderBody(body, mappings, previewContext(loadedPreview.user, previewActivity)) : body;
   // Variables still showing as {{n}} after rendering had no value for the loaded user.
-  const unfilled = loadedPreview ? [...new Set(previewBody.match(VARIABLE_RE) ?? [])] : [];
-  const unmapped = variables.filter((n) => !mappings[n]?.trim());
-  const remaining = MAX_SMS_VARIABLES - variables.length;
+  const unfilled = loadedPreview ? [...new Set(variableTokens(previewBody))] : [];
+  const unmapped = slots.filter((v) => !mappings[v.key]?.trim());
+  const remaining = MAX_SMS_VARIABLES - slots.length;
 
   // Drops the next unused {{n}} at the cursor (or over the selection).
   const addVariable = () => {
@@ -501,23 +502,25 @@ export default function CreateSmsTemplateOverlay({
                 Add variable ({remaining})
               </DsButton>
 
-              {variables.length > 0 && (
+              {slots.length > 0 && (
                 <div className="mt-6 rounded-[4px] border border-[#DDE2EE] p-6">
                   <h3 className="font-manrope text-[14px] font-bold text-[#17173A]">Map body variable</h3>
                   <div className="mt-4 space-y-4">
-                    {variables.map((n) => (
-                      <div key={n}>
+                    {slots.map((v) => (
+                      <div key={v.key}>
                         <p className="mb-2 font-manrope text-[14px] font-semibold text-[#17173A]">
-                          {`{{${n}}}`}
+                          {v.label}
                           <Required />
                         </p>
                         <SmsVariableField
-                          value={mappings[n] ?? ""}
-                          onChange={(v) => setMappings({ ...mappings, [n]: v })}
-                          invalid={submitted && !mappings[n]?.trim()}
-                          ariaLabel={`Value for variable ${n}`}
+                          value={mappings[v.key] ?? ""}
+                          onChange={(val) => setMappings({ ...mappings, [v.key]: val })}
+                          invalid={submitted && !mappings[v.key]?.trim()}
+                          ariaLabel={`Value for variable ${v.token}`}
                         />
-                        {submitted && !mappings[n]?.trim() && <FieldError>Map this variable to an attribute or liquid code.</FieldError>}
+                        {submitted && !mappings[v.key]?.trim() && (
+                          <FieldError>Map this variable to an attribute or liquid code.</FieldError>
+                        )}
                       </div>
                     ))}
                   </div>
