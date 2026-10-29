@@ -1,4 +1,4 @@
-import { DLT_TAGS } from "./smsTemplates.data";
+import { variableTokenRe } from "./smsTemplates.data";
 import { CONTENT_FETCHES, PAYLOAD_EVENTS } from "./smsVariables.data";
 
 /** Primary keys offered under "Recently used" in the preview-user field. */
@@ -142,9 +142,8 @@ export function renderLiquid(expression: string, ctx: PreviewContext): string {
 
 /** The message as the chosen user would receive it: each variable replaced by its rendered mapping. */
 export function renderBody(body: string, mappings: Record<string, string>, ctx: PreviewContext): string {
-  const re = new RegExp(`\\{\\{(\\d+)\\}\\}|\\{#(${DLT_TAGS.join("|")})#\\}`, "g");
   let tagOrdinal = 0;
-  return body.replace(re, (token, n: string | undefined) => {
+  return body.replace(variableTokenRe(), (token, n: string | undefined) => {
     const key = n !== undefined ? n : `#${++tagOrdinal}`;
     const mapping = mappings[key]?.trim();
     return (mapping && renderLiquid(mapping, ctx)) || token;
