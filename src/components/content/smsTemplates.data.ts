@@ -89,12 +89,47 @@ export const DLT_TAGS = [
   "eml",
 ] as const;
 
-/** Matches one variable in a message: a numbered {{n}} (group 1) or a DLT tag (group 2). */
-const variableTokenRe = () => new RegExp(`\\{\\{(\\d+)\\}\\}|\\{#(${DLT_TAGS.join("|")})#\\}`, "g");
+/** Parked for now: numbered {{n}} placeholders as variables (with a mapping row each). Only DLT tags count today. */
+const NUMBERED_VARIABLES = false;
+
+/** Matches one variable in a message: a numbered {{n}} (group 1, only when enabled) or a DLT tag (group 2). */
+export const variableTokenRe = () =>
+  new RegExp(
+    `${NUMBERED_VARIABLES ? "\\{\\{(\\d+)\\}\\}" : "(?!)(\\d+)"}|\\{#(${DLT_TAGS.join("|")})#\\}`,
+    "g"
+  );
 
 /** Every variable token in the text, in order. */
 export function variableTokens(text: string): string[] {
   return text.match(variableTokenRe()) ?? [];
+}
+
+/**
+ * Per-tag guidance shown under a variable's name: the point past which the value is cut off
+ * in the SMS actually sent. `{#var#}` is the
+ * generic placeholder and has no rule of its own.
+ */
+const TAG_TIPS: Record<string, string> = {
+  numeric: "Tip: Values exceeding 40 characters will be truncated in the SMS sent to users.",
+  alphanumeric: "Tip: Values exceeding 40 characters will be truncated in the SMS sent to users.",
+  url: "Tip: URLs exceeding 120 characters will be truncated in the SMS sent to users.",
+  urlott: "Tip: URLs exceeding 120 characters will be truncated in the SMS sent to users.",
+  cbn: "Tip: Values exceeding 14 characters will be truncated in the SMS sent to users.",
+  email: "Tip: Email addresses exceeding 40 characters will be truncated in the SMS sent to users.",
+};
+/** Short aliases share their full tag's rule. */
+const TAG_ALIASES: Record<string, string> = {
+  num: "numeric",
+  number: "numeric",
+  alp: "alphanumeric",
+  urg: "url",
+  uro: "urlott",
+  eml: "email",
+};
+
+/** The tip for a tag name (e.g. "url" or "urg"), if it has one. */
+export function dltTagTip(tag: string): string | undefined {
+  return TAG_TIPS[TAG_ALIASES[tag] ?? tag];
 }
 
 export interface VariableSlot {
@@ -102,7 +137,9 @@ export interface VariableSlot {
   key: string;
   /** The token as typed, e.g. "{{1}}" or "{#numeric#}". */
   token: string;
-  /** Row label — the token, numbered when the same tag appears more than once. */
+  /** The DLT tag's name without the braces, e.g. "url" (empty for a numbered variable). */
+  tag: string;
+  /** Row label — the token as typed. */
   label: string;
 }
 
@@ -113,22 +150,19 @@ export interface VariableSlot {
 export function variableSlots(body: string): VariableSlot[] {
   const slots: VariableSlot[] = [];
   const seenNumbers = new Set<string>();
-  const tagTotals: Record<string, number> = {};
-  for (const m of body.matchAll(variableTokenRe())) if (m[2]) tagTotals[m[2]] = (tagTotals[m[2]] ?? 0) + 1;
-  const tagSeen: Record<string, number> = {};
   let tagOrdinal = 0;
   for (const m of body.matchAll(variableTokenRe())) {
     if (m[1] !== undefined) {
       if (seenNumbers.has(m[1])) continue;
       seenNumbers.add(m[1]);
-      slots.push({ key: m[1], token: m[0], label: m[0] });
+      slots.push({ key: m[1], token: m[0], tag: "", label: m[0] });
     } else {
       tagOrdinal++;
-      tagSeen[m[2]] = (tagSeen[m[2]] ?? 0) + 1;
       slots.push({
         key: `#${tagOrdinal}`,
         token: m[0],
-        label: tagTotals[m[2]] > 1 ? `${m[0]} (${tagSeen[m[2]]})` : m[0],
+        tag: m[2],
+        label: m[0],
       });
     }
   }

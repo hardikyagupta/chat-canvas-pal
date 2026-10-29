@@ -15,6 +15,7 @@ import {
   DLT_VAR_LENGTH,
   smsLength,
   smsParts,
+  dltTagTip,
   variableSlots,
   variableTokens,
   type DltTemplateType,
@@ -35,6 +36,9 @@ const NAME_ALLOWED = /^[A-Za-z0-9\-_&@:]*$/;
 const NAME_ERROR = "Only a-z A-Z 0-9 - _ & @ : characters are allowed.";
 const DEFAULT_CATEGORY = "uncategorized";
 
+/** Parked for now: the ADD VARIABLE button (numbered {{n}} variables). */
+const SHOW_ADD_VARIABLE = false;
+
 const VARIABLE_RE = /\{\{(\d+)\}\}/g;
 /** Liquid typed straight into the message: any {{ … }} that isn't a plain {{n}} variable, or a {% … %} tag. */
 const STRAY_LIQUID_RE = /\{\{(?!\d+\}\})[^}]*\}\}|\{%[\s\S]*?%\}/g;
@@ -49,6 +53,24 @@ const fieldClass =
 
 function Required() {
   return <span className="text-[#E5484D]"> *</span>;
+}
+
+/** Outline "i" beside a field label; hover (or focus) explains the field. */
+function LabelInfo({ label, children }: { label: string; children: string }) {
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button type="button" aria-label={label} className="text-[#6F6F8D] transition-colors hover:text-[#17173A]">
+            <Info className="size-4" strokeWidth={1.8} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-[260px] rounded-lg border-0 bg-black px-3 py-2 text-white">
+          <p className="font-manrope text-xs leading-[18px]">{children}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 function FieldError({ children }: { children: string }) {
@@ -383,9 +405,14 @@ export default function CreateSmsTemplateOverlay({
 
               <div className="mt-8 grid grid-cols-2 gap-8">
                 <div>
-                  <label className={labelClass}>
-                    DLT Template ID
-                    <Required />
+                  <label className={cn(labelClass, "flex items-center gap-1.5")}>
+                    <span>
+                      DLT Template ID
+                      <Required />
+                    </span>
+                    <LabelInfo label="About DLT Template ID">
+                      Enter the DLT-approved template ID provided by your telecom operator.
+                    </LabelInfo>
                   </label>
                   <input
                     value={dltId}
@@ -411,21 +438,10 @@ export default function CreateSmsTemplateOverlay({
                       DLT Template Type
                       <Required />
                     </span>
-                    <TooltipProvider delayDuration={150}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button type="button" aria-label="About DLT Template Type" className="text-[#6F6F8D]">
-                            <Info className="size-4 fill-[#6F6F8D] text-white" strokeWidth={2} />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-[260px] rounded-lg border-0 bg-black px-3 py-2 text-white">
-                          <p className="font-manrope text-xs leading-[18px]">
-                            The type this template is registered under with your telecom operator — it decides when the
-                            message can be sent.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <LabelInfo label="About DLT Template Type">
+                      The type this template is registered under with your telecom operator — it decides when the
+                      message can be sent.
+                    </LabelInfo>
                   </label>
                   <DltTypeSelect value={dltType} onChange={setDltType} invalid={Boolean(dltTypeError)} />
                   {dltTypeError && <FieldError>{dltTypeError}</FieldError>}
@@ -497,27 +513,36 @@ export default function CreateSmsTemplateOverlay({
                 bodyError && <FieldError>{bodyError}</FieldError>
               )}
 
-              <DsButton variant="tertiary" onClick={addVariable} disabled={remaining <= 0} className="mt-4 uppercase">
-                <Plus />
-                Add variable ({remaining})
-              </DsButton>
+              {/* Parked for now: variables come from DLT tags typed in the message. */}
+              {SHOW_ADD_VARIABLE && (
+                <DsButton variant="tertiary" onClick={addVariable} disabled={remaining <= 0} className="mt-4 uppercase">
+                  <Plus />
+                  Add variable ({remaining})
+                </DsButton>
+              )}
 
               {slots.length > 0 && (
                 <div className="mt-6 rounded-[4px] border border-[#DDE2EE] p-6">
                   <h3 className="font-manrope text-[14px] font-bold text-[#17173A]">Map body variable</h3>
                   <div className="mt-4 space-y-4">
-                    {slots.map((v) => (
+                    {slots.map((v, i) => (
                       <div key={v.key}>
-                        <p className="mb-2 font-manrope text-[14px] font-semibold text-[#17173A]">
+                        <p className="font-manrope text-[14px] font-semibold text-[#17173A]">
+                          <span className="mr-2 text-[#6F6F8D]">{i + 1}.</span>
                           {v.label}
                           <Required />
                         </p>
-                        <SmsVariableField
-                          value={mappings[v.key] ?? ""}
-                          onChange={(val) => setMappings({ ...mappings, [v.key]: val })}
-                          invalid={submitted && !mappings[v.key]?.trim()}
-                          ariaLabel={`Value for variable ${v.token}`}
-                        />
+                        {dltTagTip(v.tag) && (
+                          <p className="mt-1 font-manrope text-[12px] leading-[18px] text-[#6F6F8D]">{dltTagTip(v.tag)}</p>
+                        )}
+                        <div className="mt-2">
+                          <SmsVariableField
+                            value={mappings[v.key] ?? ""}
+                            onChange={(val) => setMappings({ ...mappings, [v.key]: val })}
+                            invalid={submitted && !mappings[v.key]?.trim()}
+                            ariaLabel={`Value for variable ${i + 1} ${v.token}`}
+                          />
+                        </div>
                         {submitted && !mappings[v.key]?.trim() && (
                           <FieldError>Map this variable to an attribute or liquid code.</FieldError>
                         )}
